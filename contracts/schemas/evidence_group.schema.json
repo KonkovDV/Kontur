@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/evidence_group.schema.json",
+  "title": "EvidenceGroup",
+  "description": "Единица результата и разметки по п. 14.1 ТЗ: объект + атомарное правило + применимые утверждённые редакции + доказательные фрагменты.",
+  "type": "object",
+  "required": [
+    "evidence_group_id",
+    "object_id",
+    "rule_code",
+    "matrix_version",
+    "fragments"
+  ],
+  "properties": {
+    "evidence_group_id": { "type": "string" },
+    "object_id": { "type": "string" },
+    "rule_code": { "type": "string", "examples": ["PZ-01", "KR-55", "AR-41"] },
+    "matrix_version": { "type": "string" },
+    "fragments": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/fragment" }
+    },
+    "resolved_revisions": {
+      "type": "array",
+      "description": "Редакции, признанные эталонными резолвером. Пустой массив недопустим при сравнении.",
+      "items": { "$ref": "#/$defs/document_ref" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "fragment": {
+      "type": "object",
+      "required": [
+        "fragment_id",
+        "role",
+        "document",
+        "page",
+        "polygon_source",
+        "polygon_norm",
+        "extracted"
+      ],
+      "properties": {
+        "fragment_id": { "type": "string" },
+        "role": { "type": "string", "enum": ["expected", "actual", "context"] },
+        "document": { "$ref": "#/$defs/document_ref" },
+        "page": { "type": "integer", "minimum": 1 },
+        "polygon_source": {
+          "$ref": "#/$defs/polygon",
+          "description": "Координаты в системе страницы источника (PDF user space)"
+        },
+        "polygon_norm": {
+          "$ref": "#/$defs/polygon",
+          "description": "Нормализовано в [0;1] по видимой области после CropBox, MediaBox и Rotate"
+        },
+        "extracted": { "$ref": "#/$defs/extraction" }
+      },
+      "additionalProperties": false
+    },
+    "polygon": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": { "type": "number" }
+      }
+    },
+    "document_ref": {
+      "type": "object",
+      "required": ["file_id", "file_hash", "doc_stage", "document_code", "revision", "approval_status"],
+      "properties": {
+        "file_id": { "type": "string" },
+        "file_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "doc_stage": { "type": "string", "enum": ["PD", "RD", "ID"] },
+        "discipline": { "type": "string" },
+        "document_code": { "type": "string" },
+        "revision": { "type": "string" },
+        "approval_status": {
+          "type": "string",
+          "enum": ["APPROVED", "NOT_APPROVED", "UNKNOWN"]
+        },
+        "approval_date": { "type": "string", "format": "date" },
+        "sheet": { "type": "string" },
+        "predecessor_file_id": { "type": ["string", "null"] }
+      }
+    },
+    "extraction": {
+      "type": "object",
+      "required": ["raw_token", "engine", "engine_version", "confidence"],
+      "properties": {
+        "raw_token": {
+          "type": "string",
+          "description": "Дословно как в источнике. Нормализация хранится отдельно и не затирает raw."
+        },
+        "normalized_value": { "type": ["string", "number", "boolean", "null"] },
+        "unit": { "type": ["string", "null"] },
+        "engine": {
+          "type": "string",
+          "enum": ["vector", "ocr", "vlm", "manual"]
+        },
+        "engine_version": { "type": "string" },
+        "second_read": {
+          "type": ["object", "null"],
+          "description": "Независимое второе чтение критического значения. Расхождение обязывает ABSTAIN.",
+          "properties": {
+            "engine": { "type": "string" },
+            "raw_token": { "type": "string" },
+            "agrees": { "type": "boolean" }
+          }
+        },
+        "grounded_in_source_tokens": {
+          "type": "boolean",
+          "description": "Значение дословно найдено в векторных или OCR токенах страницы. false запрещает автоматическую находку."
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "confidence_features": {
+          "type": "object",
+          "description": "Многосигнальная уверенность: качество зоны, согласие чтений, пространственная стабильность, конкуренция кандидатов. Один logprob недостаточен.",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    }
+  }
+}

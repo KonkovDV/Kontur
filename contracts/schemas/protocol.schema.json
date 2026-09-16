@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/protocol.schema.json",
+  "title": "Protocol",
+  "description": "Протокол проверки. Итоговая структура обязана совпасть с Приложением 2 ТЗ; до получения официального образца поля помечены source: draft.",
+  "type": "object",
+  "required": [
+    "protocol_id",
+    "object_id",
+    "version",
+    "status",
+    "scenario",
+    "upload_status",
+    "sections",
+    "versions",
+    "input_manifest"
+  ],
+  "properties": {
+    "protocol_id": { "type": "string" },
+    "object_id": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["READY", "VERIFYING", "VERIFICATION_COMPLETED", "PROTOCOL_FINALIZED"]
+    },
+    "scenario": {
+      "type": "string",
+      "enum": ["FULL", "PD_RD_ONLY", "PD_ID_ONLY", "RD_ID_ONLY", "SINGLE_ONLY", "PARTIALLY_LOADED"]
+    },
+    "upload_status": {
+      "type": "object",
+      "description": "Раздел «Статус загрузки документов» по п. 9.2 ТЗ",
+      "required": ["pd", "rd", "id"],
+      "properties": {
+        "pd": { "type": "string", "enum": ["PD_UPLOADED", "PD_PARTIAL", "PD_MISSING"] },
+        "rd": { "type": "string", "enum": ["RD_UPLOADED", "RD_PARTIAL", "RD_MISSING"] },
+        "id": { "type": "string", "enum": ["ID_UPLOADED", "ID_PARTIAL", "ID_MISSING"] }
+      }
+    },
+    "sections": {
+      "type": "object",
+      "description": "Пять раздельных таблиц по п. 9.2 ТЗ",
+      "required": ["completeness", "candidates", "confirmed", "negative_verified", "suspicions"],
+      "properties": {
+        "completeness": { "type": "array", "items": { "type": "object" } },
+        "candidates": { "type": "array", "items": { "$ref": "./finding.schema.json" } },
+        "confirmed": { "type": "array", "items": { "$ref": "./finding.schema.json" } },
+        "negative_verified": { "type": "array", "items": { "$ref": "./finding.schema.json" } },
+        "suspicions": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "violation_count": {
+      "type": "integer",
+      "description": "Равен длине sections.confirmed. Кандидаты, подозрения и статусы качества данных не входят."
+    },
+    "versions": { "type": "object" },
+    "input_manifest": {
+      "type": "object",
+      "required": ["manifest_hash", "files"],
+      "properties": {
+        "manifest_hash": { "type": "string" },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file_id", "file_hash"],
+            "properties": {
+              "file_id": { "type": "string" },
+              "file_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
+        }
+      }
+    },
+    "finalized_at": { "type": ["string", "null"], "format": "date-time" },
+    "supersedes_version": { "type": ["integer", "null"] }
+  },
+  "additionalProperties": false
+}

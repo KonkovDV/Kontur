@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/finding.schema.json",
+  "title": "Finding",
+  "description": "Атомарная находка. CONFIRMED_VIOLATION допустим только при заполненном inspector_decision.",
+  "type": "object",
+  "required": [
+    "finding_id",
+    "evidence_group_id",
+    "rule_code",
+    "finding_status",
+    "review_priority",
+    "versions"
+  ],
+  "properties": {
+    "finding_id": { "type": "string" },
+    "evidence_group_id": { "type": "string" },
+    "rule_code": { "type": "string" },
+    "section": { "type": "string" },
+    "expected_value": { "type": ["string", "number", "boolean", "null"] },
+    "actual_value": { "type": ["string", "number", "boolean", "null"] },
+    "delta": { "type": ["string", "number", "null"] },
+    "finding_status": {
+      "type": "string",
+      "enum": [
+        "CANDIDATE",
+        "CONFIRMED_VIOLATION",
+        "NEGATIVE_VERIFIED",
+        "AUTO_NO_DIFFERENCE",
+        "MISSING_EVIDENCE",
+        "NOT_APPLICABLE",
+        "NOT_COMPARABLE",
+        "LOW_QUALITY",
+        "ABSTAIN",
+        "CLARIFICATION_REQUIRED",
+        "SUSPICION"
+      ]
+    },
+    "counts_as_violation": {
+      "type": "boolean",
+      "description": "true допустим исключительно при finding_status = CONFIRMED_VIOLATION"
+    },
+    "review_priority": {
+      "type": "string",
+      "enum": ["HIGH", "MEDIUM", "LOW"],
+      "description": "Очередь экспертной проверки. Не юридическая тяжесть и не основание для предписания."
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Детерминированное обоснование компаратора. Черновик пояснения от LLM хранится отдельно в llm_draft и не влияет на статус."
+    },
+    "llm_draft": { "type": ["string", "null"] },
+    "normative_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["identifier", "clause", "effective_from"],
+        "properties": {
+          "identifier": { "type": "string" },
+          "issuer": { "type": "string" },
+          "clause": { "type": "string" },
+          "effective_from": { "type": "string", "format": "date" },
+          "effective_to": { "type": ["string", "null"], "format": "date" },
+          "layer": {
+            "type": "string",
+            "enum": ["organizer_matrix", "current_overlay"],
+            "description": "Вердикт считается по organizer_matrix; current_overlay только предупреждает."
+          }
+        }
+      }
+    },
+    "inspector_decision": {
+      "type": ["object", "null"],
+      "required": ["inspector_id", "action", "timestamp"],
+      "properties": {
+        "inspector_id": { "type": "string" },
+        "action": {
+          "type": "string",
+          "enum": ["CONFIRM", "REJECT", "REQUEST_CLARIFICATION"]
+        },
+        "reason_code": { "type": ["string", "null"] },
+        "comment": { "type": ["string", "null"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "versions": {
+      "type": "object",
+      "required": ["matrix_version", "rule_version", "model_version"],
+      "properties": {
+        "matrix_version": { "type": "string" },
+        "rule_version": { "type": "string" },
+        "model_version": { "type": "string" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "finding_status": { "const": "CONFIRMED_VIOLATION" } },
+        "required": ["finding_status"]
+      },
+      "then": {
+        "properties": {
+          "inspector_decision": { "type": "object" },
+          "counts_as_violation": { "const": true }
+        },
+        "required": ["inspector_decision"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "finding_status": { "const": "NEGATIVE_VERIFIED" } },
+        "required": ["finding_status"]
+      },
+      "then": { "required": ["inspector_decision"] }
+    }
+  ],
+  "additionalProperties": false
+}

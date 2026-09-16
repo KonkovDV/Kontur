@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/rule.schema.json",
+  "title": "Rule",
+  "description": "Исполняемое правило матрицы. Текстовый trigger_logic из ТЗ компилируется в эту структуру и никогда не исполняется напрямую (ADR-0004).",
+  "type": "object",
+  "required": [
+    "code",
+    "section",
+    "name",
+    "matrix_version",
+    "coverage",
+    "applicability",
+    "sources",
+    "extractor",
+    "comparator",
+    "required_evidence",
+    "review_priority"
+  ],
+  "properties": {
+    "code": { "type": "string", "pattern": "^[A-ZА-Я0-9]+-[0-9]+$" },
+    "section": {
+      "type": "string",
+      "enum": ["ПЗ", "СПЗУ", "АР", "КР", "ИОС1", "ИОС2", "ИОС3", "ИОС4", "ИОС5", "ТХ", "ПОС", "ПОД", "ООС", "ППМ", "БЭ", "ОДИ", "ЗУ", "СМ", "ИН"]
+    },
+    "name": { "type": "string" },
+    "unit": { "type": ["string", "null"] },
+    "matrix_version": { "type": "string" },
+    "source_trigger_logic": {
+      "type": ["string", "null"],
+      "description": "Исходная текстовая формулировка из Приложения 1. Справочно, не исполняется."
+    },
+    "coverage": {
+      "type": "string",
+      "enum": ["executable", "extractor_missing", "source_missing", "advisory", "not_applicable"],
+      "description": "Честный статус покрытия. Отчёт по матрице публикуется в этой разбивке."
+    },
+    "applicability": {
+      "type": "object",
+      "required": ["stages_required"],
+      "properties": {
+        "stages_required": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["PD", "RD", "ID"] },
+          "description": "Отсутствие нужной стадии даёт MISSING_EVIDENCE или NOT_APPLICABLE, но никогда не нарушение."
+        },
+        "object_types": { "type": "array", "items": { "type": "string" } },
+        "condition": { "type": ["string", "null"] }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "properties": {
+        "pd": { "$ref": "#/$defs/selector" },
+        "rd": { "$ref": "#/$defs/selector" },
+        "id": { "$ref": "#/$defs/selector" }
+      }
+    },
+    "extractor": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["exact_field", "number", "enum", "set", "presence", "geometry", "semantic_candidate"]
+        },
+        "regex": { "type": ["string", "null"] },
+        "anchors": { "type": "array", "items": { "type": "string" } },
+        "normalization": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit", "upper"] }
+        },
+        "dual_read_required": {
+          "type": "boolean",
+          "default": false,
+          "description": "true для критических чисел и шифров: расхождение двух чтений даёт ABSTAIN."
+        }
+      }
+    },
+    "comparator": {
+      "type": "object",
+      "required": ["operator"],
+      "properties": {
+        "operator": {
+          "type": "string",
+          "enum": ["eq", "ne", "lt", "le", "gt", "ge", "range", "delta", "in_set", "not_in_set", "present", "class_not_lower"]
+        },
+        "value": {},
+        "min_value": { "type": ["number", "null"] },
+        "max_value": { "type": ["number", "null"] },
+        "tolerance_abs": { "type": ["number", "null"] },
+        "tolerance_rel": { "type": ["number", "null"] },
+        "rounding": { "type": "string", "enum": ["none", "half_up", "half_even", "floor", "ceil"], "default": "none" },
+        "unit_target": { "type": ["string", "null"] }
+      }
+    },
+    "required_evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "enum": ["expected", "actual"] }
+    },
+    "normative_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["identifier", "clause", "effective_from", "layer"],
+        "properties": {
+          "identifier": { "type": "string" },
+          "issuer": { "type": "string" },
+          "clause": { "type": "string" },
+          "effective_from": { "type": "string", "format": "date" },
+          "effective_to": { "type": ["string", "null"], "format": "date" },
+          "mandatory": { "type": "string", "enum": ["law", "bylaw", "mandatory_list", "voluntary", "contest_contract"] },
+          "layer": { "type": "string", "enum": ["organizer_matrix", "current_overlay"] }
+        }
+      }
+    },
+    "failure_mapping": {
+      "type": "object",
+      "description": "Во что превращается каждый тип сбоя. Пустые и недостающие источники не становятся нарушением.",
+      "properties": {
+        "source_absent": { "type": "string", "default": "MISSING_EVIDENCE" },
+        "not_comparable": { "type": "string", "default": "NOT_COMPARABLE" },
+        "revision_conflict": { "type": "string", "default": "CLARIFICATION_REQUIRED" },
+        "low_quality": { "type": "string", "default": "LOW_QUALITY" },
+        "reads_disagree": { "type": "string", "default": "ABSTAIN" }
+      }
+    },
+    "review_priority": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW"] },
+    "tests": {
+      "type": "array",
+      "description": "Обязательные фикстуры правила: положительная, отрицательная, граничная и legal.",
+      "items": {
+        "type": "object",
+        "required": ["name", "expected_status"],
+        "properties": {
+          "name": { "type": "string" },
+          "inputs": { "type": "object" },
+          "expected_status": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "selector": {
+      "type": "object",
+      "properties": {
+        "discipline": { "type": "array", "items": { "type": "string" } },
+        "document_kind": { "type": "array", "items": { "type": "string" } },
+        "table": { "type": ["string", "null"] },
+        "description": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "additionalProperties": false
+}

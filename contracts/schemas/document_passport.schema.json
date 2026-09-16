@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/document_passport.schema.json",
+  "title": "DocumentPassport",
+  "description": "Результат L1 Identity: то, что читается из основной надписи и метаданных файла. Поля Exact Match по п. 14.3 ТЗ помечены key: true.",
+  "type": "object",
+  "required": ["file_id", "file_hash", "doc_stage", "pages", "quality"],
+  "properties": {
+    "file_id": { "type": "string" },
+    "file_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "object_id": { "type": ["string", "null"] },
+    "doc_stage": { "type": "string", "enum": ["PD", "RD", "ID", "UNKNOWN"] },
+    "discipline": { "type": ["string", "null"] },
+    "document_code": { "type": ["string", "null"], "description": "key: true" },
+    "revision": { "type": ["string", "null"], "description": "key: true" },
+    "approval_status": { "type": "string", "enum": ["APPROVED", "NOT_APPROVED", "UNKNOWN"] },
+    "approval_date": { "type": ["string", "null"], "format": "date" },
+    "sheet": { "type": ["string", "null"], "description": "key: true" },
+    "pages": { "type": "integer", "minimum": 0 },
+    "predecessor_file_id": { "type": ["string", "null"] },
+    "successor_file_id": { "type": ["string", "null"] },
+    "quality": {
+      "type": "object",
+      "required": ["layer_kind"],
+      "properties": {
+        "layer_kind": { "type": "string", "enum": ["vector", "raster", "hybrid"] },
+        "dpi": { "type": ["number", "null"] },
+        "rotate": { "type": "integer", "enum": [0, 90, 180, 270] },
+        "media_box": { "type": "array", "items": { "type": "number" } },
+        "crop_box": { "type": "array", "items": { "type": "number" } },
+        "has_embedded_text": { "type": "boolean" },
+        "has_ocr_layer": { "type": "boolean" },
+        "text_render_agreement": {
+          "type": ["boolean", "null"],
+          "description": "false означает расхождение видимого и текстового слоя: автоматическая находка блокируется как событие безопасности."
+        },
+        "damaged_pages": { "type": "integer" },
+        "handwritten_ratio": { "type": ["number", "null"] }
+      }
+    },
+    "extraction_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+  },
+  "additionalProperties": false
+}

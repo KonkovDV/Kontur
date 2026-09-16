@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: kontur
+      POSTGRES_USER: kontur
+      POSTGRES_PASSWORD: kontur
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/src/kontur/infrastructure/db/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+
+  redis:
+    image: redis:7-alpine
+    # Кеш парсинга по хешу файла (ТЗ п. 9.1, шаг 5). Не durable queue.
+    ports: ["6379:6379"]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    # Очередь по ТЗ п. 1.5. Доставка at-least-once, идемпотентность — на стороне ядра.
+    ports: ["5672:5672", "15672:15672"]
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: kontur
+      MINIO_ROOT_PASSWORD: kontur-dev-secret
+    ports: ["9000:9000", "9001:9001"]
+    volumes:
+      - minio:/data
+
+  core:
+    build: ./backend
+    command: uvicorn kontur.presentation.api:app --host 0.0.0.0 --port 8000
+    environment:
+      KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
+      KONTUR_REDIS_URL: redis://redis:6379/0
+      KONTUR_AMQP_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on: [postgres, redis, rabbitmq, minio]
+    ports: ["8000:8000"]
+
+  gateway:
+    build: ./gateway
+    environment:
+      KONTUR_CORE_URL: http://core:8000
+    depends_on: [core]
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:
+  minio:

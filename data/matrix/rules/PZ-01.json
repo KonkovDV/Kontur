@@ -1,0 +1,59 @@
+{
+  "code": "PZ-01",
+  "section": "ПЗ",
+  "name": "Площадь застройки",
+  "unit": "м²",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Расхождение > 0",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": ["PD", "RD"],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": { "document_kind": ["ПЗ"], "table": "ТЭП", "description": "Таблица ТЭП в составе ПЗУ" },
+    "rd": { "document_kind": ["ОД"], "table": "ТЭП", "description": "Лист общих данных, таблица ТЭП" },
+    "id": { "document_kind": ["Техплан"], "table": null, "description": "Технический план БТИ" }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": "(?<![0-9])([0-9]{1,3}(?:[ \u00a0][0-9]{3})*(?:[.,][0-9]+)?)(?![0-9])",
+    "anchors": ["Площадь застройки", "Площадь застройки, м2"],
+    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "delta",
+    "tolerance_abs": 0.0,
+    "tolerance_rel": null,
+    "rounding": "half_up",
+    "unit_target": "м²"
+  },
+  "required_evidence": ["expected", "actual"],
+  "normative_refs": [
+    {
+      "identifier": "ПП РФ № 87",
+      "issuer": "Правительство Российской Федерации",
+      "clause": "Положение, п. 10 (Пояснительная записка)",
+      "effective_from": "2008-02-16",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    { "name": "equal_values_give_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
+    { "name": "any_difference_gives_candidate", "expected_status": "CANDIDATE" },
+    { "name": "rd_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" },
+    { "name": "ocr_reads_disagree_gives_abstain", "expected_status": "ABSTAIN" }
+  ]
+}

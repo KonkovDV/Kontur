@@ -1,0 +1,70 @@
+{
+  "code": "AR-41",
+  "section": "АР",
+  "name": "Ширина эвакуационных дверей",
+  "unit": "м",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "< 0.9 м",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": ["PD", "RD"],
+    "object_types": [],
+    "condition": "Помещение входит в путь эвакуации"
+  },
+  "sources": {
+    "pd": { "discipline": ["АР"], "table": "Ведомость заполнения проемов", "description": null },
+    "rd": { "discipline": ["АР"], "table": "Спецификация дверей", "description": null },
+    "id": { "document_kind": ["АОСР"], "table": null, "description": "Акты освидетельствования" }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": "([0-9]{3,4})\\s?(?:мм)?|([0-9][.,][0-9]{1,2})\\s?м",
+    "anchors": ["Ширина проема", "Ширина двери", "Габариты проема"],
+    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "ge",
+    "value": 0.9,
+    "min_value": 0.9,
+    "tolerance_abs": 0.0,
+    "rounding": "none",
+    "unit_target": "м"
+  },
+  "required_evidence": ["actual"],
+  "normative_refs": [
+    {
+      "identifier": "СП 1.13130.2020",
+      "issuer": "МЧС России",
+      "clause": "п. 4.2.1",
+      "effective_from": "2020-09-19",
+      "effective_to": null,
+      "mandatory": "mandatory_list",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "ФЗ № 123-ФЗ",
+      "issuer": "Российская Федерация",
+      "clause": "Технический регламент о требованиях пожарной безопасности",
+      "effective_from": "2008-07-22",
+      "effective_to": null,
+      "mandatory": "law",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    { "name": "900mm_is_compliant_boundary", "expected_status": "AUTO_NO_DIFFERENCE" },
+    { "name": "899mm_gives_candidate", "expected_status": "CANDIDATE" },
+    { "name": "mm_and_m_units_normalized_equally", "expected_status": "AUTO_NO_DIFFERENCE" },
+    { "name": "door_not_on_evacuation_path_is_not_applicable", "expected_status": "NOT_APPLICABLE" },
+    { "name": "digit_8_misread_as_9_blocks_on_abstain", "expected_status": "ABSTAIN" }
+  ]
+}

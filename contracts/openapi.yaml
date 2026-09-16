@@ -1,0 +1,244 @@
+openapi: 3.0.3
+info:
+  title: Контур — Инспектор ИИ
+  version: 0.1.0-skeleton
+  description: >
+    Сверка ПД/РД/ИД по матрице 132 параметров. Асинхронная pull-модель:
+    загрузка возвращает process_id, результат забирается по запросу.
+    CONFIRMED_VIOLATION присваивает только инспектор.
+servers:
+  - url: /api/v1
+
+paths:
+  /documents/upload:
+    post:
+      summary: Загрузка пакета документов (инкрементальная дозагрузка до финализации)
+      operationId: uploadDocuments
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [object_id, files]
+              properties:
+                object_id: { type: string }
+                process_id:
+                  type: string
+                  description: Указывается при дозагрузке в существующий процесс
+                doc_stage:
+                  type: string
+                  enum: [PD, RD, ID]
+                files:
+                  type: array
+                  items: { type: string, format: binary }
+      responses:
+        "202":
+          description: Принято в обработку
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UploadAccepted" }
+        "400": { $ref: "#/components/responses/Rejected" }
+        "409":
+          description: Протокол финализирован, дозагрузка запрещена
+        "413":
+          description: Превышен лимит файла (50 МБ) или пакета (200 МБ)
+
+  /processes/{process_id}/status:
+    get:
+      summary: Статус обработки (целевой p95 ≤200 мс)
+      operationId: getProcessStatus
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProcessStatus" }
+        "404": { description: Процесс не найден }
+
+  /processes/{process_id}/protocol:
+    get:
+      summary: Протокол проверки (структура по Приложению 2 ТЗ)
+      operationId: getProtocol
+      parameters:
+        - { $ref: "#/components/parameters/ProcessId" }
+        - name: version
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "./schemas/protocol.schema.json" }
+
+  /findings/{finding_id}/review:
+    post:
+      summary: Решение инспектора по атомарной находке
+      operationId: reviewFinding
+      parameters:
+        - name: finding_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewDecision" }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "./schemas/finding.schema.json" }
+        "409": { description: Недопустимый переход состояния }
+        "422": { description: Отсутствует reason_code при отклонении }
+
+  /processes/{process_id}/finalize:
+    post:
+      summary: Финализация протокола
+      description: >
+        Разрешена только после обработки всех CANDIDATE либо их явного перевода
+        в CLARIFICATION_REQUIRED. MISSING_EVIDENCE выводится отдельным перечнем.
+      operationId: finalizeProtocol
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProcessStatus" }
+        "409": { description: Есть необработанные кандидаты }
+
+  /inspection/{process_id}:
+    post:
+      summary: Передача результатов во внешнюю ИС (целевая — ИАИС «РиН»)
+      description: >
+        Разрешена только при PROTOCOL_FINALIZED. Передаются только
+        подтверждённые инспектором записи с версиями протокола, матрицы,
+        модели и реестром входных файлов. До 3 повторов: 1, 5, 15 минут.
+      operationId: syncInspection
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "202":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SyncState" }
+        "409": { description: Протокол не финализирован }
+
+components:
+  parameters:
+    ProcessId:
+      name: process_id
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    Rejected:
+      description: Файл или пакет отклонён
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/RejectionReason" }
+
+  schemas:
+    UploadAccepted:
+      type: object
+      required: [process_id, accepted, rejected]
+      properties:
+        process_id: { type: string }
+        accepted:
+          type: array
+          items:
+            type: object
+            required: [file_id, file_hash]
+            properties:
+              file_id: { type: string }
+              file_hash: { type: string, pattern: "^[a-f0-9]{64}$" }
+        rejected:
+          type: array
+          items: { $ref: "#/components/schemas/RejectionReason" }
+
+    RejectionReason:
+      type: object
+      required: [reason_code, message]
+      properties:
+        file_name: { type: string }
+        reason_code:
+          type: string
+          enum:
+            - UNSUPPORTED_FORMAT
+            - CORRUPTED_FILE
+            - FILE_TOO_LARGE
+            - BATCH_LIMIT_EXCEEDED
+            - ANTIVIRUS_REJECTED
+            - ENCRYPTED_FILE
+            - PROCESSING_TIMEOUT
+        message: { type: string }
+
+    ProcessStatus:
+      type: object
+      required: [process_id, process_state, completeness, sync_state, versions]
+      properties:
+        process_id: { type: string }
+        process_state:
+          type: string
+          enum: [PENDING, PARSING, READY, VERIFYING, COMPLETED, FINALIZED]
+        scenario:
+          type: string
+          enum: [FULL, PD_RD_ONLY, PD_ID_ONLY, RD_ID_ONLY, SINGLE_ONLY, PARTIALLY_LOADED]
+        completeness:
+          type: object
+          properties:
+            pd: { $ref: "#/components/schemas/CompletenessState" }
+            rd: { $ref: "#/components/schemas/CompletenessState" }
+            id: { $ref: "#/components/schemas/CompletenessState" }
+        counters:
+          type: object
+          description: candidates и confirmed считаются раздельно; в число нарушений входит только confirmed
+          properties:
+            candidates: { type: integer }
+            confirmed_violations: { type: integer }
+            negative_verified: { type: integer }
+            missing_evidence: { type: integer }
+            clarification_required: { type: integer }
+            suspicions: { type: integer }
+        sync_state: { $ref: "#/components/schemas/SyncState" }
+        versions: { $ref: "#/components/schemas/Versions" }
+
+    CompletenessState:
+      type: string
+      enum: [UPLOADED, PARTIAL, MISSING]
+
+    SyncState:
+      type: string
+      enum: [NOT_REQUESTED, PENDING_SYNC, SYNCING, SYNCED, RETRY_WAIT, FAILED_TERMINAL]
+
+    Versions:
+      type: object
+      required: [matrix_version, model_version, dataset_version, input_manifest_hash, git_sha]
+      properties:
+        matrix_version: { type: string }
+        model_version: { type: string }
+        dataset_version: { type: string }
+        input_manifest_hash: { type: string }
+        git_sha: { type: string }
+
+    ReviewDecision:
+      type: object
+      required: [action, inspector_id]
+      properties:
+        action:
+          type: string
+          enum: [CONFIRM, REJECT, REQUEST_CLARIFICATION, SPLIT]
+        inspector_id: { type: string }
+        reason_code:
+          type: string
+          description: Обязателен при REJECT
+          enum:
+            - WRONG_REVISION_SELECTED
+            - APPROVED_CHANGE_EXISTS
+            - OCR_ERROR
+            - LINKAGE_ERROR
+            - PARAMETER_NOT_APPLICABLE
+            - SOURCE_QUALITY
+            - OTHER
+        comment: { type: string }
