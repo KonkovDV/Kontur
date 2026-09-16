@@ -49,6 +49,7 @@ psql -v ON_ERROR_STOP=1 \
 | RT-2609-12 | RT-G | S1 | Состояние процесса живёт только в памяти; выгрузка во внешнюю ИС начинается до финализации; счётчик повторов не ограничен | После перезапуска процесс невосстановим; п. 9.6 требует только финализированный протокол | таблица `processes`, ограничения `sync_only_after_finalize`, `finalized_needs_human`, границы счётчиков повторов | `checks.sql` § 8–10, `test_schema_sql.py::test_schema_freezes_process_state_and_finalization_invariants` |
 | RT-2609-13 | RT-G | S2 | `schema.sql` никогда не исполнялся в CI (только строковые проверки), шаг `ruff` дублировался | Ошибка DDL обнаружилась бы при развёртывании, а не в CI | job `db` с Postgres 16 исполняет `schema.sql` и `checks.sql`; дубль шага удалён | `.github/workflows/ci.yml` |
 | RT-2609-14 | RT-A | S3 | Перечень кодов отказа приёма дублировался в `pipeline` и в OpenAPI | Контракт и код разъезжаются незаметно | единый источник `intake.TZ_REJECTION_CODES`, реэкспорт в `pipeline`, сверка в `check_contracts.py` | `test_intake.py::test_rejection_codes_do_not_drift_from_the_contract` |
+| RT-2609-22 | RT-G | S3 | Два конфигурационных файла ruff (`ruff.toml` и `backend/pyproject.toml`) по-разному определяли first-party для пакета `kontur` | Локальный прогон зеленел, CI краснел на тех же файлах: разница обнаружилась только после пуша | в корневой `ruff.toml` добавлен явный `src = ["backend/src", "."]`, оба способа вызова дают одинаковый результат | `ruff check backend scripts` и `ruff check --config ruff.toml backend scripts` |
 
 ## Открыто
 

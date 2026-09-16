@@ -1,5 +1,9 @@
 line-length = 100
 target-version = "py311"
+# `kontur` лежит в backend/src. Без явного src корневой конфиг и
+# backend/pyproject.toml по-разному определяют first-party, и isort требует
+# взаимно противоречащих блоков импорта: локальный прогон зеленеет, CI краснеет.
+src = ["backend/src", "."]
 
 [lint]
 select = ["E", "F", "I", "UP", "B", "S"]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from kontur.application.retry_policy import (
     MAX_PARSE_RETRIES,
     SYNC_BACKOFF_SECONDS,

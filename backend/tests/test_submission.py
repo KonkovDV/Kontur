@@ -7,6 +7,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+
 from kontur.domain.models import (
     ApprovalStatus,
     DocStage,

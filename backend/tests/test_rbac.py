@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from kontur.presentation.rbac import (
     LEGAL_DECISION_OPERATIONS,
     REQUIRED_ROLES,

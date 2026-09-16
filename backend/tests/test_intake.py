@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from kontur.application.intake import (
     EXTRA_REJECTION_CODES,
     MAX_BATCH_BYTES,
