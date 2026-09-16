@@ -6,16 +6,42 @@
 
 from __future__ import annotations
 
+import re
+from collections.abc import Iterable
 from pathlib import Path
 
-QUARANTINE_MARKERS = ("TEST_213", "annotated_documents")
+#: Маркеры карантина в нормализованном виде: нижний регистр, одиночные `_`.
+#: Имена организатора нестабильны — в поставке встречаются и
+#: `РАЗМЕЧЕННЫЙ_TEST__213.zip` (два подчёркивания), и внутренний каталог
+#: `РАЗМЕЧЕННЫЙ_TEST_HIDDEN_ОРГАНИЗАТОР_213`. Точное сравнение имён такие
+#: варианты пропускает, поэтому сравнение идёт по нормализованной строке.
+QUARANTINE_MARKERS = (
+    "test_213",
+    "test_hidden",
+    "hidden_организатор",
+    "annotated_documents",
+)
+
+_REPEATED_UNDERSCORES = re.compile(r"_+")
 
 
-def is_quarantined(path: Path) -> bool:
+def normalize(path: Path | str) -> str:
+    """Схлопывает повторяющиеся `_` и снимает регистр (в т. ч. кириллица)."""
+
+    return _REPEATED_UNDERSCORES.sub("_", str(path)).casefold()
+
+
+def is_quarantined(path: Path | str) -> bool:
     """Путь относится к карантину скрытого теста."""
 
-    text = str(path)
+    text = normalize(path)
     return any(marker in text for marker in QUARANTINE_MARKERS)
+
+
+def quarantine_hits(paths: Iterable[Path | str]) -> list[str]:
+    """Пути, помеченные как карантин. Пустой список — можно продолжать."""
+
+    return [str(path) for path in paths if is_quarantined(path)]
 
 
 def hash_archives(incoming: Path) -> dict[str, str]:

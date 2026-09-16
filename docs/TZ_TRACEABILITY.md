@@ -15,14 +15,16 @@
 | 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `application/l0_intake/errors.py` | `test_intake_errors.py` | skeleton |
 | 9.1 | Статусы загрузки `*_UPLOADED/PARTIAL/MISSING` | `domain/statuses.py` | `test_state_machines.py` | skeleton |
 | 9.2 | Сценарии FULL…PARTIALLY_LOADED, карточка доказательства, протокол | `application/l6_matrix`, `l7_findings` | `test_scenarios.py` | skeleton |
+| 9.2 | Каскад L0–L9: безопасная остановка, отсутствие автостатуса на L8–L9 | `application/pipeline.py` | `test_pipeline_halt.py` | in_progress |
 | 9.2 | Инкрементальное обновление при дозагрузке | `application/l7_findings/incremental.py` | `test_incremental.py` | skeleton |
 | 9.3 | Верификация, reason_code, атомарность, финализация, отмена | `domain/review.py` | `test_review_state_machine.py` | skeleton |
 | 9.3 | Юзабилити: ≤30 мин на протокол, ≤3 клика на находку | `web/`, `docs/USABILITY_PROTOCOL.md` | ручной протокол на 5 инспекторах | skeleton |
 | 9.4 | GOLD, версии, разбиение по объектам, пороги публикации модели | `evaluation/gold.py`, `evaluation/release_gate.py` | `test_release_gate.py` | skeleton |
+| 9.4 | Реестр поставки, карантин скрытого теста, изоляция по `object_id` | `data/dataset/package_manifest.json`, `data/dataset/objects.json`, `evaluation/dataset_package.py`, `docs/DATASET_PACKAGE.md` | `test_dataset_package.py`, `test_quarantine.py` | in_progress |
 | 9.5 | SUSPICION, 4 подхода, дедупликация | `application/l7_findings/suspicion.py` | `test_suspicion.py` | skeleton |
 | 9.6 | ИАИС «РиН»: только FINALIZED, УКЭП, 3 ретрая 1/5/15 мин, PENDING_SYNC | `infrastructure/adapters/rin/` | `test_rin_sync.py` | skeleton |
 | 10 | 16 таблиц БД | `infrastructure/db/schema.sql` | `test_db_schema.py` | skeleton |
-| 11 | Производительность, p95 ≤200 мс, 100 пользователей | `docs/PERFORMANCE.md`, k6-сценарий | нагрузочный прогон | skeleton |
+| 11 | Производительность, p95 ≤200 мс, 100 пользователей | `docs/PERFORMANCE.md`, k6-сценарий | нагрузочный прогон (не выполнен) | skeleton |
 | 12 | Аутентификация, RBAC, TLS 1.3, аудит, 152-ФЗ, антивирус | `core/security/` | `test_authz_matrix.py` | skeleton |
 | 13 | JSON-логи, уровни, Prometheus/Grafana, ELK, алерты, checksum | `core/observability/` | `test_log_schema.py` | skeleton |
 | 14 | Пороги приёмки и правила выборок | `evaluation/metrics.py` | `test_metrics.py` | skeleton |
@@ -32,3 +34,9 @@
 Приложения 1 и 2 в переданном PDF отсутствуют — запрос отправлен организатору
 (`QUESTIONS_TO_ORGANIZER.md`, вопросы 1 и 2). До получения официальных файлов
 матрица ведётся как черновик с пометкой `source: draft`.
+
+Возможные источники приложений найдены в пакете методики
+(`02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА.tar`: `lct_scoring_board_20260825`,
+`hackathon_gold_20260811`, `ПАСПОРТ_РАЗМЕТКИ.pdf`) — см.
+[`DATASET_PACKAGE.md`](DATASET_PACKAGE.md). Это материалы организатора, но не
+подписанные приложения к ТЗ, поэтому статус строк не меняется до ответа.

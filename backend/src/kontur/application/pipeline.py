@@ -39,6 +39,14 @@ STAGE_FAILURE_STATUS: dict[Stage, FindingStatus] = {
     Stage.L7_FINDINGS: FindingStatus.ABSTAIN,
 }
 
+#: Стадии верификации и протокола: статус здесь присваивает инспектор
+#: (ADR-0001), поэтому автоматического статуса остановки у них нет.
+NON_HALTING_STAGES: frozenset[Stage] = frozenset({Stage.L8_REVIEW, Stage.L9_PROTOCOL})
+
+
+class StageHaltError(RuntimeError):
+    """У стадии нет автоматического безопасного статуса остановки."""
+
 
 @dataclass(frozen=True, slots=True)
 class StageResult:
@@ -49,16 +57,31 @@ class StageResult:
 
 
 def halt_status(stage: Stage) -> FindingStatus:
-    """Безопасный статус остановки на стадии."""
+    """Безопасный статус остановки на стадии.
 
-    return STAGE_FAILURE_STATUS[stage]
+    Для L8–L9 таблицы нет по существу, а не по недосмотру: находка уже
+    существует, и её статус меняет только инспектор. Поднимаем явную ошибку
+    вместо `KeyError`, чтобы отказ на этих стадиях нельзя было молча
+    превратить в статус качества данных.
+    """
+
+    if stage in NON_HALTING_STAGES:
+        raise StageHaltError(
+            f"{stage.name}: статус на этой стадии присваивает инспектор, "
+            "автоматическая остановка не определена"
+        )
+    try:
+        return STAGE_FAILURE_STATUS[stage]
+    except KeyError as error:
+        raise StageHaltError(f"{stage.name}: безопасный статус остановки не задан") from error
 
 
 def run(stages: list[StageResult]) -> FindingStatus | None:
     """Первый отказ прекращает каскад и возвращает безопасный статус.
 
     Возврат None означает, что все предварительные стадии пройдены и правило
-    допущено до предметного сравнения.
+    допущено до предметного сравнения. Отказ на L8–L9 обязан нести явный
+    `status`: иначе будет `StageHaltError`.
     """
 
     for result in sorted(stages, key=lambda item: item.stage):

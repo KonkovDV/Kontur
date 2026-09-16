@@ -24,7 +24,9 @@
   ≥0,95; локализация ≥0,95 при IoU≥0,50; Precision ≥0,90; Recall ≥0,80;
   F1 ≥0,85; FPR ≤0,10) — это **минимумы приёмки, а не заявленный результат**.
   До замера на frozen validation репозиторий не публикует ни одного числа.
-- `РАЗМЕЧЕННЫЙ_TEST_213` — карантин: не открывать, не подбирать по нему пороги.
+- `РАЗМЕЧЕННЫЙ_TEST__213.zip` и каталог
+  `РАЗМЕЧЕННЫЙ_TEST_HIDDEN_ОРГАНИЗАТОР_213` — карантин: не открывать, не
+  подбирать по ним пороги ([`docs/DATASET_PACKAGE.md`](docs/DATASET_PACKAGE.md)).
 
 ## Состояние
 
@@ -38,16 +40,20 @@ contracts/      OpenAPI 3.0 и JSON-схемы обмена (source of truth)
 backend/        Python 3.12: домен, применение, инфраструктура, API
 gateway/        Node.js BFF по требованию п.1.5 ТЗ
 web/            React: двухпанельное рабочее место инспектора
-data/           Матрица 132, нормативный реестр, политика карантина
+data/           Матрица 132, нормативный реестр, реестр поставки, карантин
 docs/           ADR, план, трассируемость ТЗ, Red Team, вопросы организатору
 ```
 
 ## Старт
 
 ```bash
-python -m venv .venv && .venv/Scripts/pip install -e backend[dev]
-.venv/Scripts/pytest backend/tests -q
-docker compose up -d        # postgres, redis, rabbitmq, minio
+python -m venv .venv
+. .venv/bin/activate                 # Windows: .venv\Scripts\activate
+pip install -e "backend[dev]"
+pytest backend/tests -q
+ruff check backend scripts && mypy --strict backend/src
+python scripts/check_contracts.py && python scripts/check_claims.py
+docker compose up -d                 # postgres, redis, rabbitmq, minio
 ```
 
 ## Документы
@@ -58,7 +64,9 @@ docker compose up -d        # postgres, redis, rabbitmq, minio
 | План 15–29.09 с гейтами | [`docs/PLAN_2026_09.md`](docs/PLAN_2026_09.md) |
 | Трассируемость ТЗ → артефакт → тест | [`docs/TZ_TRACEABILITY.md`](docs/TZ_TRACEABILITY.md) |
 | Архитектурные решения | [`docs/adr/`](docs/adr/) |
+| Состав переданного пакета данных | [`docs/DATASET_PACKAGE.md`](docs/DATASET_PACKAGE.md) |
 | Карантин датасета | [`docs/DATA_QUARANTINE.md`](docs/DATA_QUARANTINE.md) |
+| Производительность и нагрузка | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
 | Вопросы организатору | [`docs/QUESTIONS_TO_ORGANIZER.md`](docs/QUESTIONS_TO_ORGANIZER.md) |
 | Red Team и stop-ship | [`docs/RED_TEAM.md`](docs/RED_TEAM.md) |
 | Нормативный реестр | [`docs/NORMATIVE_REGISTRY.md`](docs/NORMATIVE_REGISTRY.md) |
