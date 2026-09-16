@@ -30,6 +30,8 @@ def review(
 ) -> Finding:
     """Применяет решение инспектора к атомарной находке."""
 
+    if action == "SPLIT":
+        raise TransitionError("SPLIT is not an atomic review action; use split()")
     if action not in ACTION_TO_STATUS:
         raise TransitionError(f"unknown review action: {action}")
     if action == "REJECT" and reason_code is None:

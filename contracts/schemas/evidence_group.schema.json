@@ -18,7 +18,8 @@
     "matrix_version": { "type": "string" },
     "fragments": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
+      "description": "Для CANDIDATE/CONFIRMED_VIOLATION/NEGATIVE_VERIFIED минимум один фрагмент. Для MISSING_EVIDENCE и NOT_APPLICABLE массив может быть пустым: это и есть отсутствие доказательства, а не дыра в схеме.",
       "items": { "$ref": "#/$defs/fragment" }
     },
     "resolved_revisions": {
@@ -83,7 +84,8 @@
         },
         "approval_date": { "type": "string", "format": "date" },
         "sheet": { "type": "string" },
-        "predecessor_file_id": { "type": ["string", "null"] }
+        "predecessor_file_id": { "type": ["string", "null"] },
+        "successor_file_id": { "type": ["string", "null"] }
       }
     },
     "extraction": {

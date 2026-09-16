@@ -54,6 +54,8 @@ def test_coverage_report_does_not_overclaim(registry: FileRuleRegistry) -> None:
     assert report["expected_total"] == EXPECTED_PARAM_COUNT
     assert report["declared"] <= EXPECTED_PARAM_COUNT
     assert report["executable"] <= report["declared"]
+    assert report["executable"] == 0
+    assert report["extractor_missing"] == report["declared"]
 
 
 @pytest.mark.xfail(reason="Приложение 1 не передано организатором (вопрос 1)", strict=True)

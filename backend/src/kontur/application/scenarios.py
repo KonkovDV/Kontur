@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from kontur.domain.models import DocStage
+from kontur.domain.status_map import EmptyPackageError
 from kontur.domain.statuses import Completeness, FindingStatus, Scenario
 
 CompletenessMap = dict[DocStage, Completeness]
@@ -20,6 +21,8 @@ def detect_scenario(completeness: CompletenessMap) -> Scenario:
     }
     partial = any(state is Completeness.PARTIAL for state in completeness.values())
 
+    if not present and not partial:
+        raise EmptyPackageError("empty package is not a TZ comparison scenario")
     if partial:
         return Scenario.PARTIALLY_LOADED
     if present == {DocStage.PD, DocStage.RD, DocStage.ID}:

@@ -5,7 +5,7 @@
   "unit": "м",
   "matrix_version": "draft-0",
   "source_trigger_logic": "< 0.9 м",
-  "coverage": "executable",
+  "coverage": "extractor_missing",
   "applicability": {
     "stages_required": ["PD", "RD"],
     "object_types": [],

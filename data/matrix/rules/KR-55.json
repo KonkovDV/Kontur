@@ -5,7 +5,7 @@
   "unit": "Марка (B)",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Понижение класса",
-  "coverage": "executable",
+  "coverage": "extractor_missing",
   "applicability": {
     "stages_required": ["PD", "RD", "ID"],
     "object_types": [],

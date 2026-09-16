@@ -22,11 +22,12 @@ CREATE TABLE files (
                         CHECK (approval_status IN ('APPROVED', 'NOT_APPROVED', 'UNKNOWN')),
     approval_date       DATE,
     predecessor_id      TEXT REFERENCES files (id),
+    successor_id        TEXT REFERENCES files (id),
     file_hash           CHAR(64) NOT NULL,
     file_path           TEXT NOT NULL,
     uploaded_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-    -- Один и тот же content hash в пределах объекта — один источник.
-    UNIQUE (object_id, file_hash)
+    -- Один content hash может быть и РД, и ИД. Дедуп — в пределах стадии.
+    UNIQUE (object_id, file_hash, doc_stage)
 );
 
 CREATE TABLE params (
@@ -100,6 +101,13 @@ CREATE TABLE checks (
         OR (inspector_id IS NOT NULL AND decided_at IS NOT NULL
             AND evidence_group_id IS NOT NULL)
     ),
+    CONSTRAINT candidate_requires_evidence CHECK (
+        finding_status NOT IN (
+            'CANDIDATE', 'CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED',
+            'AUTO_NO_DIFFERENCE'
+        )
+        OR evidence_group_id IS NOT NULL
+    ),
     CONSTRAINT rejection_requires_reason CHECK (
         finding_status <> 'NEGATIVE_VERIFIED' OR reason_code IS NOT NULL
     )
@@ -121,7 +129,32 @@ CREATE TABLE protocols (
     UNIQUE (object_id, version)
 );
 
+CREATE TABLE dataset_items (
+    id                  TEXT PRIMARY KEY,
+    evidence_group_id   TEXT REFERENCES evidence_groups (id),
+    gold_label          TEXT,
+    expert_id           TEXT,
+    reason_code         TEXT,
+    dataset_version     TEXT NOT NULL,
+    split               TEXT NOT NULL CHECK (split IN ('train', 'validation', 'test')),
+    object_group_id     TEXT NOT NULL,
+    object_id           TEXT NOT NULL REFERENCES objects (id)
+);
+
+CREATE UNIQUE INDEX dataset_items_object_split
+    ON dataset_items (object_id, dataset_version);
+
+CREATE TABLE audit_log (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    action      TEXT NOT NULL,
+    object_id   TEXT,
+    details     JSONB NOT NULL DEFAULT '{}',
+    timestamp   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ip_address  TEXT,
+    user_agent  TEXT
+);
+
 -- Остальные таблицы сводки ТЗ п. 10 (Rejection_Log, Dispute_Log, Suspicions,
--- Logical_Rules, Normative_Base, ML_Retraining_Log, Audit_Log,
--- Monitoring_Metrics, Dataset_Items, Model_Versions) добавляются миграциями
--- по мере реализации соответствующих модулей.
+-- Logical_Rules, Normative_Base, ML_Retraining_Log, Monitoring_Metrics,
+-- Model_Versions) добавляются миграциями по мере реализации модулей.

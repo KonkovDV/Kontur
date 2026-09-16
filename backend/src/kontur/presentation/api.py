@@ -7,11 +7,12 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from kontur.domain.state_machines import TransitionError
 
-app = FastAPI(title="Контур — Инспектор ИИ", version="0.1.0-skeleton")
+app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton")
 
 MAX_FILE_BYTES = 50 * 1024 * 1024
 MAX_BATCH_BYTES = 200 * 1024 * 1024
@@ -19,8 +20,8 @@ SUPPORTED_SUFFIXES = frozenset({".pdf", ".docx", ".xml"})
 
 
 @app.exception_handler(TransitionError)
-async def _transition_error(_: object, exc: TransitionError) -> HTTPException:
-    raise HTTPException(status_code=409, detail=str(exc)) from exc
+async def _transition_error(_request: Request, exc: TransitionError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
 @app.get("/api/v1/healthz")

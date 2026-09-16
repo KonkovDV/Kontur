@@ -58,6 +58,11 @@ def test_finalize_blocked_by_open_candidate() -> None:
     assert pending == ["f-1"]
 
 
+def test_split_is_not_an_atomic_review_action() -> None:
+    with pytest.raises(TransitionError, match="SPLIT"):
+        review(candidate(), actor=INSPECTOR, action="SPLIT")
+
+
 def test_missing_evidence_does_not_block_finalize() -> None:
     stalled = replace(candidate("f-2"), finding_status=FindingStatus.MISSING_EVIDENCE)
     ok, pending = can_finalize([stalled])

@@ -49,7 +49,7 @@ FINDING_TRANSITIONS: dict[FindingStatus, frozenset[FindingStatus]] = {
     FindingStatus.NOT_COMPARABLE: frozenset({FindingStatus.CANDIDATE}),
     FindingStatus.LOW_QUALITY: frozenset({FindingStatus.CANDIDATE}),
     FindingStatus.ABSTAIN: frozenset({FindingStatus.CANDIDATE}),
-    FindingStatus.NOT_APPLICABLE: frozenset(),
+    FindingStatus.NOT_APPLICABLE: frozenset({FindingStatus.CANDIDATE}),
     FindingStatus.CONFIRMED_VIOLATION: frozenset(),
     FindingStatus.NEGATIVE_VERIFIED: frozenset(),
 }
@@ -94,6 +94,9 @@ def advance_finding(
 
     if target in HUMAN_ONLY_STATUSES and not actor.is_human:
         raise TransitionError(f"finding: {target} requires a human inspector, got {actor.actor_id}")
+    # ТЗ п. 9.2: инспектор может подтвердить применимость. Автомат — нет.
+    if current is FindingStatus.NOT_APPLICABLE and not actor.is_human:
+        raise TransitionError("NOT_APPLICABLE override requires a human inspector")
     if target not in FINDING_TRANSITIONS[current]:
         raise TransitionError(f"finding: {current} -> {target}")
     return target
@@ -105,9 +108,11 @@ def advance_sync(current: SyncState, target: SyncState) -> SyncState:
     return target
 
 
-def unfinalize(actor: Actor) -> ProcessState:
-    """Отмена финализации: только супервизор, с обязательной записью аудита."""
+def unfinalize(current: ProcessState, actor: Actor) -> ProcessState:
+    """Отмена финализации: только супервизор, только из FINALIZED."""
 
+    if current is not ProcessState.FINALIZED:
+        raise TransitionError("unfinalize requires FINALIZED")
     if not (actor.is_human and actor.is_supervisor):
         raise TransitionError("unfinalize requires a supervisor")
     return ProcessState.COMPLETED

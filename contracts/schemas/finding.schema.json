@@ -6,7 +6,6 @@
   "type": "object",
   "required": [
     "finding_id",
-    "evidence_group_id",
     "rule_code",
     "finding_status",
     "review_priority",
@@ -14,7 +13,7 @@
   ],
   "properties": {
     "finding_id": { "type": "string" },
-    "evidence_group_id": { "type": "string" },
+    "evidence_group_id": { "type": ["string", "null"] },
     "rule_code": { "type": "string" },
     "section": { "type": "string" },
     "expected_value": { "type": ["string", "number", "boolean", "null"] },
@@ -22,6 +21,7 @@
     "delta": { "type": ["string", "number", "null"] },
     "finding_status": {
       "type": "string",
+      "description": "AUTO_NO_DIFFERENCE — внутренний статус автомата (развилка п. 9.2 и 9.3). Во внешний протокол ТЗ и в ИАИС «РиН» не сериализуется: ждёт ответа организатора на вопрос 8. Карточки с этим статусом кладутся в sections.preliminary_no_difference.",
       "enum": [
         "CANDIDATE",
         "CONFIRMED_VIOLATION",
@@ -96,6 +96,25 @@
   "allOf": [
     {
       "if": {
+        "properties": {
+          "finding_status": {
+            "enum": [
+              "CANDIDATE",
+              "CONFIRMED_VIOLATION",
+              "NEGATIVE_VERIFIED",
+              "AUTO_NO_DIFFERENCE"
+            ]
+          }
+        },
+        "required": ["finding_status"]
+      },
+      "then": {
+        "properties": { "evidence_group_id": { "type": "string" } },
+        "required": ["evidence_group_id"]
+      }
+    },
+    {
+      "if": {
         "properties": { "finding_status": { "const": "CONFIRMED_VIOLATION" } },
         "required": ["finding_status"]
       },
@@ -104,7 +123,7 @@
           "inspector_decision": { "type": "object" },
           "counts_as_violation": { "const": true }
         },
-        "required": ["inspector_decision"]
+        "required": ["inspector_decision", "evidence_group_id"]
       }
     },
     {

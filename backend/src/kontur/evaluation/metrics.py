@@ -12,6 +12,8 @@ import math
 from dataclasses import dataclass
 
 #: Обязательные минимумы ТЗ. Это пороги приёмки, а не заявленный результат.
+#: Гармоника P=0.90 и R=0.80 ≈ 0.847 < 0.85: точка на полу precision и recall
+#: не проходит F1. Запас держим по precision, не по recall.
 TZ_THRESHOLDS: dict[str, float] = {
     "character_accuracy": 0.95,
     "key_field_exact_match": 0.90,

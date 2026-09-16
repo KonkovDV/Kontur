@@ -39,14 +39,20 @@
     },
     "sections": {
       "type": "object",
-      "description": "Пять раздельных таблиц по п. 9.2 ТЗ",
+      "description": "Пять таблиц п. 9.2 плюс внутренний карман preliminary_no_difference: автоматическое «расхождения нет» до ответа организатора на вопрос 8. Это не NEGATIVE_VERIFIED и не входит в число нарушений.",
       "required": ["completeness", "candidates", "confirmed", "negative_verified", "suspicions"],
       "properties": {
         "completeness": { "type": "array", "items": { "type": "object" } },
         "candidates": { "type": "array", "items": { "$ref": "./finding.schema.json" } },
         "confirmed": { "type": "array", "items": { "$ref": "./finding.schema.json" } },
         "negative_verified": { "type": "array", "items": { "$ref": "./finding.schema.json" } },
-        "suspicions": { "type": "array", "items": { "type": "object" } }
+        "suspicions": { "type": "array", "items": { "type": "object" } },
+        "missing_evidence": { "type": "array", "items": { "$ref": "./finding.schema.json" } },
+        "preliminary_no_difference": {
+          "type": "array",
+          "description": "Внутренние AUTO_NO_DIFFERENCE. Не выгружаются в РиН.",
+          "items": { "$ref": "./finding.schema.json" }
+        }
       }
     },
     "violation_count": {

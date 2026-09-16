@@ -5,30 +5,32 @@
 
 | Пункт ТЗ | Требование | Артефакт | Тест | Состояние |
 |---|---|---|---|---|
-| 1.3–1.4 | REST/JSON, OpenAPI 3.0, асинхронный pull, `process_id` | `contracts/openapi.yaml`, `presentation/api` | `test_api_contract.py` | skeleton |
-| 1.5 | React + Node.js + Python ML, RabbitMQ | `web/`, `gateway/`, `backend/`, `docker-compose.yml` | `test_queue_contract.py` | skeleton |
-| 3–5 | Разделы ПД, состав РД, состав ИД | `domain/nomenclature.py` | `test_nomenclature.py` | skeleton |
+| 1.3–1.4 | REST/JSON, OpenAPI 3.0, асинхронный pull, `process_id` | `contracts/openapi.yaml`, `presentation/api.py` | `scripts/check_contracts.py` | skeleton |
+| 1.5 | React + Node.js + Python, RabbitMQ | `web/`, `gateway/`, `backend/`, `docker-compose.yml` | — | skeleton |
+| 3–5 | Разделы ПД, состав РД, состав ИД | `data/matrix/sections.json` | `test_matrix_registry.py` | skeleton |
 | 6 | Соответствие разделов матрицы и документации | `data/matrix/sections.json` | `test_matrix_registry.py` | skeleton |
 | 7 | 12 модулей системы | `application/` | — | skeleton |
 | 8 | Матрица 132 параметра, таблица `Params` | `data/matrix/`, `contracts/schemas/rule.schema.json` | `test_matrix_registry.py` | skeleton |
-| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/l0_intake…l4_revision` | `test_coordinates.py`, `test_revision_resolver.py` | skeleton |
-| 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `application/l0_intake/errors.py` | `test_intake_errors.py` | skeleton |
-| 9.1 | Статусы загрузки `*_UPLOADED/PARTIAL/MISSING` | `domain/statuses.py` | `test_state_machines.py` | skeleton |
-| 9.2 | Сценарии FULL…PARTIALLY_LOADED, карточка доказательства, протокол | `application/l6_matrix`, `l7_findings` | `test_scenarios.py` | skeleton |
-| 9.2 | Инкрементальное обновление при дозагрузке | `application/l7_findings/incremental.py` | `test_incremental.py` | skeleton |
-| 9.3 | Верификация, reason_code, атомарность, финализация, отмена | `domain/review.py` | `test_review_state_machine.py` | skeleton |
-| 9.3 | Юзабилити: ≤30 мин на протокол, ≤3 клика на находку | `web/`, `docs/USABILITY_PROTOCOL.md` | ручной протокол на 5 инспекторах | skeleton |
-| 9.4 | GOLD, версии, разбиение по объектам, пороги публикации модели | `evaluation/gold.py`, `evaluation/release_gate.py` | `test_release_gate.py` | skeleton |
-| 9.5 | SUSPICION, 4 подхода, дедупликация | `application/l7_findings/suspicion.py` | `test_suspicion.py` | skeleton |
-| 9.6 | ИАИС «РиН»: только FINALIZED, УКЭП, 3 ретрая 1/5/15 мин, PENDING_SYNC | `infrastructure/adapters/rin/` | `test_rin_sync.py` | skeleton |
-| 10 | 16 таблиц БД | `infrastructure/db/schema.sql` | `test_db_schema.py` | skeleton |
-| 11 | Производительность, p95 ≤200 мс, 100 пользователей | `docs/PERFORMANCE.md`, k6-сценарий | нагрузочный прогон | skeleton |
-| 12 | Аутентификация, RBAC, TLS 1.3, аудит, 152-ФЗ, антивирус | `core/security/` | `test_authz_matrix.py` | skeleton |
-| 13 | JSON-логи, уровни, Prometheus/Grafana, ELK, алерты, checksum | `core/observability/` | `test_log_schema.py` | skeleton |
+| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/pipeline.py` | `test_pipeline.py`, `test_coordinates.py` | skeleton |
+| 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `pipeline.INTAKE_REJECTION_CODES` | `test_status_map.py` | skeleton |
+| 9.1 | Статусы загрузки `PD_/RD_/ID_UPLOADED/PARTIAL/MISSING` | `domain/status_map.py` | `test_status_map.py` | skeleton |
+| 9.2 | Сценарии FULL…PARTIALLY_LOADED; пустой пакет — ошибка | `application/scenarios.py` | `test_scenarios.py` | skeleton |
+| 9.2 | Карточка доказательства, протокол, `MISSING_EVIDENCE` | `contracts/schemas/` | `scripts/check_contracts.py` | skeleton |
+| 9.2 | Инкрементальное обновление при дозагрузке | — | — | skeleton |
+| 9.3 | Верификация, reason_code, атомарность, финализация, отмена | `application/review.py`, `domain/state_machines.py` | `test_review.py`, `test_state_machines.py` | skeleton |
+| 9.3 | Юзабилити: ≤30 мин на протокол, ≤3 клика на находку | `web/` | ручной протокол на 5 инспекторах | skeleton |
+| 9.4 | GOLD, версии, разбиение по объектам, пороги публикации модели | `evaluation/release_gate.py` | — | skeleton |
+| 9.5 | SUSPICION, 4 подхода, дедупликация | — | — | skeleton |
+| 9.6 | ИАИС «РиН»: только `PROTOCOL_FINALIZED`, УКЭП, 3 ретрая | — | — | skeleton |
+| 10 | Таблицы БД | `infrastructure/db/schema.sql` | — | skeleton |
+| 11 | Производительность, p95 ≤200 мс, 100 пользователей | — | — | skeleton |
+| 12 | Аутентификация, RBAC, TLS 1.3, аудит, 152-ФЗ, антивирус | — | — | skeleton |
+| 13 | JSON-логи, уровни, Prometheus/Grafana, ELK, алерты, checksum | `gateway/src/server.js` | — | skeleton |
 | 14 | Пороги приёмки и правила выборок | `evaluation/metrics.py` | `test_metrics.py` | skeleton |
-| Прил. 1 | Полный перечень 132 параметров | `data/matrix/params.csv` | `test_matrix_registry.py` | **нет исходника** |
-| Прил. 2 | Образец протокола | `contracts/schemas/protocol.schema.json` | `test_protocol_template.py` | **нет исходника** |
+| Прил. 1 | Полный перечень 132 параметров | `data/matrix/params.template.csv` | `test_matrix_registry.py` | **нет исходника** |
+| Прил. 2 | Образец протокола | `contracts/schemas/protocol.schema.json` | — | **нет исходника** |
 
-Приложения 1 и 2 в переданном PDF отсутствуют — запрос отправлен организатору
-(`QUESTIONS_TO_ORGANIZER.md`, вопросы 1 и 2). До получения официальных файлов
-матрица ведётся как черновик с пометкой `source: draft`.
+Приложения 1 и 2 в переданном PDF отсутствуют. Вопросы 1 и 2 записаны в
+`QUESTIONS_TO_ORGANIZER.md`. Файла-подтверждения отправки организатору в
+репозитории нет. До получения официальных файлов матрица ведётся как черновик
+`source: draft`.

@@ -35,9 +35,13 @@ def test_fpr_checked_by_upper_bound() -> None:
     assert not meets_threshold("false_positive_rate", wilson(100, 1000))
 
 
-def test_f1_matches_tz_minimum() -> None:
+def test_f1_floor_is_stricter_than_precision_and_recall_floors() -> None:
+    """P=0.90 и R=0.80 одновременно не закрывают порог F1=0.85."""
+
     assert TZ_THRESHOLDS["f1"] == 0.85
-    assert round(f1(0.90, 0.80), 4) == 0.8471
+    harmonic = f1(TZ_THRESHOLDS["precision"], TZ_THRESHOLDS["recall"])
+    assert round(harmonic, 4) == 0.8471
+    assert harmonic < TZ_THRESHOLDS["f1"]
 
 
 def test_internal_targets_are_stricter_than_tz() -> None:

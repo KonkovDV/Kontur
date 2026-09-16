@@ -13,6 +13,18 @@ from enum import IntEnum
 
 from kontur.domain.statuses import FindingStatus
 
+INTAKE_REJECTION_CODES = frozenset(
+    {
+        "UNSUPPORTED_FORMAT",
+        "CORRUPTED_FILE",
+        "FILE_TOO_LARGE",
+        "BATCH_LIMIT_EXCEEDED",
+        "ANTIVIRUS_REJECTED",
+        "ENCRYPTED_FILE",
+        "PROCESSING_TIMEOUT",
+    }
+)
+
 
 class Stage(IntEnum):
     L0_INTAKE = 0
@@ -27,15 +39,15 @@ class Stage(IntEnum):
     L9_PROTOCOL = 9
 
 
-#: Во что превращается отказ каждой стадии. Ни один вариант не даёт нарушения.
+#: Отказ стадии → статус качества данных, не нарушение.
+#: L0 не входит: сбой загрузки — RejectionReason, а не finding.
 STAGE_FAILURE_STATUS: dict[Stage, FindingStatus] = {
-    Stage.L0_INTAKE: FindingStatus.MISSING_EVIDENCE,
     Stage.L1_IDENTITY: FindingStatus.CLARIFICATION_REQUIRED,
     Stage.L2_EXTRACTION: FindingStatus.LOW_QUALITY,
     Stage.L3_LOCALIZATION: FindingStatus.LOW_QUALITY,
     Stage.L4_REVISION: FindingStatus.CLARIFICATION_REQUIRED,
     Stage.L5_PAIRING: FindingStatus.NOT_COMPARABLE,
-    Stage.L6_MATRIX: FindingStatus.NOT_APPLICABLE,
+    Stage.L6_MATRIX: FindingStatus.CLARIFICATION_REQUIRED,
     Stage.L7_FINDINGS: FindingStatus.ABSTAIN,
 }
 
@@ -49,8 +61,13 @@ class StageResult:
 
 
 def halt_status(stage: Stage) -> FindingStatus:
-    """Безопасный статус остановки на стадии."""
+    """Безопасный статус остановки на стадии.
 
+    L0 не превращается в finding: вызывающий код обязан обработать reject.
+    """
+
+    if stage is Stage.L0_INTAKE:
+        raise ValueError("L0 intake failures are RejectionReason, not findings")
     return STAGE_FAILURE_STATUS[stage]
 
 

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from kontur.application.scenarios import detect_scenario, status_for_missing_stage
 from kontur.domain.models import DocStage
+from kontur.domain.status_map import EmptyPackageError
 from kontur.domain.statuses import Completeness, FindingStatus, Scenario
 
 FULL_MAP = {
@@ -11,6 +14,16 @@ FULL_MAP = {
     DocStage.RD: Completeness.UPLOADED,
     DocStage.ID: Completeness.UPLOADED,
 }
+
+
+def test_empty_package_is_not_a_scenario() -> None:
+    mapping = {
+        DocStage.PD: Completeness.MISSING,
+        DocStage.RD: Completeness.MISSING,
+        DocStage.ID: Completeness.MISSING,
+    }
+    with pytest.raises(EmptyPackageError):
+        detect_scenario(mapping)
 
 
 def test_full_scenario() -> None:

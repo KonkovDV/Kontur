@@ -1,11 +1,13 @@
 openapi: 3.0.3
 info:
-  title: Контур — Инспектор ИИ
+  title: Инспектор ИИ
   version: 0.1.0-skeleton
   description: >
     Сверка ПД/РД/ИД по матрице 132 параметров. Асинхронная pull-модель:
     загрузка возвращает process_id, результат забирается по запросу.
     CONFIRMED_VIOLATION присваивает только инспектор.
+    Имя продукта в интерфейсе — «Инспектор ИИ» (ТЗ п. 1.1).
+    Кодовая линия репозитория — Контур.
 servers:
   - url: /api/v1
 
@@ -187,10 +189,24 @@ components:
           enum: [FULL, PD_RD_ONLY, PD_ID_ONLY, RD_ID_ONLY, SINGLE_ONLY, PARTIALLY_LOADED]
         completeness:
           type: object
+          required: [pd, rd, id]
+          description: >
+            Буквальные статусы п. 9.1. Внутри домена хранится UPLOADED/PARTIAL/MISSING
+            и проецируется через tz_upload_status.
           properties:
-            pd: { $ref: "#/components/schemas/CompletenessState" }
-            rd: { $ref: "#/components/schemas/CompletenessState" }
-            id: { $ref: "#/components/schemas/CompletenessState" }
+            pd:
+              type: string
+              enum: [PD_UPLOADED, PD_PARTIAL, PD_MISSING]
+            rd:
+              type: string
+              enum: [RD_UPLOADED, RD_PARTIAL, RD_MISSING]
+            id:
+              type: string
+              enum: [ID_UPLOADED, ID_PARTIAL, ID_MISSING]
+        protocol_status:
+          type: string
+          description: Проекция п. 9.3. COMPLETED→VERIFICATION_COMPLETED, FINALIZED→PROTOCOL_FINALIZED.
+          enum: [READY, VERIFYING, VERIFICATION_COMPLETED, PROTOCOL_FINALIZED]
         counters:
           type: object
           description: candidates и confirmed считаются раздельно; в число нарушений входит только confirmed
@@ -203,10 +219,6 @@ components:
             suspicions: { type: integer }
         sync_state: { $ref: "#/components/schemas/SyncState" }
         versions: { $ref: "#/components/schemas/Versions" }
-
-    CompletenessState:
-      type: string
-      enum: [UPLOADED, PARTIAL, MISSING]
 
     SyncState:
       type: string
@@ -228,7 +240,10 @@ components:
       properties:
         action:
           type: string
-          enum: [CONFIRM, REJECT, REQUEST_CLARIFICATION, SPLIT]
+          enum: [CONFIRM, REJECT, REQUEST_CLARIFICATION]
+          description: >
+            SPLIT составного кандидата — отдельная операция (ещё не реализована).
+            Не смешивается с атомарным решением.
         inspector_id: { type: string }
         reason_code:
           type: string

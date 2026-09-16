@@ -80,6 +80,33 @@ HUMAN_ONLY_STATUSES: frozenset[FindingStatus] = frozenset(
     {FindingStatus.CONFIRMED_VIOLATION, FindingStatus.NEGATIVE_VERIFIED}
 )
 
+#: Карточки, которые можно отдать во внешний протокол ТЗ и в РиН.
+#: AUTO_NO_DIFFERENCE живёт только внутри до ответа на вопрос 8.
+WIRE_FINDING_STATUSES: frozenset[FindingStatus] = frozenset(
+    {
+        FindingStatus.CANDIDATE,
+        FindingStatus.CONFIRMED_VIOLATION,
+        FindingStatus.NEGATIVE_VERIFIED,
+        FindingStatus.MISSING_EVIDENCE,
+        FindingStatus.NOT_APPLICABLE,
+        FindingStatus.NOT_COMPARABLE,
+        FindingStatus.LOW_QUALITY,
+        FindingStatus.ABSTAIN,
+        FindingStatus.CLARIFICATION_REQUIRED,
+        FindingStatus.SUSPICION,
+    }
+)
+
+#: Предметный статус без evidence_group_id не существует (ADR-0002).
+STATUSES_REQUIRING_EVIDENCE: frozenset[FindingStatus] = frozenset(
+    {
+        FindingStatus.CANDIDATE,
+        FindingStatus.CONFIRMED_VIOLATION,
+        FindingStatus.NEGATIVE_VERIFIED,
+        FindingStatus.AUTO_NO_DIFFERENCE,
+    }
+)
+
 
 class ReasonCode(StrEnum):
     """Кодированная причина отклонения кандидата (ТЗ п. 9.3, обязательна)."""

@@ -6,7 +6,12 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
 
-from kontur.domain.statuses import FindingStatus, ReasonCode, ReviewPriority
+from kontur.domain.statuses import (
+    STATUSES_REQUIRING_EVIDENCE,
+    FindingStatus,
+    ReasonCode,
+    ReviewPriority,
+)
 
 Point = tuple[float, float]
 Polygon = tuple[Point, ...]
@@ -49,6 +54,7 @@ class DocumentRef:
     approval_date: date | None = None
     sheet: str | None = None
     predecessor_file_id: str | None = None
+    successor_file_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,19 +129,23 @@ class Finding:
     """
 
     finding_id: str
-    evidence_group_id: str
     rule_code: str
     finding_status: FindingStatus
     review_priority: ReviewPriority
     matrix_version: str
     rule_version: str
     model_version: str
+    evidence_group_id: str | None = None
     expected_value: str | float | bool | None = None
     actual_value: str | float | bool | None = None
     delta: str | float | None = None
     rationale: str = ""
     llm_draft: str | None = None
     inspector_decision: InspectorDecision | None = None
+
+    def __post_init__(self) -> None:
+        if self.finding_status in STATUSES_REQUIRING_EVIDENCE and not self.evidence_group_id:
+            raise ValueError(f"{self.finding_status} requires evidence_group_id")
 
     @property
     def counts_as_violation(self) -> bool:

@@ -5,7 +5,7 @@
   "unit": "м²",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Расхождение > 0",
-  "coverage": "executable",
+  "coverage": "extractor_missing",
   "applicability": {
     "stages_required": ["PD", "RD"],
     "object_types": [],
