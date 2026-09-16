@@ -23,4 +23,5 @@ out/
 *.tar
 *.7z
 *.pdf
+*.pptx
 !docs/**/*.pdf

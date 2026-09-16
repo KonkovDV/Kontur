@@ -1,0 +1,172 @@
+{
+  "package_version": "lct2026-task10-20260915",
+  "observed_at": "2026-09-15",
+  "source": "Файловый архив организатора, зафиксирован по скриншотам каталога поставки. Размеры — как их показывает проводник (КБ). Сами архивы в репозиторий не попадают.",
+  "hash_status": "pending",
+  "hash_procedure": "SHA-256 считается до распаковки (evaluation/inventory.hash_archives), затем сверяется с SHA256SUMS.jsonl внутри пакета разметки.",
+  "annotated_layout": [
+    "annotated_documents/",
+    "data/",
+    "QA_SUMMARY.json",
+    "SHA256SUMS.jsonl",
+    "VALIDATION.json",
+    "ПАСПОРТ_РАЗМЕТКИ.pdf"
+  ],
+  "methodology_folders": [
+    "annotation_20260811",
+    "domain_violation_reannotation_20260817",
+    "hackathon_gold_20260811",
+    "krestovozdvizhenskiy_4_comparison_20260813",
+    "lct_scoring_board_20260825",
+    "multi_object_annotation_20260817",
+    "nagatinskaya_1_4_comparison_20260813",
+    "novoslobodskaya_comparison_20260812",
+    "ocr_pilot_20260811",
+    "rechnikov_7_7_comparison_20260812",
+    "tz_redline_20260811",
+    "tz_redline_20260812",
+    "tz_review_20260809",
+    "tz_substantive_revision_20260817",
+    "violation_annotation_20260811",
+    "violations_drawings_20260812",
+    "Общая структура МГСН"
+  ],
+  "methodology_folders_complete": false,
+  "entries": [
+    {
+      "name": "01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА.tar",
+      "kind": "participant_package",
+      "access": "open",
+      "object_id": null,
+      "size_kb": 8514948,
+      "sha256": null,
+      "notes": "Сводный пакет участникам: по имени — 3 объекта. Состав раскрыть при инвентаризации (Gate A)."
+    },
+    {
+      "name": "02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА.tar",
+      "kind": "methodology",
+      "access": "open",
+      "object_id": null,
+      "size_kb": 505070,
+      "sha256": null,
+      "notes": "Методика и эталонная разметка организатора: каталоги tz_review/tz_redline, *_comparison_*, lct_scoring_board_20260825, hackathon_gold_20260811."
+    },
+    {
+      "name": "10. Мосстройнадзор.pdf",
+      "kind": "tz",
+      "access": "open",
+      "object_id": null,
+      "size_kb": 3326,
+      "sha256": null,
+      "notes": "ТЗ задачи №10. Приложения 1 (перечень 132 параметров) и 2 (образец протокола) в файл не вошли."
+    },
+    {
+      "name": "10_Полярная_25_СОШ1100к7.tar",
+      "kind": "object_package",
+      "access": "open",
+      "object_id": "10_Полярная_25_СОШ1100к7",
+      "size_kb": 20465301,
+      "sha256": null,
+      "notes": "Самый крупный объект поставки."
+    },
+    {
+      "name": "11_Полярная_16.tar",
+      "kind": "object_package",
+      "access": "open",
+      "object_id": "11_Полярная_16",
+      "size_kb": 10034977,
+      "sha256": null,
+      "notes": ""
+    },
+    {
+      "name": "12_Полярная_25_ДОО220к9.tar",
+      "kind": "object_package",
+      "access": "open",
+      "object_id": "12_Полярная_25_ДОО220к9",
+      "size_kb": 5858623,
+      "sha256": null,
+      "notes": ""
+    },
+    {
+      "name": "13_УНДМС.tar",
+      "kind": "object_package",
+      "access": "open",
+      "object_id": "13_УНДМС",
+      "size_kb": 15738775,
+      "sha256": null,
+      "notes": "Расшифровка аббревиатуры объекта организатором не дана."
+    },
+    {
+      "name": "14_Алтуфьевское_79Б.tar",
+      "kind": "object_package",
+      "access": "open",
+      "object_id": "14_Алтуфьевское_79Б",
+      "size_kb": 783176,
+      "sha256": null,
+      "notes": ""
+    },
+    {
+      "name": "15_Полярная_17.tar",
+      "kind": "object_package",
+      "access": "open",
+      "object_id": "15_Полярная_17",
+      "size_kb": 2980787,
+      "sha256": null,
+      "notes": ""
+    },
+    {
+      "name": "16_Лосевская_3А.tar",
+      "kind": "object_package",
+      "access": "open",
+      "object_id": "16_Лосевская_3А",
+      "size_kb": 2559123,
+      "sha256": null,
+      "notes": ""
+    },
+    {
+      "name": "17_Изумрудная_12.tar",
+      "kind": "object_package",
+      "access": "open",
+      "object_id": "17_Изумрудная_12",
+      "size_kb": 1367298,
+      "sha256": null,
+      "notes": ""
+    },
+    {
+      "name": "18_Октябрьская_103.tar",
+      "kind": "object_package",
+      "access": "open",
+      "object_id": "18_Октябрьская_103",
+      "size_kb": 1049196,
+      "sha256": null,
+      "notes": ""
+    },
+    {
+      "name": "ЛЦТ2026 Шаблон презентации.pptx",
+      "kind": "presentation_template",
+      "access": "open",
+      "object_id": null,
+      "size_kb": 33362,
+      "sha256": null,
+      "notes": "Шаблон итоговой презентации."
+    },
+    {
+      "name": "РАЗМЕЧЕННЫЙ_TEST__213.zip",
+      "kind": "annotated_hidden_test",
+      "access": "quarantine",
+      "object_id": null,
+      "size_kb": 8032546,
+      "sha256": null,
+      "notes": "Скрытый тест. Внутри каталог РАЗМЕЧЕННЫЙ_TEST_HIDDEN_ОРГАНИЗАТОР_213. Не распаковывать, не смотреть, не подбирать по нему пороги."
+    },
+    {
+      "name": "РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203.zip",
+      "kind": "annotated_train",
+      "access": "open",
+      "object_id": null,
+      "size_kb": 3840762,
+      "sha256": null,
+      "notes": "Открытая разметка для обучения и валидации. Разбиение — только по object_id."
+    }
+  ]
+}
