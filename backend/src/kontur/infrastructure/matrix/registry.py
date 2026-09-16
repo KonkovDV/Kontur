@@ -73,7 +73,7 @@ class FileRuleRegistry:
         return versions.pop()
 
     def get(self, code: str) -> dict[str, object]:
-        canonical = canonicalize_rule_code(code)
+        canonical = canonicalize_rule_code(code, known_codes=self._rules)
         try:
             return self._rules[canonical]
         except KeyError as exc:

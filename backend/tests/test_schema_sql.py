@@ -76,6 +76,9 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "protocols_finalized_is_immutable" in sql
     assert "kontur.unfinalize_reason" in sql
     assert "KNT01" in sql
+    assert "не может менять содержимое" in sql
+    assert "KNT02" in sql
+    assert "processes_sync_requires_finalized_protocol" in sql
     assert "gold_label IN ('CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED')" in sql
     assert "gold_requires_expert" in sql
     assert "negative_gold_requires_reason" in sql
@@ -85,10 +88,12 @@ def test_checks_sql_asserts_instead_of_merely_running() -> None:
     """checks.sql обязан ловить отсутствие ограничения, а не любую ошибку подряд."""
 
     checks = CHECKS.read_text(encoding="utf-8")
-    assert checks.count("DO $$") >= 10
+    assert checks.count("DO $$") >= 12
     assert checks.count("DO $$") == checks.count("END;\n$$;")
     assert "KNT99" in checks
+    assert "KNT02" in checks
     assert "SQLSTATE 'KNT01'" in checks
+    assert "отмена финализации изменила содержимое" in checks
     assert "WHEN check_violation THEN NULL;" in checks
     assert checks.rstrip().endswith("ROLLBACK;")
 

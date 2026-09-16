@@ -249,9 +249,8 @@ def test_evidence_group_id_mismatch_is_refused() -> None:
 
 
 def test_page_numbering_starts_at_one() -> None:
-    group = _group(_fragment(EvidenceRole.ACTUAL, DocStage.RD, page=0))
-    with pytest.raises(ValueError, match="pdf_page_number"):
-        build_check(_finding(), group)
+    with pytest.raises(ValueError, match="страницы"):
+        _fragment(EvidenceRole.ACTUAL, DocStage.RD, page=0)
 
 
 def test_candidate_on_ungrounded_value_is_refused() -> None:
@@ -267,6 +266,17 @@ def test_dual_read_requirement_is_enforced_when_asked() -> None:
         build_check(_finding(), group, require_second_read=True)
     agreed = _group(_fragment(EvidenceRole.ACTUAL, DocStage.RD, second_read=True))
     assert build_check(_finding(), agreed, require_second_read=True).evidence
+
+
+def test_dual_read_flag_on_the_rule_is_enough_without_a_caller_flag() -> None:
+    """`dual_read_required` из матрицы не должен зависеть от памяти вызывающего."""
+
+    group = _group(_fragment(EvidenceRole.ACTUAL, DocStage.RD, second_read=None))
+    rule = {"extractor": {"dual_read_required": True}}
+    with pytest.raises(ValueError, match="двойного чтения"):
+        build_check(_finding(), group, rule=rule)
+    agreed = _group(_fragment(EvidenceRole.ACTUAL, DocStage.RD, second_read=True))
+    assert build_check(_finding(), agreed, rule=rule).evidence
 
 
 def test_two_values_on_one_stage_are_a_linkage_error() -> None:

@@ -98,6 +98,17 @@ def test_appendix2_short_aliases_resolve(registry: FileRuleRegistry) -> None:
         registry.get("AR-14")
 
 
+def test_cyrillic_section_prefixes_resolve_to_catalog_codes(
+    registry: FileRuleRegistry,
+) -> None:
+    assert registry.get("ПЗ-1")["code"] == "PZ-001"
+    assert registry.get("СМ-132")["code"] == "SM-132"
+    assert registry.get("ООС-98")["code"] == "OOS-098"
+    assert registry.get("ЗУ-124")["code"] == "ZU-124"
+    with pytest.raises(KeyError):
+        registry.get("CM-132")
+
+
 def test_params_csv_matches_catalog() -> None:
     catalog = [
         json.loads(line)

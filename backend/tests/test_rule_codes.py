@@ -44,14 +44,27 @@ def test_typography_from_pdf_does_not_silently_break_the_code() -> None:
     assert canonicalize_rule_code("\uff30\uff5a\uff0d\uff10\uff10\uff11") == "PZ-001"
 
 
-def test_cyrillic_homoglyph_is_folded_only_when_result_is_latin() -> None:
-    """`РZ-001` с русской «Р» — тот же PZ-001; настоящий кириллический код не портится."""
+def test_cyrillic_section_aliases_beat_letter_homoglyphs() -> None:
+    """`СМ` и `ООС` нельзя свёртывать побуквенно: получились бы CM и OOC."""
 
     assert canonicalize_rule_code("РZ-1") == "PZ-001"
     assert canonicalize_rule_code("АR-14") == "AR-014"
-    assert canonicalize_rule_code("ПЗ-1") == "ПЗ-001"
-    assert canonicalize_rule_code("ЗУ-1") == "ЗУ-001"
+    assert canonicalize_rule_code("ПЗ-1") == "PZ-001"
+    assert canonicalize_rule_code("ЗУ-1") == "ZU-001"
+    assert canonicalize_rule_code("СМ-132") == "SM-132"
+    assert canonicalize_rule_code("ООС-98") == "OOS-098"
+    assert canonicalize_rule_code("ИОС4-79") == "IOS4-079"
     assert fold_latin_homoglyphs("ЗУ-001") == "ЗУ-001"
+    assert fold_latin_homoglyphs("СМ-132") == "CM-132"
+
+
+def test_homoglyph_fold_is_accepted_only_when_the_code_is_in_the_matrix() -> None:
+    """Без матрицы `РZ` → PZ; с чужой матрицей свёртка в несуществующий код не проходит."""
+
+    assert canonicalize_rule_code("РZ-1", known_codes={"PZ-001"}) == "PZ-001"
+    assert canonicalize_rule_code("СМ-132", known_codes={"SM-132"}) == "SM-132"
+    assert canonicalize_rule_code("СМ-132", known_codes={"PZ-001"}) == "SM-132"
+    assert canonicalize_rule_code("СМ-132", known_codes={"CM-132"}) == "CM-132"
 
 
 def test_canonicalization_is_idempotent_and_self_reported() -> None:

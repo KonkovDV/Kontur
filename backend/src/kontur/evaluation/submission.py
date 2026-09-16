@@ -17,6 +17,7 @@ from enum import StrEnum
 
 from kontur.domain.models import DocStage, EvidenceFragment, EvidenceGroup, EvidenceRole, Finding
 from kontur.domain.rule_codes import (
+    KnownCodes,
     canonicalize_rule_code,
     display_alias,
     is_canonical_rule_code,
@@ -50,7 +51,7 @@ class ContestCodeStyle(StrEnum):
 
     Каталог параметров организатора трёхзначный (`PZ-001`), в текстах Приложения 2
     встречается короткая форма (`PZ-1`). Пока организатор не подтвердил формат
-    приёмки (вопрос 12), выбор живёт в одной константе, а не в десяти местах.
+    приёмки (вопрос 16), выбор живёт в одной константе, а не в десяти местах.
     """
 
     CANONICAL = "CANONICAL"
@@ -117,12 +118,18 @@ def contest_allows_auto_no_difference() -> bool:
     return FindingStatus.AUTO_NO_DIFFERENCE not in WIRE_FINDING_STATUSES
 
 
-def contest_parameter_code(code: str, style: ContestCodeStyle | None = None) -> str:
+def contest_parameter_code(
+    code: str,
+    style: ContestCodeStyle | None = None,
+    known_codes: KnownCodes = None,
+) -> str:
     """Код параметра в формате приёмки. Пустой или неразбираемый код — отказ."""
 
-    canonical = canonicalize_rule_code(code)
+    canonical = canonicalize_rule_code(code, known_codes=known_codes)
     if not is_canonical_rule_code(canonical):
         raise ValueError(f"код параметра не разбирается: {code!r}")
+    if known_codes is not None and canonical not in set(known_codes):
+        raise ValueError(f"код параметра не из матрицы: {code!r}")
     chosen = CONTEST_CODE_STYLE if style is None else style
     if chosen is ContestCodeStyle.SHORT:
         return display_alias(canonical)
@@ -285,6 +292,17 @@ def location_from_group(group: EvidenceGroup) -> str:
     return ", ".join(part for part in parts if part)
 
 
+def dual_read_required(rule: dict[str, object] | None) -> bool:
+    """`extractor.dual_read_required` из матрицы. Нет правила — нет требования."""
+
+    if rule is None:
+        return False
+    extractor = rule.get("extractor")
+    if not isinstance(extractor, dict):
+        return False
+    return extractor.get("dual_read_required") is True
+
+
 def _assert_groundedness(group: EvidenceGroup, *, require_second_read: bool) -> None:
     for fragment in group.fragments:
         if fragment.role not in _COMPARED_ROLES:
@@ -310,7 +328,9 @@ def build_check(
     criticality: str | None = None,
     location: str | None = None,
     style: ContestCodeStyle | None = None,
-    require_second_read: bool = False,
+    require_second_read: bool | None = None,
+    rule: dict[str, object] | None = None,
+    known_codes: KnownCodes = None,
 ) -> SubmissionCheck:
     """Собрать строку ответа из находки и её доказательства.
 
@@ -320,14 +340,21 @@ def build_check(
     * доказательство обязано принадлежать этой же находке и этому же правилу;
     * `VIOLATION_PRESENT` без локализации не выпускается: без страницы и файла
       организатор не сможет его засчитать, а FPR вырастет;
-    * автоматический кандидат обязан опираться на grounded-значения.
+    * автоматический кандидат обязан опираться на grounded-значения;
+    * `dual_read_required` из правила исполняется, даже если вызывающий
+      забыл передать `require_second_read`.
     """
 
-    code = contest_parameter_code(finding.rule_code, style)
+    need_second_read = (
+        dual_read_required(rule) if require_second_read is None else require_second_read
+    )
+    code = contest_parameter_code(finding.rule_code, style, known_codes=known_codes)
     label = contest_violation_label(finding.finding_status)
 
     if group is not None:
-        if canonicalize_rule_code(group.rule_code) != canonicalize_rule_code(finding.rule_code):
+        finding_code = canonicalize_rule_code(finding.rule_code, known_codes=known_codes)
+        group_code = canonicalize_rule_code(group.rule_code, known_codes=known_codes)
+        if group_code != finding_code:
             raise ValueError(
                 f"{finding.finding_id}: доказательство правила {group.rule_code} "
                 f"подставлено находке правила {finding.rule_code}"
@@ -345,7 +372,7 @@ def build_check(
     resolved_location = location
     if group is not None and group.fragments:
         if finding.finding_status is FindingStatus.CANDIDATE:
-            _assert_groundedness(group, require_second_read=require_second_read)
+            _assert_groundedness(group, require_second_read=need_second_read)
         evidence = evidence_from_group(group)
         values = stage_values(group)
         if resolved_location is None:

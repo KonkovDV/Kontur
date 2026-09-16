@@ -42,7 +42,24 @@ EXCEPTION
 END;
 $$;
 
--- 3. Отмена финализации возможна, но только с причиной в сессии (ТЗ п. 9.3).
+-- 3. Отмена финализации не может подменить payload в том же UPDATE.
+DO $$
+BEGIN
+    PERFORM set_config('kontur.unfinalize_reason', 'ошибочная редакция', true);
+    UPDATE protocols
+       SET status = 'VERIFICATION_COMPLETED',
+           finalized_at = NULL,
+           payload = '{"tampered": true}'::jsonb
+     WHERE id = 'proto-check';
+    RAISE EXCEPTION 'отмена финализации изменила содержимое протокола'
+        USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN SQLSTATE 'KNT01' THEN
+        PERFORM set_config('kontur.unfinalize_reason', '', true);
+END;
+$$;
+
+-- 4. Отмена финализации возможна, но только с причиной и без правки payload.
 DO $$
 BEGIN
     PERFORM set_config('kontur.unfinalize_reason', 'ошибочно выбрана редакция РД', true);
@@ -53,10 +70,18 @@ BEGIN
     IF (SELECT status FROM protocols WHERE id = 'proto-check') <> 'VERIFICATION_COMPLETED' THEN
         RAISE EXCEPTION 'отмена финализации супервизором не прошла' USING ERRCODE = 'KNT99';
     END IF;
+    IF (SELECT payload FROM protocols WHERE id = 'proto-check') <> '{}'::jsonb THEN
+        RAISE EXCEPTION 'payload изменился при отмене финализации' USING ERRCODE = 'KNT99';
+    END IF;
 END;
 $$;
 
--- 4. Машинный статус не может быть GOLD-меткой (ТЗ п. 9.4).
+-- Протокол снова финализирован: дальнейшие проверки выгрузки требуют живой печати.
+UPDATE protocols
+   SET status = 'PROTOCOL_FINALIZED', finalized_at = now()
+ WHERE id = 'proto-check';
+
+-- 5. Машинный статус не может быть GOLD-меткой (ТЗ п. 9.4).
 DO $$
 BEGIN
     INSERT INTO dataset_items (
@@ -72,7 +97,7 @@ EXCEPTION
 END;
 $$;
 
--- 5. GOLD без ответственного эксперта не существует (ТЗ п. 9.4).
+-- 6. GOLD без ответственного эксперта не существует (ТЗ п. 9.4).
 DO $$
 BEGIN
     INSERT INTO dataset_items (
@@ -88,7 +113,7 @@ EXCEPTION
 END;
 $$;
 
--- 6. Отрицательный вердикт требует кодированной причины (ТЗ п. 9.3).
+-- 7. Отрицательный вердикт требует кодированной причины (ТЗ п. 9.3).
 DO $$
 BEGIN
     INSERT INTO dataset_items (
@@ -104,7 +129,7 @@ EXCEPTION
 END;
 $$;
 
--- 7. Подтверждённое нарушение без инспектора и комментария невозможно (п. 9.3).
+-- 8. Подтверждённое нарушение без инспектора и комментария невозможно (п. 9.3).
 INSERT INTO params (code, matrix_version, section, parameter_name, compiled_rule, coverage)
 VALUES ('PZ-001', 'draft-0', 'ПЗ', 'Площадь застройки', '{}'::jsonb, 'extractor_missing');
 
@@ -126,7 +151,7 @@ EXCEPTION
 END;
 $$;
 
--- 8. Выгрузка в РиН до финализации запрещена (ТЗ п. 9.6).
+-- 9. Выгрузка в РиН до финализации запрещена (ТЗ п. 9.6).
 DO $$
 BEGIN
     INSERT INTO processes (
@@ -140,7 +165,7 @@ EXCEPTION
 END;
 $$;
 
--- 9. FINALIZED без человека и без протокола не существует (ТЗ п. 9.3).
+-- 10. FINALIZED без человека и без протокола не существует (ТЗ п. 9.3).
 DO $$
 BEGIN
     INSERT INTO processes (
@@ -154,7 +179,7 @@ EXCEPTION
 END;
 $$;
 
--- 10. Счётчик повторов ограничен ТЗ: 1 попытка + 2 повтора.
+-- 11. Счётчик повторов ограничен ТЗ: 1 попытка + 2 повтора.
 DO $$
 BEGIN
     INSERT INTO processes (
@@ -168,7 +193,7 @@ EXCEPTION
 END;
 $$;
 
--- 11. Нормальный путь обязан проходить: процесс, протокол, GOLD-метка.
+-- 12. Нормальный путь обязан проходить: процесс, протокол, GOLD-метка.
 INSERT INTO processes (
     id, object_id, process_state, scenario, matrix_version, model_version,
     protocol_id, finalized_by, finalized_at, sync_state, sync_attempts
@@ -184,5 +209,30 @@ INSERT INTO dataset_items (
     'ds-ok', 'eg-check', 'NEGATIVE_VERIFIED', 'exp-1', 'WRONG_REVISION_SELECTED',
     'v1', 'grp-1', 'obj-check'
 );
+
+-- 13. Выгрузка смотрит на статус протокола, не только на process_state.
+INSERT INTO protocols (
+    id, object_id, version, matrix_version, dataset_version, model_version,
+    input_manifest_hash, status, payload
+) VALUES (
+    'proto-open', 'obj-check', 2, 'draft-0', 'v1', 'm-0',
+    'hash-2', 'VERIFICATION_COMPLETED', '{}'::jsonb
+);
+
+DO $$
+BEGIN
+    INSERT INTO processes (
+        id, object_id, process_state, scenario, matrix_version, model_version,
+        protocol_id, finalized_by, finalized_at, sync_state
+    ) VALUES (
+        'prc-desync', 'obj-check', 'FINALIZED', 'FULL', 'draft-0', 'm-0',
+        'proto-open', 'inspector-7', now(), 'PENDING_SYNC'
+    );
+    RAISE EXCEPTION 'синхронизация по незакрытому протоколу прошла'
+        USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN SQLSTATE 'KNT02' THEN NULL;
+END;
+$$;
 
 ROLLBACK;
