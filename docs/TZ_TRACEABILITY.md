@@ -13,11 +13,11 @@
 | 8 | Матрица 132 параметра, таблица `Params` | `data/matrix/`, `contracts/schemas/rule.schema.json` | `test_matrix_registry.py` | in_progress |
 
 | 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/pipeline.py` | `test_pipeline.py`, `test_coordinates.py` | skeleton |
-| 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `application/intake.py`, `application/retry_policy.py` | `test_intake.py`, `test_retry_policy.py` | in_progress (проверки чистые, к FastAPI и шлюзу не подключены) |
+| 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `application/intake.py`, `application/retry_policy.py`, `presentation/api.py` | `test_intake.py`, `test_retry_policy.py`, `test_api.py` | in_progress |
 | 9.1 | Статусы загрузки `PD_/RD_/ID_UPLOADED/PARTIAL/MISSING` | `domain/status_map.py` | `test_status_map.py` | skeleton |
 | 9.2 | Сценарии FULL…PARTIALLY_LOADED; пустой пакет — ошибка | `application/scenarios.py` | `test_scenarios.py` | skeleton |
-| 9.2 | Карточка доказательства, протокол, `MISSING_EVIDENCE` | `contracts/schemas/` | `scripts/check_contracts.py` | skeleton |
-| 9.2 | Каскад L0–L9: безопасная остановка, L0 ≠ finding, нет автостатуса на L8–L9 | `application/pipeline.py` | `test_pipeline.py`, `test_pipeline_halt.py` | in_progress |
+| 9.2 | Карточка доказательства, протокол, `MISSING_EVIDENCE` | `application/protocol.py`, `contracts/schemas/` | `test_pz001.py`, `scripts/check_contracts.py` | in_progress |
+| 9.2 | Каскад L0–L9: безопасная остановка, L0 ≠ finding, нет автостатуса на L8–L9 | `application/pipeline.py`, `application/evaluate.py` | `test_pipeline.py`, `test_pipeline_halt.py`, `test_pz001.py` | in_progress |
 | 9.2 | Инкрементальное обновление при дозагрузке | — | — | skeleton |
 | 9.3 | Верификация, reason_code, атомарность, финализация, отмена | `application/review.py`, `domain/state_machines.py`, триггер `protocols_finalized_is_immutable` | `test_review.py`, `test_state_machines.py`, `db/checks.sql` § 1–3 | in_progress |
 | 9.3 | Юзабилити: ≤30 мин на протокол, ≤3 клика на находку | `web/` | ручной протокол на 5 инспекторах | skeleton |
@@ -27,10 +27,10 @@
 | 9.6 | ИАИС «РиН»: только `PROTOCOL_FINALIZED`, УКЭП, 3 ретрая | `application/retry_policy.py`, ограничение `sync_only_after_finalize` | `test_retry_policy.py`, `db/checks.sql` § 8 | in_progress (УКЭП и sandbox отсутствуют) |
 | 10 | Таблицы БД | `infrastructure/db/schema.sql` (добавлена `processes`) | `test_schema_sql.py`, job `db` исполняет `schema.sql` и `checks.sql` | in_progress (8 из 16 таблиц сводки ещё нет) |
 | 11 | Производительность, p95 ≤200 мс, 100 пользователей | `docs/PERFORMANCE.md` | нагрузочный прогон (не выполнен) | skeleton |
-| 12 | Аутентификация, RBAC, TLS 1.3, аудит, 152-ФЗ, антивирус | `presentation/rbac.py`, `security` и `x-required-roles` в `contracts/openapi.yaml`, `audit_log` | `test_rbac.py`, `scripts/check_contracts.py` | in_progress (матрица прав описана и сверяется с контрактом; проверки в обработчиках нет) |
+| 12 | Аутентификация, RBAC, TLS 1.3, аудит, 152-ФЗ, антивирус | `presentation/rbac.py`, `presentation/auth.py`, `security` и `x-required-roles` в `contracts/openapi.yaml`, `audit_log` | `test_rbac.py`, `test_api.py`, `scripts/check_contracts.py` | in_progress (Bearer-заглушка, не JWT; TLS и антивирус ещё нет) |
 | 13 | JSON-логи, уровни, Prometheus/Grafana, ELK, алерты, checksum | `gateway/src/server.js` | — | skeleton |
 | 14 | Пороги приёмки и правила выборок | `evaluation/metrics.py` | `test_metrics.py` | skeleton |
-| Прил. 1 | Полный перечень 132 параметров | `data/matrix/source/parameter_catalog_132.jsonl`, `data/matrix/params.template.csv`, `data/matrix/rules/*.json` | `test_matrix_registry.py` | in_progress (132 schema-valid, coverage=extractor_missing) |
+| Прил. 1 | Полный перечень 132 параметров | `data/matrix/source/parameter_catalog_132.jsonl`, `data/matrix/params.template.csv`, `data/matrix/rules/*.json` | `test_matrix_registry.py`, `test_pz001.py` | in_progress (132 schema-valid; `PZ-001` executable, остальные extractor_missing) |
 | Прил. 2 | Образец протокола | `contracts/schemas/protocol.schema.json` | — | in_progress (образец найден: Приложение 2 docx) |
 | Прил. 2 | Формат ответа участника (`submission_schema.json`) | `contracts/schemas/submission.schema.json`, `evaluation/submission.py` | `test_submission.py` | in_progress (формат `parameter_code` — вопрос 16) |
 

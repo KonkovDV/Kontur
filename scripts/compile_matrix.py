@@ -246,7 +246,18 @@ def _stamp_catalog_fields(rule: dict[str, object], row: dict[str, object]) -> di
     stamped["unit"] = row["unit"]
     stamped["source_trigger_logic"] = row["trigger"]
     stamped["matrix_version"] = "draft-0"
-    stamped["coverage"] = "extractor_missing"
+    coverage = str(rule.get("coverage") or "extractor_missing")
+    if coverage not in {
+        "executable",
+        "extractor_missing",
+        "source_missing",
+        "advisory",
+        "not_applicable",
+    }:
+        raise ValueError(f"{row['parameter_code']}: неизвестный coverage {coverage}")
+    # coverage — наш статус, не поле каталога: executable ставит override
+    # только когда экстрактор реально работает.
+    stamped["coverage"] = coverage
     stamped["review_priority"] = _priority(str(row["criticality"]))
     return stamped
 
