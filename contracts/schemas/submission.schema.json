@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/submission.schema.json",
+  "title": "ИИ-инспектор: ответ участника",
+  "description": "Внешний контракт соревнования (копия submission_schema.json организатора). Внутренние FindingStatus сюда не проецируются напрямую — только через evaluation.submission.",
+  "type": "object",
+  "required": ["object_id", "checks"],
+  "properties": {
+    "object_id": { "type": "string" },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["parameter_code", "location", "violation_label", "evidence"],
+        "properties": {
+          "parameter_code": { "type": "string" },
+          "location": { "type": "string" },
+          "pd_value": {},
+          "rd_value": {},
+          "id_value": {},
+          "violation_label": {
+            "enum": [
+              "VIOLATION_PRESENT",
+              "NO_VIOLATION",
+              "MISSING_DOCUMENT",
+              "COMPARISON_IMPOSSIBLE"
+            ]
+          },
+          "protocol_status": {
+            "enum": [
+              "OK",
+              "WARNING",
+              "CRITICAL",
+              "ID_MISSING",
+              "RD_MISSING",
+              "PD_MISSING",
+              "COMPARISON_IMPOSSIBLE"
+            ]
+          },
+          "criticality": { "type": ["string", "null"] },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["stage", "file_id", "pdf_page_number"],
+              "properties": {
+                "stage": { "enum": ["PD", "RD", "ID"] },
+                "file_id": { "type": "string" },
+                "pdf_page_number": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

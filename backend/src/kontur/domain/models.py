@@ -146,6 +146,20 @@ class Finding:
     def __post_init__(self) -> None:
         if self.finding_status in STATUSES_REQUIRING_EVIDENCE and not self.evidence_group_id:
             raise ValueError(f"{self.finding_status} requires evidence_group_id")
+        if self.finding_status is FindingStatus.CONFIRMED_VIOLATION:
+            decision = self.inspector_decision
+            if decision is None or decision.action != "CONFIRM":
+                raise ValueError("CONFIRMED_VIOLATION requires inspector CONFIRM")
+            if not decision.comment or not decision.comment.strip():
+                raise ValueError("CONFIRMED_VIOLATION requires comment")
+        if self.finding_status is FindingStatus.NEGATIVE_VERIFIED:
+            decision = self.inspector_decision
+            if decision is None or decision.action != "REJECT":
+                raise ValueError("NEGATIVE_VERIFIED requires inspector REJECT")
+            if decision.reason_code is None:
+                raise ValueError("NEGATIVE_VERIFIED requires reason_code")
+            if not decision.comment or not decision.comment.strip():
+                raise ValueError("NEGATIVE_VERIFIED requires comment")
 
     @property
     def counts_as_violation(self) -> bool:

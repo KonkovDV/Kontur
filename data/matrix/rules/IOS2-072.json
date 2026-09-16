@@ -1,0 +1,78 @@
+{
+  "code": "IOS2-072",
+  "section": "ИОС2",
+  "name": "Материал и класс давления напорных труб В1/Т3",
+  "unit": "Марка",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Подмена оцинкованных/чугунных труб на полипропилен без перерасчета расширения.",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Спецификация материалов (ИОС2)"
+    },
+    "rd": {
+      "description": "Спецификация оборудования (ВК)"
+    },
+    "id": {
+      "description": "Паспорта и сертификаты на трубы"
+    }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": null,
+    "anchors": [
+      "Материал и класс давления напорных труб В1/Т3"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "delta",
+    "tolerance_abs": 0.0,
+    "tolerance_rel": null,
+    "rounding": "half_up",
+    "unit_target": "Марка"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "MEDIUM",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "code": "ODI-117",
+  "section": "ОДИ",
+  "name": "Ширина дверных проемов на путях движения МГН",
+  "unit": "м",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Ширина полотна двери в свету < 1.5 м (СП 59.13330).",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Ведомость заполнения проемов (ОДИ/АР)"
+    },
+    "rd": {
+      "description": "Спецификация дверей; Маркировка МГН (АР)"
+    },
+    "id": {
+      "description": "Паспорта на двери; Фактические обмеры"
+    }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": null,
+    "anchors": [
+      "Ширина дверных проемов на путях движения МГН"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "ge",
+    "value": 1.5,
+    "min_value": 1.5,
+    "tolerance_abs": 0.0,
+    "rounding": "none",
+    "unit_target": "м"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

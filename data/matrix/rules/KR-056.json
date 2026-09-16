@@ -1,0 +1,78 @@
+{
+  "code": "KR-056",
+  "section": "КР",
+  "name": "Марка стали и класс прочности металлопроката",
+  "unit": "Марка (С)",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Подмена марки стали на менее прочную (например, С345 на С245).",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Текст КР; Спецификация металлопроката"
+    },
+    "rd": {
+      "description": "Ведомости материалов; Спецификация (КМ/КМД)"
+    },
+    "id": {
+      "description": "Журнал сварочных работ; Сертификаты на металл"
+    }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": null,
+    "anchors": [
+      "Марка стали и класс прочности металлопроката"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "delta",
+    "tolerance_abs": 0.0,
+    "tolerance_rel": null,
+    "rounding": "half_up",
+    "unit_target": "Марка (С)"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

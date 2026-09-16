@@ -1,0 +1,78 @@
+{
+  "code": "KR-067",
+  "section": "КР",
+  "name": "Ведомости расхода материалов (бетон, сталь)",
+  "unit": "м³ / т",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Итоговое расхождение объемов материалов между ПД, РД и ИД > 2%.",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Сводные таблицы расхода (КР)"
+    },
+    "rd": {
+      "description": "Ведомости расхода стали (ВРС) (КЖ/КМ)"
+    },
+    "id": {
+      "description": "Общий журнал работ; Реестр накладных КС-2"
+    }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": null,
+    "anchors": [
+      "Ведомости расхода материалов (бетон, сталь)"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "delta",
+    "tolerance_abs": null,
+    "tolerance_rel": 0.02,
+    "rounding": "half_up",
+    "unit_target": "м³ / т"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "MEDIUM",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

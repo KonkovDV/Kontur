@@ -1,10 +1,10 @@
 {
-  "code": "PZ-01",
+  "code": "PZ-001",
   "section": "ПЗ",
   "name": "Площадь застройки",
   "unit": "м²",
   "matrix_version": "draft-0",
-  "source_trigger_logic": "Расхождение > 0",
+  "source_trigger_logic": "Расхождение контуров здания на генплане с данными БТИ или РД > 0.",
   "coverage": "extractor_missing",
   "applicability": {
     "stages_required": ["PD", "RD"],
@@ -12,9 +12,9 @@
     "condition": null
   },
   "sources": {
-    "pd": { "document_kind": ["ПЗ"], "table": "ТЭП", "description": "Таблица ТЭП в составе ПЗУ" },
-    "rd": { "document_kind": ["ОД"], "table": "ТЭП", "description": "Лист общих данных, таблица ТЭП" },
-    "id": { "document_kind": ["Техплан"], "table": null, "description": "Технический план БТИ" }
+    "pd": { "document_kind": ["ПЗ"], "table": "ТЭП", "description": "Раздел ПЗУ: Таблица ТЭП" },
+    "rd": { "document_kind": ["ОД"], "table": "ТЭП", "description": "Раздел ПП (ГП): Лист «Общие данные», Таблица ТЭП" },
+    "id": { "document_kind": ["Техплан"], "table": null, "description": "Технический план БТИ; Акт выноса осей" }
   },
   "extractor": {
     "type": "number",

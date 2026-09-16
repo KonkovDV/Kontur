@@ -27,6 +27,7 @@ QUARANTINE_MARKERS = (
 
 _QUARANTINE_DIR = "quarantine"
 _REPEATED_UNDERSCORES = re.compile(r"_+")
+_PATH_SEPARATORS = re.compile(r"[\\/]+")
 
 
 class QuarantineViolation(RuntimeError):
@@ -37,6 +38,12 @@ def normalize(path: Path | str) -> str:
     """Схлопывает повторяющиеся `_` и снимает регистр (в т. ч. кириллица)."""
 
     return _REPEATED_UNDERSCORES.sub("_", str(path)).casefold()
+
+
+def _path_parts(path: Path | str) -> tuple[str, ...]:
+    """Компоненты пути и для POSIX, и для Windows-строки на Linux CI."""
+
+    return tuple(part for part in _PATH_SEPARATORS.split(str(path)) if part)
 
 
 def is_quarantined(path: Path | str) -> bool:
@@ -50,7 +57,7 @@ def is_quarantined(path: Path | str) -> bool:
     text = normalize(path)
     if any(marker in text for marker in QUARANTINE_MARKERS):
         return True
-    return any(normalize(part) == _QUARANTINE_DIR for part in Path(path).parts)
+    return any(normalize(part) == _QUARANTINE_DIR for part in _path_parts(path))
 
 
 def quarantine_hits(paths: Iterable[Path | str]) -> list[str]:
@@ -72,21 +79,22 @@ def require_path_open(path: Path | str) -> Path:
 
 
 def hash_archives(incoming: Path) -> dict[str, str]:
-    """SHA-256 каждого архива до распаковки.
+    """SHA-256 открытых архивов до распаковки.
 
-    Карантинные имена в список хеширования не попадают: их нельзя открывать
-    даже для контрольной суммы в рабочем контуре (считается отдельно, offline).
-    Обход — рекурсивный: переименование в подкаталог без маркера в имени
-    верхнего уровня не должно снимать карантин, пока маркер остаётся в пути.
+    Карантинные имена **пропускаются**, а не валят всю партию: иначе поставка
+    с `РАЗМЕЧЕННЫЙ_TEST__213.zip` в `data/incoming/` блокирует Gate A.
+    Сами карантинные файлы этим контуром не читаются и не хешируются.
     """
 
+    files: list[Path] = []
     if incoming.exists():
-        files = sorted(path for path in incoming.rglob("*") if path.is_file())
-        blocked = quarantine_hits(files)
-        if blocked:
-            raise QuarantineViolation(
-                "карантинные архивы не хешируются рабочим контуром: " + ", ".join(blocked)
-            )
+        files = sorted(
+            path
+            for path in incoming.rglob("*")
+            if path.is_file() and not is_quarantined(path)
+        )
+    if not files:
+        return {}
     raise NotImplementedError("Gate A: SHA-256 pending")
 
 

@@ -17,7 +17,9 @@ from kontur.evaluation.inventory import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_quarantine_markers_are_detected() -> None:
+def test_windows_quarantine_path_is_detected_on_posix() -> None:
+    assert is_quarantined(r"F:\data\quarantine\hidden.zip")
+    assert is_quarantined("F:\\data\\quarantine\\hidden.zip")
     assert is_quarantined(Path("data/quarantine/РАЗМЕЧЕННЫЙ_TEST_213.zip"))
     assert is_quarantined(Path("data/incoming/РАЗМЕЧЕННЫЙ_TEST__213.zip"))
     assert not is_quarantined(Path("data/work/obj-10/documents/АР-1.pdf"))
@@ -65,18 +67,25 @@ def test_quarantine_hits_lists_only_forbidden_paths() -> None:
     assert quarantine_hits(paths) == [str(paths[0])]
 
 
-def test_hash_archives_refuses_quarantine(tmp_path: Path) -> None:
+def test_hash_archives_skips_quarantine_and_hashes_open_files(tmp_path: Path) -> None:
     (tmp_path / "РАЗМЕЧЕННЫЙ_TEST__213.zip").write_bytes(b"x")
-    with pytest.raises(QuarantineViolation, match="карантин"):
+    (tmp_path / "10_Полярная_16.tar").write_bytes(b"open")
+    with pytest.raises(NotImplementedError, match="Gate A"):
         hash_archives(tmp_path)
 
 
-def test_hash_archives_refuses_nested_quarantine_name(tmp_path: Path) -> None:
+def test_hash_archives_skips_nested_quarantine_name(tmp_path: Path) -> None:
     nested = tmp_path / "incoming" / "drop"
     nested.mkdir(parents=True)
     (nested / "РАЗМЕЧЕННЫЙ_TEST__213.zip").write_bytes(b"x")
-    with pytest.raises(QuarantineViolation, match="карантин"):
+    (tmp_path / "train.tar").write_bytes(b"open")
+    with pytest.raises(NotImplementedError, match="Gate A"):
         hash_archives(tmp_path)
+
+
+def test_hash_archives_only_quarantine_returns_empty(tmp_path: Path) -> None:
+    (tmp_path / "РАЗМЕЧЕННЫЙ_TEST__213.zip").write_bytes(b"x")
+    assert hash_archives(tmp_path) == {}
 
 
 def test_require_path_open_blocks_hidden_test_name(tmp_path: Path) -> None:

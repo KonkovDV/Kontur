@@ -31,7 +31,9 @@ services:
       - minio:/data
 
   core:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     command: uvicorn kontur.presentation.api:app --host 0.0.0.0 --port 8000
     environment:
       KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur

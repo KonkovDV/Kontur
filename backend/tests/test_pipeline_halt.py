@@ -88,3 +88,12 @@ def test_earliest_failure_wins() -> None:
 def test_clean_cascade_reaches_comparison() -> None:
     stages = [StageResult(stage, ok=True) for stage in Stage if stage <= Stage.L7_FINDINGS]
     assert run(stages) is None
+
+
+def test_skipped_precomparison_stage_does_not_admit_comparison() -> None:
+    with pytest.raises(StageHaltError, match="пропущены стадии"):
+        run([])
+    with pytest.raises(StageHaltError, match="L1_IDENTITY"):
+        run([StageResult(Stage.L6_MATRIX, ok=True)])
+    with pytest.raises(StageHaltError, match="пропущены стадии"):
+        run([StageResult(Stage.L1_IDENTITY, ok=True), StageResult(Stage.L9_PROTOCOL, ok=True)])

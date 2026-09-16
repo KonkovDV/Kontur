@@ -17,6 +17,7 @@ data/incoming/
 data/quarantine/
 data/work/
 data/cache/
+files/
 var/
 out/
 *.zip

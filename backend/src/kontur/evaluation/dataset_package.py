@@ -24,18 +24,30 @@ QUARANTINE_ACCESS: Final[str] = "quarantine"
 ACCESS_MODES: Final[frozenset[str]] = frozenset({OPEN_ACCESS, QUARANTINE_ACCESS})
 HIDDEN_TEST_KIND: Final[str] = "annotated_hidden_test"
 
+# Официальный split_policy организатора. Документы OBJ-RECHNIKOV-7-7 лежат в
+# открытом пакете без меток — карантинный детектор имён их не ловит.
+# Пороги, prompt и обучение — только по этому allowlist.
+LABELED_TRAIN_OBJECT_IDS: Final[frozenset[str]] = frozenset(
+    {"OBJ-NOVOSLOBODSKAYA", "OBJ-TYUMENSKAYA-5-GOLD-SEED"}
+)
+HIDDEN_TEST_OBJECT_IDS: Final[frozenset[str]] = frozenset({"OBJ-RECHNIKOV-7-7"})
+
 __all__ = (
     "ACCESS_MODES",
-    "MANIFEST_PATH",
     "HIDDEN_TEST_KIND",
+    "HIDDEN_TEST_OBJECT_IDS",
+    "LABELED_TRAIN_OBJECT_IDS",
+    "MANIFEST_PATH",
     "OPEN_ACCESS",
     "QUARANTINE_ACCESS",
     "PackageEntry",
     "QuarantineViolation",
+    "is_hidden_test_object",
     "load_entries",
     "load_manifest",
     "object_ids",
     "pending_hashes",
+    "require_labeled_train_object",
     "require_open",
     "total_size_kb",
     "usable_for_experiments",
@@ -178,3 +190,29 @@ def total_size_kb(entries: Iterable[PackageEntry]) -> int:
     """Суммарный объём поставки в КБ — вход для расчёта бюджета диска."""
 
     return sum(entry.size_kb for entry in entries)
+
+
+def is_hidden_test_object(object_id: str) -> bool:
+    """Объект объявлен TEST_HIDDEN, даже если его PDF лежат в открытом пакете."""
+
+    return object_id in HIDDEN_TEST_OBJECT_IDS
+
+
+def require_labeled_train_object(object_id: str) -> str:
+    """Барьер перед обучением, подбором порогов, prompt и regex.
+
+    Pipeline может прогонять скрытый объект как будущий тест — без обратной
+    связи. Этот барьер закрывает как раз обратную связь.
+    """
+
+    if is_hidden_test_object(object_id):
+        raise QuarantineViolation(
+            f"{object_id}: объект скрытого теста, обучение и подбор порогов "
+            "запрещены (docs/DATA_QUARANTINE.md, split_policy.json)"
+        )
+    if object_id not in LABELED_TRAIN_OBJECT_IDS:
+        raise ValueError(
+            f"{object_id}: нет в allowlist TRAIN_PUBLIC "
+            f"({sorted(LABELED_TRAIN_OBJECT_IDS)})"
+        )
+    return object_id

@@ -1,0 +1,90 @@
+{
+  "code": "IOS4-079",
+  "section": "ИОС4",
+  "name": "Характеристики вентиляторов общеобменной вентиляции",
+  "unit": "м³/ч / Па / кВт",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Подмена установок на аналоги с меньшей кратностью воздухообмена.",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": "Наличие общеобменной вентиляции"
+  },
+  "sources": {
+    "pd": {
+      "discipline": [
+        "ОВ"
+      ],
+      "table": null,
+      "description": "Аксонометрия; Спецификация оборудования (ОВ)"
+    },
+    "rd": {
+      "discipline": [
+        "ОВ"
+      ],
+      "table": null,
+      "description": "Планы венткамер; Спецификация вентиляторов"
+    },
+    "id": {
+      "document_kind": [
+        "Паспорт"
+      ],
+      "table": null,
+      "description": "Паспорта вентиляторов; Акты пусконаладки"
+    }
+  },
+  "extractor": {
+    "type": "semantic_candidate",
+    "regex": null,
+    "anchors": [
+      "приточная установка",
+      "венткамера",
+      "кратность воздухообмена"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "ne",
+    "rounding": "none",
+    "unit_target": null
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "same_ahu_config_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "room_012_config_mismatch_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "rd_sheet_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "object_without_ahu_is_not_applicable",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

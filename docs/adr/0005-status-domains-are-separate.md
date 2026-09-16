@@ -26,8 +26,9 @@
    (`tz_upload_status`).
 2. **Процесс:** `PENDING → PARSING → READY → VERIFYING → COMPLETED → FINALIZED`.
    Из `FINALIZED` нет исходящих переходов. Отмена — отдельная операция
-   `unfinalize(current, actor)`: только супервизор и только из `FINALIZED`,
-   результат `COMPLETED`, новая версия протокола и запись аудита.
+   `unfinalize(current, actor, reason)`: только супервизор и только из `FINALIZED`,
+   с непустой причиной; результат `COMPLETED`. Новая версия протокола и запись
+   аудита — обязанность `review.unfinalize_process`.
 3. **Протокол (проекция п. 9.3):** `READY | VERIFYING |
    VERIFICATION_COMPLETED | PROTOCOL_FINALIZED`. Не хранится второй машиной.
 4. **Находка (предмет):** `CANDIDATE → CONFIRMED_VIOLATION | NEGATIVE_VERIFIED |

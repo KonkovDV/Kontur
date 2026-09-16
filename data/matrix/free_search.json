@@ -1,0 +1,14 @@
+{
+  "matrix_version": "draft-0",
+  "note": "Находки вне реестра 132 не добавляются в data/matrix/rules. Молча «исправлять» матрицу запрещено (инвариант 6). Free-search живёт отдельным слоем и на провод соревнования уходит со своим parameter_code.",
+  "entries": [
+    {
+      "parameter_code": "FREE-HEATING-001",
+      "matrix_scope": "FREE_SEARCH",
+      "title": "Система тёплых полов в помещениях МГН",
+      "gold_ids": ["VIO-0002", "TRAIN-0002", "TRAIN-0003", "TRAIN-0004", "TRAIN-0005"],
+      "mapping_status": "MATRIX_GAP",
+      "action": "Не привязывать к существующему параметру матрицы. Отдельный вопрос организатору: добавить параметр или оставить free-search."
+    }
+  ]
+}

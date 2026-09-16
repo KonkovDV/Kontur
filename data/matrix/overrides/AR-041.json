@@ -1,10 +1,10 @@
 {
-  "code": "AR-41",
+  "code": "AR-041",
   "section": "АР",
-  "name": "Ширина эвакуационных дверей",
+  "name": "Ширина эвакуационных выходов (дверей)",
   "unit": "м",
   "matrix_version": "draft-0",
-  "source_trigger_logic": "< 0.9 м",
+  "source_trigger_logic": "Ширина дверного полотна на путях эвакуации в РД/ИД < 0.9 м.",
   "coverage": "extractor_missing",
   "applicability": {
     "stages_required": ["PD", "RD"],
@@ -12,9 +12,9 @@
     "condition": "Помещение входит в путь эвакуации"
   },
   "sources": {
-    "pd": { "discipline": ["АР"], "table": "Ведомость заполнения проемов", "description": null },
-    "rd": { "discipline": ["АР"], "table": "Спецификация дверей", "description": null },
-    "id": { "document_kind": ["АОСР"], "table": null, "description": "Акты освидетельствования" }
+    "pd": { "discipline": ["АР"], "table": "Ведомость заполнения проемов", "description": "Ведомость заполнения проемов (АР)" },
+    "rd": { "discipline": ["АР"], "table": "Спецификация дверей", "description": "Спецификация дверей (ГОСТ 21.101); Детальные узлы (АР)" },
+    "id": { "document_kind": ["АОСР"], "table": null, "description": "Паспорта на двери; Акты АОСР (фактический замер)" }
   },
   "extractor": {
     "type": "number",

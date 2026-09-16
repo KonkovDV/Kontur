@@ -8,12 +8,16 @@ from pathlib import Path
 import pytest
 
 from kontur.evaluation.dataset_package import (
+    HIDDEN_TEST_OBJECT_IDS,
+    LABELED_TRAIN_OBJECT_IDS,
     MANIFEST_PATH,
     PackageEntry,
     QuarantineViolation,
+    is_hidden_test_object,
     load_entries,
     object_ids,
     pending_hashes,
+    require_labeled_train_object,
     require_open,
     total_size_kb,
     usable_for_experiments,
@@ -122,3 +126,16 @@ def test_usable_set_excludes_name_detector_even_if_manifest_tampered() -> None:
     with pytest.raises(QuarantineViolation):
         require_open(tampered)
     assert usable_for_experiments([tampered]) == ()
+
+
+def test_hidden_object_id_is_blocked_even_without_filename_markers() -> None:
+    """Документы Речникова открыты, ответы — нет. Allowlist, не blocklist имён."""
+
+    assert HIDDEN_TEST_OBJECT_IDS == {"OBJ-RECHNIKOV-7-7"}
+    assert is_hidden_test_object("OBJ-RECHNIKOV-7-7")
+    with pytest.raises(QuarantineViolation):
+        require_labeled_train_object("OBJ-RECHNIKOV-7-7")
+    for object_id in LABELED_TRAIN_OBJECT_IDS:
+        assert require_labeled_train_object(object_id) == object_id
+    with pytest.raises(ValueError, match="allowlist"):
+        require_labeled_train_object("10_Полярная_25_СОШ1100к7")

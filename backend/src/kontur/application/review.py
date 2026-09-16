@@ -10,8 +10,15 @@ from dataclasses import replace
 from datetime import UTC, datetime
 
 from kontur.domain.models import Finding, InspectorDecision
-from kontur.domain.state_machines import Actor, TransitionError, advance_finding
-from kontur.domain.statuses import FindingStatus, ReasonCode
+from kontur.domain.ports import AuditLog
+from kontur.domain.state_machines import (
+    Actor,
+    TransitionError,
+    advance_finding,
+    enter_finalized,
+    unfinalize,
+)
+from kontur.domain.statuses import FindingStatus, ProcessState, ReasonCode
 
 ACTION_TO_STATUS: dict[str, FindingStatus] = {
     "CONFIRM": FindingStatus.CONFIRMED_VIOLATION,
@@ -35,8 +42,9 @@ def review(
     if action not in ACTION_TO_STATUS:
         raise TransitionError(f"unknown review action: {action}")
     if action == "REJECT" and reason_code is None:
-        # ТЗ п. 9.3: отклонение без кодированной причины не принимается.
         raise TransitionError("REJECT requires reason_code")
+    if comment is None or not comment.strip():
+        raise TransitionError("review action requires comment")
 
     target = ACTION_TO_STATUS[action]
     advance_finding(finding.finding_status, target, actor)
@@ -46,19 +54,67 @@ def review(
         action=action,
         timestamp=datetime.now(tz=UTC),
         reason_code=reason_code,
-        comment=comment,
+        comment=comment.strip(),
     )
     return replace(finding, finding_status=target, inspector_decision=decision)
 
 
 def can_finalize(findings: list[Finding]) -> tuple[bool, list[str]]:
-    """Финализация разрешена только после обработки всех кандидатов.
+    """Финализация — после обработки всех кандидатов и подозрений.
 
-    MISSING_EVIDENCE выводится отдельным перечнем и не блокирует финализацию.
+    CANDIDATE блокирует. SUSPICION блокирует: это необработанный сигнал.
+    CLARIFICATION_REQUIRED не блокирует: п. 9.3 и OpenAPI явно допускают
+    перевод кандидата в уточнение как способ закрыть очередь.
+    MISSING_EVIDENCE выводится отдельным перечнем и не блокирует.
     """
 
-    pending = [f.finding_id for f in findings if f.finding_status is FindingStatus.CANDIDATE]
+    blocking = {
+        FindingStatus.CANDIDATE,
+        FindingStatus.SUSPICION,
+    }
+    pending = [f.finding_id for f in findings if f.finding_status in blocking]
     return (not pending, pending)
+
+
+def finalize_process(
+    current: ProcessState,
+    *,
+    actor: Actor,
+    findings: list[Finding],
+    audit: AuditLog,
+) -> ProcessState:
+    """Финализация протокола: человек, закрытая очередь, запись в журнал."""
+
+    if not actor.is_human:
+        raise TransitionError("finalize requires a human inspector")
+    ok, pending = can_finalize(findings)
+    if not ok:
+        raise TransitionError(f"unprocessed findings: {pending}")
+    target = enter_finalized(current, actor)
+    audit.record(
+        actor.actor_id,
+        "FINALIZE",
+        {"from": current.value, "to": target.value},
+    )
+    return target
+
+
+def unfinalize_process(
+    current: ProcessState,
+    *,
+    actor: Actor,
+    reason: str,
+    audit: AuditLog,
+) -> ProcessState:
+    """Отмена финализации с причиной и аудитом. Новую версию протокола пишет L9."""
+
+    target = unfinalize(current, actor, reason)
+    audit.record(
+        actor.actor_id,
+        "UNFINALIZE",
+        {"from": current.value, "to": target.value, "reason": reason.strip()},
+    )
+    return target
 
 
 def split(finding: Finding, parts: int) -> list[Finding]:

@@ -80,6 +80,13 @@ def main() -> int:
     actions = set(review_props["action"]["enum"])
     if actions != {"CONFIRM", "REJECT", "REQUEST_CLARIFICATION"}:
         problems.append("ReviewDecision.action: SPLIT не должен быть атомарным действием")
+    if "comment" not in components["ReviewDecision"].get("required", []):
+        problems.append("ReviewDecision.comment обязателен по п. 9.3")
+    finalize = spec["paths"]["/processes/{process_id}/finalize"]["post"]
+    if "requestBody" not in finalize:
+        problems.append("finalize без inspector_id в теле запроса")
+    if "/processes/{process_id}/unfinalize" not in spec["paths"]:
+        problems.append("нет POST unfinalize")
 
     title = spec["info"]["title"]
     if title != "Инспектор ИИ":

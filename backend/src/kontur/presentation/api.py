@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from kontur.domain.state_machines import TransitionError
 
@@ -17,6 +18,15 @@ app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton")
 MAX_FILE_BYTES = 50 * 1024 * 1024
 MAX_BATCH_BYTES = 200 * 1024 * 1024
 SUPPORTED_SUFFIXES = frozenset({".pdf", ".docx", ".xml"})
+
+
+class FinalizeRequest(BaseModel):
+    inspector_id: str = Field(min_length=1)
+
+
+class UnfinalizeRequest(BaseModel):
+    inspector_id: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
 
 
 @app.exception_handler(TransitionError)
@@ -50,8 +60,13 @@ def review_finding(finding_id: str) -> dict[str, object]:
 
 
 @app.post("/api/v1/processes/{process_id}/finalize")
-def finalize(process_id: str) -> dict[str, object]:
-    raise NotImplementedError("L8: проверка can_finalize, затем неизменяемая версия")
+def finalize(process_id: str, body: FinalizeRequest) -> dict[str, object]:
+    raise NotImplementedError("L8: finalize_process(actor, findings, audit)")
+
+
+@app.post("/api/v1/processes/{process_id}/unfinalize")
+def unfinalize_protocol(process_id: str, body: UnfinalizeRequest) -> dict[str, object]:
+    raise NotImplementedError("L8: unfinalize_process(actor, reason, audit)")
 
 
 @app.post("/api/v1/inspection/{process_id}", status_code=202)

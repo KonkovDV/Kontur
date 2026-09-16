@@ -99,16 +99,52 @@ paths:
     post:
       summary: Финализация протокола
       description: >
-        Разрешена только после обработки всех CANDIDATE либо их явного перевода
-        в CLARIFICATION_REQUIRED. MISSING_EVIDENCE выводится отдельным перечнем.
+        Разрешена только человеку и только после обработки всех CANDIDATE и
+        SUSPICION. CLARIFICATION_REQUIRED — допустимый способ закрыть кандидата
+        (п. 9.3). MISSING_EVIDENCE выводится отдельным перечнем.
       operationId: finalizeProtocol
       parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inspector_id]
+              properties:
+                inspector_id: { type: string }
       responses:
         "200":
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProcessStatus" }
-        "409": { description: Есть необработанные кандидаты }
+        "409": { description: Есть необработанные кандидаты или вызывающий не инспектор }
+
+  /processes/{process_id}/unfinalize:
+    post:
+      summary: Отмена финализации супервизором
+      description: >
+        Только из PROTOCOL_FINALIZED / FINALIZED, только супервизор, только с
+        причиной. Результат — COMPLETED, новая версия протокола и запись аудита
+        (ADR-0005).
+      operationId: unfinalizeProtocol
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inspector_id, reason]
+              properties:
+                inspector_id: { type: string }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProcessStatus" }
+        "409": { description: Не FINALIZED или вызывающий не супервизор }
 
   /inspection/{process_id}:
     post:
@@ -236,7 +272,7 @@ components:
 
     ReviewDecision:
       type: object
-      required: [action, inspector_id]
+      required: [action, inspector_id, comment]
       properties:
         action:
           type: string
@@ -256,4 +292,7 @@ components:
             - PARAMETER_NOT_APPLICABLE
             - SOURCE_QUALITY
             - OTHER
-        comment: { type: string }
+        comment:
+          type: string
+          minLength: 1
+          description: Обязателен при CONFIRM, REJECT и REQUEST_CLARIFICATION (ТЗ п. 9.3)

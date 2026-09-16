@@ -14,7 +14,7 @@
   "properties": {
     "evidence_group_id": { "type": "string" },
     "object_id": { "type": "string" },
-    "rule_code": { "type": "string", "examples": ["PZ-01", "KR-55", "AR-41"] },
+    "rule_code": { "type": "string", "examples": ["PZ-001", "KR-055", "AR-041"] },
     "matrix_version": { "type": "string" },
     "fragments": {
       "type": "array",

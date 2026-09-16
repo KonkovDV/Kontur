@@ -1,0 +1,78 @@
+{
+  "code": "PPM-107",
+  "section": "ППМ",
+  "name": "Класс пожарной опасности отделочных материалов",
+  "unit": "Класс (КМ)",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Подмена КМ0/КМ1 на КМ3 на путях эвакуации в РД/ИД.",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Требования к отделке стен/полов (ППМ)"
+    },
+    "rd": {
+      "description": "Ведомости отделки (АР)"
+    },
+    "id": {
+      "description": "Сертификаты; Пожарные декларации"
+    }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": null,
+    "anchors": [
+      "Класс пожарной опасности отделочных материалов"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "delta",
+    "tolerance_abs": 0.0,
+    "tolerance_rel": null,
+    "rounding": "half_up",
+    "unit_target": "Класс (КМ)"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

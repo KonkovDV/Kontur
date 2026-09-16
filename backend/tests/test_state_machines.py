@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from kontur.domain.state_machines import (
+    FINDING_TRANSITIONS,
     Actor,
     TransitionError,
     advance_finding,
@@ -78,13 +79,34 @@ def test_finalized_process_has_no_outgoing_transitions() -> None:
             advance_process(ProcessState.FINALIZED, target)
 
 
+def test_enter_finalized_requires_human() -> None:
+    from kontur.domain.state_machines import enter_finalized
+
+    with pytest.raises(TransitionError, match="human"):
+        enter_finalized(ProcessState.COMPLETED, MACHINE)
+    assert (
+        enter_finalized(ProcessState.COMPLETED, INSPECTOR) is ProcessState.FINALIZED
+    )
+    with pytest.raises(TransitionError, match="finalize_process"):
+        advance_process(ProcessState.COMPLETED, ProcessState.FINALIZED)
+
+
+def test_finding_transitions_cover_every_status() -> None:
+    assert set(FINDING_TRANSITIONS) == set(FindingStatus)
+
+
 def test_unfinalize_requires_supervisor_and_finalized() -> None:
     supervisor = Actor("admin", is_human=True, is_supervisor=True)
     with pytest.raises(TransitionError):
-        unfinalize(ProcessState.FINALIZED, INSPECTOR)
+        unfinalize(ProcessState.FINALIZED, INSPECTOR, "ошибочная финализация")
     with pytest.raises(TransitionError):
-        unfinalize(ProcessState.VERIFYING, supervisor)
-    assert unfinalize(ProcessState.FINALIZED, supervisor) is ProcessState.COMPLETED
+        unfinalize(ProcessState.VERIFYING, supervisor, "ошибочная финализация")
+    with pytest.raises(TransitionError, match="reason"):
+        unfinalize(ProcessState.FINALIZED, supervisor, "   ")
+    assert (
+        unfinalize(ProcessState.FINALIZED, supervisor, "ошибочная финализация")
+        is ProcessState.COMPLETED
+    )
 
 
 def test_upload_returns_process_to_parsing() -> None:

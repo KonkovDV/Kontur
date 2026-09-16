@@ -1,0 +1,78 @@
+{
+  "code": "PZ-002",
+  "section": "ПЗ",
+  "name": "Общая площадь здания",
+  "unit": "м²",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Дельта общей площади между ПД и РД (или ИД) > 1%.",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Раздел ПЗ: Таблица ТЭП (текстовая часть)"
+    },
+    "rd": {
+      "description": "Раздел АР: Лист \"Общие данные\", Сводная экспликация"
+    },
+    "id": {
+      "description": "Технический план БТИ; ЗОС"
+    }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": null,
+    "anchors": [
+      "Общая площадь здания"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "delta",
+    "tolerance_abs": null,
+    "tolerance_rel": 0.01,
+    "rounding": "half_up",
+    "unit_target": "м²"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

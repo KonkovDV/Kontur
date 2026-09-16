@@ -2,15 +2,24 @@
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
 import pytest
 
-from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
+from kontur.domain.rule_codes import canonicalize_rule_code, display_alias
+from kontur.infrastructure.matrix.registry import (
+    EXPECTED_PARAM_COUNT,
+    KNOWN_COVERAGE,
+    FileRuleRegistry,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = REPO_ROOT / "contracts" / "schemas" / "rule.schema.json"
+PARAMS_CSV = REPO_ROOT / "data" / "matrix" / "params.template.csv"
+CATALOG = REPO_ROOT / "data" / "matrix" / "source" / "parameter_catalog_132.jsonl"
+FREE_SEARCH = REPO_ROOT / "data" / "matrix" / "free_search.json"
 
 
 @pytest.fixture(scope="module")
@@ -48,16 +57,80 @@ def test_executable_rule_declares_comparator_and_evidence(registry: FileRuleRegi
 
 
 def test_coverage_report_does_not_overclaim(registry: FileRuleRegistry) -> None:
-    """Реестр не имеет права заявлять больше правил, чем в матрице."""
+    """Реестр не имеет права заявлять больше правил, чем в матрице.
+
+    executable == 0 не закрепляем: первое рабочее извлечение не должно красить CI.
+    """
 
     report = registry.coverage_report()
     assert report["expected_total"] == EXPECTED_PARAM_COUNT
     assert report["declared"] <= EXPECTED_PARAM_COUNT
     assert report["executable"] <= report["declared"]
-    assert report["executable"] == 0
-    assert report["extractor_missing"] == report["declared"]
+    coverage_sum = sum(report[name] for name in KNOWN_COVERAGE)
+    assert coverage_sum == report["declared"]
+    assert set(report) <= KNOWN_COVERAGE | {"declared", "expected_total"}
 
 
-@pytest.mark.xfail(reason="Приложение 1 не передано организатором (вопрос 1)", strict=True)
 def test_all_132_params_present(registry: FileRuleRegistry) -> None:
     assert len(registry.all_codes()) == EXPECTED_PARAM_COUNT
+    catalog = [
+        json.loads(line)
+        for line in CATALOG.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert {str(row["parameter_code"]) for row in catalog} == set(registry.all_codes())
+
+
+def test_canonical_codes_are_zero_padded(registry: FileRuleRegistry) -> None:
+    for code in registry.all_codes():
+        assert code == canonicalize_rule_code(code), code
+        prefix, number = code.rsplit("-", 1)
+        assert number.isdigit() and len(number) == 3, code
+        assert registry.get(display_alias(code))["code"] == code
+        assert prefix
+
+
+def test_appendix2_short_aliases_resolve(registry: FileRuleRegistry) -> None:
+    assert registry.get("PZ-01")["code"] == "PZ-001"
+    assert registry.get("KR-55")["code"] == "KR-055"
+    assert registry.get("AR-41")["code"] == "AR-041"
+    with pytest.raises(KeyError):
+        registry.get("AR-14")
+
+
+def test_params_csv_matches_catalog() -> None:
+    catalog = [
+        json.loads(line)
+        for line in CATALOG.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    with PARAMS_CSV.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert [row["code"] for row in rows] == [str(item["parameter_code"]) for item in catalog]
+    assert len(rows) == EXPECTED_PARAM_COUNT
+
+
+def test_free_search_is_not_a_matrix_rule(registry: FileRuleRegistry) -> None:
+    payload = json.loads(FREE_SEARCH.read_text(encoding="utf-8"))
+    extra = {item["parameter_code"] for item in payload["entries"]}
+    assert extra
+    assert extra.isdisjoint(set(registry.all_codes()))
+    with pytest.raises(KeyError):
+        registry.get("FREE-HEATING-001")
+
+
+def test_empty_matrix_is_an_error(tmp_path: Path) -> None:
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    with pytest.raises(FileNotFoundError, match="пуста"):
+        FileRuleRegistry(tmp_path).all_codes()
+
+
+def test_unknown_coverage_is_rejected(tmp_path: Path, registry: FileRuleRegistry) -> None:
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    sample = dict(registry.get("PZ-001"))
+    sample["coverage"] = "почти_готово"
+    (rules / "PZ-001.json").write_text(json.dumps(sample, ensure_ascii=False), encoding="utf-8")
+    with pytest.raises(ValueError, match="coverage"):
+        FileRuleRegistry(tmp_path).all_codes()

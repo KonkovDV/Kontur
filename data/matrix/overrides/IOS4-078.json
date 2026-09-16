@@ -1,0 +1,47 @@
+{
+  "code": "IOS4-078",
+  "section": "ИОС4",
+  "name": "Сечения и материал воздуховодов",
+  "unit": "мм / Класс",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Уменьшение площади сечения воздуховода в РД (падение объема воздуха, рост шума).",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": ["PD", "RD"],
+    "object_types": [],
+    "condition": "Наличие сети воздуховодов"
+  },
+  "sources": {
+    "pd": { "discipline": ["ОВ"], "table": null, "description": "Аксонометрические схемы; Сечения воздуховодов (ОВ)" },
+    "rd": { "discipline": ["ОВ"], "table": null, "description": "Планы прокладки; Узлы пересечений" },
+    "id": { "document_kind": ["АОСР"], "table": null, "description": "Акты АОСР на вентиляцию; Исполнительные схемы" }
+  },
+  "extractor": {
+    "type": "geometry",
+    "regex": null,
+    "anchors": ["сечение воздуховода", "воздуховод", "вытяжная вентиляция"],
+    "normalization": ["nfc", "collapse_spaces", "decimal_comma"],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "class_not_lower",
+    "rounding": "none",
+    "unit_target": null
+  },
+  "required_evidence": ["expected", "actual"],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    { "name": "same_duct_section_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
+    { "name": "reduced_section_or_missing_exhaust_gives_candidate", "expected_status": "CANDIDATE" },
+    { "name": "rd_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" },
+    { "name": "object_without_ducts_is_not_applicable", "expected_status": "NOT_APPLICABLE" }
+  ]
+}

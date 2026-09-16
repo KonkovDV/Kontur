@@ -22,7 +22,9 @@ PROCESS_TRANSITIONS: dict[ProcessState, frozenset[ProcessState]] = {
     ProcessState.READY: frozenset({ProcessState.VERIFYING, ProcessState.PARSING}),
     # Дозагрузка до финализации возвращает процесс в PARSING (ТЗ п. 9.1).
     ProcessState.VERIFYING: frozenset({ProcessState.COMPLETED, ProcessState.PARSING}),
-    ProcessState.COMPLETED: frozenset({ProcessState.FINALIZED, ProcessState.PARSING}),
+    # FINALIZED только через finalize_process: автомат и фоновая задача
+    # не имеют права закрыть протокол обходом машины.
+    ProcessState.COMPLETED: frozenset({ProcessState.PARSING}),
     # Из FINALIZED выход только через отмену финализации супервизором.
     ProcessState.FINALIZED: frozenset(),
 }
@@ -75,7 +77,21 @@ class Actor:
     is_supervisor: bool = False
 
 
+def enter_finalized(current: ProcessState, actor: Actor) -> ProcessState:
+    """Единственный легальный вход в FINALIZED. Без человека не вызывается."""
+
+    if not actor.is_human:
+        raise TransitionError("finalize requires a human inspector")
+    if current is not ProcessState.COMPLETED:
+        raise TransitionError(f"process: {current} -> FINALIZED")
+    return ProcessState.FINALIZED
+
+
 def advance_process(current: ProcessState, target: ProcessState) -> ProcessState:
+    """Обычные переходы процесса. В FINALIZED — только `finalize_process`."""
+
+    if target is ProcessState.FINALIZED:
+        raise TransitionError("FINALIZED только через finalize_process с актором и находками")
     if target not in PROCESS_TRANSITIONS[current]:
         raise TransitionError(f"process: {current} -> {target}")
     return target
@@ -108,11 +124,17 @@ def advance_sync(current: SyncState, target: SyncState) -> SyncState:
     return target
 
 
-def unfinalize(current: ProcessState, actor: Actor) -> ProcessState:
-    """Отмена финализации: только супервизор, только из FINALIZED."""
+def unfinalize(current: ProcessState, actor: Actor, reason: str) -> ProcessState:
+    """Отмена финализации: только супервизор, только из FINALIZED, только с причиной.
+
+    Новая версия протокола и запись аудита — обязанность вызывающего слоя
+    (`review.unfinalize_process`): у домена нет порта журнала.
+    """
 
     if current is not ProcessState.FINALIZED:
         raise TransitionError("unfinalize requires FINALIZED")
     if not (actor.is_human and actor.is_supervisor):
         raise TransitionError("unfinalize requires a supervisor")
+    if not reason.strip():
+        raise TransitionError("unfinalize requires reason")
     return ProcessState.COMPLETED

@@ -10,7 +10,8 @@
 | 3–5 | Разделы ПД, состав РД, состав ИД | `data/matrix/sections.json` | `test_matrix_registry.py` | skeleton |
 | 6 | Соответствие разделов матрицы и документации | `data/matrix/sections.json` | `test_matrix_registry.py` | skeleton |
 | 7 | 12 модулей системы | `application/` | — | skeleton |
-| 8 | Матрица 132 параметра, таблица `Params` | `data/matrix/`, `contracts/schemas/rule.schema.json` | `test_matrix_registry.py` | skeleton |
+| 8 | Матрица 132 параметра, таблица `Params` | `data/matrix/`, `contracts/schemas/rule.schema.json` | `test_matrix_registry.py` | in_progress |
+
 | 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/pipeline.py` | `test_pipeline.py`, `test_coordinates.py` | skeleton |
 | 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `pipeline.INTAKE_REJECTION_CODES` | `test_status_map.py` | skeleton |
 | 9.1 | Статусы загрузки `PD_/RD_/ID_UPLOADED/PARTIAL/MISSING` | `domain/status_map.py` | `test_status_map.py` | skeleton |
@@ -29,16 +30,13 @@
 | 12 | Аутентификация, RBAC, TLS 1.3, аудит, 152-ФЗ, антивирус | — | — | skeleton |
 | 13 | JSON-логи, уровни, Prometheus/Grafana, ELK, алерты, checksum | `gateway/src/server.js` | — | skeleton |
 | 14 | Пороги приёмки и правила выборок | `evaluation/metrics.py` | `test_metrics.py` | skeleton |
-| Прил. 1 | Полный перечень 132 параметров | `data/matrix/params.template.csv` | `test_matrix_registry.py` | **нет исходника** |
-| Прил. 2 | Образец протокола | `contracts/schemas/protocol.schema.json` | — | **нет исходника** |
+| Прил. 1 | Полный перечень 132 параметров | `data/matrix/source/parameter_catalog_132.jsonl`, `data/matrix/params.template.csv`, `data/matrix/rules/*.json` | `test_matrix_registry.py` | in_progress (132 schema-valid, coverage=extractor_missing) |
+| Прил. 2 | Образец протокола | `contracts/schemas/protocol.schema.json` | — | in_progress (образец найден: Приложение 2 docx) |
 
-Приложения 1 и 2 в переданном PDF отсутствуют. Вопросы 1 и 2 записаны в
-`QUESTIONS_TO_ORGANIZER.md`. Файла-подтверждения отправки организатору в
-репозитории нет. До получения официальных файлов матрица ведётся как черновик
-`source: draft`.
-
-Возможные источники приложений найдены в пакете методики
-(`02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА.tar`: `lct_scoring_board_20260825`,
-`hackathon_gold_20260811`, `ПАСПОРТ_РАЗМЕТКИ.pdf`) — см.
-[`DATASET_PACKAGE.md`](DATASET_PACKAGE.md). Это материалы организатора, но не
-подписанные приложения к ТЗ, поэтому статус строк не меняется до ответа.
+Приложения 1 и 2 **найдены в поставке 15.09.2026**
+(`01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА\...\00_ТЗ_И_ПРИЛОЖЕНИЯ`). Каталог импортирован
+в `data/matrix/source/`, 132 правила собраны скриптом `scripts/compile_matrix.py`
+со статусом `extractor_missing` — это schema-valid скелет, не исполняемые
+проверки. Файла-подтверждения отправки организатору в репозитории нет.
+Коды параметров — канонический трёхзначный формат (`PZ-001` … `SM-132`);
+короткие формы из текстов (`AR-14`) — display-алиасы.

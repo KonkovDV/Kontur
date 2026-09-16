@@ -115,15 +115,31 @@
     },
     {
       "if": {
+        "properties": { "counts_as_violation": { "const": true } },
+        "required": ["counts_as_violation"]
+      },
+      "then": {
+        "properties": { "finding_status": { "const": "CONFIRMED_VIOLATION" } }
+      }
+    },
+    {
+      "if": {
         "properties": { "finding_status": { "const": "CONFIRMED_VIOLATION" } },
         "required": ["finding_status"]
       },
       "then": {
         "properties": {
-          "inspector_decision": { "type": "object" },
+          "inspector_decision": {
+            "type": "object",
+            "required": ["inspector_id", "action", "timestamp", "comment"],
+            "properties": {
+              "action": { "const": "CONFIRM" },
+              "comment": { "type": "string", "minLength": 1 }
+            }
+          },
           "counts_as_violation": { "const": true }
         },
-        "required": ["inspector_decision", "evidence_group_id"]
+        "required": ["inspector_decision", "evidence_group_id", "counts_as_violation"]
       }
     },
     {
@@ -131,7 +147,20 @@
         "properties": { "finding_status": { "const": "NEGATIVE_VERIFIED" } },
         "required": ["finding_status"]
       },
-      "then": { "required": ["inspector_decision"] }
+      "then": {
+        "properties": {
+          "inspector_decision": {
+            "type": "object",
+            "required": ["inspector_id", "action", "timestamp", "reason_code", "comment"],
+            "properties": {
+              "action": { "const": "REJECT" },
+              "reason_code": { "type": "string", "minLength": 1 },
+              "comment": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "required": ["inspector_decision"]
+      }
     }
   ],
   "additionalProperties": false

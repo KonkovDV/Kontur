@@ -56,7 +56,7 @@ def test_candidate_without_evidence_is_rejected() -> None:
     with pytest.raises(ValueError, match="evidence_group_id"):
         Finding(
             finding_id="f-1",
-            rule_code="AR-41",
+            rule_code="AR-041",
             finding_status=FindingStatus.CANDIDATE,
             review_priority=ReviewPriority.HIGH,
             matrix_version="draft-0",
@@ -68,7 +68,7 @@ def test_candidate_without_evidence_is_rejected() -> None:
 def test_missing_evidence_may_omit_evidence_group() -> None:
     finding = Finding(
         finding_id="f-2",
-        rule_code="AR-41",
+        rule_code="AR-041",
         finding_status=FindingStatus.MISSING_EVIDENCE,
         review_priority=ReviewPriority.HIGH,
         matrix_version="draft-0",

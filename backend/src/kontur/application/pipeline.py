@@ -55,6 +55,20 @@ STAGE_FAILURE_STATUS: dict[Stage, FindingStatus] = {
 #: (ADR-0001), поэтому автоматического статуса остановки у них нет.
 NON_HALTING_STAGES: frozenset[Stage] = frozenset({Stage.L8_REVIEW, Stage.L9_PROTOCOL})
 
+#: ТЗ п. 9.2 шаг 3: сравнение только после применимости, комплектности,
+#: актуальности и сопоставимости. Пропуск любой из этих стадий — не успех.
+REQUIRED_PRECOMPARISON_STAGES: frozenset[Stage] = frozenset(
+    {
+        Stage.L1_IDENTITY,
+        Stage.L2_EXTRACTION,
+        Stage.L3_LOCALIZATION,
+        Stage.L4_REVISION,
+        Stage.L5_PAIRING,
+        Stage.L6_MATRIX,
+        Stage.L7_FINDINGS,
+    }
+)
+
 
 class StageHaltError(RuntimeError):
     """У стадии нет автоматического безопасного статуса остановки."""
@@ -94,10 +108,11 @@ def halt_status(stage: Stage) -> FindingStatus:
 def run(stages: list[StageResult]) -> FindingStatus | None:
     """Первый отказ прекращает каскад и возвращает безопасный статус.
 
-    Возврат None означает, что все предварительные стадии пройдены и правило
-    допущено до предметного сравнения. Отказ на L8–L9 обязан нести явный
-    `status`: иначе будет `StageHaltError`. Явный `status` не может обойти
-    L0 и не может быть человеческим вердиктом (ADR-0001).
+    Возврат None означает, что L1–L7 реально выполнялись и пройдены, и правило
+    допущено до предметного сравнения. Пустой набор или дыра в каскаде — не
+    успех: это `StageHaltError`, а не молчаливый допуск. Отказ на L8–L9 обязан
+    нести явный `status`. Явный `status` не может обойти L0 и не может быть
+    человеческим вердиктом (ADR-0001).
     """
 
     for result in sorted(stages, key=lambda item: item.stage):
@@ -112,4 +127,11 @@ def run(stages: list[StageResult]) -> FindingStatus | None:
                 "каскад не имеет права записать этот статус"
             )
         return status
+    present = {result.stage for result in stages}
+    missing = sorted(REQUIRED_PRECOMPARISON_STAGES - present, key=lambda item: item.value)
+    if missing:
+        names = ", ".join(stage.name for stage in missing)
+        raise StageHaltError(
+            f"пропущены стадии {names}: сравнение без L1–L7 запрещено (ТЗ п. 9.2)"
+        )
     return None
