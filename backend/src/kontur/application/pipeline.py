@@ -11,19 +11,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum
 
+from kontur.application.intake import TZ_REJECTION_CODES
 from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus
 
-INTAKE_REJECTION_CODES = frozenset(
-    {
-        "UNSUPPORTED_FORMAT",
-        "CORRUPTED_FILE",
-        "FILE_TOO_LARGE",
-        "BATCH_LIMIT_EXCEEDED",
-        "ANTIVIRUS_REJECTED",
-        "ENCRYPTED_FILE",
-        "PROCESSING_TIMEOUT",
-    }
-)
+#: Перечень ТЗ п. 9.1 живёт в `application.intake` вместе с проверками лимитов.
+#: Здесь оставлен реэкспорт, чтобы список нельзя было продублировать и разойтись.
+INTAKE_REJECTION_CODES: frozenset[str] = TZ_REJECTION_CODES
 
 
 class Stage(IntEnum):

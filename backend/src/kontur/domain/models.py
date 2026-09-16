@@ -95,6 +95,10 @@ class EvidenceFragment:
     polygon_norm: Polygon
     extracted: Extraction
 
+    def __post_init__(self) -> None:
+        if self.page < 1:
+            raise ValueError("номер страницы начинается с 1, а не с 0")
+
 
 @dataclass(frozen=True, slots=True)
 class EvidenceGroup:

@@ -35,14 +35,11 @@ def discover_matrix_root(start: Path | None = None) -> Path:
     )
 
 
-DEFAULT_ROOT = discover_matrix_root()
-
-
 class FileRuleRegistry:
     """Читает `data/matrix/rules/*.json` и отдаёт правила как данные."""
 
     def __init__(self, root: Path | None = None) -> None:
-        self._root = root or DEFAULT_ROOT
+        self._root = root or discover_matrix_root()
         self._rules_dir = self._root / "rules"
 
     @cached_property
@@ -73,7 +70,7 @@ class FileRuleRegistry:
         return versions.pop()
 
     def get(self, code: str) -> dict[str, object]:
-        canonical = canonicalize_rule_code(code)
+        canonical = canonicalize_rule_code(code, known_codes=self._rules)
         try:
             return self._rules[canonical]
         except KeyError as exc:
