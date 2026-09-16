@@ -18,6 +18,15 @@ security:
   - bearerAuth: []
 
 paths:
+  /healthz:
+    get:
+      summary: Жив ли процесс ядра
+      operationId: healthz
+      security: []
+      responses:
+        "200":
+          description: Процесс отвечает
+
   /documents/upload:
     post:
       summary: Загрузка пакета документов (инкрементальная дозагрузка до финализации)
@@ -89,6 +98,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "./schemas/protocol.schema.json" }
+        "404": { description: Процесс не найден или протокол ещё не собран }
 
   /findings/{finding_id}/review:
     post:

@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.3", "ruff>=0.7", "mypy>=1.13", "hypothesis>=6.112"]
+dev = ["pytest>=8.3", "ruff>=0.7", "mypy>=1.13", "hypothesis>=6.112", "httpx>=0.27"]
 queue = ["aio-pika>=9.4"]
 store = ["psycopg[binary]>=3.2", "redis>=5.1", "boto3>=1.35"]
 ocr = ["rapidocr-onnxruntime>=1.3"]

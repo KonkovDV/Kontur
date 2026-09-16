@@ -162,6 +162,7 @@ BEGIN
     RAISE EXCEPTION 'синхронизация началась до финализации' USING ERRCODE = 'KNT99';
 EXCEPTION
     WHEN check_violation THEN NULL;
+    WHEN SQLSTATE 'KNT02' THEN NULL;
 END;
 $$;
 

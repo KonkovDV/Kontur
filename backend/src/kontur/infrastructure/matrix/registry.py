@@ -35,14 +35,11 @@ def discover_matrix_root(start: Path | None = None) -> Path:
     )
 
 
-DEFAULT_ROOT = discover_matrix_root()
-
-
 class FileRuleRegistry:
     """Читает `data/matrix/rules/*.json` и отдаёт правила как данные."""
 
     def __init__(self, root: Path | None = None) -> None:
-        self._root = root or DEFAULT_ROOT
+        self._root = root or discover_matrix_root()
         self._rules_dir = self._root / "rules"
 
     @cached_property

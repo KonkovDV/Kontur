@@ -93,6 +93,7 @@ def test_checks_sql_asserts_instead_of_merely_running() -> None:
     assert "KNT99" in checks
     assert "KNT02" in checks
     assert "SQLSTATE 'KNT01'" in checks
+    assert "WHEN SQLSTATE 'KNT02' THEN NULL;" in checks
     assert "отмена финализации изменила содержимое" in checks
     assert "WHEN check_violation THEN NULL;" in checks
     assert checks.rstrip().endswith("ROLLBACK;")

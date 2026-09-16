@@ -1,6 +1,6 @@
 // Node.js BFF. Границы ответственности зафиксированы намеренно:
-// шлюз отвечает за внешний контракт, аутентификацию, RBAC, лимиты и логи;
-// доменные решения и статусы находок остаются в Python-ядре.
+// шлюз отвечает за внешний контракт, лимиты тела и логи;
+// аутентификация, RBAC и статусы находок остаются в Python-ядре.
 // Шлюз не имеет права изменять finding_status (ADR-0001).
 
 import express from "express";
@@ -25,14 +25,25 @@ app.use((req, res, next) => {
 
 app.get("/healthz", (_req, res) => res.json({ status: "ok" }));
 
-// TODO(L0): антивирусная проверка и лимиты до передачи в ядро.
-// TODO(security): аутентификация и RBAC (инспектор / администратор / ML-инженер).
+app.use((req, res, next) => {
+  const length = Number(req.headers["content-length"] || 0);
+  if (Number.isFinite(length) && length > MAX_BATCH_BYTES) {
+    res.status(413).json({
+      reason_code: "BATCH_LIMIT_EXCEEDED",
+      message: `Content-Length ${length} больше лимита ${MAX_BATCH_BYTES} Б`,
+    });
+    return;
+  }
+  next();
+});
+
+// TODO(L0): антивирусная проверка до передачи в ядро.
+// RBAC — в Python-ядре (presentation/rbac.py); шлюз не пишет finding_status.
 app.use(
   "/api/v1",
   createProxyMiddleware({
     target: CORE_URL,
     changeOrigin: true,
-    limit: MAX_BATCH_BYTES,
   }),
 );
 

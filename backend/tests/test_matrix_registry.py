@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from kontur.domain.rule_codes import canonicalize_rule_code, display_alias
+from kontur.infrastructure.matrix import registry as registry_module
 from kontur.infrastructure.matrix.registry import (
     EXPECTED_PARAM_COUNT,
     KNOWN_COVERAGE,
@@ -128,6 +129,12 @@ def test_free_search_is_not_a_matrix_rule(registry: FileRuleRegistry) -> None:
     assert extra.isdisjoint(set(registry.all_codes()))
     with pytest.raises(KeyError):
         registry.get("FREE-HEATING-001")
+
+
+def test_importing_registry_does_not_require_matrix_on_disk() -> None:
+    """Путь к матрице ищется при создании реестра, а не при импорте модуля."""
+
+    assert not hasattr(registry_module, "DEFAULT_ROOT")
 
 
 def test_empty_matrix_is_an_error(tmp_path: Path) -> None:

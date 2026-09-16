@@ -120,6 +120,10 @@ def main() -> int:
                 problems.append(f"{method.upper()} {path}: нет operationId")
                 continue
             operations[operation_id] = operation
+            if operation.get("security") == []:
+                if operation.get("x-required-roles"):
+                    problems.append(f"{operation_id}: публичная операция не должна задавать роли")
+                continue
             responses = operation.get("responses", {})
             for code in ("401", "403"):
                 if code not in responses:
