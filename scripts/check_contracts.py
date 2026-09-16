@@ -18,6 +18,11 @@ SCHEMAS = ROOT / "contracts" / "schemas"
 OPENAPI = ROOT / "contracts" / "openapi.yaml"
 
 sys.path.insert(0, str(ROOT / "backend" / "src"))
+from kontur.application.intake import (  # noqa: E402
+    EXTRA_REJECTION_CODES,
+    TZ_REJECTION_CODES,
+    RejectionReason,
+)
 from kontur.domain.models import DocStage  # noqa: E402
 from kontur.domain.status_map import PROTOCOL_STATUS, tz_upload_status  # noqa: E402
 from kontur.domain.statuses import (  # noqa: E402
@@ -29,6 +34,10 @@ from kontur.domain.statuses import (  # noqa: E402
     Scenario,
     SyncState,
 )
+from kontur.presentation.rbac import REQUIRED_ROLES  # noqa: E402
+
+#: HTTP-методы, которые в этой спецификации могут нести операцию.
+METHODS = frozenset({"get", "post", "put", "patch", "delete"})
 
 
 def main() -> int:
@@ -87,6 +96,46 @@ def main() -> int:
         problems.append("finalize без inspector_id в теле запроса")
     if "/processes/{process_id}/unfinalize" not in spec["paths"]:
         problems.append("нет POST unfinalize")
+
+    rejection_enum = set(components["RejectionReason"]["properties"]["reason_code"]["enum"])
+    if rejection_enum != {member.value for member in RejectionReason}:
+        problems.append("RejectionReason: контракт и application.intake расходятся")
+    if not TZ_REJECTION_CODES <= rejection_enum:
+        problems.append("RejectionReason: потерян код отказа из ТЗ п. 9.1")
+    if not EXTRA_REJECTION_CODES <= rejection_enum:
+        problems.append("RejectionReason: расширение кодов не объявлено в контракте")
+
+    if not spec.get("security"):
+        problems.append("нет глобального security: ТЗ п. 12 требует аутентификации")
+    if "bearerAuth" not in spec["components"].get("securitySchemes", {}):
+        problems.append("нет securitySchemes.bearerAuth: чем подписан запрос — не описано")
+
+    operations: dict[str, dict[str, object]] = {}
+    for path, item in spec["paths"].items():
+        for method, operation in item.items():
+            if method not in METHODS:
+                continue
+            operation_id = operation.get("operationId")
+            if operation_id is None:
+                problems.append(f"{method.upper()} {path}: нет operationId")
+                continue
+            operations[operation_id] = operation
+            responses = operation.get("responses", {})
+            for code in ("401", "403"):
+                if code not in responses:
+                    problems.append(f"{operation_id}: нет ответа {code} (ТЗ п. 12)")
+            declared = operation.get("x-required-roles")
+            if not declared:
+                problems.append(f"{operation_id}: не заданы x-required-roles")
+                continue
+            expected = REQUIRED_ROLES.get(operation_id)
+            if expected is None:
+                problems.append(f"{operation_id}: операции нет в rbac.REQUIRED_ROLES")
+            elif set(declared) != {role.value for role in expected}:
+                problems.append(f"{operation_id}: роли контракта и rbac расходятся")
+    orphans = sorted(set(REQUIRED_ROLES) - set(operations))
+    if orphans:
+        problems.append(f"матрица прав описывает несуществующие операции: {', '.join(orphans)}")
 
     title = spec["info"]["title"]
     if title != "Инспектор ИИ":

@@ -15,7 +15,6 @@ jobs:
           python-version: "3.12"
       - run: pip install -e "backend[dev]"
       - run: ruff check backend scripts
-      - run: ruff check backend scripts
       - run: mypy --strict backend/src
       - run: pytest backend/tests -q
 
@@ -29,6 +28,33 @@ jobs:
       - run: pip install -e "backend[dev]"
       - name: Схемы и OpenAPI разбираются
         run: python scripts/check_contracts.py
+
+  db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kontur
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Схема разворачивается, ограничения срабатывают
+        env:
+          PGPASSWORD: postgres
+        # checks.sql выполняет запрещённые действия и ждёт отказа СУБД.
+        # Если ограничение исчезло, скрипт падает с ошибкой KNT99.
+        run: |
+          psql -h localhost -p 5432 -U postgres -d kontur -v ON_ERROR_STOP=1 \
+            -f backend/src/kontur/infrastructure/db/schema.sql \
+            -f backend/src/kontur/infrastructure/db/checks.sql
 
   claims:
     runs-on: ubuntu-latest

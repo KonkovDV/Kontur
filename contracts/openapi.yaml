@@ -11,11 +11,18 @@ info:
 servers:
   - url: /api/v1
 
+# ТЗ п. 12: доступ только по токену. Роли операций перечислены в
+# x-required-roles и продублированы в backend/src/kontur/presentation/rbac.py;
+# расхождение ловит scripts/check_contracts.py.
+security:
+  - bearerAuth: []
+
 paths:
   /documents/upload:
     post:
       summary: Загрузка пакета документов (инкрементальная дозагрузка до финализации)
       operationId: uploadDocuments
+      x-required-roles: [INSPECTOR, SUPERVISOR]
       requestBody:
         required: true
         content:
@@ -35,6 +42,8 @@ paths:
                   type: array
                   items: { type: string, format: binary }
       responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "202":
           description: Принято в обработку
           content:
@@ -45,13 +54,18 @@ paths:
           description: Протокол финализирован, дозагрузка запрещена
         "413":
           description: Превышен лимит файла (50 МБ) или пакета (200 МБ)
+        "415":
+          description: Неподдерживаемый формат файла (перечень — application.intake)
 
   /processes/{process_id}/status:
     get:
       summary: Статус обработки (целевой p95 ≤200 мс)
       operationId: getProcessStatus
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
       parameters: [{ $ref: "#/components/parameters/ProcessId" }]
       responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "200":
           content:
             application/json:
@@ -62,12 +76,15 @@ paths:
     get:
       summary: Протокол проверки (структура по Приложению 2 ТЗ)
       operationId: getProtocol
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
       parameters:
         - { $ref: "#/components/parameters/ProcessId" }
         - name: version
           in: query
           schema: { type: integer }
       responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "200":
           content:
             application/json:
@@ -77,6 +94,7 @@ paths:
     post:
       summary: Решение инспектора по атомарной находке
       operationId: reviewFinding
+      x-required-roles: [INSPECTOR, SUPERVISOR]
       parameters:
         - name: finding_id
           in: path
@@ -88,6 +106,8 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ReviewDecision" }
       responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "200":
           content:
             application/json:
@@ -103,6 +123,7 @@ paths:
         SUSPICION. CLARIFICATION_REQUIRED — допустимый способ закрыть кандидата
         (п. 9.3). MISSING_EVIDENCE выводится отдельным перечнем.
       operationId: finalizeProtocol
+      x-required-roles: [INSPECTOR, SUPERVISOR]
       parameters: [{ $ref: "#/components/parameters/ProcessId" }]
       requestBody:
         required: true
@@ -114,6 +135,8 @@ paths:
               properties:
                 inspector_id: { type: string }
       responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "200":
           content:
             application/json:
@@ -128,6 +151,7 @@ paths:
         причиной. Результат — COMPLETED, новая версия протокола и запись аудита
         (ADR-0005).
       operationId: unfinalizeProtocol
+      x-required-roles: [SUPERVISOR]
       parameters: [{ $ref: "#/components/parameters/ProcessId" }]
       requestBody:
         required: true
@@ -140,6 +164,8 @@ paths:
                 inspector_id: { type: string }
                 reason: { type: string, minLength: 1 }
       responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "200":
           content:
             application/json:
@@ -154,8 +180,11 @@ paths:
         подтверждённые инспектором записи с версиями протокола, матрицы,
         модели и реестром входных файлов. До 3 повторов: 1, 5, 15 минут.
       operationId: syncInspection
+      x-required-roles: [SUPERVISOR, ADMIN]
       parameters: [{ $ref: "#/components/parameters/ProcessId" }]
       responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "202":
           content:
             application/json:
@@ -163,6 +192,16 @@ paths:
         "409": { description: Протокол не финализирован }
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Токен доступа с ролями INSPECTOR / SUPERVISOR / ADMIN (ТЗ п. 12).
+        Администратор не подтверждает нарушения и не финализирует протокол
+        (ADR-0001), отмена финализации — только супервизор (п. 9.3).
+
   parameters:
     ProcessId:
       name: process_id
@@ -171,6 +210,10 @@ components:
       schema: { type: string }
 
   responses:
+    Unauthorized:
+      description: Токен отсутствует или недействителен (ТЗ п. 12)
+    Forbidden:
+      description: Роль субъекта не допускает операцию (ТЗ п. 12)
     Rejected:
       description: Файл или пакет отклонён
       content:
@@ -210,6 +253,7 @@ components:
             - ANTIVIRUS_REJECTED
             - ENCRYPTED_FILE
             - PROCESSING_TIMEOUT
+            - UNSAFE_FILENAME
         message: { type: string }
 
     ProcessStatus:
