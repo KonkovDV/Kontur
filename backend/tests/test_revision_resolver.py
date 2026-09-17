@@ -11,6 +11,7 @@ from datetime import date
 import pytest
 
 from kontur.application.revision_resolver import (
+    ResolveStatus,
     RevisionConflict,
     check_stale_revision,
     resolve_revision,
@@ -49,29 +50,35 @@ class TestBasicResolution:
     def test_single_approved_is_resolved(self) -> None:
         doc = _doc("pd-v1")
         result = resolve_revision([doc], DocStage.PD)
+        assert result.status is ResolveStatus.RESOLVED
         assert result.resolved is not None
         assert result.resolved.document.file_id == "pd-v1"
 
     def test_no_documents_gives_missing_evidence(self) -> None:
         result = resolve_revision([], DocStage.PD)
-        assert result.status is FindingStatus.MISSING_EVIDENCE
+        assert result.status is ResolveStatus.MISSING_EVIDENCE
         assert result.resolved is None
 
     def test_no_approved_gives_clarification_required(self) -> None:
         doc = _doc("pd-v1", approval=ApprovalStatus.NOT_APPROVED)
         result = resolve_revision([doc], DocStage.PD)
-        assert result.status is FindingStatus.CLARIFICATION_REQUIRED
+        assert result.status is ResolveStatus.CLARIFICATION_REQUIRED
         assert result.resolved is None
 
     def test_unknown_approval_gives_clarification_required(self) -> None:
         doc = _doc("pd-v1", approval=ApprovalStatus.UNKNOWN)
         result = resolve_revision([doc], DocStage.PD)
-        assert result.status is FindingStatus.CLARIFICATION_REQUIRED
+        assert result.status is ResolveStatus.CLARIFICATION_REQUIRED
 
     def test_stage_filter_ignores_other_stages(self) -> None:
         rd_doc = _doc("rd-v1", stage=DocStage.RD)
         result = resolve_revision([rd_doc], DocStage.PD)
-        assert result.status is FindingStatus.MISSING_EVIDENCE
+        assert result.status is ResolveStatus.MISSING_EVIDENCE
+
+    def test_success_is_not_a_finding_status(self) -> None:
+        result = resolve_revision([_doc("pd-v1")], DocStage.PD)
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.status.value != FindingStatus.AUTO_NO_DIFFERENCE.value
 
 
 # ---------------------------------------------------------------------------
@@ -90,9 +97,15 @@ class TestRevisionChain:
     def test_unapproved_newer_revision_does_not_become_baseline(self) -> None:
         """RT-2709-08: неутверждённая редакция, даже новее, не эталон.
 
-        Регрессия: если убрать фильтр approved_ids, v2 станет эталоном.
+        Цепочка явная: v1.successor = v2. Если убрать фильтр APPROVED, голова
+        станет v2.
         """
-        v1 = _doc("pd-v1", approval=ApprovalStatus.APPROVED, approval_date=date(2025, 1, 1))
+        v1 = _doc(
+            "pd-v1",
+            approval=ApprovalStatus.APPROVED,
+            approval_date=date(2025, 1, 1),
+            successor="pd-v2",
+        )
         v2 = _doc(
             "pd-v2",
             approval=ApprovalStatus.NOT_APPROVED,
@@ -100,13 +113,12 @@ class TestRevisionChain:
             predecessor="pd-v1",
         )
         result = resolve_revision([v1, v2], DocStage.PD)
-        assert result.resolved is not None, "должна быть выбрана утверждённая редакция"
-        assert result.resolved.document.file_id == "pd-v1", (
-            "неутверждённая v2 не должна вытеснять утверждённую v1"
-        )
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-v1"
 
     def test_unknown_approval_also_does_not_become_baseline(self) -> None:
-        v1 = _doc("pd-v1", approval=ApprovalStatus.APPROVED)
+        v1 = _doc("pd-v1", approval=ApprovalStatus.APPROVED, successor="pd-v2")
         v2 = _doc("pd-v2", approval=ApprovalStatus.UNKNOWN, predecessor="pd-v1")
         result = resolve_revision([v1, v2], DocStage.PD)
         assert result.resolved is not None
@@ -142,6 +154,12 @@ class TestConflicts:
         v1 = _doc("pd-alpha")
         v2 = _doc("pd-beta")
         with pytest.raises(RevisionConflict, match="pd-alpha"):
+            resolve_revision([v1, v2], DocStage.PD)
+
+    def test_cycle_raises(self) -> None:
+        v1 = _doc("pd-v1", successor="pd-v2")
+        v2 = _doc("pd-v2", predecessor="pd-v1", successor="pd-v1")
+        with pytest.raises(RevisionConflict, match="цикл"):
             resolve_revision([v1, v2], DocStage.PD)
 
 

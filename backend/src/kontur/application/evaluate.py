@@ -13,6 +13,11 @@ from uuid import uuid4
 from kontur.application.comparators import compare_values
 from kontur.application.extractors.number import NumberHit, PageToken, extract_number
 from kontur.application.pipeline import Stage, StageResult, run
+from kontur.application.revision_resolver import (
+    ResolveStatus,
+    RevisionConflict,
+    resolve_revision,
+)
 from kontur.application.scenarios import CompletenessMap, status_for_missing_stage
 from kontur.domain.geometry import polygon_in_unit_square
 from kontur.domain.models import (
@@ -156,6 +161,7 @@ def evaluate_rule(
     object_id: str,
     pages: dict[DocStage, StagePage],
     completeness: CompletenessMap,
+    revision_pool: list[DocumentRef] | None = None,
 ) -> RuleEvaluation:
     """Исполнить одно правило на уже разрезанных страницах."""
 
@@ -202,14 +208,61 @@ def evaluate_rule(
                 FindingStatus.CLARIFICATION_REQUIRED,
                 f"{stage.value}: нет file_id/SHA-256 или страница 0",
             )
-        if page.document.approval_status is not ApprovalStatus.APPROVED:
-            return _halt(
-                rule,
-                Stage.L4_REVISION,
-                _mapped(rule, "revision_conflict", FindingStatus.CLARIFICATION_REQUIRED),
-                f"{stage.value}: эталон без признака утверждения",
-                prior=identity_ok,
-            )
+
+    revision_status = _mapped(rule, "revision_conflict", FindingStatus.CLARIFICATION_REQUIRED)
+    if revision_pool is not None:
+        for stage in required:
+            try:
+                resolution = resolve_revision(revision_pool, stage)
+            except RevisionConflict as exc:
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    str(exc),
+                    prior=identity_ok,
+                )
+            if resolution.status is ResolveStatus.MISSING_EVIDENCE:
+                mapped = _mapped(rule, "source_absent", FindingStatus.MISSING_EVIDENCE)
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    mapped,
+                    resolution.conflict_reason or f"{stage.value}: нет документов стадии",
+                    prior=identity_ok,
+                    missing_stage=stage,
+                )
+            if resolution.status is not ResolveStatus.RESOLVED or resolution.resolved is None:
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    resolution.conflict_reason or f"{stage.value}: эталон не выбран",
+                    prior=identity_ok,
+                )
+            current = pages.get(stage)
+            chosen = resolution.resolved.document
+            if current is None or current.document.file_id != chosen.file_id:
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    (
+                        f"{stage.value}: страница не последняя утверждённая редакция"
+                        f" ({chosen.file_id})"
+                    ),
+                    prior=identity_ok,
+                )
+    else:
+        for stage, page in pages.items():
+            if page.document.approval_status is not ApprovalStatus.APPROVED:
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    f"{stage.value}: эталон без признака утверждения",
+                    prior=identity_ok,
+                )
 
     hits: dict[DocStage, NumberHit] = {}
     for stage in required:

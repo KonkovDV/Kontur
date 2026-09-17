@@ -165,6 +165,36 @@ def test_unapproved_revision_does_not_compare(rule: dict[str, object]) -> None:
     assert result.finding.finding_status is not FindingStatus.CANDIDATE
 
 
+def test_pool_rejects_page_that_is_not_approved_head(rule: dict[str, object]) -> None:
+    """RT-2709-08 в слайсе: в страницах черновик, в пуле есть утверждённый предшественник."""
+
+    draft = _document(DocStage.PD, approved=False)
+    head = DocumentRef(
+        file_id="file-pd-approved",
+        file_hash=HASH,
+        doc_stage=DocStage.PD,
+        document_code="12345-PD-TEP",
+        revision="1",
+        approval_status=ApprovalStatus.APPROVED,
+        sheet="ОД",
+        successor_file_id=draft.file_id,
+    )
+    rd = _document(DocStage.RD)
+    pages = {
+        DocStage.PD: StagePage(document=draft, tokens=_line("Площадь", "застройки", "1250,5")),
+        DocStage.RD: StagePage(document=rd, tokens=_line("Площадь", "застройки", "1100")),
+    }
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages=pages,
+        completeness=_completeness(),
+        revision_pool=[head, draft, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert result.finding.evidence_group_id is None
+
+
 def test_review_and_protocol_close_the_slice(rule: dict[str, object]) -> None:
     result = _run(
         rule,

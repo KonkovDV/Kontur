@@ -1,21 +1,19 @@
-"""Резолвер актуальной утверждённой редакции (Gate E, ТЗ п. 9.1).
+"""Резолвер актуальной утверждённой редакции (Gate E, ТЗ п. 9.1, ADR-0003).
 
-Инвариант: эталоном сравнения является только последняя утверждённая редакция.
-Неутверждённая редакция, даже если она новее, не становится эталоном.
-Конфликт predecessor/successor → RevisionConflict (→ CLARIFICATION_REQUIRED).
+Эталон — только последняя утверждённая редакция. Неутверждённая, даже если
+она новее, в пул не входит. Конфликт, цикл или отсутствие признака
+утверждения — `CLARIFICATION_REQUIRED`, без сравнения.
 
-Связанные требования ТЗ:
-- п. 9.1: «актуальная утверждённая редакция»
-- п. 9.2: «расхождение — только между утверждёнными стадиями»
-- ADR-0005: машины состояний не выносят юридических решений
+Резолвер не пишет `finding_status` сравнения: успешный выбор эталона — это
+не «расхождения нет».
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
-from kontur.domain.statuses import FindingStatus
 
 
 class RevisionConflict(ValueError):
@@ -24,6 +22,14 @@ class RevisionConflict(ValueError):
     Вызывающий слой обязан закрыть находку через CLARIFICATION_REQUIRED
     и зафиксировать conflict_reason в rationale.
     """
+
+
+class ResolveStatus(StrEnum):
+    """Исход выбора эталона. Это не статус находки."""
+
+    RESOLVED = "RESOLVED"
+    MISSING_EVIDENCE = "MISSING_EVIDENCE"
+    CLARIFICATION_REQUIRED = "CLARIFICATION_REQUIRED"
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,16 +43,9 @@ class ResolvedRevision:
 
 @dataclass(frozen=True, slots=True)
 class RevisionResolution:
-    """Итог резолвера для одного параметра / одной стадии.
+    """Итог резолвера для одной стадии."""
 
-    status:
-      AUTO_NO_DIFFERENCE     — успешный выбор эталона
-      MISSING_EVIDENCE       — нет документов стадии вообще
-      CLARIFICATION_REQUIRED — нет ни одной утверждённой редакции
-    resolved — None при любом нетерминальном статусе.
-    """
-
-    status: FindingStatus
+    status: ResolveStatus
     resolved: ResolvedRevision | None
     conflict_reason: str | None = None
 
@@ -61,57 +60,48 @@ def resolve_revision(
 ) -> RevisionResolution:
     """Выбирает последнюю утверждённую редакцию для стадии.
 
-    Алгоритм:
-    1. Фильтр: только документы нужной стадии.
-    2. Фильтр: только APPROVED — неутверждённые вход в approved-пул не попадают.
-    3. Ищем «голову» цепочки: approved без successor_file_id
-       ИЛИ чей successor_file_id не является approved.
-    4. Если голов несколько — RevisionConflict.
-    5. Случай цикла — RevisionConflict.
-    6. Неутверждённая редакция не вытесняет утверждённую (RT-2709-08).
+    1. Только документы нужной стадии.
+    2. Только APPROVED — неутверждённые в пул голов не попадают.
+    3. Голова: approved без successor_file_id либо successor не approved.
+    4. Несколько голов или цикл — RevisionConflict.
     """
-    stage_docs = [d for d in documents if d.doc_stage is stage]
+
+    stage_docs = [item for item in documents if item.doc_stage is stage]
     if not stage_docs:
         return RevisionResolution(
-            status=FindingStatus.MISSING_EVIDENCE,
+            status=ResolveStatus.MISSING_EVIDENCE,
             resolved=None,
-            conflict_reason=f"нет документов стадии {stage}",
+            conflict_reason=f"нет документов стадии {stage.value}",
         )
 
-    approved = [d for d in stage_docs if _is_approved(d)]
+    approved = [item for item in stage_docs if _is_approved(item)]
     if not approved:
         return RevisionResolution(
-            status=FindingStatus.CLARIFICATION_REQUIRED,
+            status=ResolveStatus.CLARIFICATION_REQUIRED,
             resolved=None,
             conflict_reason=(
-                f"нет утверждённых редакций для {stage}"
+                f"нет утверждённых редакций для {stage.value}"
                 f" ({len(stage_docs)} неутверждённых)"
             ),
         )
 
-    approved_ids: frozenset[str] = frozenset(d.file_id for d in approved)
-
-    # Голова: approved без successor_file_id ИЛИ чей successor не approved
+    approved_ids: frozenset[str] = frozenset(item.file_id for item in approved)
     heads = [
-        d for d in approved
-        if d.successor_file_id is None or d.successor_file_id not in approved_ids
+        item
+        for item in approved
+        if item.successor_file_id is None or item.successor_file_id not in approved_ids
     ]
-
     if len(heads) == 0:
-        ids = ", ".join(d.file_id for d in approved)
-        raise RevisionConflict(
-            f"цикл в графе редакций для {stage}: {ids}"
-        )
-
+        ids = ", ".join(item.file_id for item in approved)
+        raise RevisionConflict(f"цикл в графе редакций для {stage.value}: {ids}")
     if len(heads) > 1:
-        ids = ", ".join(d.file_id for d in heads)
+        ids = ", ".join(item.file_id for item in heads)
         raise RevisionConflict(
             f"несколько утверждённых редакций без однозначного successor"
-            f" для {stage}: {ids}"
+            f" для {stage.value}: {ids}"
         )
-
     return RevisionResolution(
-        status=FindingStatus.AUTO_NO_DIFFERENCE,
+        status=ResolveStatus.RESOLVED,
         resolved=ResolvedRevision(document=heads[0], is_stale=False),
     )
 
@@ -120,19 +110,16 @@ def check_stale_revision(
     candidate: DocumentRef,
     all_documents: list[DocumentRef],
 ) -> bool:
-    """True если candidate устарел: заменён более новой APPROVED редакцией.
+    """True, если candidate заменён более новой APPROVED редакцией.
 
-    Неутверждённый successor не считается: сокращает FPR (RT-2609-17).
+    Неутверждённый successor не считается: он не смещает эталон (RT-2709-08).
+    Связь predecessor/successor первична; даты не требуются.
     """
-    successors = [
-        d
-        for d in all_documents
-        if d.doc_stage is candidate.doc_stage
-        and d.file_id != candidate.file_id
-        and _is_approved(d)
-        and d.predecessor_file_id == candidate.file_id
-        and d.approval_date is not None
-        and candidate.approval_date is not None
-        and d.approval_date > candidate.approval_date
-    ]
-    return bool(successors)
+
+    return any(
+        item.doc_stage is candidate.doc_stage
+        and item.file_id != candidate.file_id
+        and _is_approved(item)
+        and item.predecessor_file_id == candidate.file_id
+        for item in all_documents
+    )

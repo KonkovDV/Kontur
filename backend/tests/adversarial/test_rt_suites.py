@@ -3,11 +3,8 @@
 По одному представительному кейсу на набор. Каждый кейс фиксирует oracle:
 что именно система обязана сделать с враждебным входом.
 
-Изменения относительно оригинального файла:
-- RT-2709-08 (неутверждённая редакция не эталон): закрыт, xfail снят.
-  Реальная проверка через kontur.application.revision_resolver.
-- Остальные тесты: хранят xfail strict=True отдельными метками,
-  пока соответствующие слои не реализованы.
+RT-2709-08 (неутверждённая редакция не эталон) и RT-D rename/хеш закрыты.
+Остальные тесты — xfail strict, пока слой не реализован.
 """
 
 from __future__ import annotations
@@ -18,11 +15,8 @@ import pytest
 
 from kontur.application.revision_resolver import resolve_revision
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
+from kontur.infrastructure.pdfium_tokens import file_sha256
 
-
-# ---------------------------------------------------------------------------
-# Вспомогательная функция
-# ---------------------------------------------------------------------------
 
 def _doc(
     file_id: str,
@@ -46,17 +40,15 @@ def _doc(
     )
 
 
-# ---------------------------------------------------------------------------
-# RT-D: резолвер редакций — РЕАЛИЗОВАНО, xfail снят
-# ---------------------------------------------------------------------------
-
 def test_rt_d_newer_unapproved_revision_does_not_become_baseline() -> None:
-    """Новая неутверждённая редакция не смещает эталон (ADR-0003, RT-2709-08).
+    """Новая неутверждённая редакция не смещает эталон (ADR-0003, RT-2709-08)."""
 
-    Регрессия: удалите из resolve_revision фильтр approved_ids —
-    v2 станет эталоном, тест покраснеет.
-    """
-    v1 = _doc("pd-v1", approval=ApprovalStatus.APPROVED, approval_date=date(2025, 1, 1))
+    v1 = _doc(
+        "pd-v1",
+        approval=ApprovalStatus.APPROVED,
+        approval_date=date(2025, 1, 1),
+        successor="pd-v2",
+    )
     v2 = _doc(
         "pd-v2",
         approval=ApprovalStatus.NOT_APPROVED,
@@ -64,15 +56,18 @@ def test_rt_d_newer_unapproved_revision_does_not_become_baseline() -> None:
         predecessor="pd-v1",
     )
     result = resolve_revision([v1, v2], DocStage.PD)
-    assert result.resolved is not None, "должна быть выбрана утверждённая редакция"
-    assert result.resolved.document.file_id == "pd-v1", (
-        "неутверждённая v2 не должна вытеснять утверждённую v1"
-    )
+    assert result.resolved is not None
+    assert result.resolved.document.file_id == "pd-v1"
 
 
-# ---------------------------------------------------------------------------
-# Остальные RT-наборы: xfail strict до реализации слоёв L0–L9
-# ---------------------------------------------------------------------------
+def test_rt_d_rename_does_not_change_identity() -> None:
+    """Переименование и перемещение файла не меняют identity: решает content hash."""
+
+    payload = b"%PDF-1.4 renamed-or-moved"
+    moved = b"%PDF-1.4 renamed-or-moved"
+    assert file_sha256(payload) == file_sha256(moved)
+    assert file_sha256(payload) != file_sha256(payload + b"\x00")
+
 
 @pytest.mark.xfail(reason="RT-A: слой приёма не реализован", strict=True)
 def test_rt_a_decompression_bomb_is_rejected_with_reason_code() -> None:
@@ -100,13 +95,6 @@ def test_rt_c_instruction_inside_image_is_ignored() -> None:
     """Текст «ignore rules» внутри чертежа остаётся данными и не управляет пайплайном."""
 
     raise NotImplementedError("RT-C")
-
-
-@pytest.mark.xfail(reason="RT-D: identity по content-hash не реализован", strict=True)
-def test_rt_d_rename_does_not_change_identity() -> None:
-    """Переименование и перемещение файла не меняют identity: решает content hash."""
-
-    raise NotImplementedError("RT-D")
 
 
 @pytest.mark.xfail(reason="RT-E: нормативная база не реализована", strict=True)

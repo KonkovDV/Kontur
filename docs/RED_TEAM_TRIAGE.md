@@ -62,10 +62,9 @@ psql -v ON_ERROR_STOP=1 \
 | ID | Класс | Находка | Почему не закрыто здесь | Следующий шаг |
 |---|---|---|---|---|
 | RT-2609-16 | S1 | П. 9.5 (SUSPICION, четыре подхода, дедупликация) и УКЭП из п. 9.6 — только текст | Нет артефакта и нет sandbox внешней ИС | модуль подозрений с дедупликацией по группе доказательств; требования к подписи — вопрос 14 организатору |
-| RT-2609-17 | S2 | `release_gate.evaluate` не требует полного набора категорий; нет подписи ответственного и плана откатa | Политика публикации модели — решение владельца | требовать полный набор категорий и непустые интервалы, хранить подпись и rollback-план вместе с версией модели |
 | RT-2609-18 | S2 | React и Node не проверяются в CI | Опция `limit`, которой нет в `http-proxy-middleware` v3, снята; `Content-Length` 413 стоит в Express. Job `frontend` всё ещё нет | lock-файлы, `npm ci` и `tsc --noEmit` в CI |
 | RT-2609-19 | S2 | OpenAPI 3.0.3 ссылается на схемы JSON Schema 2020-12 с `type: [..., "null"]` | Смена версии контракта затрагивает генераторы клиентов | перейти на OpenAPI 3.1 либо держать 3.0-совместимые копии схем |
-| RT-2609-21 | S3 | Нет протокола юзабилити п. 9.3 (время на протокол, число кликов на находку, пять инспекторов) | Нужны люди и сессии наблюдения | `docs/USABILITY_PROTOCOL.md` с формой замера |
+| RT-2609-21 | S3 | Замер юзабилити п. 9.3 не проведён | Форма есть в `docs/USABILITY_PROTOCOL.md`; нет сессий с инспекторами | провести 5 сессий до гейта K |
 | RT-2609-27 | S2 | HTTP-контур держит процессы в памяти процесса API, а не в таблице `processes` | Схема есть, DAO нет; после перезапуска процессы пропадают — это явно, не «состояние в очереди» | репозиторий процессов на Postgres по `schema.sql` |
 
 ## Прогон 17.09.2026 (гейт C)
@@ -83,13 +82,14 @@ psql -v ON_ERROR_STOP=1 \
 | RT-2709-04 | RT-A | S1 | Повреждённый или пустой PDF принимается как пустая страница | Тихий пропуск объекта | `extract_pdf_bytes` бросает `ValueError` | `test_pdf_tokens.py::test_corrupt_pdf_is_an_error_not_empty_success` |
 | RT-2709-05 | RT-B | S2 | Текст вне CropBox попадает в доказательства | Находка на невидимом фрагменте | токен вне CropBox отбрасывается | `::test_text_outside_cropbox_is_not_a_token` |
 | RT-2709-06 | RT-E | S2 | Exact Match шифра после casefold (`12345-PZ` = `12345-pz`) | Ложное совпадение ключевых полей (вопрос 10) | `normalize_key_field` без casefold; порог по Wilson | `test_metrics.py::test_key_field_exact_match_is_case_sensitive_in_ciphers`, `::test_key_field_threshold_needs_wilson_lower_bound` |
+| RT-2709-08 | RT-D | S2 | Новая неутверждённая редакция становится эталоном | Ложные нарушения по всему объекту (stop-ship № 4) | `resolve_revision` берёт только APPROVED; успех — `ResolveStatus.RESOLVED`, не `AUTO_NO_DIFFERENCE` | `test_revision_resolver.py::test_unapproved_newer_revision_does_not_become_baseline`, `test_pz001.py::test_pool_rejects_page_that_is_not_approved_head`, `test_rt_suites.py::test_rt_d_newer_unapproved_revision_does_not_become_baseline` |
+| RT-2609-17 | RT-G | S2 | Публикация модели без категорий и без подписи | Скоринг-гейт 59/100 и нет отката | `PublicationSignature` и `REQUIRED_CATEGORIES` блокируют `evaluate` | `test_release_gate.py` |
 
 ### Открыто после прогона
 
 | ID | Класс | Находка | Почему не закрыто здесь | Следующий шаг |
 |---|---|---|---|---|
 | RT-2709-07 | S1 | Скрытый белый/перекрытый текст внутри CropBox читается как штамп | Нет детектора visual vs text; `text_render_agreement` всегда `None` | не закрывать RT-B; не ставить `True` без детектора |
-| RT-2709-08 | S2 | Новая неутверждённая редакция как эталон | Резолвер редакций — гейт E, не C | `test_rt_d_newer_unapproved_revision_does_not_become_baseline` остаётся xfail |
 | RT-2709-09 | S3 | Character Accuracy / CER не реализованы | Не смешивать с Exact Match полей | E1 после bake-off OCR, не в этой сессии |
 
 Порог Exact Match ≥0,92 на validation v0 не атаковался как достигнутый: выборки нет,

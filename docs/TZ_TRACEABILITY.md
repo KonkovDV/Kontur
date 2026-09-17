@@ -12,7 +12,7 @@
 | 7 | 12 модулей системы | `application/` | — | skeleton |
 | 8 | Матрица 132 параметра, таблица `Params` | `data/matrix/`, `contracts/schemas/rule.schema.json` | `test_matrix_registry.py` | in_progress |
 
-| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/pipeline.py`, `domain/coordinates.py`, `infrastructure/pdfium_tokens.py`, `application/passport.py` | `test_pipeline.py`, `test_coordinates.py`, `test_pdf_tokens.py`, `test_passport.py` | in_progress (паспорт и PDF-токены есть; OCR/CV/кеш/редакции нет) |
+| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/pipeline.py`, `domain/coordinates.py`, `infrastructure/pdfium_tokens.py`, `application/passport.py`, `application/revision_resolver.py` | `test_pipeline.py`, `test_coordinates.py`, `test_pdf_tokens.py`, `test_passport.py`, `test_revision_resolver.py` | in_progress (резолвер эталона есть; OCR/CV/кеш нет; связка ≥0,97 не измерена) |
 | 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `application/intake.py`, `application/retry_policy.py`, `presentation/api.py` | `test_intake.py`, `test_retry_policy.py`, `test_api.py` | in_progress |
 | 9.1 | Статусы загрузки `PD_/RD_/ID_UPLOADED/PARTIAL/MISSING` | `domain/status_map.py` | `test_status_map.py` | skeleton |
 | 9.2 | Сценарии FULL…PARTIALLY_LOADED; пустой пакет — ошибка | `application/scenarios.py` | `test_scenarios.py` | skeleton |
@@ -20,8 +20,8 @@
 | 9.2 | Каскад L0–L9: безопасная остановка, L0 ≠ finding, нет автостатуса на L8–L9 | `application/pipeline.py`, `application/evaluate.py` | `test_pipeline.py`, `test_pipeline_halt.py`, `test_pz001.py` | in_progress |
 | 9.2 | Инкрементальное обновление при дозагрузке | — | — | skeleton |
 | 9.3 | Верификация, reason_code, атомарность, финализация, отмена | `application/review.py`, `domain/state_machines.py`, триггер `protocols_finalized_is_immutable` | `test_review.py`, `test_state_machines.py`, `db/checks.sql` § 1–3 | in_progress |
-| 9.3 | Юзабилити: ≤30 мин на протокол, ≤3 клика на находку | `web/` | ручной протокол на 5 инспекторах | skeleton |
-| 9.4 | GOLD, версии, разбиение по объектам, пороги публикации модели | `evaluation/release_gate.py`, CHECK `gold_label` и `gold_requires_expert` в `db/schema.sql` | `db/checks.sql` § 4–6, `test_schema_sql.py` | in_progress (пропуск категории в `release_gate` не блокирует публикацию — RT-2609-17) |
+| 9.3 | Юзабилити: ≤30 мин на протокол, ≤3 клика на находку | `web/`, `docs/USABILITY_PROTOCOL.md` | ручной протокол на 5 инспекторах | skeleton (форма замера есть, сессий нет) |
+| 9.4 | GOLD, версии, разбиение по объектам, пороги публикации модели | `evaluation/release_gate.py`, CHECK `gold_label` и `gold_requires_expert` в `db/schema.sql` | `db/checks.sql` § 4–6, `test_schema_sql.py`, `test_release_gate.py` | in_progress (подпись и полный набор категорий блокируют публикацию) |
 | 9.4 | Реестр поставки, карантин скрытого теста, изоляция по `object_id` | `data/dataset/package_manifest.json`, `data/dataset/objects.json`, `evaluation/dataset_package.py`, `docs/DATASET_PACKAGE.md` | `test_dataset_package.py`, `test_quarantine.py` | in_progress |
 | 9.5 | SUSPICION, 4 подхода, дедупликация | — | — | skeleton |
 | 9.6 | ИАИС «РиН»: только `PROTOCOL_FINALIZED`, УКЭП, 3 ретрая | `application/retry_policy.py`, ограничение `sync_only_after_finalize` | `test_retry_policy.py`, `db/checks.sql` § 8 | in_progress (УКЭП и sandbox отсутствуют) |

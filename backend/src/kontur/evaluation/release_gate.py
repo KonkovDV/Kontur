@@ -56,6 +56,8 @@ class PublicationSignature:
     def __post_init__(self) -> None:
         if not self.responsible_id.strip():
             raise ValueError("responsible_id не может быть пустым")
+        if not self.model_version.strip():
+            raise ValueError("model_version не может быть пустым")
         if not self.rollback_plan.strip():
             raise ValueError("rollback_plan не может быть пустым")
 
