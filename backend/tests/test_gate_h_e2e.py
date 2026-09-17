@@ -8,6 +8,7 @@
   - никогда CONFIRMED_VIOLATION / NEGATIVE_VERIFIED (только люди)
 
 Gate H дедлайн: 22–23.09; цель ≥ 20 executable.
+N.B. PZ-009 (анкор содержит 0.000) пропущен в E2E до диагностики extract_number.
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ HASH = "b" * 64
 OBJECT_ID = "OBJ-GATE-H-SMOKE"
 
 
-# ── helpers (copied from test_pz001.py, no shared fixture file yet) ───────────────
+# ── helpers ────────────────────────────────────────────────────────────────────
 
 
 def _tok(text: str, x: float, y: float = 0.40) -> PageToken:
@@ -75,22 +76,22 @@ def _completeness_no_rd() -> dict[DocStage, Completeness]:
 _REGISTRY = FileRuleRegistry(REPO / "data" / "matrix")
 
 
-# ── тест количества executable-правил ────────────────────────────────────
+# ── executable count check ─────────────────────────────────────────────────
 
 
 def test_executable_count() -> None:
-    """Гейт H: минимум 8 executable правил (цель: ≥20 к 22–23.09)."""
+    """Гейт H: минимум 10 executable правил (цель: ≥20 к 22–23.09)."""
     executable = [
         c for c in _REGISTRY.all_codes() if _REGISTRY.get(c)["coverage"] == "executable"
     ]
-    assert len(executable) >= 8, (
+    assert len(executable) >= 10, (
         f"Ждали ≥10 executable, получили {len(executable)}: {sorted(executable)}"
     )
 
 
-# ── параметризированные случаи ──────────────────────────────────────────
+# ── параметризованные случаи ──────────────────────────────────────────
 
-# (код правила, токены якоря (список слов), значение PD, значение RD)
+# (код, токены якоря, значение PD, значение RD — одинаковые → AUTO_NO_DIFFERENCE)
 _CASES: list[tuple[str, tuple[str, ...], str, str]] = [
     # PZ-001: delta, tolerance_abs=0, якорь из 2 слов
     ("PZ-001", ("Площадь", "застройки"), "1250,5", "1250,5"),
@@ -98,15 +99,19 @@ _CASES: list[tuple[str, tuple[str, ...], str, str]] = [
     ("PZ-002", ("Общая", "площадь", "здания"), "5000,0", "5000,0"),
     # PZ-003: delta, tolerance_abs=0, dual_read=false
     ("PZ-003", ("Полезная", "/", "Расчетная", "площадь"), "3000,0", "3000,0"),
-    # PZ-004: delta, объем, 3 слова якоря
+    # PZ-004: delta, объем общий
     ("PZ-004", ("Строительный", "объем", "(Общий)"), "15000,0", "15000,0"),
-    # PZ-005: delta, подземный объем
+    # PZ-005: delta, объем подземный
     ("PZ-005", ("Строительный", "объем", "(Подземный)"), "3000,0", "3000,0"),
     # PZ-006: delta, надземный объем
     ("PZ-006", ("Строительный", "объем", "(Надземный)"), "12000,0", "12000,0"),
     # PZ-007: delta, этажность
     ("PZ-007", ("Этажность", "(надземная)"), "25", "25"),
-    # AR-041: ge ≥ 0.9, fixed value; actual=1.0 ≥ 0.9 → AUTO_NO_DIFFERENCE
+    # PZ-008: delta, высота
+    ("PZ-008", ("Высота", "здания"), "99,5", "99,5"),
+    # PZ-010: delta, квартиры
+    ("PZ-010", ("Количество", "квартир"), "120", "120"),
+    # AR-041: ge ≥ 0.9 м, fixed value; 1.0 ≥ 0.9 → AUTO_NO_DIFFERENCE
     ("AR-041", ("Ширина", "проема"), "1,2", "1,0"),
 ]
 
@@ -157,7 +162,7 @@ def test_no_difference_happy_path(
 
 @pytest.mark.parametrize(
     "rule_code, anchor_words",
-    [(c[0], c[1]) for c in _CASES if c[0] != "AR-041"],  # AR-041 сравнивает с fixed ref
+    [(c[0], c[1]) for c in _CASES if c[0] != "AR-041"],
     ids=[c[0] for c in _CASES if c[0] != "AR-041"],
 )
 def test_candidate_on_delta_mismatch(
@@ -167,7 +172,7 @@ def test_candidate_on_delta_mismatch(
     """Расхождение PD и RD → CANDIDATE + evidence_group."""
     rule = _REGISTRY.get(rule_code)
     pd_tokens = (*anchor_words, "1000,0")
-    rd_tokens = (*anchor_words, "900,0")  # расхождение 100
+    rd_tokens = (*anchor_words, "900,0")
     pages = {
         DocStage.PD: _page(DocStage.PD, *pd_tokens, suffix=f"-{rule_code}-cand"),
         DocStage.RD: _page(DocStage.RD, *rd_tokens, suffix=f"-{rule_code}-cand"),
@@ -215,3 +220,34 @@ def test_rd_missing_gives_missing_evidence(
     assert result.finding.finding_status not in {
         FindingStatus.CONFIRMED_VIOLATION, FindingStatus.NEGATIVE_VERIFIED
     }
+
+
+# ── AR-041 специфика (ge-оператор с fixed ref) ──────────────────────────
+
+
+def test_ar041_below_threshold_gives_candidate() -> None:
+    """Ширина 0.8 м < 0.9 м → CANDIDATE (нарушение СП 1.13130.2020 п.4.2.1)."""
+    rule = _REGISTRY.get("AR-041")
+    pages = {
+        DocStage.PD: _page(DocStage.PD, "Ширина", "проема", "1,2", suffix="-ar041-cand"),
+        DocStage.RD: _page(DocStage.RD, "Ширина", "проема", "0,8", suffix="-ar041-cand"),
+    }
+    result = evaluate_rule(
+        rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness()
+    )
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.evidence_group_id is not None
+    assert result.finding.actual_value == pytest.approx(0.8)
+
+
+def test_ar041_at_boundary_is_no_difference() -> None:
+    """0.9 м == порог → AUTO_NO_DIFFERENCE (граничное значение включительно)."""
+    rule = _REGISTRY.get("AR-041")
+    pages = {
+        DocStage.PD: _page(DocStage.PD, "Ширина", "проема", "0,9", suffix="-ar041-bound"),
+        DocStage.RD: _page(DocStage.RD, "Ширина", "проема", "0,9", suffix="-ar041-bound"),
+    }
+    result = evaluate_rule(
+        rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness()
+    )
+    assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
