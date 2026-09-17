@@ -29,7 +29,7 @@
 | 11 | Производительность, p95 ≤200 мс, 100 пользователей | `docs/PERFORMANCE.md` | нагрузочный прогон (не выполнен) | skeleton |
 | 12 | Аутентификация, RBAC, TLS 1.3, аудит, 152-ФЗ, антивирус | `presentation/rbac.py`, `presentation/auth.py`, `security` и `x-required-roles` в `contracts/openapi.yaml`, `audit_log` | `test_rbac.py`, `test_api.py`, `scripts/check_contracts.py` | in_progress (Bearer-заглушка, не JWT; TLS и антивирус ещё нет) |
 | 13 | JSON-логи, уровни, Prometheus/Grafana, ELK, алерты, checksum | `gateway/src/server.js` | — | skeleton |
-| 14 | Пороги приёмки и правила выборок | `evaluation/metrics.py` | `test_metrics.py` | in_progress (Exact Match ключей реализован; порог не измерен на frozen corpus; Character Accuracy — `NotImplemented`) |
+| 14 | Пороги приёмки и правила выборок | `evaluation/metrics.py` | `test_metrics.py` | in_progress (Exact Match ключей и IoU/`evidence_localization` на синтетике; пороги ≥0,92 и ≥0,95 не измерены на frozen corpus; Character Accuracy — `NotImplemented`) |
 | Прил. 1 | Полный перечень 132 параметров | `data/matrix/source/parameter_catalog_132.jsonl`, `data/matrix/params.template.csv`, `data/matrix/rules/*.json` | `test_matrix_registry.py`, `test_pz001.py` | in_progress (132 schema-valid; `PZ-001` executable, остальные extractor_missing) |
 | Прил. 2 | Образец протокола | `contracts/schemas/protocol.schema.json` | — | in_progress (образец найден: Приложение 2 docx) |
 | Прил. 2 | Формат ответа участника (`submission_schema.json`) | `contracts/schemas/submission.schema.json`, `evaluation/submission.py` | `test_submission.py` | in_progress (формат `parameter_code` — вопрос 16) |

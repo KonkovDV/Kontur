@@ -1,1 +1,187 @@
-IiIi0KLQtdGB0YLRiyDQtNC70Y8gZXZhbHVhdGlvbi9tZXRyaWNzLnB5ICjQk9C10LnRgiDQlCkg4oCTINC80LXRgtGA0LjQutCwIElvVSDQuCBldmlkZW5jZV9sb2NhbGl6YXRpb24uCgpLcnl0ZXJpYToKLSBJb1UoaWRlbnRpY2FsKSA9IDEuMDsgSW9VKGRpc2pvaW50KSA9IDAuMDsgSW9VIG9mIHBhcnRpYWwgb3ZlcmxhcApFdmlkZW5jZUxvY2FsaXphdGlvbiBpbnRlcnZhbDogYWxsIHBhc3MsIGFsbCBmYWlsLCBwYXJ0aWFsLCBlbXB0eQoiIiIKCmZyb20gX19mdXR1cmVfXyBpbXBvcnQgYW5ub3RhdGlvbnMKCmltcG9ydCBweXRlc3QKCmZyb20ga29udHVyLmV2YWx1YXRpb24ubWV0cmljcyBpbXBvcnQgKAogICAgSW9VX1RIUkVTSE9MRCwKICAgIGV2aWRlbmNlX2xvY2FsaXphdGlvbl9pbnRlcnZhbCwKICAgIGlvdSwKKQoKClVOSVRfU1FVQVJFID0gKCgwLjAsIDAuMCksICgxLjAsIDAuMCksICgxLjAsIDEuMCksICgwLjAsIDEuMCkpCgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KIyBUZXN0SW9VCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgoKZGVmIHRlc3RfaW91X2lkZW50aWNhbF9wb2x5Z29ucygpIC0+IE5vbmU6CiAgICAiIiJJb1UoQSwgQSkgPSAxLjAg0LTQu9GPINC70Y7QsdC+0LPQviDQvNC+0LTQtdC70Y8uIiIiCiAgICBhc3NlcnQgaW91KFVOSVRTUVVBR0UsIFVOSVRfU1FVQVJFKSA9PSBweXRlc3QuYXBwcm94KDEuMCkKCgpkZWYgdGVzdF9pb3VfZGlzam9pbnRfcG9seWdvbnMoKSAtPiBOb25lOgogICAgIiIiSW9VKEEsIEIpID0gMC4wINC00LvRjyDQvdC10L/QtdGA0LXRgdC10LrQsNGO0YnQuNGF0YHRjyDQvdCwINGA0LDRgdGB0YLQvtGP0L3QuNC4LiIiIgogICAgZmFyID0gKCgxMC4wLCAxMC4wKSwgKDExLjAsIDEwLjApLCAoMTEuMCwgMTEuMCksICgxMC4wLCAxMS4wKSkKICAgIGFzc2VydCBpb3UoVU5JVF9TUVVBUkUsIGZhcikgPT0gcHl0ZXN0LmFwcHJveCgwLjApCgoKZGVmIHRlc3RfaW91X2hhbGZfb3ZlcmxhcCgpIC0+IE5vbmU6CiAgICAiIiJJb1UoQSwgQikgPSAxLzMg0LTQu9GPINC/0L7Qu9C+0LLQuNC90L3QvtCz0L4g0L/QtdGA0LXQutGA0YvRgtC40Y8uIiIiCiAgICBoYWxmID0gKCgwLjUsIDAuMCksICgxLjUsIDAuMCksICgxLjUsIDEuMCksICgwLjUsIDEuMCkpCiAgICByZXN1bHQgPSBpb3UoVU5JVF9TUVVBUkUsIGhhbGYpCiAgICBhc3NlcnQgcmVzdWx0ID09IHB5dGVzdC5hcHByb3goMS4wIC8gMy4wLCBhYnM9MWUtNikKCgpkZWYgdGVzdF9pb3VfaXNfc3ltbWV0cmljKCkgLT4gTm9uZToKICAgICIiIklvVShBLCBCKSA9PSBJb1UoQiwgQSkuIiIiCiAgICBvdGhlciA9ICgoMC4yNSwgMC4yNSksICgwLjc1LCAwLjI1KSwgKDAuNzUsIDAuNzUpLCAoMC4yNSwgMC43NSkpCiAgICBhc3NlcnQgaW91KFVOSVRTUVVBR0UsIG90aGVyKSA9PSBweXRlc3QuYXBwcm94KGlvdShvdGhlciwgVU5JVF9TUVVBUkUpKQoKCmRlZiB0ZXN0X2lvdV90cmlhbmdsZV92c19zcXVhcmUoKSAtPiBOb25lOgogICAgIiIi0KLRgNC10YPQs9C+0LvRjNC90LjQuiDQstC90YPRgtGA0Lgg0LXQtNC40L3QuNGH0L3QvtCz0L4g0L/QvtC70LjQs9C+0L3QsC4iIiIKICAgIHRyaSA9ICgoMC4wLCAwLjApLCAoMS4wLCAwLjApLCAoMC41LCAxLjApKQogICAgcmVzdWx0ID0gaW91KFVOSVRTUVVBR0UsIHRyaSkKICAgIGFzc2VydCAwLjAgPCByZXN1bHQgPCAxLjAKCgpkZWYgdGVzdF9pb3VfZW1wdHlfcG9seWdvbigpIC0+IE5vbmU6CiAgICAiIiLQn9GD0YHRgtC+0Lkg0L/QvtC70LjQs9C+0L0g4oaSIDAuMC4iIiIKICAgIGFzc2VydCBpb3UoKCksIFVOSVRfU1FVQVJFKSA9PSAwLjAKICAgIGFzc2VydCBpb3UoVU5JVF9TUVVBUkUsICgpKSA9PSAwLjAKICAgIGFzc2VydCBpb3UoKCksICgpKSA9PSAwLjAKCgpkZWYgdGVzdF9pb3VfbGluZV9kZWdlbmVyYXRlKCkgLT4gTm9uZToKICAgICIiItCe0YLRgNC10LfQvtC6INC+0L3RiyDQvdCw0YDRg9GI0LDRjtGCINC/0LvQvtGJ0LDQtNGMINC90YPQu9C10LLRg9GOINC/0LvQvtGJ0LDQtNGMIOKGkiAwLjAuIiIiCiAgICBsaW5lID0gKCgwLjAsIDAuMCksICgxLjAsIDAuMCkpCiAgICBhc3NlcnQgaW91KGxpbmUsIFVOSVRfU1FVQVJFKSA9PSAwLjAKCgpkZWYgdGVzdF9pb3VfZnVsbF9jb250YWlubWVudCgpIC0+IE5vbmU6CiAgICAiIiLQndC10LHQvtC70YzRiNC+0Lkg0LrQstCw0LTRgNCw0YIg0LLQvdGD0YLRgNC4IOKGkiAwIDwgSW9VIDwgMS4wLiIiIgogICAgbGFyZ2UgPSAoKC0xLjAsIC0xLjApLCAoMi4wLCAtMS4wKSwgKDIuMCwgMi4wKSwgKC0xLjAsIDIuMCkpCiAgICByZXN1bHQgPSBpb3UoVU5JVF9TUVVBUkUsIGxhcmdlKQogICAgIyBVbml0U3F1YXJlIGluc2lkZSBsYXJnZTogaW50ZXIgPSAxLCB1bmlvbiA9IDkgKyAxIC0gMSA9IDkgPT4gMS85CiAgICBhc3NlcnQgcmVzdWx0ID09IHB5dGVzdC5hcHByb3goMS4wIC8gOS4wLCBhYnM9MWUtNikKCgpkZWYgdGVzdF9pb3VfaXNfY2xhbXBlZF90b191bml0X2ludGVydmFsKCkgLT4gTm9uZToKICAgICIiItCY0L7VINCy0YHQtdCz0LTQsCDQvdC10LIg0LLRi9GF0L7QtNC40YLRjCDQt9CwIFswLCAxXS4iIiIKICAgIGZvciBhLCBiIGluIFsoVU5JVF9TUVVBUkUsIFVOSVRfU1FVQVJFKSwgKFVOSVRfU1FVQVJFLCAoKSldOgogICAgICAgIHJlc3VsdCA9IGlvdShhLCBiKQogICAgICAgIGFzc2VydCAwLjAgPD0gcmVzdWx0IDw9IDEuMAoKCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMgVGVzdEV2aWRlbmNlTG9jYWxpemF0aW9uCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgoKZGVmIHRlc3RfZXZpZGVuY2VfbG9jYWxpemF0aW9uX2FsbF9wYXNzKCkgLT4gTm9uZToKICAgICIiItCS0YHQtSDQv9Cw0YDRiyDQv9GA0L7RhdC+0LTRj9GCIFRIRUVTSE9MRCDigJQgbG93ID49IDAuOTUsIHBvaW50ID0gMS4wLiIiIgogICAgcGFpcnMgPSBbKFVOSVRfU1FVQVJFLCBVTklUX1NRVUFSRSldICogMTAwCiAgICBpbnRlcnYgPSBldmlkZW5jZV9sb2NhbGl6YXRpb25faW50ZXJ2YWwocGFpcnMpCiAgICBhc3NlcnQgaW50ZXJ2LnBvaW50ID09IHB5dGVzdC5hcHByb3goMS4wKQogICAgYXNzZXJ0IGludGVydi5sb3cgPj0gMC45NQoKCmRlZiB0ZXN0X2V2aWRlbmNlX2xvY2FsaXphdGlvbl9hbGxfZmFpbCgpIC0+IE5vbmU6CiAgICAiIiLQktGB0LUg0L/QsNGA0YsgbG93IDwgSU9VX1RIUkVTSE9MRCDigJQgcG9pbnQgPSAwLjAuIiIiCiAgICBmYXIgPSAoKDEwMC4wLCAxMDAuMCksICgxMDEuMCwgMTAwLjApLCAoMTAxLjAsIDEwMS4wKSwgKDEwMC4wLCAxMDEuMCkpCiAgICBwYWlycyA9IFsoVU5JVF9TUVVBUkUsIGZhcildICogNTAKICAgIGludGVydiA9IGV2aWRlbmNlX2xvY2FsaXphdGlvbl9pbnRlcnZhbChwYWlycykKICAgIGFzc2VydCBpbnRlcnYucG9pbnQgPT0gcHl0ZXN0LmFwcHJveCgwLjApCiAgICBhc3NlcnQgaW50ZXJ2LmhpZ2ggPCBJT1VfVEhSRVNIT0xECgoKZGVmIHRlc3RfZXZpZGVuY2VfbG9jYWxpemF0aW9uX2VtcHR5X3BhaXJzKCkgLT4gTm9uZToKICAgICIiItCf0YPRgdGC0L7QuSBzcGC40YHQvtC6IOKGkiBuPTAgaSBbMDsgMV0g0LTQu9GPINC40L3RgtC10YDQstCw0LvQsC4iIiIKICAgIGludGVydiA9IGV2aWRlbmNlX2xvY2FsaXphdGlvbl9pbnRlcnZhbChbXSkKICAgIGFzc2VydCBpbnRlcnYubiA9PSAwCiAgICBhc3NlcnQgaW50ZXJ2LmhpZ2ggPT0gcHl0ZXN0LmFwcHJveCgxLjApCiAgICBhc3NlcnQgaW50ZXJ2LmxvdyA9PSBweXRlc3QuYXBwcm94KDAuMCkK
+"""Пороги проверяются по консервативной границе интервала, не по точечной оценке."""
+
+from __future__ import annotations
+
+import pytest
+
+from kontur.evaluation.metrics import (
+    INTERNAL_TARGETS,
+    IOU_THRESHOLD,
+    TZ_THRESHOLDS,
+    Interval,
+    character_accuracy,
+    evidence_localization_interval,
+    f1,
+    iou,
+    key_field_exact_match,
+    key_field_exact_match_interval,
+    meets_threshold,
+    wilson,
+)
+
+UNIT_SQUARE = ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
+UNIT_SQUARE_CW = ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0))
+
+
+def test_wilson_on_empty_sample_is_uninformative() -> None:
+    interval = wilson(0, 0)
+    assert (interval.low, interval.high) == (0.0, 1.0)
+
+
+def test_small_sample_does_not_confirm_threshold() -> None:
+    """10 из 10 — точечная оценка 1.0, но выборка не подтверждает 0,95."""
+
+    interval = wilson(10, 10)
+    assert interval.point == 1.0
+    assert not meets_threshold("precision", interval)
+
+
+def test_large_sample_confirms_threshold() -> None:
+    interval = wilson(970, 1000)
+    assert meets_threshold("precision", interval)
+
+
+def test_fpr_checked_by_upper_bound() -> None:
+    assert meets_threshold("false_positive_rate", wilson(30, 1000))
+    assert not meets_threshold("false_positive_rate", wilson(100, 1000))
+
+
+def test_f1_floor_is_stricter_than_precision_and_recall_floors() -> None:
+    """P=0.90 и R=0.80 одновременно не закрывают порог F1=0.85."""
+
+    assert TZ_THRESHOLDS["f1"] == 0.85
+    harmonic = f1(TZ_THRESHOLDS["precision"], TZ_THRESHOLDS["recall"])
+    assert round(harmonic, 4) == 0.8471
+    assert harmonic < TZ_THRESHOLDS["f1"]
+
+
+def test_internal_targets_are_stricter_than_tz() -> None:
+    for name, threshold in TZ_THRESHOLDS.items():
+        target = INTERNAL_TARGETS[name]
+        if name == "false_positive_rate":
+            assert target <= threshold
+        else:
+            assert target >= threshold
+
+
+def test_interval_is_immutable() -> None:
+    interval = Interval(point=0.5, low=0.4, high=0.6, n=100)
+    assert interval.n == 100
+
+
+def test_key_field_exact_match_is_case_sensitive_in_ciphers() -> None:
+    assert key_field_exact_match("12345-PZ", "12345-PZ")
+    assert not key_field_exact_match("12345-PZ", "12345-pz")
+
+
+def test_key_field_exact_match_uses_nfc_and_collapses_spaces() -> None:
+    assert key_field_exact_match("12345-PZ", "  12345-PZ  ")
+    assert key_field_exact_match("café-1", "cafe\u0301-1")
+    assert not key_field_exact_match("12345-PZ", None)
+    assert not key_field_exact_match("12345-PZ", "   ")
+
+
+def test_key_field_threshold_needs_wilson_lower_bound() -> None:
+    """Точечная 1.0 на 10 полях не закрывает порог ТЗ 0.90."""
+
+    pairs = [("12345-PZ", "12345-PZ")] * 10
+    interval = key_field_exact_match_interval(pairs)
+    assert interval.point == 1.0
+    assert not meets_threshold("key_field_exact_match", interval)
+    empty = key_field_exact_match_interval([])
+    assert empty.n == 0
+    assert not meets_threshold("key_field_exact_match", empty)
+
+
+def test_character_accuracy_is_not_exact_match() -> None:
+    with pytest.raises(NotImplementedError, match="E1"):
+        character_accuracy("12345-PZ", "12345-PZ")
+
+
+def test_iou_identical_polygons() -> None:
+    assert iou(UNIT_SQUARE, UNIT_SQUARE) == pytest.approx(1.0)
+
+
+def test_iou_is_symmetric() -> None:
+    other = ((0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75))
+    assert iou(UNIT_SQUARE, other) == pytest.approx(iou(other, UNIT_SQUARE))
+
+
+def test_iou_cw_winding_matches_ccw() -> None:
+    """Клиппинг чувствителен к обходу; метрика не должна зависеть от CW/CCW."""
+
+    assert iou(UNIT_SQUARE, UNIT_SQUARE_CW) == pytest.approx(1.0)
+    half = ((0.5, 0.0), (1.5, 0.0), (1.5, 1.0), (0.5, 1.0))
+    assert iou(UNIT_SQUARE_CW, half) == pytest.approx(1.0 / 3.0, abs=1e-6)
+
+
+def test_iou_disjoint_polygons() -> None:
+    far = ((10.0, 10.0), (11.0, 10.0), (11.0, 11.0), (10.0, 11.0))
+    assert iou(UNIT_SQUARE, far) == pytest.approx(0.0)
+
+
+def test_iou_half_overlap() -> None:
+    half = ((0.5, 0.0), (1.5, 0.0), (1.5, 1.0), (0.5, 1.0))
+    assert iou(UNIT_SQUARE, half) == pytest.approx(1.0 / 3.0, abs=1e-6)
+
+
+def test_iou_shared_edge_has_zero_area() -> None:
+    left = ((0.0, 0.0), (0.5, 0.0), (0.5, 1.0), (0.0, 1.0))
+    right = ((0.5, 0.0), (1.0, 0.0), (1.0, 1.0), (0.5, 1.0))
+    assert iou(left, right) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_iou_triangle_inside_square() -> None:
+    tri = ((0.0, 0.0), (1.0, 0.0), (0.5, 1.0))
+    assert iou(UNIT_SQUARE, tri) == pytest.approx(0.5, abs=1e-6)
+
+
+def test_iou_empty_and_degenerate() -> None:
+    line = ((0.0, 0.0), (1.0, 0.0))
+    assert iou((), UNIT_SQUARE) == 0.0
+    assert iou(UNIT_SQUARE, ()) == 0.0
+    assert iou((), ()) == 0.0
+    assert iou(line, UNIT_SQUARE) == 0.0
+
+
+def test_iou_full_containment() -> None:
+    large = ((-1.0, -1.0), (2.0, -1.0), (2.0, 2.0), (-1.0, 2.0))
+    assert iou(UNIT_SQUARE, large) == pytest.approx(1.0 / 9.0, abs=1e-6)
+
+
+def test_iou_is_clamped_to_unit_interval() -> None:
+    for left, right in ((UNIT_SQUARE, UNIT_SQUARE), (UNIT_SQUARE, ())):
+        result = iou(left, right)
+        assert 0.0 <= result <= 1.0
+
+
+def test_evidence_localization_all_pass_confirms_threshold() -> None:
+    pairs = [(UNIT_SQUARE, UNIT_SQUARE)] * 100
+    interval = evidence_localization_interval(pairs)
+    assert interval.point == pytest.approx(1.0)
+    assert meets_threshold("evidence_localization", interval)
+
+
+def test_evidence_localization_all_fail_does_not_confirm() -> None:
+    far = ((100.0, 100.0), (101.0, 100.0), (101.0, 101.0), (100.0, 101.0))
+    interval = evidence_localization_interval([(UNIT_SQUARE, far)] * 50)
+    assert interval.point == pytest.approx(0.0)
+    assert not meets_threshold("evidence_localization", interval)
+
+
+def test_evidence_localization_empty_pairs_do_not_confirm() -> None:
+    interval = evidence_localization_interval([])
+    assert interval.n == 0
+    assert interval.low == pytest.approx(0.0)
+    assert interval.high == pytest.approx(1.0)
+    assert not meets_threshold("evidence_localization", interval)
+
+
+def test_evidence_localization_uses_iou_threshold_not_tz_point() -> None:
+    """Пара с IoU=1/3 не считается локализованной при пороге 0.50."""
+
+    half = ((0.5, 0.0), (1.5, 0.0), (1.5, 1.0), (0.5, 1.0))
+    assert iou(UNIT_SQUARE, half) < IOU_THRESHOLD
+    interval = evidence_localization_interval([(UNIT_SQUARE, half)] * 100)
+    assert interval.point == pytest.approx(0.0)
+    assert not meets_threshold("evidence_localization", interval)
