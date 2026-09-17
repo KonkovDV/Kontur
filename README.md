@@ -24,6 +24,7 @@
 - Отсутствие стадии, документа или доказательства — **не** нарушение:
   `MISSING_EVIDENCE` / `NOT_APPLICABLE` / `NOT_COMPARABLE` /
   `CLARIFICATION_REQUIRED`.
+- Система сверяет **ПД с РД и ИД**, а не проект с СНиП (ADR-0006).
 - Комплектность на проводе — `PD_UPLOADED` / `RD_PARTIAL` / `ID_MISSING`.
   Процесс — `COMPLETED` / `FINALIZED`. Протокол — `VERIFICATION_COMPLETED` /
   `PROTOCOL_FINALIZED`. Это проекции, не одна простыня статусов (ADR-0005).
@@ -39,11 +40,10 @@
 
 ## Состояние
 
-Скелет MVP: контракты, схемы, доменные инварианты, порты, тестовые каркасы.
-132 правила матрицы — schema-valid скелет с `coverage: extractor_missing`
-(исполняемого извлечения нет). Ни один контур ещё не измерен. Гейт A открыт:
-реестр поставки есть, SHA-256 архивов и доказательство отправки вопросов в
-репозитории отсутствуют.
+Контракты, домен, вертикальный слайс `PZ-001` (якорь → число → delta →
+протокол), паспорт документа, векторные PDF-токены, резолвер утверждённой
+редакции. Остальные 131 правило матрицы — `extractor_missing`. Пороги ТЗ не
+измерены на frozen validation.
 
 ## Карта репозитория
 
@@ -82,3 +82,5 @@ docker compose up -d                 # postgres, redis, rabbitmq, minio
 | Вопросы организатору | [`docs/QUESTIONS_TO_ORGANIZER.md`](docs/QUESTIONS_TO_ORGANIZER.md) |
 | Red Team и stop-ship | [`docs/RED_TEAM.md`](docs/RED_TEAM.md) |
 | Нормативный реестр | [`docs/NORMATIVE_REGISTRY.md`](docs/NORMATIVE_REGISTRY.md) |
+| SOTA / донор AeroBIM | [`docs/SOTA_AEROBIM_ANALYSIS.md`](docs/SOTA_AEROBIM_ANALYSIS.md) |
+| Известные пробелы | [`docs/KNOWN_GAPS.md`](docs/KNOWN_GAPS.md) |

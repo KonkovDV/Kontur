@@ -13,8 +13,14 @@ from uuid import uuid4
 from kontur.application.comparators import compare_values
 from kontur.application.extractors.number import NumberHit, PageToken, extract_number
 from kontur.application.pipeline import Stage, StageResult, run
+from kontur.application.revision_resolver import (
+    ResolveStatus,
+    RevisionConflict,
+    resolve_revision,
+)
 from kontur.application.scenarios import CompletenessMap, status_for_missing_stage
 from kontur.domain.geometry import polygon_in_unit_square
+from kontur.domain.idempotency import comparison_key
 from kontur.domain.models import (
     ApprovalStatus,
     DocStage,
@@ -24,7 +30,7 @@ from kontur.domain.models import (
     EvidenceRole,
     Finding,
 )
-from kontur.domain.statuses import Completeness, FindingStatus, ReviewPriority
+from kontur.domain.statuses import HUMAN_ONLY_STATUSES, Completeness, FindingStatus, ReviewPriority
 
 _STAGE_ROLE: dict[DocStage, EvidenceRole] = {
     DocStage.PD: EvidenceRole.EXPECTED,
@@ -74,12 +80,20 @@ def _required_stages(rule: dict[str, object]) -> tuple[DocStage, ...]:
     return tuple(DocStage(str(item)) for item in raw)
 
 
+def _assert_machine_status(status: FindingStatus) -> None:
+    """Детерминизм: автомат не пишет человеческий вердикт (ADR-0001)."""
+
+    if status in HUMAN_ONLY_STATUSES:
+        raise RuntimeError(f"автомат не имеет права писать {status.value}")
+
+
 def _quality_finding(
     rule: dict[str, object],
     status: FindingStatus,
     *,
     rationale: str,
 ) -> Finding:
+    _assert_machine_status(status)
     return Finding(
         finding_id=str(uuid4()),
         rule_code=str(rule["code"]),
@@ -156,6 +170,7 @@ def evaluate_rule(
     object_id: str,
     pages: dict[DocStage, StagePage],
     completeness: CompletenessMap,
+    revision_pool: list[DocumentRef] | None = None,
 ) -> RuleEvaluation:
     """Исполнить одно правило на уже разрезанных страницах."""
 
@@ -202,14 +217,66 @@ def evaluate_rule(
                 FindingStatus.CLARIFICATION_REQUIRED,
                 f"{stage.value}: нет file_id/SHA-256 или страница 0",
             )
-        if page.document.approval_status is not ApprovalStatus.APPROVED:
-            return _halt(
-                rule,
-                Stage.L4_REVISION,
-                _mapped(rule, "revision_conflict", FindingStatus.CLARIFICATION_REQUIRED),
-                f"{stage.value}: эталон без признака утверждения",
-                prior=identity_ok,
-            )
+
+    revision_status = _mapped(rule, "revision_conflict", FindingStatus.CLARIFICATION_REQUIRED)
+    if revision_pool is not None:
+        for stage in required:
+            try:
+                staged = pages.get(stage)
+                resolution = resolve_revision(
+                    revision_pool,
+                    stage,
+                    anchor=None if staged is None else staged.document,
+                )
+            except RevisionConflict as exc:
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    str(exc),
+                    prior=identity_ok,
+                )
+            if resolution.status is ResolveStatus.MISSING_EVIDENCE:
+                mapped = _mapped(rule, "source_absent", FindingStatus.MISSING_EVIDENCE)
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    mapped,
+                    resolution.conflict_reason or f"{stage.value}: нет документов стадии",
+                    prior=identity_ok,
+                    missing_stage=stage,
+                )
+            if resolution.status is not ResolveStatus.RESOLVED or resolution.resolved is None:
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    resolution.conflict_reason or f"{stage.value}: эталон не выбран",
+                    prior=identity_ok,
+                )
+            current = pages.get(stage)
+            chosen = resolution.resolved.document
+            if current is None or current.document.file_id != chosen.file_id:
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    (
+                        f"{stage.value}: страница не последняя утверждённая редакция"
+                        f" ({chosen.file_id})"
+                    ),
+                    prior=identity_ok,
+                )
+    else:
+        for stage, page in pages.items():
+            if page.document.approval_status is not ApprovalStatus.APPROVED:
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    f"{stage.value}: эталон без признака утверждения",
+                    prior=identity_ok,
+                )
 
     hits: dict[DocStage, NumberHit] = {}
     for stage in required:
@@ -293,7 +360,9 @@ def evaluate_rule(
     if run(list(stages)) is not None:
         raise RuntimeError("каскад L1–L7 закрылся до сравнения")
 
-    group_id = str(uuid4())
+    file_ids = tuple(pages[stage].document.file_id for stage in hits)
+    group_id = comparison_key(object_id, str(rule["code"]), file_ids)
+    _assert_machine_status(comparison.status)
     fragments = tuple(
         _fragment(
             hit,
