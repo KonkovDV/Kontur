@@ -1,4 +1,4 @@
-"""Пороги проверяются по консервативной границе интервала, не по точечной оценке."""
+"""\u041f\u043e\u0440\u043e\u0433\u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u044e\u0442\u0441\u044f \u043f\u043e \u043a\u043e\u043d\u0441\u0435\u0440\u0432\u0430\u0442\u0438\u0432\u043d\u043e\u0439 \u0433\u0440\u0430\u043d\u0438\u0446\u0435 \u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b\u0430, \u043d\u0435 \u043f\u043e \u0442\u043e\u0447\u0435\u0447\u043d\u043e\u0439 \u043e\u0446\u0435\u043d\u043a\u0435."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def test_wilson_on_empty_sample_is_uninformative() -> None:
 
 
 def test_small_sample_does_not_confirm_threshold() -> None:
-    """10 из 10 — точечная оценка 1.0, но выборка не подтверждает 0,95."""
+    """10 \u0438\u0437 10 \u2014 \u0442\u043e\u0447\u0435\u0447\u043d\u0430\u044f \u043e\u0446\u0435\u043d\u043a\u0430 1.0, \u043d\u043e \u0432\u044b\u0431\u043e\u0440\u043a\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 0,95."""
 
     interval = wilson(10, 10)
     assert interval.point == 1.0
@@ -47,7 +47,7 @@ def test_fpr_checked_by_upper_bound() -> None:
 
 
 def test_f1_floor_is_stricter_than_precision_and_recall_floors() -> None:
-    """P=0.90 и R=0.80 одновременно не закрывают порог F1=0.85."""
+    """P=0.90 \u0438 R=0.80 \u043e\u0434\u043d\u043e\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0435 \u0437\u0430\u043a\u0440\u044b\u0432\u0430\u044e\u0442 \u043f\u043e\u0440\u043e\u0433 F1=0.85."""
 
     assert TZ_THRESHOLDS["f1"] == 0.85
     harmonic = f1(TZ_THRESHOLDS["precision"], TZ_THRESHOLDS["recall"])
@@ -76,13 +76,13 @@ def test_key_field_exact_match_is_case_sensitive_in_ciphers() -> None:
 
 def test_key_field_exact_match_uses_nfc_and_collapses_spaces() -> None:
     assert key_field_exact_match("12345-PZ", "  12345-PZ  ")
-    assert key_field_exact_match("café-1", "cafe\u0301-1")
+    assert key_field_exact_match("caf\u00e9-1", "cafe\u0301-1")
     assert not key_field_exact_match("12345-PZ", None)
     assert not key_field_exact_match("12345-PZ", "   ")
 
 
 def test_key_field_threshold_needs_wilson_lower_bound() -> None:
-    """Точечная 1.0 на 10 полях не закрывает порог ТЗ 0.90."""
+    """\u0422\u043e\u0447\u0435\u0447\u043d\u0430\u044f 1.0 \u043d\u0430 10 \u043f\u043e\u043b\u044f\u0445 \u043d\u0435 \u0437\u0430\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u043f\u043e\u0440\u043e\u0433 \u0422\u0417 0.90."""
 
     pairs = [("12345-PZ", "12345-PZ")] * 10
     interval = key_field_exact_match_interval(pairs)
@@ -93,9 +93,50 @@ def test_key_field_threshold_needs_wilson_lower_bound() -> None:
     assert not meets_threshold("key_field_exact_match", empty)
 
 
-def test_character_accuracy_is_not_exact_match() -> None:
-    with pytest.raises(NotImplementedError, match="E1"):
-        character_accuracy("12345-PZ", "12345-PZ")
+# --- character_accuracy (RT-2709-09, \u0433\u0435\u0439\u0442 I) ---
+
+
+def test_character_accuracy_perfect_match_is_one() -> None:
+    """\u0418\u0434\u0435\u043d\u0442\u0438\u0447\u043d\u044b\u0435 \u0441\u0442\u0440\u043e\u043a\u0438 \u043f\u043e\u0441\u043b\u0435 NFC \u2192 CA = 1.0."""
+    assert character_accuracy("12345-PZ", "12345-PZ") == pytest.approx(1.0)
+
+
+def test_character_accuracy_one_substitution() -> None:
+    # 1 \u0437\u0430\u043c\u0435\u043d\u0430 \u0438\u0437 4 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432: CER = 1/4 = 0.25, CA = 0.75
+    assert character_accuracy("ABCD", "ABCE") == pytest.approx(0.75)
+
+
+def test_character_accuracy_empty_both_is_one() -> None:
+    assert character_accuracy("", "") == pytest.approx(1.0)
+
+
+def test_character_accuracy_empty_hypothesis_is_zero() -> None:
+    """\u041f\u0443\u0441\u0442\u0430\u044f \u0433\u0438\u043f\u043e\u0442\u0435\u0437\u0430 \u043f\u0440\u0438 \u043d\u0435\u043f\u0443\u0441\u0442\u043e\u043c \u044d\u0442\u0430\u043b\u043e\u043d\u0435: \u0432\u0441\u0435 \u0441\u0438\u043c\u0432\u043e\u043b\u044b \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u044b, CA = 0."""
+    assert character_accuracy("ABC", "") == pytest.approx(0.0)
+
+
+def test_character_accuracy_normalises_nfc() -> None:
+    nfc = "caf\u00e9"    # U+00E9 precomposed
+    nfd = "cafe\u0301"  # e + combining acute accent \u2014 \u0442\u043e\u0442 \u0436\u0435 \u0433\u043b\u0438\u0444 \u043f\u043e\u0441\u043b\u0435 NFC
+    assert character_accuracy(nfc, nfd) == pytest.approx(1.0)
+
+
+def test_character_accuracy_collapses_extra_spaces() -> None:
+    assert character_accuracy("A B C", "A  B  C") == pytest.approx(1.0)
+
+
+def test_character_accuracy_is_not_binary() -> None:
+    """CER \u0434\u0430\u0451\u0442 \u043f\u0440\u043e\u043c\u0435\u0436\u0443\u0442\u043e\u0447\u043d\u043e\u0435 \u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435 \u2014 \u043d\u0435 binary \u043a\u0430\u043a Exact Match."""
+    score = character_accuracy("ABCDEF", "XBCDEF")
+    assert 0.0 < score < 1.0
+
+
+def test_character_accuracy_is_case_sensitive() -> None:
+    """\u0420\u0435\u0433\u0438\u0441\u0442\u0440 \u043d\u0435 \u0441\u0432\u043e\u0440\u0430\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044f: \u0448\u0438\u0444\u0440 \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u0430 \u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u0435\u043d \u043a \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0443."""
+    assert character_accuracy("PZ-001", "pz-001") != pytest.approx(1.0)
+
+
+# --- IoU ---
 
 
 def test_iou_identical_polygons() -> None:
@@ -108,7 +149,7 @@ def test_iou_is_symmetric() -> None:
 
 
 def test_iou_cw_winding_matches_ccw() -> None:
-    """Клиппинг чувствителен к обходу; метрика не должна зависеть от CW/CCW."""
+    """\u041a\u043b\u0438\u043f\u043f\u0438\u043d\u0433 \u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u0435\u043d \u043a \u043e\u0431\u0445\u043e\u0434\u0443; \u043c\u0435\u0442\u0440\u0438\u043a\u0430 \u043d\u0435 \u0434\u043e\u043b\u0436\u043d\u0430 \u0437\u0430\u0432\u0438\u0441\u0435\u0442\u044c \u043e\u0442 CW/CCW."""
 
     assert iou(UNIT_SQUARE, UNIT_SQUARE_CW) == pytest.approx(1.0)
     half = ((0.5, 0.0), (1.5, 0.0), (1.5, 1.0), (0.5, 1.0))
@@ -178,7 +219,7 @@ def test_evidence_localization_empty_pairs_do_not_confirm() -> None:
 
 
 def test_evidence_localization_uses_iou_threshold_not_tz_point() -> None:
-    """Пара с IoU=1/3 не считается локализованной при пороге 0.50."""
+    """\u041f\u0430\u0440\u0430 \u0441 IoU=1/3 \u043d\u0435 \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044f \u043b\u043e\u043a\u0430\u043b\u0438\u0437\u043e\u0432\u0430\u043d\u043d\u043e\u0439 \u043f\u0440\u0438 \u043f\u043e\u0440\u043e\u0433\u0435 0.50."""
 
     half = ((0.5, 0.0), (1.5, 0.0), (1.5, 1.0), (0.5, 1.0))
     assert iou(UNIT_SQUARE, half) < IOU_THRESHOLD
