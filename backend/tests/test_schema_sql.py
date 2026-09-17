@@ -79,6 +79,7 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "не может менять содержимое" in sql
     assert "KNT02" in sql
     assert "processes_sync_requires_finalized_protocol" in sql
+    assert "AUTO_NO_DIFFERENCE', 'SUSPICION'" in sql
     assert "gold_label IN ('CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED')" in sql
     assert "gold_requires_expert" in sql
     assert "negative_gold_requires_reason" in sql

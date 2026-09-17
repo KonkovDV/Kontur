@@ -181,6 +181,7 @@ def read_passport(
     media_box: tuple[float, ...] | None = None,
     crop_box: tuple[float, ...] | None = None,
     object_id: str | None = None,
+    text_render_agreement: bool | None = None,
 ) -> DocumentPassport:
     """Прочитать паспорт. Не заполняет шифр из имени файла."""
 
@@ -203,6 +204,13 @@ def read_passport(
     name_stage = stage_from_filename(filename) if filename else None
     needs = False
     reason: str | None = None
+    if text_render_agreement is False:
+        needs = True
+        reason = "текстовый слой расходится с растром: скрытый или перекрытый текст"
+        code = None
+        revision = None
+        sheet = None
+        stage = None
     if stage is not None and name_stage is not None and stage is not name_stage:
         needs = True
         reason = (
@@ -212,16 +220,16 @@ def read_passport(
         stage = None
     elif stage is None and name_stage is not None:
         stage = name_stage
-    if has_text and code is None:
+    if has_text and code is None and text_render_agreement is not False:
         needs = True
         reason = reason or "шифр в основной надписи не найден"
     approval, approval_date = _approval(search)
+    if text_render_agreement is False:
+        approval, approval_date = ApprovalStatus.UNKNOWN, None
     filled = sum(1 for item in (code, revision, sheet) if item)
     confidence = None
     if has_text:
         confidence = filled / len(KEY_FIELDS)
-    # Детектора скрытого текста нет: согласие слоёв неизвестно, не True (RT-B).
-    agreement: bool | None = None
     return DocumentPassport(
         file_id=file_id,
         file_hash=file_hash,
@@ -238,7 +246,7 @@ def read_passport(
         media_box=media_box,
         crop_box=crop_box,
         has_embedded_text=has_text,
-        text_render_agreement=agreement,
+        text_render_agreement=text_render_agreement,
         extraction_confidence=confidence,
         needs_clarification=needs,
         clarification_reason=reason,

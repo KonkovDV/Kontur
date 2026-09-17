@@ -76,11 +76,30 @@ def test_rt_a_decompression_bomb_is_rejected_with_reason_code() -> None:
     raise NotImplementedError("RT-A")
 
 
-@pytest.mark.xfail(reason="RT-B: детектор скрытого текста не реализован", strict=True)
 def test_rt_b_hidden_text_layer_blocks_automatic_finding() -> None:
-    """Видимый слой и текстовый слой расходятся → находка блокируется как событие безопасности."""
+    """Белый текст в слое есть, на растре нет → штамп не становится паспортом."""
 
-    raise NotImplementedError("RT-B")
+    import sys
+    from pathlib import Path
+
+    from kontur.application.passport import read_passport
+    from kontur.infrastructure.pdfium_tokens import extract_pdf_bytes, file_sha256, flatten_tokens
+    from kontur.infrastructure.pdfium_visual import assess_pdf_bytes
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from pdf_fixtures import stamp_pdf
+
+    data = stamp_pdf(fill=(255, 255, 255, 255))
+    assessment = assess_pdf_bytes(data)
+    assert assessment.agreement is False
+    passport = read_passport(
+        flatten_tokens(extract_pdf_bytes(data)),
+        file_id="hidden",
+        file_hash=file_sha256(data),
+        text_render_agreement=assessment.agreement,
+    )
+    assert passport.document_code is None
+    assert passport.needs_clarification is True
 
 
 @pytest.mark.xfail(reason="RT-C: dual-read OCR не реализован", strict=True)

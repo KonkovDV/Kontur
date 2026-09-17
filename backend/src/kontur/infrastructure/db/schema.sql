@@ -117,7 +117,7 @@ CREATE TABLE checks (
     CONSTRAINT candidate_requires_evidence CHECK (
         finding_status NOT IN (
             'CANDIDATE', 'CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED',
-            'AUTO_NO_DIFFERENCE'
+            'AUTO_NO_DIFFERENCE', 'SUSPICION'
         )
         OR evidence_group_id IS NOT NULL
     ),

@@ -1,8 +1,8 @@
-"""Состояние процессов в памяти процесса API.
+"""Состояние процессов: снимок в DAO, находки — в памяти процесса API.
 
-Это не Postgres: таблица `processes` — контракт хранения, этот модуль —
-исполняемый контур для HTTP, пока нет DAO. После перезапуска процессы
-пропадают — это честно, а не «состояние где-то в очереди».
+Таблица `processes` — контракт хранения. HTTP по умолчанию держит полный
+контур в памяти и пишет снимок в MemoryProcessStore. Postgres включается
+отдельным адаптером; находки и комплектность после рестарта не восстанавливаются.
 """
 
 from __future__ import annotations
@@ -24,6 +24,11 @@ from kontur.domain.statuses import (
     ReasonCode,
     Scenario,
     SyncState,
+)
+from kontur.infrastructure.db.process_store import (
+    MemoryProcessStore,
+    ProcessSnapshot,
+    ProcessStore,
 )
 
 
@@ -72,6 +77,7 @@ class ProcessRecord:
     input_manifest_hash: str = "pending"
     git_sha: str = field(default_factory=lambda: os.environ.get("GITHUB_SHA") or "unspecified")
     last_sync_notice: str | None = None
+    protocol_id: str | None = None
 
     def to_status(self) -> dict[str, object]:
         counters = {
@@ -118,16 +124,66 @@ class ProcessRecord:
 
 
 class ProcessWorkspace:
-    """In-memory процессы. Не переживает рестарт и не пишет в schema.sql."""
+    """Процессы в памяти плюс снимок DAO. Находки после рестарта не восстанавливаются."""
 
-    def __init__(self) -> None:
+    def __init__(self, store: ProcessStore | None = None) -> None:
         self._items: dict[str, ProcessRecord] = {}
+        self._store: ProcessStore = store if store is not None else MemoryProcessStore()
 
     def reset(self) -> None:
         self._items.clear()
+        store = self._store
+        if isinstance(store, MemoryProcessStore):
+            store.clear()
+
+    def _snapshot(self, record: ProcessRecord) -> ProcessSnapshot:
+        return ProcessSnapshot(
+            process_id=record.process_id,
+            object_id=record.object_id,
+            process_state=record.process_state,
+            scenario=record.scenario,
+            matrix_version=record.matrix_version,
+            model_version=record.model_version,
+            dataset_version=record.dataset_version,
+            parse_attempts=record.parse_attempts,
+            sync_attempts=record.sync_attempts,
+            sync_state=record.sync_state,
+            last_error_code=record.last_sync_notice,
+            finalized_by=record.finalized_by,
+            protocol_id=record.protocol_id,
+        )
+
+    def _persist(self, record: ProcessRecord) -> None:
+        self._store.save(self._snapshot(record))
+
+    def _hydrate(self, snapshot: ProcessSnapshot) -> ProcessRecord:
+        return ProcessRecord(
+            process_id=snapshot.process_id,
+            object_id=snapshot.object_id,
+            process_state=snapshot.process_state,
+            completeness=_empty_completeness(),
+            scenario=snapshot.scenario,
+            sync_state=snapshot.sync_state,
+            sync_attempts=snapshot.sync_attempts,
+            parse_attempts=snapshot.parse_attempts,
+            finalized_by=snapshot.finalized_by,
+            matrix_version=snapshot.matrix_version,
+            model_version=snapshot.model_version,
+            dataset_version=snapshot.dataset_version or "unspecified",
+            last_sync_notice=snapshot.last_error_code,
+            protocol_id=snapshot.protocol_id,
+        )
 
     def get(self, process_id: str) -> ProcessRecord | None:
-        return self._items.get(process_id)
+        current = self._items.get(process_id)
+        if current is not None:
+            return current
+        snapshot = self._store.load(process_id)
+        if snapshot is None:
+            return None
+        record = self._hydrate(snapshot)
+        self._items[process_id] = record
+        return record
 
     def create(self, object_id: str, completeness: CompletenessMap) -> ProcessRecord:
         record = ProcessRecord(
@@ -138,6 +194,7 @@ class ProcessWorkspace:
             scenario=detect_scenario(completeness),
         )
         self._items[record.process_id] = record
+        self._persist(record)
         return record
 
     def reopen_for_upload(self, record: ProcessRecord) -> None:
@@ -194,6 +251,8 @@ class ProcessWorkspace:
             audit=record.audit,
         )
         record.finalized_by = actor.actor_id
+        record.protocol_id = record.protocol_id or f"placeholder-{record.process_id}"
+        self._persist(record)
         return record
 
     def unfinalize(self, process_id: str, actor: Actor, reason: str) -> ProcessRecord:
@@ -207,6 +266,8 @@ class ProcessWorkspace:
             audit=record.audit,
         )
         record.finalized_by = None
+        record.protocol_id = None
+        self._persist(record)
         return record
 
     def request_sync(self, process_id: str) -> ProcessRecord:
@@ -216,9 +277,11 @@ class ProcessWorkspace:
         if record.sync_state is SyncState.NOT_REQUESTED:
             record.sync_state = SyncState.PENDING_SYNC
             record.last_sync_notice = "передача поставлена в очередь; РиН не вызывался"
+            self._persist(record)
             return record
         record.sync_attempts += 1
         decision = next_sync_attempt(max(record.sync_attempts, 1))
         record.sync_state = decision.state
         record.last_sync_notice = decision.reason
+        self._persist(record)
         return record

@@ -12,7 +12,7 @@
 | 7 | 12 модулей системы | `application/` | — | skeleton |
 | 8 | Матрица 132 параметра, таблица `Params` | `data/matrix/`, `contracts/schemas/rule.schema.json` | `test_matrix_registry.py` | in_progress |
 
-| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/pipeline.py`, `domain/coordinates.py`, `infrastructure/pdfium_tokens.py`, `application/passport.py`, `application/revision_resolver.py` | `test_pipeline.py`, `test_coordinates.py`, `test_pdf_tokens.py`, `test_passport.py`, `test_revision_resolver.py` | in_progress (резолвер эталона есть; OCR/CV/кеш нет; связка ≥0,97 не измерена) |
+| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/pipeline.py`, `domain/coordinates.py`, `infrastructure/pdfium_tokens.py`, `application/passport.py`, `application/revision_resolver.py`, `application/visual_text.py` | `test_pipeline.py`, `test_coordinates.py`, `test_pdf_tokens.py`, `test_passport.py`, `test_revision_resolver.py`, `test_visual_text.py` | in_progress (резолвер эталона есть; скрытый текст обнуляет штамп; OCR/CV/кеш нет; связка ≥0,97 не измерена) |
 | 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `application/intake.py`, `application/retry_policy.py`, `presentation/api.py` | `test_intake.py`, `test_retry_policy.py`, `test_api.py` | in_progress |
 | 9.1 | Статусы загрузки `PD_/RD_/ID_UPLOADED/PARTIAL/MISSING` | `domain/status_map.py` | `test_status_map.py` | skeleton |
 | 9.2 | Сценарии FULL…PARTIALLY_LOADED; пустой пакет — ошибка | `application/scenarios.py` | `test_scenarios.py` | skeleton |
@@ -25,7 +25,7 @@
 | 9.4 | Реестр поставки, карантин скрытого теста, изоляция по `object_id` | `data/dataset/package_manifest.json`, `data/dataset/objects.json`, `evaluation/dataset_package.py`, `docs/DATASET_PACKAGE.md` | `test_dataset_package.py`, `test_quarantine.py` | in_progress |
 | 9.5 | SUSPICION, 4 подхода, дедупликация | `application/suspicion.py` | `test_suspicion.py` | in_progress (сигналы и дедупликация есть; в компаратор и протокол ТЗ не вшиты; сверка с нормой не является подходом) |
 | 9.6 | ИАИС «РиН»: только `PROTOCOL_FINALIZED`, УКЭП, 3 ретрая | `application/retry_policy.py`, ограничение `sync_only_after_finalize` | `test_retry_policy.py`, `db/checks.sql` § 8 | in_progress (УКЭП и sandbox отсутствуют) |
-| 10 | Таблицы БД | `infrastructure/db/schema.sql` (добавлена `processes`) | `test_schema_sql.py`, job `db` исполняет `schema.sql` и `checks.sql` | in_progress (8 из 16 таблиц сводки ещё нет) |
+| 10 | Таблицы БД | `infrastructure/db/schema.sql`, `infrastructure/db/process_store.py` | `test_schema_sql.py`, `test_process_store.py`, job `db` | in_progress (снимок процесса есть; находки/файлы не в DAO; 8 из 16 таблиц сводки ещё нет) |
 | 11 | Производительность, p95 ≤200 мс, 100 пользователей | `docs/PERFORMANCE.md` | нагрузочный прогон (не выполнен) | skeleton |
 | 12 | Аутентификация, RBAC, TLS 1.3, аудит, 152-ФЗ, антивирус | `presentation/rbac.py`, `presentation/auth.py`, `security` и `x-required-roles` в `contracts/openapi.yaml`, `audit_log` | `test_rbac.py`, `test_api.py`, `scripts/check_contracts.py` | in_progress (Bearer-заглушка, не JWT; TLS и антивирус ещё нет) |
 | 13 | JSON-логи, уровни, Prometheus/Grafana, ELK, алерты, checksum | `gateway/src/server.js` | — | skeleton |
