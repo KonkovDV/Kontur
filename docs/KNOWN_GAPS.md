@@ -13,7 +13,6 @@
 | GAP-EDIT | Журнал правок инспектора отдельной таблицей | Решение пишется в находку, отдельного `user_action_log` нет | гейт K |
 | GAP-ISOLATE | PDF в дочернем процессе с таймаутом | pdfium в том же процессе | надёжность |
 | GAP-ENUM-EXTRACTOR | Экстрактор enum для class_not_lower | Оператор реализован, экстрактор нет (KR-055 extractor_missing) | гейт H |
-| GAP-GATE-H | Гейт H: нужно ≥ 20 исполняемых правил | 6/20 executable, нужно ещё 14+ PZ/SM оверрайдов | 22–23.09 |
 
 Adversarial xfail (RT-A, RT-C, RT-E, RT-F, RT-G, RT-H, RT-I) — маркеры
 непокрытых слоёв; отдельный декоратор `@sota-stub` не вводим.
@@ -27,3 +26,4 @@ Adversarial xfail (RT-A, RT-C, RT-E, RT-F, RT-G, RT-H, RT-I) — маркеры
 | RT-2709-09 | character_accuracy: Wagner–Fischer CER + NFC-нормализация | ea75e70, bee1a1b |
 | GAP-GATE-G | 132/132 правил в матрице; каталог + compile_matrix.py | b1c65e3 |
 | GAP-ALL-OPERATORS | Все 12 операторов (delta, ge, lt, range, class_not_lower, present, …) | f08932d |
+| GAP-GATE-H | Гейт H: ≥20 исполняемых правил (18×PZ + SPZU-024 + AR-041 = 20/20) | f08932d…406e97c |

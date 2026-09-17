@@ -1,0 +1,49 @@
+{
+  "code": "SPZU-024",
+  "section": "СПЗУ",
+  "name": "Объем грунта (выемка/насыпь)",
+  "unit": "м³",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Дельта объемов выемки и обратной засыпки между стадиями > 5%.",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": ["PD", "RD"],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": { "description": "Ведомость объемов работ (СПЗУ)" },
+    "rd": { "description": "Раздел ПП: План земляных масс; Ведомость выемки" },
+    "id": { "description": "Журнал учета транспорта; Накладные на вывоз/завоз" }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": null,
+    "anchors": ["Объем грунта (выемка/насыпь)"],
+    "normalization": ["nfc", "collapse_spaces"],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "delta",
+    "tolerance_abs": null,
+    "tolerance_rel": 0.05,
+    "rounding": "half_up",
+    "unit_target": "м³"
+  },
+  "required_evidence": ["expected", "actual"],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "MEDIUM",
+  "tests": [
+    { "name": "equal_or_compliant_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
+    { "name": "triggering_difference_gives_candidate", "expected_status": "CANDIDATE" },
+    { "name": "required_stage_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" },
+    { "name": "parameter_not_applicable_on_object", "expected_status": "NOT_APPLICABLE" }
+  ]
+}

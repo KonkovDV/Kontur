@@ -3,8 +3,12 @@
 Цель: подтвердить, что каждое правило с `coverage: executable` проходит
 полный цикл L1–L7 с мок-токенами.
 
-Gate H дедлайн: 22–23.09; цель ≥ 20 executable.
-N.B. PZ-009 (анкор содержит 0.000) пропущен в E2E до диагностики extract_number.
+Gate H дедлайн: 22–23.09 — ЦЕЛЬ ДОСТИГНУТА! 20/20 executable.
+
+N.B.
+  PZ-009 (анкор содержит 0.000) пропущен в E2E до диагностики extract_number.
+  SPZU-024 имеет dual_read_required=False и tolerance_rel=0.05;
+  second_read_agrees проверяется только при dual_read_required=True.
 """
 
 from __future__ import annotations
@@ -76,12 +80,12 @@ _REGISTRY = FileRuleRegistry(REPO / "data" / "matrix")
 
 
 def test_executable_count() -> None:
-    """Гейт H: минимум 19 executable правил (цель: ≥20 к 22–23.09)."""
+    """Гейт H выполнен: минимум 20 executable правил."""
     executable = [
         c for c in _REGISTRY.all_codes() if _REGISTRY.get(c)["coverage"] == "executable"
     ]
-    assert len(executable) >= 19, (
-        f"Ждали ≥19 executable, получили {len(executable)}: {sorted(executable)}"
+    assert len(executable) >= 20, (
+        f"Ждали ≥20 executable, получили {len(executable)}: {sorted(executable)}"
     )
 
 
@@ -89,6 +93,7 @@ def test_executable_count() -> None:
 
 # (код, токены якоря, значение PD, значение RD)
 _CASES: list[tuple[str, tuple[str, ...], str, str]] = [
+    # ─ PZ-секция: ТЭП здания (delta, tolerance_abs=0) ─────────────────────
     ("PZ-001", ("Площадь", "застройки"), "1250,5", "1250,5"),
     ("PZ-002", ("Общая", "площадь", "здания"), "5000,0", "5000,0"),
     ("PZ-003", ("Полезная", "/", "Расчетная", "площадь"), "3000,0", "3000,0"),
@@ -102,12 +107,13 @@ _CASES: list[tuple[str, tuple[str, ...], str, str]] = [
     ("PZ-012", ("Количество", "машино-мест", "(подземных)"), "350", "350"),
     ("PZ-014", ("Расчетная", "электрическая", "мощность"), "1200,0", "1200,0"),
     ("PZ-016", ("Суточный", "расход", "водопотребления"), "250,5", "250,5"),
-    # PZ-017..020: TEП земельного участка, инженерные сети
     ("PZ-017", ("Суммарная", "тепловая", "нагрузка"), "2,5", "2,5"),
     ("PZ-018", ("Максимальный", "часовой", "расход", "газа"), "120,0", "120,0"),
     ("PZ-019", ("Коэффициент", "застройки", "(КЗ)"), "28,0", "28,0"),
     ("PZ-020", ("Коэффициент", "использования", "территории", "(КИТ)"), "45,0", "45,0"),
-    # AR-041: ge ≥ 0.9 м, fixed ref
+    # ─ SPZU-024: Объем грунта (delta, tolerance_rel=0.05, dual_read=False) ──
+    ("SPZU-024", ("Объем", "грунта", "(выемка/насыпь)"), "5000,0", "5000,0"),
+    # ─ AR-041: ge ≥ 0.9 м, fixed ref ───────────────────────────────────────
     ("AR-041", ("Ширина", "проема"), "1,2", "1,0"),
 ]
 
@@ -126,6 +132,7 @@ def test_no_difference_happy_path(
     """Счастливый путь: AUTO_NO_DIFFERENCE + evidence_group."""
     rule = _REGISTRY.get(rule_code)
     assert rule["coverage"] == "executable", f"{rule_code}: coverage != executable"
+    dual_read_required = rule.get("extractor", {}).get("dual_read_required", True)
     pd_tokens = (*anchor_words, pd_value)
     rd_tokens = (*anchor_words, rd_value)
     pages = {
@@ -142,7 +149,9 @@ def test_no_difference_happy_path(
     assert finding.finding_status not in {FindingStatus.CONFIRMED_VIOLATION, FindingStatus.NEGATIVE_VERIFIED}
     for fragment in result.evidence_group.fragments:
         assert fragment.page >= 1
-        assert fragment.extracted.second_read_agrees is True
+        # second_read_agrees проверяем только если dual_read_required=True
+        if dual_read_required:
+            assert fragment.extracted.second_read_agrees is True
 
 
 @pytest.mark.parametrize(
@@ -151,7 +160,11 @@ def test_no_difference_happy_path(
     ids=[c[0] for c in _CASES if c[0] != "AR-041"],
 )
 def test_candidate_on_delta_mismatch(rule_code: str, anchor_words: tuple[str, ...]) -> None:
-    """Расхождение PD и RD → CANDIDATE + evidence_group."""
+    """Расхождение PD и RD → CANDIDATE.
+
+    Для правил с tolerance_rel=0.05 используем 1000 и 900: дельта=10% > 5% → CANDIDATE.
+    Для правил с tolerance_abs=0 дельта=100 != 0 → CANDIDATE.
+    """
     rule = _REGISTRY.get(rule_code)
     pages = {
         DocStage.PD: _page(DocStage.PD, *(*anchor_words, "1000,0"), suffix=f"-{rule_code}-cand"),
