@@ -7,8 +7,9 @@
 Репозиторий **приватный**. Стратегия, Red Team, вопросы организатору и черновик
 матрицы не предназначены для публичного зеркала.
 
-**Вход:** PDF, DOCX, XML. **Выход:** протокол с карточками доказательств и
-решением инспектора. **Ядро продукта:** не распознавание текста, а
+**Вход:** PDF, DOCX, XML.
+**Выход:** протокол с карточками доказательств и решением инспектора.
+**Ядро продукта:** не распознавание текста, а
 доказательная цепочка `актуальная редакция → доказательное извлечение →
 атомарное исполняемое правило → решение инспектора`.
 
@@ -17,33 +18,52 @@
 - `CONFIRMED_VIOLATION` присваивает **только инспектор**. Система формирует
   `CANDIDATE` и карточку доказательства.
 - LLM/VLM **никогда** не пишут итоговый статус находки (ADR-0001).
-- Предметная находка (`CANDIDATE` / `CONFIRMED_VIOLATION` /
-  `NEGATIVE_VERIFIED` / внутренний `AUTO_NO_DIFFERENCE`) не сохраняется без
+- Предметная находка не сохраняется без
   `evidence_group_id`, источников с SHA-256 и координат (ADR-0002).
-  `MISSING_EVIDENCE` и `NOT_APPLICABLE` могут существовать без фрагментов.
-- Отсутствие стадии, документа или доказательства — **не** нарушение:
-  `MISSING_EVIDENCE` / `NOT_APPLICABLE` / `NOT_COMPARABLE` /
-  `CLARIFICATION_REQUIRED`.
+- Отсутствие стадии, документа или доказательства — **не** нарушение.
 - Система сверяет **ПД с РД и ИД**, а не проект с СНиП (ADR-0006).
-- Комплектность на проводе — `PD_UPLOADED` / `RD_PARTIAL` / `ID_MISSING`.
-  Процесс — `COMPLETED` / `FINALIZED`. Протокол — `VERIFICATION_COMPLETED` /
-  `PROTOCOL_FINALIZED`. Это проекции, не одна простыня статусов (ADR-0005).
-- Устаревшая или неутверждённая редакция **не может** быть эталоном.
-- Пороги раздела 14 ТЗ (Character Accuracy ≥0,95; Exact Match ≥0,90; связка
-  ≥0,95; локализация ≥0,95 при IoU≥0,50; Precision ≥0,90; Recall ≥0,80;
-  F1 ≥0,85; FPR ≤0,10) — это **минимумы приёмки, а не заявленный результат**.
-  Гармоника P=0,90 и R=0,80 ≈ 0,847 и **не** закрывает F1=0,85.
-  До замера на frozen validation репозиторий не публикует ни одного числа.
-- `РАЗМЕЧЕННЫЙ_TEST__213.zip` и каталог
-  `РАЗМЕЧЕННЫЙ_TEST_HIDDEN_ОРГАНИЗАТОР_213` — карантин: не открывать, не
+- Устаревшая или неутверждённая редакция не может быть эталоном.
+- Пороги раздела 14 ТЗ (P ≥ 0,90; R ≥ 0,80; F1 ≥ 0,85; FPR ≤ 0,10 и др.) —
+  минимумы приёмки, не заявленный результат.
+- `РАЗМЕЧЕННЫЙ_TEST__213.zip` — карантин: не открывать, не
   подбирать по ним пороги ([`docs/DATASET_PACKAGE.md`](docs/DATASET_PACKAGE.md)).
 
-## Состояние
+## Состояние на 17.09.2026
 
-Контракты, домен, вертикальный слайс `PZ-001` (якорь → число → delta →
-протокол), паспорт документа, векторные PDF-токены, резолвер утверждённой
-редакции. Остальные 131 правило матрицы — `extractor_missing`. Пороги ТЗ не
-измерены на frozen validation.
+### Исполняемые правила (executable): **27 / 132**
+
+| Группа | Правила | Статус |
+|--------|--------|--------|
+| PZ (Пожарная защита) | PZ-001…012, 013, 014–020, 021, 022, 023 | ✅ executable |
+| AR (Архитектура) | AR-041 | ✅ executable |
+| SPZU (СПЗУ) | SPZU-024 | ✅ executable |
+| KR (Конструктив) | KR-055 | ✅ executable |
+| Остальные | 105 правил | `extractor_missing` |
+
+### Red Team (adversarial)
+
+| Набор | Статус |
+|------|--------|
+| RT-A: архив-бомба отклоняется с reason_code | ✅ реализован (PR #13) |
+| RT-B: белый текст блокирует автонаходку | ✅ реализован |
+| RT-C × 2: OCR dual-read + LLM isolation | ⏳ xfail |
+| RT-D: rename не меняет identity | ✅ реализован |
+| RT-E: истёкшая нормативная редакция | ⏳ xfail |
+| RT-F: неподписанный нормативный фрагмент | ⏳ xfail |
+| RT-G: idempotency broker | ⏳ xfail |
+| RT-H: cross-tenant access denied | ⏳ xfail |
+| RT-I: approve не default action | ⏳ xfail |
+
+**xfail stop-ship осталось:** 7 из 8. Цель: 0 к 28.09.
+
+### Открытые PR
+
+| PR | Содержание | Статус |
+|----|------------|--------|
+| #11 | KR-055 enum extractor | OPEN |
+| #12 | PZ-013/015/021/022/023 → executable | OPEN |
+| #13 | RT-A: intake validation (decompression bomb) | OPEN |
+| #14 | Docker offline + README | OPEN |
 
 ## Карта репозитория
 
@@ -56,16 +76,32 @@ data/           Матрица 132, нормативный реестр, рее�
 docs/           ADR, план, трассируемость ТЗ, Red Team, вопросы организатору
 ```
 
-## Старт
+## Быстрый старт
 
 ```bash
 python -m venv .venv
-. .venv/bin/activate                 # Windows: .venv\Scripts\activate
+. .venv/bin/activate           # Windows: .venv\Scripts\activate
 pip install -e "backend[dev]"
-pytest backend/tests -q
-ruff check backend scripts && mypy --strict backend/src
-python scripts/check_contracts.py && python scripts/check_claims.py
-docker compose up -d                 # postgres, redis, rabbitmq, minio
+pytest backend/tests -q        # все тесты
+make check                     # ruff + mypy
+```
+
+## Offline-старт (без интернета)
+
+```bash
+# 1. Один раз загрузить образы (нужен интернет):
+make offline-pull
+
+# 2. Запуск без интернета (на любой машине с загруженными образами):
+make offline-up
+
+# 3. Проверить контейнеры:
+docker compose ps
+
+# API: http://localhost:8000
+# RabbitMQ UI: http://localhost:15672 (guest/guest)
+# MinIO console: http://localhost:9001 (kontur/kontur-dev-secret)
+# Gateway: http://localhost:3000
 ```
 
 ## Документы
