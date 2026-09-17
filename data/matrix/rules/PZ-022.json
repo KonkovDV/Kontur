@@ -4,49 +4,46 @@
   "name": "Степень огнестойкости здания",
   "unit": "Степень",
   "matrix_version": "draft-0",
-  "source_trigger_logic": "Снижение степени огнестойкости (например, с I на II) в РД.",
-  "coverage": "extractor_missing",
+  "source_trigger_logic": "Снижение степени огнестойкости (например, с I на II) в РД относительно ПД.",
+  "coverage": "executable",
   "applicability": {
-    "stages_required": [
-      "PD",
-      "RD"
-    ],
+    "stages_required": ["PD", "RD"],
     "object_types": [],
     "condition": null
   },
   "sources": {
-    "pd": {
-      "description": "Раздел ПЗ: Противопожарные характеристики"
-    },
-    "rd": {
-      "description": "Раздел АР/КР: Лист \"Общие данные\" (маркировка)"
-    },
-    "id": {
-      "description": "Заключение ГПН (МЧС)"
-    }
+    "pd": {"description": "Раздел ПЗ: Противопожарные характеристики"},
+    "rd": {"description": "Раздел АР/КР: Лист \"Общие данные\" (маркировка)"},
+    "id": {"description": "Заключение ГПН (МЧС)"}
   },
   "extractor": {
     "type": "enum",
-    "regex": null,
+    "regex": "V|IV|III|II|I",
     "anchors": [
-      "Степень огнестойкости здания"
+      "Степень огнестойкости здания",
+      "Степень огнестойкости"
     ],
-    "normalization": [
-      "nfc",
-      "collapse_spaces"
-    ],
+    "normalization": ["nfc", "collapse_spaces", "upper"],
     "dual_read_required": true
   },
   "comparator": {
     "operator": "class_not_lower",
+    "value": ["V", "IV", "III", "II", "I"],
     "rounding": "none",
     "unit_target": "Степень"
   },
-  "required_evidence": [
-    "expected",
-    "actual"
+  "required_evidence": ["expected", "actual"],
+  "normative_refs": [
+    {
+      "identifier": "ФЗ № 123-ФЗ",
+      "issuer": "Федеральное Собрание России",
+      "clause": "Таблица 21 (степени огнестойкости)",
+      "effective_from": "2008-07-22",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
   ],
-  "normative_refs": [],
   "failure_mapping": {
     "source_absent": "MISSING_EVIDENCE",
     "not_comparable": "NOT_COMPARABLE",
@@ -56,21 +53,9 @@
   },
   "review_priority": "HIGH",
   "tests": [
-    {
-      "name": "equal_or_compliant_gives_no_difference",
-      "expected_status": "AUTO_NO_DIFFERENCE"
-    },
-    {
-      "name": "triggering_difference_gives_candidate",
-      "expected_status": "CANDIDATE"
-    },
-    {
-      "name": "required_stage_absent_gives_missing_evidence",
-      "expected_status": "MISSING_EVIDENCE"
-    },
-    {
-      "name": "parameter_not_applicable_on_object",
-      "expected_status": "NOT_APPLICABLE"
-    }
+    {"name": "same_degree_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE"},
+    {"name": "better_degree_in_rd_is_not_violation", "expected_status": "AUTO_NO_DIFFERENCE"},
+    {"name": "lower_degree_gives_candidate", "expected_status": "CANDIDATE"},
+    {"name": "required_stage_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE"}
   ]
 }
