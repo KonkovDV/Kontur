@@ -2,7 +2,7 @@
 
 Сервис камеральной сверки проектной (ПД), рабочей (РД) и исполнительной (ИД)
 документации по матрице из 132 контролируемых параметров.
-Задача №10, Мосгосстройнадзор.
+Задача №9, Мосгосстройнадзор.
 
 Репозиторий **приватный**. Стратегия, Red Team, вопросы организатору и черновик
 матрицы не предназначены для публичного зеркала.
@@ -38,22 +38,43 @@
   `РАЗМЕЧЕННЫЙ_TEST_HIDDEN_ОРГАНИЗАТОР_213` — карантин: не открывать, не
   подбирать по ним пороги ([`docs/DATASET_PACKAGE.md`](docs/DATASET_PACKAGE.md)).
 
-## Состояние
+## Состояние (18 сентября 2026)
 
-Контракты, домен, вертикальный слайс `PZ-001` (якорь → число → delta →
-протокол), паспорт документа, векторные PDF-токены, резолвер утверждённой
-редакции. Остальные 131 правило матрицы — `extractor_missing`. Пороги ТЗ не
-измерены на frozen validation.
+**27/132 исполняемых правил матрицы.**
+Остальные 105 — `extractor_missing`.
+Пороги ТЗ не измерены на frozen validation.
+
+**Red Team:** xfail = **2** (RT-E: normative DB, RT-F: unsigned normative).
+RT-A, RT-B, RT-C, RT-D, RT-G, RT-H, RT-I — реализованы. Stop-ship п. 1, 3, 11
+закрыты.
+
+### Открытые PR перед Gate M (RC freeze 28.09)
+
+| PR | Ветка | Содержание |
+|---|---|---|
+| [#8](https://github.com/KonkovDV/Kontur/pull/8) | `gate-j-calibration` | Gate J: калибровка и метрики |
+| [#9](https://github.com/KonkovDV/Kontur/pull/9) | `gate-k-ui-protocol` | Gate K: рабочее место инспектора (React, 3-click) |
+| [#10](https://github.com/KonkovDV/Kontur/pull/10) | `gate-l-bff-openapi` | Gate L: BFF OpenAPI схемы |
+| [#11](https://github.com/KonkovDV/Kontur/pull/11) | `gate-kr055-enum-extractor` | KR-055: экстрактор перечислений |
+| [#12](https://github.com/KonkovDV/Kontur/pull/12) | `gate-pz-enum-fire-classes` | PZ-013/015/021/022/023: пожарные классы |
+| [#13](https://github.com/KonkovDV/Kontur/pull/13) | `gate-rt-a-intake` | RT-A: intake validation, деком-бомба |
+| [#14](https://github.com/KonkovDV/Kontur/pull/14) | `gate-docker-offline` | Docker offline-режим |
+| [#15](https://github.com/KonkovDV/Kontur/pull/15) | `gate-rt-c-dual-read` | RT-C: dual-read ABSTAIN + injection scan |
+| [#16](https://github.com/KonkovDV/Kontur/pull/16) | `gate-gap-redis` | GAP-REDIS + RT-G: идемпотентный кэш |
+| [#17](https://github.com/KonkovDV/Kontur/pull/17) | `gate-rt-h-access` | RT-H: контроль доступа к объектам |
+| [#18](https://github.com/KonkovDV/Kontur/pull/18) | `gate-rt-i-approve` | RT-I: подтверждение не в фокусе |
+
+**Порядок мержа:** #8 → #9 → #10 → #11 → #12 → #13 → #14 → #15 → #16 → #17 → #18.
 
 ## Карта репозитория
 
 ```text
 contracts/      OpenAPI 3.0 и JSON-схемы обмена (source of truth)
 backend/        Python ≥3.11: домен, применение, инфраструктура, API
-gateway/        Node.js BFF по требованию п.1.5 ТЗ
-web/            React: двухпанельное рабочее место инспектора (каркас)
+gateway/        Node.js BFF по требованию п. 1.5 ТЗ
+web/            React: двухпанельное рабочее место инспектора
 data/           Матрица 132, нормативный реестр, реестр поставки, карантин
-docs/           ADR, план, трассируемость ТЗ, Red Team, вопросы организатору
+доцс/           ADR, план, трассируемость ТЗ, Red Team, вопросы организатору
 ```
 
 ## Старт
