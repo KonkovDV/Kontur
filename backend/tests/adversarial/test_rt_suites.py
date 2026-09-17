@@ -4,17 +4,21 @@
 что именно система обязана сделать с враждебным входом.
 
 RT-2709-08 (неутверждённая редакция не эталон) и RT-D rename/хеш закрыты.
-Остальные тесты — xfail strict, пока слой не реализован.
+RT-A: реализован — xfail удалён.
+Остальные xfail strict: RT-C×2, RT-E, RT-F, RT-G, RT-H, RT-I.
 """
 
 from __future__ import annotations
 
+import io
+import zipfile
 from datetime import date
 
 import pytest
 
 from kontur.application.revision_resolver import resolve_revision
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
+from kontur.infrastructure.intake import IntakeResult, RejectReason, validate_intake
 from kontur.infrastructure.pdfium_tokens import file_sha256
 
 
@@ -69,11 +73,33 @@ def test_rt_d_rename_does_not_change_identity() -> None:
     assert file_sha256(payload) != file_sha256(payload + b"\x00")
 
 
-@pytest.mark.xfail(reason="RT-A: слой приёма не реализован", strict=True)
 def test_rt_a_decompression_bomb_is_rejected_with_reason_code() -> None:
-    """Архив-бомба отклоняется с конкретным reason_code, парсер не падает."""
+    """Архив-бомба отклоняется с конкретным reason_code, парсер не падает.
 
-    raise NotImplementedError("RT-A")
+    Сценарий: ZIP-архив с 1 МБ нулей компрессируется до ~1 КБ.
+    Expansion ratio ~1000x >> порог 100x.
+    validate_intake() должна:
+      1. Вернуть IntakeResult(ok=False)
+      2. reason_code в {DECOMPRESSION_BOMB, EXPAND_LIMIT_EXCEEDED}
+      3. Не выбрасывать исключения (RT-A: парсер не падает)
+    """
+    # Создаём zip-бомбу: 1 МБ нулей → ~1 КБ в zip (ratio ~1000x)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("bomb.bin", b"\x00" * 1_000_000)  # 1 МБ нулей
+    bomb = buf.getvalue()
+
+    # Паранойдный перехватчик: validate_intake не должна выбрасывать
+    result: IntakeResult = validate_intake(bomb)
+
+    assert not result.ok, f"Зип-бомба должна быть отклонена, result.ok=True"
+    assert result.reason_code in {
+        RejectReason.DECOMPRESSION_BOMB,
+        RejectReason.EXPAND_LIMIT_EXCEEDED,
+    }, f"Ожидали bomb reason_code, получено: {result.reason_code!r}"
+    assert result.reason_code is not None
+    # ADR-0001: никогда не должна выбрасываться ошибка из validate_intake()
+    # (если бы выбросилась, тест уже упал бы выше)
 
 
 def test_rt_b_hidden_text_layer_blocks_automatic_finding() -> None:
