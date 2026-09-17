@@ -111,6 +111,36 @@ def test_equal_values_give_no_difference(rule: dict[str, object]) -> None:
     }
 
 
+def test_missing_value_is_quality_not_human_verdict(rule: dict[str, object]) -> None:
+    """Параметр не найден в загруженном документе — не нарушение и не NEGATIVE_VERIFIED."""
+
+    result = _run(
+        rule,
+        ("Площадь", "застройки"),
+        ("Площадь", "застройки", "1250,5"),
+    )
+    assert result.finding.finding_status is FindingStatus.LOW_QUALITY
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+    assert result.finding.finding_status is not FindingStatus.NEGATIVE_VERIFIED
+    assert result.finding.evidence_group_id is None
+
+
+def test_evidence_group_id_is_stable_across_retries(rule: dict[str, object]) -> None:
+    first = _run(
+        rule,
+        ("Площадь", "застройки", "1 250,50"),
+        ("Площадь", "застройки", "1250,5"),
+    )
+    second = _run(
+        rule,
+        ("Площадь", "застройки", "1 250,50"),
+        ("Площадь", "застройки", "1250,5"),
+    )
+    assert first.evidence_group is not None
+    assert second.evidence_group is not None
+    assert first.evidence_group.evidence_group_id == second.evidence_group.evidence_group_id
+
+
 def test_any_difference_gives_candidate(rule: dict[str, object]) -> None:
     result = _run(
         rule,

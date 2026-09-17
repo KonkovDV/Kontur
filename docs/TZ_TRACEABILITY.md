@@ -43,3 +43,6 @@
 короткие формы из текстов (`AR-14`) — display-алиасы.
 
 Прогон Red Team от 16.09.2026, триаж и открытые классы — [RED_TEAM_TRIAGE.md](RED_TEAM_TRIAGE.md).
+SOTA и запрет «сверки с нормой» — [SOTA_AEROBIM_ANALYSIS.md](SOTA_AEROBIM_ANALYSIS.md),
+[adr/0006-compare-documents-not-norms.md](adr/0006-compare-documents-not-norms.md).
+Пробелы слоёв — [KNOWN_GAPS.md](KNOWN_GAPS.md).

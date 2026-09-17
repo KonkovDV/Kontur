@@ -28,15 +28,18 @@ def _doc(
     approval_date: date | None = None,
     predecessor: str | None = None,
     successor: str | None = None,
+    document_code: str | None = None,
+    sheet: str | None = None,
 ) -> DocumentRef:
     return DocumentRef(
         file_id=file_id,
         file_hash=f"sha-{file_id}",
         doc_stage=stage,
-        document_code=f"CODE-{file_id}",
+        document_code=document_code or f"CODE-{stage.value}",
         revision=file_id[-1],
         approval_status=approval,
         approval_date=approval_date,
+        sheet=sheet,
         predecessor_file_id=predecessor,
         successor_file_id=successor,
     )
@@ -79,6 +82,13 @@ class TestBasicResolution:
         result = resolve_revision([_doc("pd-v1")], DocStage.PD)
         assert result.status is ResolveStatus.RESOLVED
         assert result.status.value != FindingStatus.AUTO_NO_DIFFERENCE.value
+
+    def test_anchor_ignores_other_document_codes(self) -> None:
+        pz = _doc("pd-pz", document_code="12345-PZ")
+        ar = _doc("pd-ar", document_code="12345-AR")
+        result = resolve_revision([pz, ar], DocStage.PD, anchor=pz)
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-pz"
 
 
 # ---------------------------------------------------------------------------

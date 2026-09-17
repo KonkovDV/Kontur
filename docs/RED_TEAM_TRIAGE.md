@@ -92,6 +92,10 @@ psql -v ON_ERROR_STOP=1 \
 | RT-2709-07 | S1 | Скрытый белый/перекрытый текст внутри CropBox читается как штамп | Нет детектора visual vs text; `text_render_agreement` всегда `None` | не закрывать RT-B; не ставить `True` без детектора |
 | RT-2709-09 | S3 | Character Accuracy / CER не реализованы | Не смешивать с Exact Match полей | E1 после bake-off OCR, не в этой сессии |
 
+Остальные пробелы слоёв (OCR-поворот, DWG, DAO, юзабилити) — [KNOWN_GAPS.md](KNOWN_GAPS.md).
+Черновик SOTA, который учил автомат писать `NEGATIVE_VERIFIED`, отвергнут:
+[SOTA_AEROBIM_ANALYSIS.md](SOTA_AEROBIM_ANALYSIS.md), ADR-0006.
+
 Порог Exact Match ≥0,92 на validation v0 не атаковался как достигнутый: выборки нет,
 метрика есть. Публиковать число запрещено.
 

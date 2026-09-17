@@ -20,6 +20,7 @@ from kontur.application.revision_resolver import (
 )
 from kontur.application.scenarios import CompletenessMap, status_for_missing_stage
 from kontur.domain.geometry import polygon_in_unit_square
+from kontur.domain.idempotency import comparison_key
 from kontur.domain.models import (
     ApprovalStatus,
     DocStage,
@@ -29,7 +30,7 @@ from kontur.domain.models import (
     EvidenceRole,
     Finding,
 )
-from kontur.domain.statuses import Completeness, FindingStatus, ReviewPriority
+from kontur.domain.statuses import HUMAN_ONLY_STATUSES, Completeness, FindingStatus, ReviewPriority
 
 _STAGE_ROLE: dict[DocStage, EvidenceRole] = {
     DocStage.PD: EvidenceRole.EXPECTED,
@@ -79,12 +80,20 @@ def _required_stages(rule: dict[str, object]) -> tuple[DocStage, ...]:
     return tuple(DocStage(str(item)) for item in raw)
 
 
+def _assert_machine_status(status: FindingStatus) -> None:
+    """Детерминизм: автомат не пишет человеческий вердикт (ADR-0001)."""
+
+    if status in HUMAN_ONLY_STATUSES:
+        raise RuntimeError(f"автомат не имеет права писать {status.value}")
+
+
 def _quality_finding(
     rule: dict[str, object],
     status: FindingStatus,
     *,
     rationale: str,
 ) -> Finding:
+    _assert_machine_status(status)
     return Finding(
         finding_id=str(uuid4()),
         rule_code=str(rule["code"]),
@@ -213,7 +222,12 @@ def evaluate_rule(
     if revision_pool is not None:
         for stage in required:
             try:
-                resolution = resolve_revision(revision_pool, stage)
+                staged = pages.get(stage)
+                resolution = resolve_revision(
+                    revision_pool,
+                    stage,
+                    anchor=None if staged is None else staged.document,
+                )
             except RevisionConflict as exc:
                 return _halt(
                     rule,
@@ -346,7 +360,9 @@ def evaluate_rule(
     if run(list(stages)) is not None:
         raise RuntimeError("каскад L1–L7 закрылся до сравнения")
 
-    group_id = str(uuid4())
+    file_ids = tuple(pages[stage].document.file_id for stage in hits)
+    group_id = comparison_key(object_id, str(rule["code"]), file_ids)
+    _assert_machine_status(comparison.status)
     fragments = tuple(
         _fragment(
             hit,

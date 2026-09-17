@@ -31,7 +31,7 @@ def _doc(
         file_id=file_id,
         file_hash=f"sha-{file_id}",
         doc_stage=stage,
-        document_code=f"CODE-{file_id}",
+        document_code=f"CODE-{stage.value}",
         revision=file_id[-1],
         approval_status=approval,
         approval_date=approval_date,

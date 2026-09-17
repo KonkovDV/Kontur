@@ -16,6 +16,20 @@ from enum import StrEnum
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
 
 
+def _same_document_identity(left: DocumentRef, right: DocumentRef) -> bool:
+    """Цепочка редакций — один документ, не все файлы стадии (ADR-0003)."""
+
+    if left.doc_stage is not right.doc_stage:
+        return False
+    if left.document_code and right.document_code and left.document_code != right.document_code:
+        return False
+    if left.sheet and right.sheet and left.sheet != right.sheet:
+        return False
+    if left.discipline and right.discipline and left.discipline != right.discipline:
+        return False
+    return True
+
+
 class RevisionConflict(ValueError):
     """Граф редакций содержит неоднозначность или цикл.
 
@@ -57,16 +71,30 @@ def _is_approved(doc: DocumentRef) -> bool:
 def resolve_revision(
     documents: list[DocumentRef],
     stage: DocStage,
+    *,
+    anchor: DocumentRef | None = None,
 ) -> RevisionResolution:
     """Выбирает последнюю утверждённую редакцию для стадии.
 
     1. Только документы нужной стадии.
-    2. Только APPROVED — неутверждённые в пул голов не попадают.
-    3. Голова: approved без successor_file_id либо successor не approved.
-    4. Несколько голов или цикл — RevisionConflict.
+    2. При `anchor` — только та же identity (шифр, лист, раздел).
+    3. Только APPROVED — неутверждённые в пул голов не попадают.
+    4. Голова: approved без successor_file_id либо successor не approved.
+    5. Несколько голов или цикл — RevisionConflict.
     """
 
     stage_docs = [item for item in documents if item.doc_stage is stage]
+    if anchor is not None:
+        if anchor.doc_stage is not stage:
+            return RevisionResolution(
+                status=ResolveStatus.MISSING_EVIDENCE,
+                resolved=None,
+                conflict_reason=(
+                    f"якорь {anchor.file_id} стадии {anchor.doc_stage.value},"
+                    f" запрошена {stage.value}"
+                ),
+            )
+        stage_docs = [item for item in stage_docs if _same_document_identity(anchor, item)]
     if not stage_docs:
         return RevisionResolution(
             status=ResolveStatus.MISSING_EVIDENCE,
