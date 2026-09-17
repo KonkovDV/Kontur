@@ -1,8 +1,9 @@
 """Один проход правила: комплектность → извлечение → сравнение → находка.
 
-Слайз исполняет `extractor.type=number` и `comparator.operator=delta`.
-Другой оператор — отказ L6, а не «почти delta». Человеческий вердикт сюда
-не пишется: максимум CANDIDATE или AUTO_NO_DIFFERENCE.
+Слайс исполняет `extractor.type=number` и любой operator из NUMERIC_OPERATORS
+(delta, eq, ne, lt, le, gt, ge, range). Нечисловой оператор или иной тип
+экстрактора — отказ L6. Человеческий вердикт сюда не пишется: максимум
+CANDIDATE или AUTO_NO_DIFFERENCE.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import uuid4
 
-from kontur.application.comparators import compare_values
+from kontur.application.comparators import NUMERIC_OPERATORS, compare_values
 from kontur.application.extractors.number import NumberHit, PageToken, extract_number
 from kontur.application.pipeline import Stage, StageResult, run
 from kontur.application.revision_resolver import (
@@ -183,12 +184,13 @@ def evaluate_rule(
             FindingStatus.CLARIFICATION_REQUIRED,
             "слайс исполняет только extractor.type=number",
         )
-    if not isinstance(comparator, dict) or comparator.get("operator") != "delta":
+    if not isinstance(comparator, dict) or comparator.get("operator") not in NUMERIC_OPERATORS:
         return _halt(
             rule,
             Stage.L6_MATRIX,
             FindingStatus.CLARIFICATION_REQUIRED,
-            "слайс исполняет только comparator.operator=delta",
+            f"слайс исполняет операторы {sorted(NUMERIC_OPERATORS)!r}, "
+            f"получен {comparator.get('operator')!r}",
         )
 
     required = _required_stages(rule)
@@ -334,7 +336,7 @@ def evaluate_rule(
             rule,
             Stage.L5_PAIRING,
             _mapped(rule, "not_comparable", FindingStatus.NOT_COMPARABLE),
-            "для delta нужны ПД и РД",
+            "для числового оператора нужны ПД и РД",
             prior=(
                 *identity_ok,
                 StageResult(Stage.L2_EXTRACTION, ok=True),
