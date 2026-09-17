@@ -1,1 +1,147 @@
-IiIi0JzQvtC00YPQu9GMINC/0L7QtNC+0LfRgNC10L3QuNC5ICjQotCXINC/LiA5LjUsIFJULTI2MDktMTYpLgoKU1VTUElDSU9OIOKAlCDRgdGC0LDRgtGD0YEg0LTQu9GPINGB0LjQs9C90LDQu9C+0LIsINC90LXQtNC+0YHRgtCw0YLQvtGH0L3Ri9GFINC00LvRjyDQsNCy0YLQvtC80LDRgtC40YfQtdGB0LrQvtC5INC90LDRhdC+0LTQutC4LAoKQXZRbyDRgtGA0LXQsdGD0Y7RidC40YUg0LLQvdC40LzQsNC90LjRjyDQuNC90YHQv9C10LrRgtC+0YDQsC4g0JDQstGC0L7QvNCw0YLQuNGH0LXRgdC60LDRjyDRjdGB0LrQsNC70LDRhtC40Y8gwgpDT05GSVJNRURfVklPTEFUSU9OINC30LDQv9GA0LXRidC10L3QsC4KCkTQtNC00YPQv9C70LjQutCw0YbQuNGPOiDQvtC00L3QsCBTVVNQSUNJT04g0L3QsCBldmlkZW5jZV9ncm91cCAo0YEg0L3QsNC40LHQvtC70YzRiNC10Lkg0YPQstC10YDQtdC90L3QvtGB0YLRjNGOKS4KIiIiCgpmcm9tIF9fZnV0dXJlX18gaW1wb3J0IGFubm90YXRpb25zCgpmcm9tIGRhdGFjbGFzc2VzIGltcG9ydCBkYXRhY2xhc3MKZnJvbSBlbnVtIGltcG9ydCBTdHJFbnVtCmZyb20gdHlwaW5nIGltcG9ydCBTZXF1ZW5jZQoKZnJvbSBrb250dXIuZG9tYWluLnN0YXR1c2VzIGltcG9ydCBGaW5kaW5nU3RhdHVzCgoKY2xhc3MgU3VzcGljaW9uQXBwcm9hY2goU3RyRW51bSk6CiAgICAiIiLQn9C+0LTRhdC+0LQsINC60L7RgtC+0YDRi9C8INCy0YvRj9Cy0LvQtdC90L4g0L/QvtC00L7Qt9GA0LXQvdC40LUgKNCi0Jcg0L8uIDkuNSkuIiIiCgogICAgIzog0J/QvtC00YXQvtC0IDE6INGD0LLQtdGA0LXQvdC90L7RgdGC0YzQvC7Qv9C+0LTRhdC+0LTQsCDQvdC40LbQtSDQv9C+0YDQvtCz0LAsINC90L4g0YHQuNCz0L3QsNC7INC10YHRgtGMLgogICAgTE9XX0NPTkZJREVOQ0UgPSAiTE9XX0NPTkZJREVOQ0UiCiAgICAjOiDQn9C+0LTRhdC+0LQgMjog0LTQstCwINC90LXQt9Cw0LLQuNGB0LjQvNGL0YUg0YfRgtC10L3QuNGPINC00LDQu9C4INGA0LDQt9C90YvQtSDB30L7QvdCw0YfQtdC90LjRjy4KICAgIERVQUxfUkVBRF9ESVNBR1JFRSA9ICJEVUFMX1JFQURfRElTQUdSRUUiCiAgICAjOiDQn9C+0LTRhdC+0LQgMzog0YfQsNGB0YLQuNGH0L3QvtC1INGB0L7QstC/0LDQtNC10L3QuNC1IOKAlCDRh9Cw0YHRgtGMINC60YDQuNGC0LXRgNC40LXQsiDQv9GA0L7QudC00LXQvdCwLCDRh9Cw0YHRgtGMINC90LXRgi4KICAgIFBBUlRJQUxfTUFUQ0ggPSAiUEFSVElBTF9NQVRDSCIKICAgICM6INCf0L7QtNGF0L7QtCA0OiDQsNC90L3QvtGC0LDRhtC40Y8g0LrQvtC90YTQu9C40LrRgtGD0LXRgiDRgSDQv9GA0LXQtNGL0LTRg9GJ0LXQuSDQstC10YDRgdC40LXQuSDQuNC70Lgg0YEg0LTRgNGD0LPQuNC8INC/0YDQsNCy0LjQu9C+0LwuCiAgICBBTk5PVEFUSU9OX0NPTkZMSUNUID0gIkFOTk9UQVRJT05fQ09ORkxJQ1QiCgoKQGRhdGFjbGFzcyhmcm96ZW49VHJ1ZSwgc2xvdHM9VHJ1ZSkKY2xhc3MgU3VzcGljaW9uU2lnbmFsOgogICAgIiIi0KHQuNCz0L3QsNC7INC/0L7QtNC+0LfRgNC10L3QuNGPINC/0L4g0L7QtNC90L7QvNGDINC/0YDQsNCy0LjQu9GDINC4INC+0LTQvdC+0Lkg0LPRgNGD0L/Qv9C1INC00L7QutCw0LfQsNGC0LXQu9GM0YHRgtCyLgoKICAgINCf0L7Qu9C1IHN0YXR1cyDQstGB0LXQs9C00LAgRmluZGluZ1N0YXR1cy5TVVNQSUNJT04g4oCUINGB0LjQs9C90LDQu9GPINGB0YLQsNGC0YPRgdCwLgogICAgZXZpZGVuY2VfZ3JvdXBfaWQg0L7QsdGP0LfQsNGC0LXQu9C10L06IFNVU1BJQ0lPTiDQsdC10Lcg0LPRgNGD0L/Qv9GLINC00L7QutCw0LfQsNGC0LXQu9GM0YHRgtCyINC90LUKICAgINGB0YPRidC10YHRgtCy0YPQtdGCIChBRFItMDAwMiDRgNCw0YHQv9GA0L7RgdGC0YDQsNC90Y/QtdGC0YHRjyDQuCDQvdCwINC/0L7QtNC+0LfRgNC10L3QuNGPKS4KICAgICIiIgoKICAgIHJ1bGVfY29kZTogc3RyCiAgICBldmlkZW5jZV9ncm91cF9pZDogc3RyCiAgICBhcHByb2FjaDogU3VzcGljaW9uQXBwcm9hY2gKICAgIGNvbmZpZGVuY2U6IGZsb2F0ICAjIFswLjAsIDEuMF0g4oCUINCd0LLQtdGA0LXQvdC90L7RgdGC0Ywg0YHQuNCz0L3QsNC70LAKICAgIGRldGFpbDogc3RyICAgICAgICAjINCS0YDQsNGC0LrQvtC1INC/0L7Rj9GB0L3QtdC90LjQtSDQtNC70Y8g0LjQvdGB0L/QtdC60YLQvtGA0LAKICAgIHN0YXR1czogRmluZGluZ1N0YXR1cyA9IEZpbmRpbmdTdGF0dXMuU1VTUElDSU9OCgogICAgZGVmIF9fcG9zdF9pbml0X18oc2VsZikgLT4gTm9uZToKICAgICAgICBpZiBub3Qgc2VsZi5ldmlkZW5jZV9ncm91cF9pZDoKICAgICAgICAgICAgcmFpc2UgVmFsdWVFcnJvcigiU3VzcGljaW9uU2lnbmFsOiBldmlkZW5jZV9ncm91cF9pZCDQvtCx0Y/Qt9Cw0YLQtdC70LXQvSIpCiAgICAgICAgaWYgbm90ICgwLjAgPD0gc2VsZi5jb25maWRlbmNlIDw9IDEuMCk6CiAgICAgICAgICAgIHJhaXNlIFZhbHVlRXJyb3IoZiJjb25maWRlbmNlINCy0L3QtSBbMDsxXToge3NlbGYuY29uZmlkZW5jZX0iKQogICAgICAgIGlmIHNlbGYuc3RhdHVzIGlzIG5vdCBGaW5kaW5nU3RhdHVzLlNVU1BJQ0lPTjoKICAgICAgICAgICAgcmFpc2UgVmFsdWVFcnJvcigKICAgICAgICAgICAgICAgICJTdXNwaWNpb25TaWduYWwuc3RhdHVzINC+0LHRj9C30LDQvSDQsdGL0YLRjCBTVVNQSUNJT04g4oCUICIKICAgICAgICAgICAgICAgICLQsNCy0YLQvtC80LDRgtC40YfQtdGB0LrQvtC1INC/0L7QstGL0YjQtdC90LjQtSDQtNC+IENPTkZJUk1FRF9WSU9MQVRJT04g0LfQsNC/0YDQtdGJ0LXQvdC+IgogICAgICAgICAgICApCgoKZGVmIGRlZHVwbGljYXRlX2J5X2dyb3VwKAogICAgc2lnbmFsczogU2VxdWVuY2VbU3VzcGljaW9uU2lnbmFsXSwKKSAtPiB0dXBsZVtTdXNwaWNpb25TaWduYWwsIC4uLl06CiAgICAiIiLQntC00L3QsCBTVVNQSUNJT04g0L3QsCAocnVsZV9jb2RlLCBldmlkZW5jZV9ncm91cF9pZCkg4oCUINGBINC90LDQuNCx0L7Qu9GM0YjQtdC5INGD0LLQtdGA0LXQvdC90L7RgdGC0YzRji4KCiAgICDQn9GA0LDQstC40LvQvjog0LXRgdC70Lgg0L/QvtC+0LTQvdC+0Lkg0LPRgNGD0L/Qv9C10LQg0LTQvtC60LDQt9Cw0YLQtdC70YzRgdGC0LLRjiDQv9GA0LjRiNC70Lgg0L3QtdGB0LrQvtC70YzQutC+INGB0LjQs9C90LDQu9C+0LIKICAgICjQvdCw0L/RgNC40LzQtdGALCBMT1dfQ09ORklERU5DRSDQuCBEVUFMX1JFQURfRElTQUdSRUUpLCDQsiDQuNC90YHQv9C10LrRgtC+0YDRgdC60YPRjiDQvtGH0LXRgNC10LTRjAogICAg0L/QvtC/0LDQtNCw0LXRgiDRgtC+0LvRjNC60L4g0YEg0L3QsNC40LHQvtC70YzRiNC10Lkg0L3QvtC00LUg0YHQv9Cw0LwuINCt0YLQviDQv9GA0LXQtNC+0YLQstGA0LDRidCw0LXRgiDRgdC/0LDQvC4KICAgICIiIgogICAgYmVzdDogZGljdFt0dXBsZVtzdHIsIHN0cl0sIFN1c3BpY2lvblNpZ25hbF0gPSB7fQogICAgZm9yIHNpZ25hbCBpbiBzaWduYWxzOgogICAgICAgIGtleSA9IChzaWduYWwucnVsZV9jb2RlLCBzaWduYWwuZXZpZGVuY2VfZ3JvdXBfaWQpCiAgICAgICAgcHJldiA9IGJlc3QuZ2V0KGtleSkKICAgICAgICBpZiBwcmV2IGlzIE5vbmUgb3Igc2lnbmFsLmNvbmZpZGVuY2UgPiBwcmV2LmNvbmZpZGVuY2U6CiAgICAgICAgICAgIGJlc3Rba2V5XSA9IHNpZ25hbAogICAgcmV0dXJuIHR1cGxlKGJlc3QudmFsdWVzKCkpCgoKZGVmIGFzc2Vzc19sb3dfY29uZmlkZW5jZSgKICAgIHJ1bGVfY29kZTogc3RyLAogICAgZXZpZGVuY2VfZ3JvdXBfaWQ6IHN0ciwKICAgIGNvbmZpZGVuY2U6IGZsb2F0LAogICAgbG93X2NvbmZpZGVuY2VfdGhyZXNob2xkOiBmbG9hdCA9IDAuNjAsCiAgICBkZXRhaWw6IHN0ciA9ICIiLAopIC0+IFN1c3BpY2lvblNpZ25hbCB8IE5vbmU6CiAgICAiIiLQn9C+0LTRhdC+0LQgMTogNC3QtdC90LXRgNC40YDQvtCy0LDRgtGMIFNVU1BJQ0lPTiDQtdGB0LvQuCBjb25maWRlbmNlIDwg0L/QvtGA0L7Qs9CwLgoKICAgIFJldHVybnM6CiAgICAgICAgU3VzcGljaW9uU2lnbmFsINC10YHQu9C4INC90YPQttC90L4g0L/QvtC00L7Qt9GA0LXQvdC40LUsIE5vbmUg0LXRgdC70Lgg0LLRgdGRINGH0LjRgdGC0L4uCiAgICAiIiIKICAgIGlmIGNvbmZpZGVuY2UgPj0gbG93X2NvbmZpZGVuY2VfdGhyZXNob2xkOgogICAgICAgIHJldHVybiBOb25lCiAgICByZXR1cm4gU3VzcGljaW9uU2lnbmFsKAogICAgICAgIHJ1bGVfY29kZT1ydWxlX2NvZGUsCiAgICAgICAgZXZpZGVuY2VfZ3JvdXBfaWQ9ZXZpZGVuY2VfZ3JvdXBfaWQsCiAgICAgICAgYXBwcm9hY2g9U3VzcGljaW9uQXBwcm9hY2guTE9XX0NPTkZJREVOQ0UsCiAgICAgICAgY29uZmlkZW5jZT1jb25maWRlbmNlLAogICAgICAgIGRldGFpbD1kZXRhaWwgb3IgZiJjb25maWRlbmNlPXtjb25maWRlbmNlOi4yZn0gPCDQv9C+0YDQvtCz0LAge2xvd19jb25maWRlbmNlX3RocmVzaG9sZDouMmZ9IiwKICAgICkKCgpkZWYgYXNzZXNzX2R1YWxfcmVhZF9kaXNhZ3JlZSgKICAgIHJ1bGVfY29kZTogc3RyLAogICAgZXZpZGVuY2VfZ3JvdXBfaWQ6IHN0ciwKICAgIGZpcnN0X3ZhbHVlOiBvYmplY3QsCiAgICBzZWNvbmRfdmFsdWU6IG9iamVjdCwKICAgIGNvbmZpZGVuY2U6IGZsb2F0ID0gMC41LAopIC0+IFN1c3BpY2lvblNpZ25hbCB8IE5vbmU6CiAgICAiIiLQn9C+0LTRhdC+0LQgMjog0LPQtdC90LXRgNC40YDQvtCy0LDRgtGMIFNVU1BJQ0lPTiDQtdGB0LvQuCDQtNCy0LAg0YfRgtC10L3QuNGPINC00LDQu9C4INGA0LDQt9C90YvQtSDB30L7QvdCw0YfQtdC90LjRjy4iIiIKICAgIGlmIGZpcnN0X3ZhbHVlID09IHNlY29uZF92YWx1ZToKICAgICAgICByZXR1cm4gTm9uZQogICAgcmV0dXJuIFN1c3BpY2lvblNpZ25hbCgKICAgICAgICBydWxlX2NvZGU9cnVsZV9jb2RlLAogICAgICAgIGV2aWRlbmNlX2dyb3VwX2lkPWV2aWRlbmNlX2dyb3VwX2lkLAogICAgICAgIGFwcHJvYWNoPVN1c3BpY2lvbkFwcHJvYWNoLkRVQUxfUkVBRF9ESVNBR1JFRSwKICAgICAgICBjb25maWRlbmNlPWNvbmZpZGVuY2UsCiAgICAgICAgZGV0YWlsPWYi0L/QtdGA0LLQvtC1INGHdGVuaWU9e2ZpcnN0X3ZhbHVlIXJ9LCDQstGC0L7RgNC+0LU9e3NlY29uZF92YWx1ZSFyfSIsCiAgICApCgoKZGVmIGFzc2Vzc19wYXJ0aWFsX21hdGNoKAogICAgcnVsZV9jb2RlOiBzdHIsCiAgICBldmlkZW5jZV9ncm91cF9pZDogc3RyLAogICAgbWF0Y2hlZF9jcml0ZXJpYTogaW50LAogICAgdG90YWxfY3JpdGVyaWE6IGludCwKICAgIGNvbmZpZGVuY2U6IGZsb2F0ID0gMC41LAopIC0+IFN1c3BpY2lvblNpZ25hbCB8IE5vbmU6CiAgICAiIiLQn9C+0LTRhdC+0LQgMzogU1VTUElDSU9OINC10YHQu9C4INGH0LDRgdGC0Ywg0LrRgNC40YLQtdGA0LjQtdCyINC/0YDQvtC50LTQtdC9LCDRHC0Rh9Cw0YHRgtGMINC90LXRgi4iIiIKICAgIGlmIHRvdGFsX2NyaXRlcmlhID09IDA6CiAgICAgICAgcmV0dXJuIE5vbmUKICAgIHJhdGlvID0gbWF0Y2hlZF9jcml0ZXJpYSAvIHRvdGFsX2NyaXRlcmlhCiAgICBpZiByYXRpbyA9PSAwLjAgb3IgcmF0aW8gPT0gMS4wOgogICAgICAgIHJldHVybiBOb25lCiAgICByZXR1cm4gU3VzcGljaW9uU2lnbmFsKAogICAgICAgIHJ1bGVfY29kZT1ydWxlX2NvZGUsCiAgICAgICAgZXZpZGVuY2VfZ3JvdXBfaWQ9ZXZpZGVuY2VfZ3JvdXBfaWQsCiAgICAgICAgYXBwcm9hY2g9U3VzcGljaW9uQXBwcm9hY2guUEFSVElBTF9NQVRDSCwKICAgICAgICBjb25maWRlbmNlPWNvbmZpZGVuY2UgKiByYXRpbywKICAgICAgICBkZXRhaWw9ZiLQstGL0L/QvtC70L3QtdC90L4ge21hdGNoZWRfY3JpdGVyaWF9L3t0b3RhbF9jcml0ZXJpYX0g0LrRgNC40YLQtdGA0LjQtdCyIiwKICAgICkKCgpkZWYgYXNzZXNzX2Fubm90YXRpb25fY29uZmxpY3QoCiAgICBydWxlX2NvZGU6IHN0ciwKICAgIGV2aWRlbmNlX2dyb3VwX2lkOiBzdHIsCiAgICBjb25mbGljdF9kZXNjcmlwdGlvbjogc3RyLAogICAgY29uZmlkZW5jZTogZmxvYXQgPSAwLjUsCikgLT4gU3VzcGljaW9uU2lnbmFsIHwgTm9uZToKICAgICIiItCf0L7QtNGF0L7QtCA0OiBTVVNQSUNJT04g0L/RgNC4INC60L7QvdGE0LvQuNC60YLQtSDQsNC90L3QvtGC0LDRhtC40LkuIiIiCiAgICBpZiBub3QgY29uZmxpY3RfZGVzY3JpcHRpb24uc3RyaXAoKToKICAgICAgICByZXR1cm4gTm9uZQogICAgcmV0dXJuIFN1c3BpY2lvblNpZ25hbCgKICAgICAgICBydWxlX2NvZGU9cnVsZV9jb2RlLAogICAgICAgIGV2aWRlbmNlX2dyb3VwX2lkPWV2aWRlbmNlX2dyb3VwX2lkLAogICAgICAgIGFwcHJvYWNoPVN1c3BpY2lvbkFwcHJvYWNoLkFOTk9UQVRJT05fQ09ORkxJQ1QsCiAgICAgICAgY29uZmlkZW5jZT1jb25maWRlbmNlLAogICAgICAgIGRldGFpbD1jb25mbGljdF9kZXNjcmlwdGlvbiwKICAgICkK
+"""Сигналы подозрения вне автоматического вердикта (ТЗ п. 9.5, RT-2609-16).
+
+SUSPICION — гипотеза для инспектора, не строка матрицы и не нарушение.
+Автомат, LLM и этот модуль не имеют права записать CONFIRMED_VIOLATION
+(ADR-0001). Расхождение двух чтений критического значения в компараторе
+по-прежнему даёт ABSTAIN; здесь только параллельный сигнал в очередь.
+Сверка с СНиП/СанПиН не является подходом (ADR-0006).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from enum import StrEnum
+
+from kontur.domain.statuses import FindingStatus
+
+DEFAULT_LOW_CONFIDENCE_THRESHOLD = 0.60
+
+
+class SuspicionApproach(StrEnum):
+    """Четыре подхода п. 9.5. Это не статусы находки и не операторы матрицы."""
+
+    LOW_CONFIDENCE = "LOW_CONFIDENCE"
+    DUAL_READ_DISAGREE = "DUAL_READ_DISAGREE"
+    PARTIAL_MATCH = "PARTIAL_MATCH"
+    ANNOTATION_CONFLICT = "ANNOTATION_CONFLICT"
+
+
+@dataclass(frozen=True, slots=True)
+class SuspicionSignal:
+    """Один сигнал на (rule_code, evidence_group_id). Статус всегда SUSPICION."""
+
+    rule_code: str
+    evidence_group_id: str
+    approach: SuspicionApproach
+    confidence: float
+    detail: str
+    status: FindingStatus = FindingStatus.SUSPICION
+
+    def __post_init__(self) -> None:
+        if not self.evidence_group_id.strip():
+            raise ValueError("evidence_group_id обязателен для SUSPICION (ADR-0002)")
+        if not 0.0 <= self.confidence <= 1.0:
+            raise ValueError("confidence должен быть в [0; 1]")
+        if self.status is not FindingStatus.SUSPICION:
+            raise ValueError("status сигнала может быть только SUSPICION")
+        if not self.rule_code.strip():
+            raise ValueError("rule_code не может быть пустым")
+
+
+def assess_low_confidence(
+    rule_code: str,
+    evidence_group_id: str,
+    *,
+    confidence: float,
+    low_confidence_threshold: float = DEFAULT_LOW_CONFIDENCE_THRESHOLD,
+) -> SuspicionSignal | None:
+    """Подход 1: извлечённое значение есть, уверенность ниже порога."""
+
+    if confidence >= low_confidence_threshold:
+        return None
+    return SuspicionSignal(
+        rule_code,
+        evidence_group_id,
+        SuspicionApproach.LOW_CONFIDENCE,
+        confidence,
+        detail=f"уверенность {confidence:.2f} ниже порога {low_confidence_threshold:.2f}",
+    )
+
+
+def assess_dual_read_disagree(
+    rule_code: str,
+    evidence_group_id: str,
+    *,
+    first_value: object,
+    second_value: object,
+) -> SuspicionSignal | None:
+    """Подход 2: два чтения разошлись.
+
+    Не заменяет ABSTAIN компаратора и не эскалирует в CANDIDATE/CONFIRMED.
+    """
+
+    if first_value == second_value:
+        return None
+    return SuspicionSignal(
+        rule_code,
+        evidence_group_id,
+        SuspicionApproach.DUAL_READ_DISAGREE,
+        0.50,
+        detail=f"двойное чтение разошлось: {first_value!s} ≠ {second_value!s}",
+    )
+
+
+def assess_partial_match(
+    rule_code: str,
+    evidence_group_id: str,
+    *,
+    matched_criteria: int,
+    total_criteria: int,
+) -> SuspicionSignal | None:
+    """Подход 3: часть критериев совпала. PARTIALLY_CONFIRMED в домене нет."""
+
+    if total_criteria <= 0:
+        return None
+    if matched_criteria <= 0 or matched_criteria >= total_criteria:
+        return None
+    ratio = matched_criteria / total_criteria
+    return SuspicionSignal(
+        rule_code,
+        evidence_group_id,
+        SuspicionApproach.PARTIAL_MATCH,
+        ratio,
+        detail=f"{matched_criteria}/{total_criteria} критериев совпали",
+    )
+
+
+def assess_annotation_conflict(
+    rule_code: str,
+    evidence_group_id: str,
+    *,
+    conflict_description: str,
+) -> SuspicionSignal | None:
+    """Подход 4: конфликт разметок/редакций одного доказательства."""
+
+    detail = conflict_description.strip()
+    if not detail:
+        return None
+    return SuspicionSignal(
+        rule_code,
+        evidence_group_id,
+        SuspicionApproach.ANNOTATION_CONFLICT,
+        0.70,
+        detail=detail,
+    )
+
+
+def deduplicate_by_group(signals: Sequence[SuspicionSignal]) -> tuple[SuspicionSignal, ...]:
+    """Один сигнал на (rule_code, evidence_group_id): оставляем больший confidence."""
+
+    chosen: dict[tuple[str, str], SuspicionSignal] = {}
+    for signal in signals:
+        key = (signal.rule_code, signal.evidence_group_id)
+        current = chosen.get(key)
+        if current is None or signal.confidence > current.confidence:
+            chosen[key] = signal
+    return tuple(chosen.values())

@@ -23,7 +23,7 @@
 | 9.3 | Юзабилити: ≤30 мин на протокол, ≤3 клика на находку | `web/` | ручной протокол на 5 инспекторах | skeleton |
 | 9.4 | GOLD, версии, разбиение по объектам, пороги публикации модели | `evaluation/release_gate.py`, CHECK `gold_label` и `gold_requires_expert` в `db/schema.sql` | `db/checks.sql` § 4–6, `test_schema_sql.py` | in_progress (пропуск категории в `release_gate` не блокирует публикацию — RT-2609-17) |
 | 9.4 | Реестр поставки, карантин скрытого теста, изоляция по `object_id` | `data/dataset/package_manifest.json`, `data/dataset/objects.json`, `evaluation/dataset_package.py`, `docs/DATASET_PACKAGE.md` | `test_dataset_package.py`, `test_quarantine.py` | in_progress |
-| 9.5 | SUSPICION, 4 подхода, дедупликация | — | — | skeleton |
+| 9.5 | SUSPICION, 4 подхода, дедупликация | `application/suspicion.py` | `test_suspicion.py` | in_progress (сигналы и дедупликация есть; в компаратор и протокол ТЗ не вшиты; сверка с нормой не является подходом) |
 | 9.6 | ИАИС «РиН»: только `PROTOCOL_FINALIZED`, УКЭП, 3 ретрая | `application/retry_policy.py`, ограничение `sync_only_after_finalize` | `test_retry_policy.py`, `db/checks.sql` § 8 | in_progress (УКЭП и sandbox отсутствуют) |
 | 10 | Таблицы БД | `infrastructure/db/schema.sql` (добавлена `processes`) | `test_schema_sql.py`, job `db` исполняет `schema.sql` и `checks.sql` | in_progress (8 из 16 таблиц сводки ещё нет) |
 | 11 | Производительность, p95 ≤200 мс, 100 пользователей | `docs/PERFORMANCE.md` | нагрузочный прогон (не выполнен) | skeleton |

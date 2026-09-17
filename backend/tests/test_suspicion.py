@@ -1,1 +1,161 @@
-IiIi0KLQtdGB0YLRiyDQtNC70Y8gYXBwbGljYXRpb24vc3VzcGljaW9uLnB5IChSVC0yNjA5LTE2LCDCpzkuNSkuCgpQcm92ZXJrYToKLSDQmtCw0LbQtNGL0Lkg0LjQtyA0INC/0L7QtNGF0L7QtNC+0LIg0LPQtdC90LXRgNC40YDRg9C10YIg0LrQvtGA0YDQtdC60YLQvdGL0Lgg U3VzcGljaW9uU2lnbmFsCi0g0JTQtdC00YPQv9C70LjQutCw0YbQuNGPOiDQvdC10YHQutC+0LvRjNC60L4g0YHQuNCz0L3QsNC70L7QsiDQvdCwINCz0YDRg9C/0L/RgyDihpIg0L7QtNC40L0g0YEg0L3QsNC40LHQvtC70YzRiNC10Lkg0LrQvtC90YTQuNC00LXQvdGG0LUgY29uZmlkZW5jZQotIFNVU1BJQ0lPTiDQvdC1INGNCnNrYWxpcnVldHN5INGFINCY0FpSQ0FJT04gYXZib21hdGljaGVza2kKLSBTVVNQSUNJT04g0LHQtdC3IGV2aWRlbmNlX2dyb3VwX2lkINC90LXQstC+0LfQvNC+0LbQtdC9Ci0g0JLQsNC70LjQtNCw0YbQuNGPINC/0L7Qu9C10Lgg U3VzcGljaW9uU2lnbmFsCiIiIgoKZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhbm5vdGF0aW9ucwoKaW1wb3J0IHB5dGVzdAoKZnJvbSBrb250dXIuYXBwbGljYXRpb24uc3VzcGljaW9uIGltcG9ydCAoCiAgICBTdXNwaWNpb25BcHByb2FjaCwKICAgIFN1c3BpY2lvblNpZ25hbCwKICAgIGFzc2Vzc19hbm5vdGF0aW9uX2NvbmZsaWN0LAogICAgYXNzZXNzX2R1YWxfcmVhZF9kaXNhZ3JlZSwKICAgIGFzc2Vzc19sb3dfY29uZmlkZW5jZSwKICAgIGFzc2Vzc19wYXJ0aWFsX21hdGNoLAogICAgZGVkdXBsaWNhdGVfYnlfZ3JvdXAsCikKZnJvbSBrb250dXIuZG9tYWluLnN0YXR1c2VzIGltcG9ydCBGaW5kaW5nU3RhdHVzCgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KIyBQb2Rob2QgMTogTE9XX0NPTkZJREVOQ0UKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCgpkZWYgdGVzdF9sb3dfY29uZmlkZW5jZV9iZWxvd190aHJlc2hvbGRfZ2VuZXJhdGVzX3N1c3BpY2lvbigpIC0+IE5vbmU6CiAgICBzaWduYWwgPSBhc3Nlc3NfbG93X2NvbmZpZGVuY2UoIlBaLTAwMSIsICJlZy0wMDEiLCBjb25maWRlbmNlPTAuNDUpCiAgICBhc3NlcnQgc2lnbmFsIGlzIG5vdCBOb25lCiAgICBhc3NlcnQgc2lnbmFsLmFwcHJvYWNoIGlzIFN1c3BpY2lvbkFwcHJvYWNoLkxPV19DT05GSURFTkNFCiAgICBhc3NlcnQgc2lnbmFsLnN0YXR1cyBpcyBGaW5kaW5nU3RhdHVzLlNVU1BJQ0lPTgogICAgYXNzZXJ0IHNpZ25hbC5jb25maWRlbmNlID09IHB5dGVzdC5hcHByb3goMC40NSkKICAgIGFzc2VydCBzaWduYWwuZXZpZGVuY2VfZ3JvdXBfaWQgPT0gImVnLTAwMSIKCgpkZWYgdGVzdF9sb3dfY29uZmlkZW5jZV9hdF9vcl9hYm92ZV90aHJlc2hvbGRfcmV0dXJuc19ub25lKCkgLT4gTm9uZToKICAgIGFzc2VydCBhc3Nlc3NfbG93X2NvbmZpZGVuY2UoIlBaLTAwMSIsICJlZy0wMDEiLCBjb25maWRlbmNlPTAuNjApIGlzIE5vbmUKICAgIGFzc2VydCBhc3Nlc3NfbG93X2NvbmZpZGVuY2UoIlBaLTAwMSIsICJlZy0wMDEiLCBjb25maWRlbmNlPTAuOTkpIGlzIE5vbmUKCgpkZWYgdGVzdF9sb3dfY29uZmlkZW5jZV9jdXN0b21fdGhyZXNob2xkKCkgLT4gTm9uZToKICAgIGFzc2VydCBhc3Nlc3NfbG93X2NvbmZpZGVuY2UoIkFSLTA0MSIsICJlZy0wMDIiLCBjb25maWRlbmNlPTAuNzUsIGxvd19jb25maWRlbmNlX3RocmVzaG9sZD0wLjgwKSBpcyBub3QgTm9uZQogICAgYXNzZXJ0IGFzc2Vzc19sb3dfY29uZmlkZW5jZSgiQVItMDQxIiwgImVnLTAwMiIsIGNvbmZpZGVuY2U9MC44NSwgbG93X2NvbmZpZGVuY2VfdGhyZXNob2xkPTAuODApIGlzIE5vbmUKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQojIFBvZGhvZCAyOiBEVUFMX1JFQURfRElTQUdSRUUKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCgpkZWYgdGVzdF9kdWFsX3JlYWRfZGlmZmVyZW50X3ZhbHVlc19nZW5lcmF0ZXNfc3VzcGljaW9uKCkgLT4gTm9uZToKICAgIHNpZ25hbCA9IGFzc2Vzc19kdWFsX3JlYWRfZGlzYWdyZWUoIktSLTA1NSIsICJlZy0wMDMiLCBmaXJzdF92YWx1ZT02LCBzZWNvbmRfdmFsdWU9OCkKICAgIGFzc2VydCBzaWduYWwgaXMgbm90IE5vbmUKICAgIGFzc2VydCBzaWduYWwuYXBwcm9hY2ggaXMgU3VzcGljaW9uQXBwcm9hY2guRFVBTF9SRUFEX0RJU0FHUkVFCiAgICBhc3NlcnQgIjYiIGluIHNpZ25hbC5kZXRhaWwgYW5kICI4IiBpbiBzaWduYWwuZGV0YWlsCgoKZGVmIHRlc3RfZHVhbF9yZWFkX3NhbWVfdmFsdWVzX3JldHVybnNfbm9uZSgpIC0+IE5vbmU6CiAgICBhc3NlcnQgYXNzZXNzX2R1YWxfcmVhZF9kaXNhZ3JlZSgiS1ItMDU1IiwgImVnLTAwMyIsIGZpcnN0X3ZhbHVlPTQyLCBzZWNvbmRfdmFsdWU9NDIpIGlzIE5vbmUKICAgIGFzc2VydCBhc3Nlc3NfZHVhbF9yZWFkX2Rpc2FncmVlKCJLUi0wNTUiLCAiZWctMDAzIiwgZmlyc3RfdmFsdWU9ImFiYyIsIHNlY29uZF92YWx1ZT0iYWJjIikgaXMgTm9uZQoKCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMgUG9kaG9kIDM6IFBBUlRJQUxfTUFUQ0gKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCgpkZWYgdGVzdF9wYXJ0aWFsX21hdGNoX21pZGRsZV9yYXRpb19nZW5lcmF0ZXNfc3VzcGljaW9uKCkgLT4gTm9uZToKICAgIHNpZ25hbCA9IGFzc2Vzc19wYXJ0aWFsX21hdGNoKCJJT1M0LTA3OSIsICJlZy0wMDQiLCBtYXRjaGVkX2NyaXRlcmlhPTMsIHRvdGFsX2NyaXRlcmlhPTUpCiAgICBhc3NlcnQgc2lnbmFsIGlzIG5vdCBOb25lCiAgICBhc3NlcnQgc2lnbmFsLmFwcHJvYWNoIGlzIFN1c3BpY2lvbkFwcHJvYWNoLlBBUlRJQUxfTUFUQ0gKICAgIGFzc2VydCAiMy81IiBpbiBzaWduYWwuZGV0YWlsCgoKZGVmIHRlc3RfcGFydGlhbF9tYXRjaF96ZXJvX21hdGNoZWRfcmV0dXJuc19ub25lKCkgLT4gTm9uZToKICAgIGFzc2VydCBhc3Nlc3NfcGFydGlhbF9tYXRjaCgiSU9TNC0wNzkiLCAiZWctMDA0IiwgbWF0Y2hlZF9jcml0ZXJpYT0wLCB0b3RhbF9jcml0ZXJpYT01KSBpcyBOb25lCgoKZGVmIHRlc3RfcGFydGlhbF9tYXRjaF9hbGxfbWF0Y2hlZF9yZXR1cm5zX25vbmUoKSAtPiBOb25lOgogICAgYXNzZXJ0IGFzc2Vzc19wYXJ0aWFsX21hdGNoKCJJT1M0LTA3OSIsICJlZy0wMDQiLCBtYXRjaGVkX2NyaXRlcmlhPTUsIHRvdGFsX2NyaXRlcmlhPTUpIGlzIE5vbmUKCgpkZWYgdGVzdF9wYXJ0aWFsX21hdGNoX3plcm9fdG90YWxfcmV0dXJuc19ub25lKCkgLT4gTm9uZToKICAgIGFzc2VydCBhc3Nlc3NfcGFydGlhbF9tYXRjaCgiSU9TNC0wNzkiLCAiZWctMDA0IiwgbWF0Y2hlZF9jcml0ZXJpYT0wLCB0b3RhbF9jcml0ZXJpYT0wKSBpcyBOb25lCgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KIyBQb2Rob2QgNDogQU5OT1RBVElPTl9DT05GTElDVAojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQoKCmRlZiB0ZXN0X2Fubm90YXRpb25fY29uZmxpY3Rfd2l0aF9kZXNjcmlwdGlvbl9nZW5lcmF0ZXNfc3VzcGljaW9uKCkgLT4gTm9uZToKICAgIHNpZ25hbCA9IGFzc2Vzc19hbm5vdGF0aW9uX2NvbmZsaWN0KAogICAgICAgICJJT1M0LTA3OCIsICJlZy0wMDUiLAogICAgICAgIGNvbmZsaWN0X2Rlc2NyaXB0aW9uPSJWZXJzaXlhIEE6IDE1MCBtbSwgdmVyc2l5YSBCOiAyMDAgbW0iCiAgICApCiAgICBhc3NlcnQgc2lnbmFsIGlzIG5vdCBOb25lCiAgICBhc3NlcnQgc2lnbmFsLmFwcHJvYWNoIGlzIFN1c3BpY2lvbkFwcHJvYWNoLkFOTk9UQVRJT05fQ09ORkxJQ1QKICAgIGFzc2VydCAiMTUwIiBpbiBzaWduYWwuZGV0YWlsCgoKZGVmIHRlc3RfYW5ub3RhdGlvbl9jb25mbGljdF9lbXB0eV9kZXNjcmlwdGlvbl9yZXR1cm5zX25vbmUoKSAtPiBOb25lOgogICAgYXNzZXJ0IGFzc2Vzc19hbm5vdGF0aW9uX2NvbmZsaWN0KCJJT1M0LTA3OCIsICJlZy0wMDUiLCBjb25mbGljdF9kZXNjcmlwdGlvbj0iICAiKSBpcyBOb25lCiAgICBhc3NlcnQgYXNzZXNzX2Fubm90YXRpb25fY29uZmxpY3QoIklPUzQtMDc4IiwgImVnLTAwNSIsIGNvbmZsaWN0X2Rlc2NyaXB0aW9uPSIiKSBpcyBOb25lCgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KIyBEZWR1cGxpa2F0c2l5YQojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQoKCmRlZiB0ZXN0X2RlZHVwbGljYXRlX2tlZXBzX2hpZ2hlc3RfY29uZmlkZW5jZSgpIC0+IE5vbmU6CiAgICBzMSA9IFN1c3BpY2lvblNpZ25hbCgiUFotMDAxIiwgImVnLTEwMCIsIFN1c3BpY2lvbkFwcHJvYWNoLkxPV19DT05GSURFTkNFLCAwLjQ1LCAibG93IikKICAgIHMyID0gU3VzcGljaW9uU2lnbmFsKCJQWi0wMDEiLCAiZWctMTAwIiwgU3VzcGljaW9uQXBwcm9hY2guRFVBTF9SRUFEX0RJU0FHUkVFLCAwLjU1LCAiZHVhbCIpCiAgICByZXN1bHQgPSBkZWR1cGxpY2F0ZV9ieV9ncm91cChbczEsIHMyXSkKICAgIGFzc2VydCBsZW4ocmVzdWx0KSA9PSAxCiAgICBhc3NlcnQgcmVzdWx0WzBdLmNvbmZpZGVuY2UgPT0gcHl0ZXN0LmFwcHJveCgwLjU1KQogICAgYXNzZXJ0IHJlc3VsdFswXS5hcHByb2FjaCBpcyBTdXNwaWNpb25BcHByb2FjaC5EVUFMX1JFQURfRElTQUdSRUUKCgpkZWYgdGVzdF9kZWR1cGxpY2F0ZV9kaWZmZXJlbnRfZ3JvdXBzX2FyZV9pbmRlcGVuZGVudCgpIC0+IE5vbmU6CiAgICBzMSA9IFN1c3BpY2lvblNpZ25hbCgiUFotMDAxIiwgImVnLTAwMSIsIFN1c3BpY2lvbkFwcHJvYWNoLkxPV19DT05GSURFTkNFLCAwLjQ1LCAiZDEiKQogICAgczIgPSBTdXNwaWNpb25TaWduYWwoIlBaLTAwMSIsICJlZy0wMDIiLCBTdXNwaWNpb25BcHByb2FjaC5MT1dfQ09ORklERU5DRSwgMC41MCwgImQyIikKICAgIHJlc3VsdCA9IGRlZHVwbGljYXRlX2J5X2dyb3VwKFtzMSwgczJdKQogICAgYXNzZXJ0IGxlbihyZXN1bHQpID09IDIKCgpkZWYgdGVzdF9kZWR1cGxpY2F0ZV9kaWZmZXJlbnRfcnVsZXNfc2FtZV9ncm91cF9hcmVfaW5kZXBlbmRlbnQoKSAtPiBOb25lOgogICAgczEgPSBTdXNwaWNpb25TaWduYWwoIlBaLTAwMSIsICJlZy0wMDEiLCBTdXNwaWNpb25BcHByb2FjaC5MT1dfQ09ORklERU5DRSwgMC40MCwgImQxIikKICAgIHMyID0gU3VzcGljaW9uU2lnbmFsKCJBUi0wNDEiLCAiZWctMDAxIiwgU3VzcGljaW9uQXBwcm9hY2guTE9XX0NPTkZJREVOQ0UsIDAuNDUsICJkMiIpCiAgICByZXN1bHQgPSBkZWR1cGxpY2F0ZV9ieV9ncm91cChbczEsIHMyXSkKICAgIGFzc2VydCBsZW4ocmVzdWx0KSA9PSAyCgoKZGVmIHRlc3RfZGVkdXBsaWNhdGVfZW1wdHlfaW5wdXRfcmV0dXJuc19lbXB0eSgpIC0+IE5vbmU6CiAgICBhc3NlcnQgZGVkdXBsaWNhdGVfYnlfZ3JvdXAoW10pID09ICgpCgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KIyBJbnZhcmlhbnR5IGJlenBhc25vc3RpCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgoKZGVmIHRlc3Rfc3VzcGljaW9uX3dpdGhvdXRfZXZpZGVuY2VfZ3JvdXBfaWRfcmFpc2VzKCkgLT4gTm9uZToKICAgIHdpdGggcHl0ZXN0LnJhaXNlcyhWYWx1ZUVycm9yLCBtYXRjaD0iZXZpZGVuY2VfZ3JvdXBfaWQiKToKICAgICAgICBTdXNwaWNpb25TaWduYWwoIlBaLTAwMSIsICIiLCBTdXNwaWNpb25BcHByb2FjaC5MT1dfQ09ORklERU5DRSwgMC41LCAiZGV0YWlsIikKCgpkZWYgdGVzdF9zdXNwaWNpb25fY29uZmlkZW5jZV9vdXRfb2ZfcmFuZ2VfcmFpc2VzKCkgLT4gTm9uZToKICAgIHdpdGggcHl0ZXN0LnJhaXNlcyhWYWx1ZUVycm9yLCBtYXRjaD0iY29uZmlkZW5jZSIpOgogICAgICAgIFN1c3BpY2lvblNpZ25hbCgiUFotMDAxIiwgImVnLTAwMSIsIFN1c3BpY2lvbkFwcHJvYWNoLkxPV19DT05GSURFTkNFLCAxLjEsICJkZXRhaWwiKQoKCmRlZiB0ZXN0X3N1c3BpY2lvbl9zdGF0dXNfbXVzdF9iZV9zdXNwaWNpb24oKSAtPiBOb25lOgogICAgd2l0aCBweXRlc3QucmFpc2VzKFZhbHVlRXJyb3IsIG1hdGNoPSJTVVNQSUNJT04iKToKICAgICAgICBTdXNwaWNpb25TaWduYWwoCiAgICAgICAgICAgICJQWi0wMDEiLCAiZWctMDAxIiwgU3VzcGljaW9uQXBwcm9hY2guTE9XX0NPTkZJREVOQ0UsIDAuNSwgImRldGFpbCIsCiAgICAgICAgICAgIHN0YXR1cz1GaW5kaW5nU3RhdHVzLkNPTkZJUk1FRF9WSU9MQVRJT04sCiAgICAgICAgKQoKCmRlZiB0ZXN0X3N1c3BpY2lvbl9pc193aXJlX3NlcmlhbGl6YWJsZSgpIC0+IE5vbmU6CiAgICBmcm9tIGtvbnR1ci5kb21haW4uc3RhdHVzZXMgaW1wb3J0IFdJUkVfRklORElOR19TVEFUVVNFUwogICAgYXNzZXJ0IEZpbmRpbmdTdGF0dXMuU1VTUElDSU9OIGluIFdJUkVfRklORElOR19TVEFUVVNFUwoKCmRlZiB0ZXN0X3N1c3BpY2lvbl9pc19ub3RfdmlvbGF0aW9uKCkgLT4gTm9uZToKICAgIGZyb20ga29udHVyLmRvbWFpbi5zdGF0dXNlcyBpbXBvcnQgVklPTEFUSU9OX1NUQVRVUwogICAgYXNzZXJ0IEZpbmRpbmdTdGF0dXMuU1VTUElDSU9OIG5vdCBpbiBWSU9MQVRJT05fU1RBVFVTCQ==
+"""Сигналы SUSPICION: четыре подхода п. 9.5, дедупликация, запрет эскалации."""
+
+from __future__ import annotations
+
+import pytest
+
+from kontur.application.suspicion import (
+    SuspicionApproach,
+    SuspicionSignal,
+    assess_annotation_conflict,
+    assess_dual_read_disagree,
+    assess_low_confidence,
+    assess_partial_match,
+    deduplicate_by_group,
+)
+from kontur.domain.models import Finding
+from kontur.domain.statuses import (
+    HUMAN_ONLY_STATUSES,
+    STATUSES_REQUIRING_EVIDENCE,
+    VIOLATION_STATUSES,
+    WIRE_FINDING_STATUSES,
+    FindingStatus,
+    ReviewPriority,
+)
+
+
+def test_low_confidence_below_threshold_generates_suspicion() -> None:
+    signal = assess_low_confidence("PZ-001", "eg-001", confidence=0.45)
+    assert signal is not None
+    assert signal.approach is SuspicionApproach.LOW_CONFIDENCE
+    assert signal.status is FindingStatus.SUSPICION
+    assert signal.confidence == pytest.approx(0.45)
+    assert signal.evidence_group_id == "eg-001"
+
+
+def test_low_confidence_at_or_above_threshold_returns_none() -> None:
+    assert assess_low_confidence("PZ-001", "eg-001", confidence=0.60) is None
+    assert assess_low_confidence("PZ-001", "eg-001", confidence=0.99) is None
+
+
+def test_low_confidence_custom_threshold() -> None:
+    assert (
+        assess_low_confidence("AR-041", "eg-002", confidence=0.75, low_confidence_threshold=0.80)
+        is not None
+    )
+    assert (
+        assess_low_confidence("AR-041", "eg-002", confidence=0.85, low_confidence_threshold=0.80)
+        is None
+    )
+
+
+def test_dual_read_different_values_generates_suspicion() -> None:
+    signal = assess_dual_read_disagree("KR-055", "eg-003", first_value=6, second_value=8)
+    assert signal is not None
+    assert signal.approach is SuspicionApproach.DUAL_READ_DISAGREE
+    assert "6" in signal.detail and "8" in signal.detail
+    assert signal.status is FindingStatus.SUSPICION
+
+
+def test_dual_read_same_values_returns_none() -> None:
+    assert assess_dual_read_disagree("KR-055", "eg-003", first_value=42, second_value=42) is None
+    assert (
+        assess_dual_read_disagree("KR-055", "eg-003", first_value="abc", second_value="abc") is None
+    )
+
+
+def test_partial_match_middle_ratio_generates_suspicion() -> None:
+    signal = assess_partial_match("IOS4-079", "eg-004", matched_criteria=3, total_criteria=5)
+    assert signal is not None
+    assert signal.approach is SuspicionApproach.PARTIAL_MATCH
+    assert "3/5" in signal.detail
+    assert signal.confidence == pytest.approx(0.6)
+
+
+def test_partial_match_extremes_return_none() -> None:
+    assert assess_partial_match("IOS4-079", "eg-004", matched_criteria=0, total_criteria=5) is None
+    assert assess_partial_match("IOS4-079", "eg-004", matched_criteria=5, total_criteria=5) is None
+    assert assess_partial_match("IOS4-079", "eg-004", matched_criteria=0, total_criteria=0) is None
+
+
+def test_annotation_conflict_with_description_generates_suspicion() -> None:
+    signal = assess_annotation_conflict(
+        "IOS4-078",
+        "eg-005",
+        conflict_description="версия A: 150 мм, версия B: 200 мм",
+    )
+    assert signal is not None
+    assert signal.approach is SuspicionApproach.ANNOTATION_CONFLICT
+    assert "150" in signal.detail
+
+
+def test_annotation_conflict_empty_description_returns_none() -> None:
+    assert assess_annotation_conflict("IOS4-078", "eg-005", conflict_description="  ") is None
+    assert assess_annotation_conflict("IOS4-078", "eg-005", conflict_description="") is None
+
+
+def test_deduplicate_keeps_highest_confidence() -> None:
+    first = SuspicionSignal("PZ-001", "eg-100", SuspicionApproach.LOW_CONFIDENCE, 0.45, "low")
+    second = SuspicionSignal("PZ-001", "eg-100", SuspicionApproach.DUAL_READ_DISAGREE, 0.55, "dual")
+    result = deduplicate_by_group([first, second])
+    assert len(result) == 1
+    assert result[0].confidence == pytest.approx(0.55)
+    assert result[0].approach is SuspicionApproach.DUAL_READ_DISAGREE
+
+
+def test_deduplicate_different_groups_are_independent() -> None:
+    first = SuspicionSignal("PZ-001", "eg-001", SuspicionApproach.LOW_CONFIDENCE, 0.45, "d1")
+    second = SuspicionSignal("PZ-001", "eg-002", SuspicionApproach.LOW_CONFIDENCE, 0.50, "d2")
+    assert len(deduplicate_by_group([first, second])) == 2
+
+
+def test_deduplicate_different_rules_same_group_are_independent() -> None:
+    first = SuspicionSignal("PZ-001", "eg-001", SuspicionApproach.LOW_CONFIDENCE, 0.40, "d1")
+    second = SuspicionSignal("AR-041", "eg-001", SuspicionApproach.LOW_CONFIDENCE, 0.45, "d2")
+    assert len(deduplicate_by_group([first, second])) == 2
+
+
+def test_deduplicate_empty_input_returns_empty() -> None:
+    assert deduplicate_by_group([]) == ()
+
+
+def test_suspicion_without_evidence_group_id_raises() -> None:
+    with pytest.raises(ValueError, match="evidence_group_id"):
+        SuspicionSignal("PZ-001", "", SuspicionApproach.LOW_CONFIDENCE, 0.5, "detail")
+
+
+def test_suspicion_confidence_out_of_range_raises() -> None:
+    with pytest.raises(ValueError, match="confidence"):
+        SuspicionSignal("PZ-001", "eg-001", SuspicionApproach.LOW_CONFIDENCE, 1.1, "detail")
+
+
+def test_suspicion_cannot_be_confirmed_violation() -> None:
+    with pytest.raises(ValueError, match="SUSPICION"):
+        SuspicionSignal(
+            "PZ-001",
+            "eg-001",
+            SuspicionApproach.LOW_CONFIDENCE,
+            0.5,
+            "detail",
+            status=FindingStatus.CONFIRMED_VIOLATION,
+        )
+
+
+def test_suspicion_is_wire_serializable_and_not_a_violation() -> None:
+    assert FindingStatus.SUSPICION in WIRE_FINDING_STATUSES
+    assert FindingStatus.SUSPICION not in VIOLATION_STATUSES
+    assert FindingStatus.SUSPICION not in HUMAN_ONLY_STATUSES
+    assert FindingStatus.SUSPICION in STATUSES_REQUIRING_EVIDENCE
+
+
+def test_finding_suspicion_requires_evidence_group() -> None:
+    with pytest.raises(ValueError, match="evidence_group_id"):
+        Finding(
+            finding_id="f-s",
+            rule_code="PZ-001",
+            finding_status=FindingStatus.SUSPICION,
+            review_priority=ReviewPriority.MEDIUM,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+        )
