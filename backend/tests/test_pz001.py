@@ -86,12 +86,15 @@ def _run(
     )
 
 
-def test_only_pz001_is_marked_executable() -> None:
+def test_pz001_is_executable() -> None:
+    """Гейт G: PZ-001 был первым правилом, помеченным executable.
+
+    Примечание: гейт H добавляет больше executable правил; этот тест
+    проверяет только PZ-001, не весь список.
+    Полный перечень проверяется в test_gate_h_e2e.py::test_executable_count.
+    """
     registry = FileRuleRegistry(REPO / "data" / "matrix")
-    executable = [
-        code for code in registry.all_codes() if registry.get(code)["coverage"] == "executable"
-    ]
-    assert executable == ["PZ-001"]
+    assert registry.get("PZ-001")["coverage"] == "executable", "PZ-001 должен оставаться executable"
 
 
 def test_equal_values_give_no_difference(rule: dict[str, object]) -> None:
