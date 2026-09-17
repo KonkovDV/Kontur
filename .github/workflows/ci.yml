@@ -65,3 +65,20 @@ jobs:
           python-version: "3.12"
       - name: Честность публичных формулировок
         run: python scripts/check_claims.py
+
+  frontend:
+    # RT-2609-18: проверка типов TypeScript в web/
+    # TODO: зафиксировать package-lock.json и заменить npm install на npm ci
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Установить зависимости
+        run: npm install
+      - name: Проверка типов TypeScript (noEmit в tsconfig.json)
+        run: npx tsc --noEmit
