@@ -6,15 +6,21 @@ import pytest
 
 from kontur.evaluation.metrics import (
     INTERNAL_TARGETS,
+    IOU_THRESHOLD,
     TZ_THRESHOLDS,
     Interval,
     character_accuracy,
+    evidence_localization_interval,
     f1,
+    iou,
     key_field_exact_match,
     key_field_exact_match_interval,
     meets_threshold,
     wilson,
 )
+
+UNIT_SQUARE = ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
+UNIT_SQUARE_CW = ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0))
 
 
 def test_wilson_on_empty_sample_is_uninformative() -> None:
@@ -90,3 +96,92 @@ def test_key_field_threshold_needs_wilson_lower_bound() -> None:
 def test_character_accuracy_is_not_exact_match() -> None:
     with pytest.raises(NotImplementedError, match="E1"):
         character_accuracy("12345-PZ", "12345-PZ")
+
+
+def test_iou_identical_polygons() -> None:
+    assert iou(UNIT_SQUARE, UNIT_SQUARE) == pytest.approx(1.0)
+
+
+def test_iou_is_symmetric() -> None:
+    other = ((0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75))
+    assert iou(UNIT_SQUARE, other) == pytest.approx(iou(other, UNIT_SQUARE))
+
+
+def test_iou_cw_winding_matches_ccw() -> None:
+    """Клиппинг чувствителен к обходу; метрика не должна зависеть от CW/CCW."""
+
+    assert iou(UNIT_SQUARE, UNIT_SQUARE_CW) == pytest.approx(1.0)
+    half = ((0.5, 0.0), (1.5, 0.0), (1.5, 1.0), (0.5, 1.0))
+    assert iou(UNIT_SQUARE_CW, half) == pytest.approx(1.0 / 3.0, abs=1e-6)
+
+
+def test_iou_disjoint_polygons() -> None:
+    far = ((10.0, 10.0), (11.0, 10.0), (11.0, 11.0), (10.0, 11.0))
+    assert iou(UNIT_SQUARE, far) == pytest.approx(0.0)
+
+
+def test_iou_half_overlap() -> None:
+    half = ((0.5, 0.0), (1.5, 0.0), (1.5, 1.0), (0.5, 1.0))
+    assert iou(UNIT_SQUARE, half) == pytest.approx(1.0 / 3.0, abs=1e-6)
+
+
+def test_iou_shared_edge_has_zero_area() -> None:
+    left = ((0.0, 0.0), (0.5, 0.0), (0.5, 1.0), (0.0, 1.0))
+    right = ((0.5, 0.0), (1.0, 0.0), (1.0, 1.0), (0.5, 1.0))
+    assert iou(left, right) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_iou_triangle_inside_square() -> None:
+    tri = ((0.0, 0.0), (1.0, 0.0), (0.5, 1.0))
+    assert iou(UNIT_SQUARE, tri) == pytest.approx(0.5, abs=1e-6)
+
+
+def test_iou_empty_and_degenerate() -> None:
+    line = ((0.0, 0.0), (1.0, 0.0))
+    assert iou((), UNIT_SQUARE) == 0.0
+    assert iou(UNIT_SQUARE, ()) == 0.0
+    assert iou((), ()) == 0.0
+    assert iou(line, UNIT_SQUARE) == 0.0
+
+
+def test_iou_full_containment() -> None:
+    large = ((-1.0, -1.0), (2.0, -1.0), (2.0, 2.0), (-1.0, 2.0))
+    assert iou(UNIT_SQUARE, large) == pytest.approx(1.0 / 9.0, abs=1e-6)
+
+
+def test_iou_is_clamped_to_unit_interval() -> None:
+    for left, right in ((UNIT_SQUARE, UNIT_SQUARE), (UNIT_SQUARE, ())):
+        result = iou(left, right)
+        assert 0.0 <= result <= 1.0
+
+
+def test_evidence_localization_all_pass_confirms_threshold() -> None:
+    pairs = [(UNIT_SQUARE, UNIT_SQUARE)] * 100
+    interval = evidence_localization_interval(pairs)
+    assert interval.point == pytest.approx(1.0)
+    assert meets_threshold("evidence_localization", interval)
+
+
+def test_evidence_localization_all_fail_does_not_confirm() -> None:
+    far = ((100.0, 100.0), (101.0, 100.0), (101.0, 101.0), (100.0, 101.0))
+    interval = evidence_localization_interval([(UNIT_SQUARE, far)] * 50)
+    assert interval.point == pytest.approx(0.0)
+    assert not meets_threshold("evidence_localization", interval)
+
+
+def test_evidence_localization_empty_pairs_do_not_confirm() -> None:
+    interval = evidence_localization_interval([])
+    assert interval.n == 0
+    assert interval.low == pytest.approx(0.0)
+    assert interval.high == pytest.approx(1.0)
+    assert not meets_threshold("evidence_localization", interval)
+
+
+def test_evidence_localization_uses_iou_threshold_not_tz_point() -> None:
+    """Пара с IoU=1/3 не считается локализованной при пороге 0.50."""
+
+    half = ((0.5, 0.0), (1.5, 0.0), (1.5, 1.0), (0.5, 1.0))
+    assert iou(UNIT_SQUARE, half) < IOU_THRESHOLD
+    interval = evidence_localization_interval([(UNIT_SQUARE, half)] * 100)
+    assert interval.point == pytest.approx(0.0)
+    assert not meets_threshold("evidence_localization", interval)

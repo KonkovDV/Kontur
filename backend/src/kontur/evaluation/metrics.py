@@ -40,6 +40,10 @@ INTERNAL_TARGETS: dict[str, float] = {
 }
 
 IOU_THRESHOLD = 0.50
+_AREA_EPS = 1e-18
+
+Point = tuple[float, float]
+Polygon = tuple[Point, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,10 +98,119 @@ def key_field_exact_match_interval(
     return wilson(successes, len(pairs))
 
 
-def iou(poly_a: object, poly_b: object) -> float:
-    """IoU нормализованных полигонов после учёта CropBox и Rotate."""
+def _open_ring(polygon: Polygon) -> Polygon:
+    if len(polygon) >= 2 and polygon[0] == polygon[-1]:
+        return polygon[:-1]
+    return polygon
 
-    raise NotImplementedError("L3: считается на нормализованной геометрии страницы")
+
+def _signed_area(polygon: Polygon) -> float:
+    ring = _open_ring(polygon)
+    n = len(ring)
+    if n < 3:
+        return 0.0
+    return (
+        sum(ring[i][0] * ring[(i + 1) % n][1] - ring[(i + 1) % n][0] * ring[i][1] for i in range(n))
+        / 2.0
+    )
+
+
+def _polygon_area(polygon: Polygon) -> float:
+    """Площадь по формуле Гаусса. Знак отбрасывается."""
+
+    return abs(_signed_area(polygon))
+
+
+def _oriented_ccw(polygon: Polygon) -> Polygon:
+    ring = _open_ring(polygon)
+    if _signed_area(ring) < 0:
+        return tuple(reversed(ring))
+    return ring
+
+
+def _clip_by_halfplane(
+    polygon: list[Point],
+    edge_start: Point,
+    edge_end: Point,
+) -> list[Point]:
+    """Одна итерация Sutherland–Hodgman: оставить левую полуплоскость ребра."""
+
+    if not polygon:
+        return []
+    ex = edge_end[0] - edge_start[0]
+    ey = edge_end[1] - edge_start[1]
+
+    def _cross(point: Point) -> float:
+        # Ребро × (точка − начало): >0 слева от направленного ребра (внутри CCW).
+        return ex * (point[1] - edge_start[1]) - ey * (point[0] - edge_start[0])
+
+    def _inside(point: Point) -> bool:
+        return _cross(point) >= 0.0
+
+    def _intersect(start: Point, end: Point) -> Point:
+        da = _cross(start)
+        db = _cross(end)
+        denom = da - db
+        if abs(denom) < _AREA_EPS:
+            return start
+        t = max(0.0, min(1.0, da / denom))
+        return (start[0] + t * (end[0] - start[0]), start[1] + t * (end[1] - start[1]))
+
+    result: list[Point] = []
+    for index, current in enumerate(polygon):
+        previous = polygon[index - 1]
+        if _inside(current):
+            if not _inside(previous):
+                result.append(_intersect(previous, current))
+            result.append(current)
+        elif _inside(previous):
+            result.append(_intersect(previous, current))
+    return result
+
+
+def _intersect_polygons(subject: Polygon, clip: Polygon) -> Polygon:
+    """Пересечение. Клип ориентирован CCW; вогнутый клип не гарантирован."""
+
+    output: list[Point] = list(subject)
+    clip_ring = _oriented_ccw(clip)
+    if len(clip_ring) < 3:
+        return ()
+    for index, start in enumerate(clip_ring):
+        if not output:
+            return ()
+        output = _clip_by_halfplane(output, start, clip_ring[(index + 1) % len(clip_ring)])
+    return tuple(output)
+
+
+def iou(poly_a: Polygon, poly_b: Polygon) -> float:
+    """IoU нормализованных полигонов после CropBox/MediaBox/Rotate.
+
+    Координаты — в [0;1], Y вниз, как в `domain/coordinates.py`. Вырожденные
+    контуры (площадь 0) дают 0. Порог «локализовано» — `IOU_THRESHOLD`, не 0.95:
+    0.95 — нижняя граница Wilson по доле пар, а не по одному IoU.
+    """
+
+    left = _oriented_ccw(poly_a)
+    right = _oriented_ccw(poly_b)
+    area_a = _polygon_area(left)
+    area_b = _polygon_area(right)
+    if area_a <= _AREA_EPS or area_b <= _AREA_EPS:
+        return 0.0
+    area_inter = _polygon_area(_intersect_polygons(left, right))
+    area_union = area_a + area_b - area_inter
+    if area_union <= _AREA_EPS:
+        return 0.0
+    return max(0.0, min(1.0, area_inter / area_union))
+
+
+def evidence_localization_interval(
+    pairs: list[tuple[Polygon, Polygon]],
+    threshold: float = IOU_THRESHOLD,
+) -> Interval:
+    """Доля пар с IoU ≥ threshold. Пустая выборка порог не подтверждает."""
+
+    successes = sum(1 for gold, predicted in pairs if iou(gold, predicted) >= threshold)
+    return wilson(successes, len(pairs))
 
 
 def character_accuracy(reference: str, hypothesis: str) -> float:
