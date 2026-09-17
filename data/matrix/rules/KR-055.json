@@ -7,32 +7,23 @@
   "source_trigger_logic": "Понижение класса бетона несущих элементов (например, B35 на B30) в РД относительно ПД.",
   "coverage": "executable",
   "applicability": {
-    "stages_required": [
-      "PD",
-      "RD"
-    ],
+    "stages_required": ["PD", "RD"],
     "object_types": [],
     "condition": "Наличие монолитных конструкций в проекте"
   },
   "sources": {
     "pd": {
-      "discipline": [
-        "КР"
-      ],
+      "discipline": ["КР"],
       "table": "Спецификация материалов",
       "description": "Общие данные; Спецификация материалов (КР)"
     },
     "rd": {
-      "discipline": [
-        "КЖ"
-      ],
+      "discipline": ["КЖ"],
       "table": "Спецификация элементов",
       "description": "Общие указания; Спецификация элементов (КЖ)"
     },
     "id": {
-      "document_kind": [
-        "Журнал бетонных работ"
-      ],
+      "document_kind": ["Журнал бетонных работ"],
       "table": null,
       "description": "Журнал бетонных работ; Паспорта на БСГ; Протоколы испытаний"
     }
@@ -45,40 +36,67 @@
       "Класс прочности бетона",
       "Бетон класса"
     ],
-    "normalization": [
-      "nfc",
-      "collapse_spaces",
-      "upper"
-    ],
+    "normalization": ["nfc", "collapse_spaces", "upper"],
     "dual_read_required": true
   },
   "comparator": {
     "operator": "class_not_lower",
     "value": [
-      "B7.5",
-      "B10",
-      "B12.5",
-      "B15",
-      "B20",
-      "B22.5",
-      "B25",
-      "B30",
-      "B35",
-      "B40",
-      "B45",
-      "B50",
-      "B55",
-      "B60"
+      "B7.5", "B10", "B12.5", "B15", "B20", "B22.5",
+      "B25", "B30", "B35", "B40", "B45", "B50", "B55", "B60"
     ],
     "rounding": "none",
     "unit_target": "B"
   },
-  "required_evidence": [
-    "expected",
-    "actual"
-  ],
+  "required_evidence": ["expected", "actual"],
   "normative_refs": [
     {
       "identifier": "ГОСТ 21.110-2013",
       "issuer": "Межгосударственный совет по стандартизации",
-      "clause": "Специфи
+      "clause": "Спецификация оборудования, изделий и материалов",
+      "effective_from": "2014-01-01",
+      "effective_to": null,
+      "mandatory": "voluntary",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "Приказ Минстроя № 344/пр",
+      "issuer": "Минстрой России",
+      "clause": "Приложение № 1, п. 13 (журналы работ)",
+      "effective_from": "2023-09-01",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "same_class_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "lower_class_in_rd_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "higher_class_in_rd_is_not_a_violation",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "b22_5_parsed_not_as_b22",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "rd_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    }
+  ]
+}
