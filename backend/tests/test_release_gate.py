@@ -58,9 +58,64 @@ def test_missing_category_blocks() -> None:
     assert any("KR" in item for item in result.blocking)
 
 
-def test_empty_responsible_is_rejected() -> None:
-    with pytest.raises(ValueError, match="responsible_id"):
-        PublicationSignature(responsible_id=" ", model_version="m", rollback_plan="plan")
+@pytest.mark.parametrize("field", ["responsible_id", "model_version", "rollback_plan"])
+def test_empty_signature_fields_are_rejected(field: str) -> None:
+    kwargs = {
+        "responsible_id": "inspector-1",
+        "model_version": "m-test",
+        "rollback_plan": "revert to m-prev",
+    }
+    kwargs[field] = "  "
+    with pytest.raises(ValueError, match=field):
+        PublicationSignature(**kwargs)
+
+
+def test_required_categories_are_the_six_tz_sections() -> None:
+    assert REQUIRED_CATEGORIES == frozenset({"PZ", "KR", "AR", "IOS", "SM", "OOS"})
+
+
+def test_recall_drop_over_two_pp_blocks() -> None:
+    current = _recall()
+    current = {**current, "KR": 0.80}
+    baseline = _recall()
+    result = evaluate(
+        intervals=_passing_intervals(),
+        recall_by_category=current,
+        baseline_recall_by_category=baseline,
+        fpr_by_group={"all": 0.02},
+        baseline_fpr_by_group={"all": 0.02},
+        signature=_signature(),
+    )
+    assert result.passed is False
+    assert any("recall[KR]" in item for item in result.blocking)
+
+
+def test_fpr_rise_over_two_pp_blocks() -> None:
+    result = evaluate(
+        intervals=_passing_intervals(),
+        recall_by_category=_recall(),
+        baseline_recall_by_category=_recall(),
+        fpr_by_group={"all": 0.05},
+        baseline_fpr_by_group={"all": 0.02},
+        signature=_signature(),
+    )
+    assert result.passed is False
+    assert any("fpr[all]" in item for item in result.blocking)
+
+
+def test_missing_interval_blocks() -> None:
+    intervals = _passing_intervals()
+    del intervals["evidence_localization"]
+    result = evaluate(
+        intervals=intervals,
+        recall_by_category=_recall(),
+        baseline_recall_by_category=_recall(),
+        fpr_by_group={"all": 0.02},
+        baseline_fpr_by_group={"all": 0.02},
+        signature=_signature(),
+    )
+    assert result.passed is False
+    assert any("evidence_localization" in item for item in result.blocking)
 
 
 def test_signed_full_set_can_pass() -> None:
