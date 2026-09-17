@@ -202,8 +202,6 @@ def test_rt_g_duplicate_queue_message_yields_one_business_effect() -> None:
     """
 
     async def run() -> None:
-        from kontur.infrastructure.cache import _mock_client as _  # noqa: F401
-
         passport = DocumentPassport(
             file_id="doc-dup-rt-g",
             file_hash="c" * 64,
