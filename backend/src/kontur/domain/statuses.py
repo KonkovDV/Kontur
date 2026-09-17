@@ -104,6 +104,7 @@ STATUSES_REQUIRING_EVIDENCE: frozenset[FindingStatus] = frozenset(
         FindingStatus.CONFIRMED_VIOLATION,
         FindingStatus.NEGATIVE_VERIFIED,
         FindingStatus.AUTO_NO_DIFFERENCE,
+        FindingStatus.SUSPICION,
     }
 )
 
