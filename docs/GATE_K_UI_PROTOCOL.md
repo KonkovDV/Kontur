@@ -1,1 +1,184 @@
-IyBHYXRlIEsg4oCUIFVJL1Byb3RvY29sIFNwZWNpZmljYXRpb24KCj4gKirQlNC10LTQu9Cw0LnQvToqKiAyNi4wOS4yMDI2IMK3INCS0LXRgtC60LA6IGBnYXRlLWstdWktcHJvdG9jb2xgCgojIyAxLiDQndCw0LfQvdCw0YfQtdC90LjQtQoKR2F0ZSBLINC/0YDQvtCy0LXRgNGP0LXRgiwg0YfRgtC+INC40L3RgtC10YDRhNC10LnRgSDQv9GA0L7QstC10YDQutC4INGB0L7QvtGC0LLQtdGC0YHRgtCy0LjRjyDRgdGC0YDQvtC40YLQtdC70YzQvdC+0Lkg0LTQvtC60YPQvNC10L3RgtCw0YbQuNC4CtGD0LTQvtCy0LvQtdGC0LLQvtGA0Y/QtdGCINC/0YDQuNC90YbQuNC/0YMgKirilIQgMyDQutC70LjQutCwINC00L4g0LvRjtCx0L7Qs9C+INC90LDRgNGD0YjQtdC90LjRjyoqIChIQ0FJIERTUyBSZXZpZXcgMjAyNikuCgojIyAyLiBTT1RBLdC+0YHQvdC+0LLQsNC90LjQtQoKfCDQn9GD0LHQu9C40LrQsNGG0LjRjyB8INCT0L7QtCB8INCf0YDQuNC80LXQvdC10L3QuNC1IHwKfC0tLXwtLS18LS0tfAp8ICoqSENBSSBEU1MgUmV2aWV3KiogKENhaSBldCBhbC4pIHwgMjAyNiB8IOKJpDMgY2xpY2tzL2ZpbmRpbmcg4oCUINC30L7Qu9C+0YLQvtC5INGB0YLQsNC90LTQsNGA0YIgSENBSSDQtNC70Y8g0YDQtdCz0YPQu9GP0YLQvtGA0L3Ri9GFIERTUyB8CnwgKipFdmlkZW5jZS1iYXNlZCBYQUkgZm9yIENvbnN0cnVjdGlvbioqIChaaGFuZyBldCBhbC4pIHwgMjAyNiB8IEV2aWRlbmNlLWNhcmQgwqc0LjI6IE9DUi3RgdC90LjQv9C/0LXRgiArIEJvdW5kaW5nQm94INCyINC60LDRgNGC0L7Rh9C60LUg0L3QsNGA0YPRiNC10L3QuNGPIHwKfCAqKkJMVUVQUklOVCoqIChMaWFuZyBldCBhbC4pIHwgMjAyNiB8IEJsdWVwcmludC1hd2FyZSBldmlkZW5jZSBsaW5raW5nOiDRgdC+0LLQvNC10YnQtdC90LjQtSBQREYt0YHQu9C+0ZHQsiB8CnwgKipFeHRyYWN0Q29uZioqIChBQ0wgMjAyNSkgfCAyMDI1IHwgV2VpZ2h0ZWQgZ2VvbWV0cmljIG1lYW4g0LTQu9GPIGN hbGlicmF0ZWQgY29uZmlkZW5jZSB8CnwgKipSaXNrLUNvbnRyb2xsZWQgR2VuZXJhdGl2ZSBPQ1IqKiB8IDIwMjYgfCBDUkMt0L/QvtGA0L7QsyAoQ0Eg4omlIDAuOTcpINC00LvRjyDRgNCw0LfQvdC+0LPQu9Cw0YHQuNGPINC00LLQuNC20LrQvtCyIHwKfCAqKkdyb3VwLUNvbmRpdGlvbmFsIENSQyoqIChJQ01MIDIwMjYpIHwgMjAyNiB8IFBlci1ydWxlIGNvdmVyYWdlINC00LvRjyBjcml0aWNhbCBydWxlcyAocmVjYWxsID0gMS4wMCkgfAp8ICoqUmVhZGluZyBvciBHdWVzc2luZz8qKiAoRU1OTFAgMjAyNSkgfCAyMDI1IHwgRGlnaXQgaGFsbHVjaW5hdGlvbiBndWFyZCDQtNC70Y8gT0NSIHwKfCAqKkFSQ0hFUioqIChSaWJlaXJvIGV0IGFsLikgfCAyMDI1IHwgSHVtYW4taW4tdGhlLWxvb3AgYW5ub3RhdGlvbiDQtNC70Y8gZWRnZS1jYXNlcyB8CgojIyAzLiDQkNGA0YXQuNGC0LXQutGC0YPRgNCwIFVJIChHYXRlIEspCgojIyMgMy4xINCf0YDQuNC90YbQuNC/IMKrUERGLWZpcnN0LCBkdWFsLXBhbmVsIGRpZmbCuwoKYGBgCuKUjOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUkArilIIgIExFRlQgUEFORUwgKDYwICUpICAgICAgICAgIOKUgiAgUklHSFQgUEFORUwgKDQwICUpICAgICAg4pSCCuKUgiAgUERGIHZpZXdlciAgICAgICAgICAgICAgICAg4pSCICBFdmlkZW5jZSBsaXN0ICAgICAgICAgICDilIIK4pSCICDCtyDQv9C+0LTRgdCy0LXRgtC60LAgQm91bmRpbmdCb3ggICAg4pSCICDCtyBydWxlX2NvZGUsIHNldmVyaXR5ICAg4pSCCuKUgiAgwrcganVtcCB0byBwYWdlINC/0L4g0LrQu9C40LrRgyAgICDilIIgIMK3IGV4dHJhY3RlZCAvIGV4cGVjdGVkICDilIIK4pSCICDCtyBvdmVybGF5IE9DUi3RgdC90LjQv9C/0LXRgiAgICAgIOKUgiAgwrcgT0NSIHNuaXBwZXQgcHJldmlldyAgIOKUggrilIIgICAgICAgICAgICAgICAgICAgICAgICAgICAgIOKUgiAgwrcgdmlvbGF0aW9uIGRlc2MgICAgICAgIOKUggrilJTilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilJgKYGBgCgojIyMgMy4yINCi0YDQtdCx0L7QstCw0L3QuNC1IOKJpCAzINC60LvQuNC60LAgKEdhdGUgSyBjb25zdHJhaW50KQoKfCAjINC60LvQuNC60LAgfCDQlNC10LnRgdGC0LLQuNC1INC/0L7Qu9GM0LfQvtCy0LDRgtC10LvRjyB8CnwtLS18LS0tfAp8IDEgfCDQktGL0LHRgNCw0YLRjCDQvdCw0YDRg9GI0LXQvdC40LUg0LIg0YHQv9C40YHQutC1ICjQv9GA0LDQstCw0Y8g0L/QsNC90LXQu9GMKSB8CnwgMiB8IFBERiDQsNCy0YLQvtC80LDRgtC40YfQtdGB0LrQuCDQv9GA0YvQs9Cw0LXRgiDQvdCwINGB0YLRgNCw0L3QuNGG0YMgKyDQv9C+0LrQsNC30YvQstCw0LXRgiBiYm94IHwKfCAzIHwg0JrQu9C40Log0L3QsCBiYm94IOKGkiBmdWxsLXNjcmVlbiBzbmlwcGV0INGBINGC0LXQutGB0YLQvtC8IE9DUiB8CgrQm9GO0LHQvtC5INC/0YPRgtGMINC90LDQstC40LPQsNGG0LjQuCBgY2xpY2tzX3RvX25hdmlnYXRlID4gM2Ag4oCUINC+0YjQuNCx0LrQsCDRgdCx0L7RgNC60LggKGBWYWx1ZUVycm9yYCDQsiBgRXZpZGVuY2VDYXJkLl9fcG9zdF9pbml0X19gKS4KCiMjIDQuINCd0L7RgNC80LDRgtC40LLQvdCw0Y8g0LrQsNGA0YLQsAoKfCDQlNC+0LrRg9C80LXQvdGCIHwg0KDQtdCz0YPQu9GP0YLQvtGAIHwg0JTQsNGC0LAgfAp8LS0tfC0tLXwtLS18Cnwg0JPQntCh0KIg0KAgMjEuMTAxLTIwMjYgfCDQoNC+0YHRgdGC0LDQvdC00LDRgNGCIHwgMjAyNi0wMS0wMSB8Cnwg0J/RgNC40LrQsNC3INCc0LjQvdGB0YLRgNC+0Y8g4oSWMzY5L9C/0YAgfCDQnNC40L3RgdGC0YDQvtC5INCg0KQgfCAyMDI2LTAzLTAxIHwKfCDQn9CfINCc0L7RgdC60LLRiyDihJYyMDc4LdCf0J8gfCDQn9GA0LDQstC40YLQtdC70YzRgdGC0LLQviDQnNC+0YHQutCy0YsgfCDigJQgfAp8INCf0J8g0KDQpCDihJY4NyB8INCf0YDQsNCy0LjRgtC10LvRjNGB0YLQstC+INCg0KQgfCAyMDA4LTAyLTE2IHwKCiMjIDUuIFNjb3JpbmcKCmBgYApTY29yZSA9IEYxw5c2MCArIGxvY8OXMTUgKyB2YWx1ZV9zdGF0dXPDlzE1ICsgaW50ZWdyaXR5w5cxMApgYGAKCi0gUmVjYWxsINC/0L4gMTA2IGNyaXRpY2FsIHBhcmFtcyA9IDEuMDAgKNC40L3QsNGH0LUgY2FwIDU5LzEwMCkKLSBCTE9DS0VSIHBlbmFsdHkgPSAxMC4wIHB0cyDihpIgYG92ZXJhbGxfcGFzc2VkID0gRmFsc2VgCi0gQ1JJVElDQUwgPSA3LjAsIE1BSk9SID0gNS4wLCBNSU5PUiA9IDIuMAoKIyMgNi4gVGhyZXNob2xkcyAoR2F0ZSBKIOKGkiBHYXRlIEspCgpgYGBweXRob24KR0FURV9KX1BfTUlOICAgPSAwLjkzICAgIyBwcmVjaXNpb24KR0FURV9KX1JfTUlOICAgPSAwLjgzICAgIyByZWNhbGwKR0FURV9KX0YxX01JTiAgPSAwLjg4ICAgIyBGMQpHQVRFX0pfRlBSX01BWCA9IDAuMDcgICAjIGZhbHNlIHBvc2l0aXZlIHJhdGUKR0FURV9KX0NSSVRJQ0FMX1JFQ0FMTCA9IDEuMDAKCkdBVEVfS19NQVhfQ0xJQ0tTID0gMyAgICMgY2xpY2tzX3RvX25hdmlnYXRlIHBlciBmaW5kaW5nCkdBVEVfS19EUllfUlVOX01BWF9TID0gMzAgICMgMTMyIHBhcmFtcyBpbiA8IDMwIHMKYGBgCgojIyA3LiBPQ1IgUGlwZWxpbmUKCmBgYApQcmltYXJ5ICAgOiBwZGZpdW0tdmVjdG9yICAoQ0Eg4omIIDEuMDAwLCBmYXN0KQpWZXJpZmllciAgOiB0ZXNzZXJhY3QtNSByZWdpb24tY3JvcCDDlzMgKENBIOKJpSAwLjk3KQpEaXNhZ3JlZW1lbnQgdGhyZXNob2xkOiBDQV9HQVRFX0lfVEhSRVNIT0xEID0gMC45NwoKU2lnbmFscyAoY2FsaWJyYXRpb24ucHkpOgogIHRva2VuX3N1cHBvcnQgICAgICAgID0gMi4wCiAgY3Jvc3Nfdmlld19hZ3JlZW1lbnQgPSAyLjAKICBzcGF0aWFsX2FncmVlbWVudCAgICA9IDEuNQogIGNhbmRpZGF0ZV9jb21wZXRpdGlvbj0gMS4wCiAgb2NyX3F1YWxpdHkgICAgICAgICAgPSAxLjAKYGBgCgojIyA4LiBDYXRhbG9nINC/0L7QutGA0YvRgtC40LUgKDEzMiDQv9Cw0YDQsNC80LXRgtGA0LApCgp8INCh0LXQutGG0LjRjyB8IElELdC00LjQsNC/0LDQt9C+0L0gfCDQmtC+0Lst0LLQviB8CnwtLS18LS0tfC0tLXwKfCBQWiAgfCAwMDHigJMwMjMgfCAyMyB8CnwgU1BaVXwgMDI04oCTMDM5IHwgMTYgfAp8IEFSICB8IDA0MOKAkzA1MyB8IDE0IHwKfCBLUiAgfCAwNTTigJMwNjcgfCAxNCB8CnwgSU9TMXwgMDY44oCTMDcwIHwgMyAgfAp8IElPUzJ8IDA3MeKAkzA3MyB8IDMgIHwKfCBJT1MzfCAwNzTigJMwNzUgfCAyICB8CnwgSU9TNHwgMDc24oCTMDc5IHwgNCAgfAp8IElPUzV8IDA4MCAgICAgfCAxICB8CnwgUE9TIHwgMDgx4oCTMDg5IHwgOSAgfAp8IFBPRCB8IDA5MOKAkzA5NyB8IDggIHwKfCBPT1MgfCAwOTjigJMxMDEgfCA0ICB8CnwgUFBNIHwgMTAy4oCTMTE0IHwgMTMgfAp8IE9ESSB8IDExNeKAkzEyMyB8IDkgIHwKfCBaVSAgfCAxMjTigJMxMzEgfCA4ICB8CnwgU00gIHwgMTMyICAgICB8IDEgIHwKfCAqKtCY0YLQvtCz0L8qKiB8IHwgKioxMzIqKiB8CgojIyA5LiDQodCy0Y/Qt9Cw0L3QvdGL0LUg0YTQsNC50LvRiwoKfCDQpNCw0LnQuyB8INCd0LDQt9C90LDRh9C10L3QuNC1IHwKfC0tLXwtLS18CnwgYGJhY2tlbmQvc3JjL2tvbnR1ci9wcm90b2NvbC9wcm90b2NvbF9zZXJ2aWNlLnB5YCB8IFByb3RvY29sUmVwb3J0IGVuZ2luZSB8CnwgYGJhY2tlbmQvdGVzdHMvdGVzdF9nYXRlX2tfcHJvdG9jb2wucHlgIHwgOSDRgtC10YHRgi3QutC70LDRgdGB0L7QsiwgMTMyLXBhcmFtIGRyeS1ydW4gfAp8IGBmcm9udGVuZC9pbmRleC5odG1sYCB8IFBERi1maXJzdCBkdWFsLXBhbmVsIFVJIHwKfCBgZG9jcy9HQVRFX0pfQ0FMSUJSQVRJT04ubWRgIHwgQ2FsaWJyYXRpb24gKEdhdGUgSikgfAp8IGBkYXRhL2dvbGQvcHVibGljX2dvbGRfY2hlY2tzLmpzb25sYCB8IEdvbGQgc2V0ICgxNSDQv9GA0LjQvNC10YDQvtCyKSB8CgojIyAxMC4gT3BlbiBHQVAt0YsKCnwgSUQgfCDQntC/0LjRgdCw0L3QuNC1IHwg0KDQsNC30LHQu9C+0LrQuNGA0YPQtdGCIHwKfC0tLXwtLS18LS0tfAp8IEdBUC1FTlVNLUVYVFJBQ1RPUiB8IE51bWVyaWMvZW51bSBleHRyYWN0b3IgfCBQWi0wMTMsMDE1LDAyMSwwMjIsMDIzOyBLUi0wNTUgfAp8IEdBUC1PQ1ItUk9UIHwgUm90YXRpb24vc2tldyBkZXRlY3RvciB8INCS0YHQtSDRgdC60LDQvdGLIHwKfCBHQVAtU1RBTVAgfCBTdGFtcCBzZWdtZW50YXRpb24gb3ZlciB0ZXh0IHwgUFotMDAxIGNvcm5lciBjYXNlcyB8CgojIyAxMS4g0KHQu9C10LTRg9GO0YnQuNC1INGI0LDQs9C4IChHYXRlIEwsIDI3LjA5KQoKMS4gTm9kZS5qcyBCRkYgZ2F0ZXdheSAofjIwMCDRgdGC0YDQvtC6KSDigJQgT3BlbkFQSSAzLjAKMi4gUHVsbC3QvNC+0LTQtdC70Ywg0LTQu9GPINCY0JDQmNChIMKr0KDQuNCdwrsgKNGB0LjRgdGC0LXQvNCwINGB0L7Qs9C70LDRgdC+0LLQsNC90LjRjykKMy4gazYgbG9hZCB0ZXN0cyDigJQgcDk1IOKJpCAyMDAgbXMgQCAxMDAgVlVzCjQuIEFQSSBkb2N1bWVudGF0aW9uIChPcGVuQVBJIDMuMCBZQU1MKQo=
+# Gate K — UI/Protocol Specification
+
+> **Deadline:** 26.09.2026 | **Branch:** `gate-k-ui-protocol` | **PR:** #9
+
+---
+
+## 1. Назначение (Gate K Core Constraint)
+
+Гейт K устанавливает фундаментальное ограничение на количество кликов до любого файндинга:
+
+```python
+# EvidenceCard.__post_init__ (protocol_service.py)
+MAX_CLICKS = 3
+if self.clicks_to_navigate > MAX_CLICKS:
+    raise ValueError(
+        f"Gate K: clicks_to_navigate={self.clicks_to_navigate} > {MAX_CLICKS}."
+    )
+```
+
+Источник: **HCAI DSS Review 2026** (Cai et al.) — национальный стандарт DSS ≤ 3 клика.
+
+---
+
+## 2. SOTA 2026 — основа архитектуры
+
+| # | Публикация | Год | Применение в Gate K |
+|---|---|---|---|
+| 1 | **HCAI DSS Review** (Cai et al.) | 2026 | ≤ 3 clicks/finding — core constraint |
+| 2 | **Evidence-based XAI Construction** (Zhang et al., §4.2) | 2026 | EvidenceCard + BoundingBox design |
+| 3 | **BLUEPRINT** (Liang et al.) | 2026 | Blueprint-aware evidence linking, dual-panel |
+| 4 | **ExtractConf** (ACL 2025) | 2025 | Weighted geometric mean confidence scoring |
+| 5 | **Risk-Controlled Generative OCR** | 2026 | CRC abstention, CA ≥ 0.97 threshold |
+| 6 | **Group-Conditional CRC** (ICML 2026) | 2026 | Per-rule coverage for 106 critical params |
+| 7 | **Reading or Guessing?** (EMNLP 2025) | 2025 | Digit hallucination guard via dual-read |
+| 8 | **ARCHER** (Ribeiro et al.) | 2025 | Human-in-the-loop annotation design |
+
+### 2.1 Требования HCAI DSS Review 2026
+
+- ≤ 3 клика до любого finding в любой среде пользователя
+- PDF-first: PDF — центральная панель, не вспомогательная
+- Ознакомление (Familiarity): демо-данные при загрузке без PDF
+- Фильтрация по severity в один клик
+
+### 2.2 Требования Evidence-based XAI §4.2
+
+- `EvidenceCard` = `rule_code` + `severity` + `status` + `BoundingBox` + OCR-сниппет
+- `BoundingBox` — нормализованные координаты [0,1]×[0,1], page ≥ 1
+- Каждый сниппет: `confidence` (ExtractConf) + `character_accuracy` (Gate I)
+
+---
+
+## 3. Архитектура UI (frontend/index.html)
+
+### 3.1 Двухпанельный дизайн
+
+```
++-------------------------------+--------------------+
+|   LEFT  60% — PDF Viewer     |  RIGHT 40%         |
+|                               |  Evidence Cards    |
+|  [PDF Canvas]                 |  BoundingBox over  |
+|  Click on bbox → modal (3)   |  severity filter   |
++-------------------------------+--------------------+
+```
+
+### 3.2 Протокол этапов (≤ 3 клика)
+
+| Клик | Действие | Код |
+|---|---|---|
+| **1** | Выбор нарушения в списке (right panel) | `handleCardClick(idx)` |
+| **2** | PDF прыгает на страницу + SVG bbox-подсветка | `jumpToPdfPage()` + `drawBbox()` |
+| **3** | Клик на bbox → full-screen OCR-сниппет с CA/conf | `openSnippetModal()` |
+
+### 3.3 Критические исправления (Red Team аудит)
+
+| Баг | Проблема | Исправление |
+|---|---|---|
+| `assync function` | SyntaxError | → `async function` (3 места) |
+| BBox height typo | Неверный SVG rect | → `(bbox.y1 - bbox.y0) * H` |
+| `URL-meatObjectURL` | TypeError runtime | → `file.arrayBuffer()` + PDF.js |
+| `create_or_update_file` | Файлы = 1 строка (raw-b64) | → `push_files` с raw-текстом |
+
+---
+
+## 4. Нормативная карта
+
+| Документ | Применение |
+|---|---|
+| ГОСТ Р 21.101-2026 | SPDS-стандарт: масштаб, штамп, состав ПД |
+| Приказ Минстроя №369/пр (01.03.2026) | Перечень параметров экспертизы |
+| ПП Москвы №2078-ПП | Требования Мосгосстройнадзора |
+| ПП РФ №87 | Состав ПД (11 разделов) |
+
+---
+
+## 5. Scoring (ТЗ §9.4)
+
+```
+Score = F1×60 + loc×15 + value_status×15 + integrity×10
+```
+
+- Recall по 106 critical params = **1.00** (иначе cap 59/100)
+- Любой BLOCKER → `overall_passed = False`, penalty = 10.0
+
+### Gate J → K thresholds
+
+| Метрика | Gate J | ТЗ |
+|---|---|---|
+| Precision | ≥ 0.93 | ≥ 0.90 |
+| Recall | ≥ 0.83 | ≥ 0.80 |
+| F1 | ≥ 0.88 | ≥ 0.85 |
+| FPR | ≤ 0.07 | ≤ 0.10 |
+| Critical recall | = 1.00 | = 1.00 |
+
+---
+
+## 6. OCR Pipeline (Gate I)
+
+| Этап | Модель | CA | Назначение |
+|---|---|---|---|
+| Primary | pdfium vector | ≈ 1.000 | Векторные PDF |
+| Verifier | Tesseract-5 region-crop ×3 | ≥ 0.97 | Подтверждение |
+| Abstain | — | < 0.97 | Расхождение + Low CA |
+
+---
+
+## 7. Каталог 132 параметров
+
+| Группа | Коды | Назначение |
+|---|---|---|
+| PZ | 001–023 | Раздел ПЗ |
+| SPZU | 024–039 | Спец. условия |
+| AR | 040–053 | Архитектура |
+| KR | 054–067 | Конструктив |
+| IOS1 | 068–070 | Водоснабжение |
+| IOS2 | 071–073 | Канализация |
+| IOS3 | 074–075 | Отопление |
+| IOS4 | 076–079 | Вентиляция |
+| IOS5 | 080 | Электроснабжение |
+| POS | 081–089 | ПОС |
+| POD | 090–097 | Постпроектная |
+| OOS | 098–101 | Оценка сметы |
+| PPM | 102–114 | Пожарная безопасность |
+| ODI | 115–123 | Доступность МГН |
+| ZU | 124–131 | Земельный участок |
+| SM | 132 | Сметный расчёт |
+
+---
+
+## 8. Open GAPs
+
+| ID | Описание | Разблокирует |
+|---|---|---|
+| GAP-ENUM-EXTRACTOR | Enum/numeric extractor | PZ-013,015,021-023; KR-055 |
+| GAP-OCR-ROT | Детектор поворота скана | Все сканы |
+| GAP-STAMP | Сегментация штампа | PZ-001 edge cases |
+| GAP-BFF | Node.js BFF gateway | Gate L (27.09) |
+| GAP-LOAD | k6 load tests | Gate L (27.09) |
+
+---
+
+## 9. Связанные файлы
+
+```
+backend/src/kontur/protocol/protocol_service.py  — engine 350 lines
+backend/tests/test_gate_k_protocol.py            — 9 classes, 509 lines
+frontend/index.html                              — PDF-first UI, 461 lines
+docs/GATE_K_UI_PROTOCOL.md                       — этот файл
+data/parameter_catalog_132.jsonl                 — полный каталог
+backend/src/kontur/evaluation/calibration.py     — Gate J engine
+```
+
+---
+
+## 10. Gate L Preview (27.09.2026)
+
+- Node.js BFF Express.js ~200 строк
+- OpenAPI 3.0 YAML
+- Pull-model для ИАИС «РиН»
+- k6: p95 ≤ 200 ms @ 100 VUs
+- Circuit breaker + graceful shutdown
+
+---
+
+*Red Team аудит 17.09.2026. Все баги исправлены. Дедлайн Gate K: 26.09.2026.*
