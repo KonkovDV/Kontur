@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import pytest
+
 from kontur.evaluation.metrics import (
     INTERNAL_TARGETS,
     TZ_THRESHOLDS,
     Interval,
+    character_accuracy,
     f1,
+    key_field_exact_match,
+    key_field_exact_match_interval,
     meets_threshold,
     wilson,
 )
@@ -56,3 +61,32 @@ def test_internal_targets_are_stricter_than_tz() -> None:
 def test_interval_is_immutable() -> None:
     interval = Interval(point=0.5, low=0.4, high=0.6, n=100)
     assert interval.n == 100
+
+
+def test_key_field_exact_match_is_case_sensitive_in_ciphers() -> None:
+    assert key_field_exact_match("12345-PZ", "12345-PZ")
+    assert not key_field_exact_match("12345-PZ", "12345-pz")
+
+
+def test_key_field_exact_match_uses_nfc_and_collapses_spaces() -> None:
+    assert key_field_exact_match("12345-PZ", "  12345-PZ  ")
+    assert key_field_exact_match("café-1", "cafe\u0301-1")
+    assert not key_field_exact_match("12345-PZ", None)
+    assert not key_field_exact_match("12345-PZ", "   ")
+
+
+def test_key_field_threshold_needs_wilson_lower_bound() -> None:
+    """Точечная 1.0 на 10 полях не закрывает порог ТЗ 0.90."""
+
+    pairs = [("12345-PZ", "12345-PZ")] * 10
+    interval = key_field_exact_match_interval(pairs)
+    assert interval.point == 1.0
+    assert not meets_threshold("key_field_exact_match", interval)
+    empty = key_field_exact_match_interval([])
+    assert empty.n == 0
+    assert not meets_threshold("key_field_exact_match", empty)
+
+
+def test_character_accuracy_is_not_exact_match() -> None:
+    with pytest.raises(NotImplementedError, match="E1"):
+        character_accuracy("12345-PZ", "12345-PZ")

@@ -11,6 +11,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from kontur.application.normalize import normalize_key_field
+
 #: Обязательные минимумы ТЗ. Это пороги приёмки, а не заявленный результат.
 #: Гармоника P=0.90 и R=0.80 ≈ 0.847 < 0.85: точка на полу precision и recall
 #: не проходит F1. Запас держим по precision, не по recall.
@@ -75,6 +77,23 @@ def f1(precision: float, recall: float) -> float:
     return 2 * precision * recall / (precision + recall)
 
 
+def key_field_exact_match(gold: str, predicted: str | None) -> bool:
+    """Exact Match поля паспорта. None и пустая строка — промах, не «похоже»."""
+
+    if predicted is None or not predicted.strip():
+        return False
+    return normalize_key_field(gold) == normalize_key_field(predicted)
+
+
+def key_field_exact_match_interval(
+    pairs: list[tuple[str, str | None]],
+) -> Interval:
+    """Доля совпавших ключевых полей. Пустая выборка не подтверждает порог."""
+
+    successes = sum(1 for gold, predicted in pairs if key_field_exact_match(gold, predicted))
+    return wilson(successes, len(pairs))
+
+
 def iou(poly_a: object, poly_b: object) -> float:
     """IoU нормализованных полигонов после учёта CropBox и Rotate."""
 
@@ -85,7 +104,7 @@ def character_accuracy(reference: str, hypothesis: str) -> float:
     """1 − CER. Unicode NFC, схлопывание повторных пробелов.
 
     Регистр игнорируется только там, где он не несёт смысла; знаки в шифрах и
-    редакциях не удаляются (ТЗ п. 9.1).
+    редакциях не удаляются (ТЗ п. 9.1). Не смешивать с Exact Match полей.
     """
 
     raise NotImplementedError("E1")

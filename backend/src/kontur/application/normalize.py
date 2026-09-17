@@ -29,6 +29,12 @@ def fold_label(text: str) -> str:
     return _SPACES.sub(" ", folded).strip()
 
 
+def normalize_key_field(value: str) -> str:
+    """Exact Match шифра, редакции и листа: NFC и пробелы, без смены регистра."""
+
+    return _SPACES.sub(" ", unicodedata.normalize("NFC", value)).strip()
+
+
 def apply_number_normalizations(raw: str, steps: Sequence[str]) -> str:
     """Вернуть строку, готовую к float(). raw_token остаётся у вызывающего."""
 

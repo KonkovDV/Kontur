@@ -68,6 +68,33 @@ psql -v ON_ERROR_STOP=1 \
 | RT-2609-21 | S3 | Нет протокола юзабилити п. 9.3 (время на протокол, число кликов на находку, пять инспекторов) | Нужны люди и сессии наблюдения | `docs/USABILITY_PROTOCOL.md` с формой замера |
 | RT-2609-27 | S2 | HTTP-контур держит процессы в памяти процесса API, а не в таблице `processes` | Схема есть, DAO нет; после перезапуска процессы пропадают — это явно, не «состояние в очереди» | репозиторий процессов на Postgres по `schema.sql` |
 
+## Прогон 17.09.2026 (гейт C)
+
+Базовая ревизия: `6fca626` (merge PR #2). Предмет: паспорт, PDF-токены, Exact Match,
+координаты страницы. KR-055, РиН, DAO, UI не атаковались.
+
+### Закрыто в этом прогоне
+
+| ID | Набор | Класс | Атака | Цена отказа | Исправление | Регрессия |
+|---|---|---|---|---|---|---|
+| RT-2709-01 | RT-D | S1 | Файл переименован или перемещён; identity берётся из имени | Чужой или «новый» документ при том же содержимом | `file_sha256` содержимого; путь не входит в хеш | `test_pdf_tokens.py::test_same_bytes_keep_identity_under_rename`, `::test_extract_path_matches_bytes_hash` |
+| RT-2709-02 | RT-D | S1 | Стадия в штампе ПД, в имени файла РД — система выбирает одну | Неверный эталон редакции (stop-ship № 4) | конфликт обнуляет `doc_stage`, `needs_clarification` | `test_passport.py::test_stamp_and_filename_stage_conflict_clears_stage` |
+| RT-2709-03 | RT-D | S1 | Шифр подставляется из имени файла, в штампе его нет | Ложный паспорт, Exact Match «зеленеет» на фикции | `document_code` только из токенов | `::test_filename_is_not_used_as_document_code` |
+| RT-2709-04 | RT-A | S1 | Повреждённый или пустой PDF принимается как пустая страница | Тихий пропуск объекта | `extract_pdf_bytes` бросает `ValueError` | `test_pdf_tokens.py::test_corrupt_pdf_is_an_error_not_empty_success` |
+| RT-2709-05 | RT-B | S2 | Текст вне CropBox попадает в доказательства | Находка на невидимом фрагменте | токен вне CropBox отбрасывается | `::test_text_outside_cropbox_is_not_a_token` |
+| RT-2709-06 | RT-E | S2 | Exact Match шифра после casefold (`12345-PZ` = `12345-pz`) | Ложное совпадение ключевых полей (вопрос 10) | `normalize_key_field` без casefold; порог по Wilson | `test_metrics.py::test_key_field_exact_match_is_case_sensitive_in_ciphers`, `::test_key_field_threshold_needs_wilson_lower_bound` |
+
+### Открыто после прогона
+
+| ID | Класс | Находка | Почему не закрыто здесь | Следующий шаг |
+|---|---|---|---|---|
+| RT-2709-07 | S1 | Скрытый белый/перекрытый текст внутри CropBox читается как штамп | Нет детектора visual vs text; `text_render_agreement` всегда `None` | не закрывать RT-B; не ставить `True` без детектора |
+| RT-2709-08 | S2 | Новая неутверждённая редакция как эталон | Резолвер редакций — гейт E, не C | `test_rt_d_newer_unapproved_revision_does_not_become_baseline` остаётся xfail |
+| RT-2709-09 | S3 | Character Accuracy / CER не реализованы | Не смешивать с Exact Match полей | E1 после bake-off OCR, не в этой сессии |
+
+Порог Exact Match ≥0,92 на validation v0 не атаковался как достигнутый: выборки нет,
+метрика есть. Публиковать число запрещено.
+
 ## OSINT, привлечённый к прогону
 
 Нормативная база:
