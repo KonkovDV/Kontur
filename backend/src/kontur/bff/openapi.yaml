@@ -1,0 +1,303 @@
+openapi: "3.0.3"
+info:
+  title: Kontur Gate L — BFF API
+  version: "1.0.0"
+  description: |
+    BFF Gateway для протокольного анализа ПД строительного надзора.
+    Gate K constraint: ≤ 3 clicks/finding (HCAI DSS Review 2026).
+    Scoring TZ §9.4: F1×60 + loc×15 + value_status×15 + integrity×10
+  contact:
+    name: KonkovDV
+    url: https://github.com/KonkovDV/Kontur
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://kontur.example.ru
+    description: Production
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /health:
+    get:
+      summary: Liveness + readiness probe
+      security: []
+      operationId: getHealth
+      tags: [System]
+      responses:
+        "200":
+          description: Сервис доступен
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthResponse" }
+
+  /api/v1/protocol/analyze:
+    post:
+      summary: Запустить анализ документа
+      description: |
+        Pull-model: если pull_from_iais=true — данные из ИАИС РиН через circuit breaker.
+      operationId: analyzeDocument
+      tags: [Protocol]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnalyzeRequest" }
+            examples:
+              pull_mode:
+                summary: Pull-model (ИАИС РиН)
+                value: { docId: "doc-2026-001", pull_from_iais: true }
+              direct:
+                summary: Direct PDF
+                value: { docId: "doc-2026-002", pull_from_iais: false, pdf_base64: "JVBERi0x..." }
+      responses:
+        "202":
+          description: Анализ принят
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AcceptedResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "502": { $ref: "#/components/responses/BadGateway" }
+
+  /api/v1/protocol/{docId}:
+    get:
+      summary: Получить ProtocolReport
+      description: |
+        Возвращает отчёт. X-Gate-K-Passes: true|false.
+        clicks_to_navigate ∈ [1,3] для всех EvidenceCards (Gate K).
+      operationId: getProtocolReport
+      tags: [Protocol]
+      parameters:
+        - $ref: "#/components/parameters/DocId"
+      responses:
+        "200":
+          description: ProtocolReport найден
+          headers:
+            X-Gate-K-Passes:
+              schema: { type: string, enum: ["true", "false"] }
+            X-Gate-K-Penalty:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProtocolReport" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/catalog:
+    get:
+      summary: Каталог 132 параметров
+      operationId: getCatalog
+      tags: [Catalog]
+      responses:
+        "200":
+          description: Каталог
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CatalogResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/audit/{docId}:
+    get:
+      summary: Audit trail
+      operationId: getAuditTrail
+      tags: [Audit]
+      parameters:
+        - $ref: "#/components/parameters/DocId"
+      responses:
+        "200":
+          description: Audit trail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditTrail" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    DocId:
+      name: docId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+        pattern: '^[a-zA-Z0-9_\-\.]+$'
+      description: Уникальный идентификатор документа
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, version, gate, uptime, circuit_breaker, timestamp]
+      properties:
+        status:          { type: string, example: ok }
+        version:         { type: string, example: "1.0.0" }
+        gate:            { type: string, example: L }
+        uptime:          { type: integer }
+        circuit_breaker: { type: string, enum: [closed, open, half_open] }
+        timestamp:       { type: string, format: date-time }
+
+    AnalyzeRequest:
+      type: object
+      required: [docId]
+      properties:
+        docId:          { type: string, minLength: 1, maxLength: 256 }
+        pull_from_iais: { type: boolean, default: true }
+        pdf_base64:     { type: string, format: byte }
+
+    AcceptedResponse:
+      type: object
+      required: [docId, status]
+      properties:
+        docId:      { type: string }
+        status:     { type: string, example: accepted }
+        latency_ms: { type: integer }
+
+    Severity:
+      type: string
+      enum: [BLOCKER, CRITICAL, MAJOR, MINOR, INFO]
+
+    FindingStatus:
+      type: string
+      enum: [CONFIRMED_VIOLATION, ABSTAINED, COMPLIANT]
+
+    BoundingBox:
+      type: object
+      required: [page, x0, y0, x1, y1]
+      properties:
+        page: { type: integer, minimum: 1 }
+        x0:   { type: number, minimum: 0, maximum: 1 }
+        y0:   { type: number, minimum: 0, maximum: 1 }
+        x1:   { type: number, minimum: 0, maximum: 1 }
+        y1:   { type: number, minimum: 0, maximum: 1 }
+
+    EvidenceSnippet:
+      type: object
+      required: [text, bbox, confidence, character_accuracy, ocr_path, meets_ca]
+      properties:
+        text:               { type: string }
+        bbox:               { $ref: "#/components/schemas/BoundingBox" }
+        confidence:         { type: number, minimum: 0, maximum: 1 }
+        character_accuracy: { type: number, minimum: 0, maximum: 1 }
+        ocr_path:           { type: string, enum: [VECTOR_PDFIUM, RASTER_REGION, HYBRID] }
+        meets_ca:           { type: boolean }
+
+    EvidenceCard:
+      type: object
+      required: [rule_code, severity, status, penalty, clicks_to_navigate]
+      properties:
+        rule_code:          { type: string }
+        severity:           { $ref: "#/components/schemas/Severity" }
+        status:             { $ref: "#/components/schemas/FindingStatus" }
+        extracted_value:    { type: string, nullable: true }
+        expected_value:     { type: string, nullable: true }
+        penalty:            { type: number, minimum: 0 }
+        clicks_to_navigate: { type: integer, minimum: 1, maximum: 3 }
+        rule_description:   { type: string }
+        norm_ref:           { type: string }
+        snippets:
+          type: array
+          items: { $ref: "#/components/schemas/EvidenceSnippet" }
+
+    ProtocolReport:
+      type: object
+      required: [docId, overall_passed, total_penalty, violation_count]
+      properties:
+        docId:           { type: string }
+        model_version:   { type: string }
+        overall_passed:  { type: boolean }
+        total_penalty:   { type: number }
+        violation_count: { type: integer }
+        card_count:      { type: integer }
+        analyzed_at:     { type: string, format: date-time }
+        latency_ms:      { type: integer }
+        violations:
+          type: array
+          items: { $ref: "#/components/schemas/EvidenceCard" }
+
+    CatalogGroup:
+      type: object
+      required: [group, codes, count]
+      properties:
+        group: { type: string }
+        codes: { type: string }
+        count: { type: integer }
+
+    CatalogResponse:
+      type: object
+      required: [version, total_count, groups]
+      properties:
+        version:     { type: string }
+        total_count: { type: integer }
+        groups:
+          type: array
+          items: { $ref: "#/components/schemas/CatalogGroup" }
+        norm_refs:
+          type: array
+          items: { type: string }
+
+    AuditEvent:
+      type: object
+      required: [event, ts]
+      properties:
+        event:      { type: string }
+        ts:         { type: integer }
+        latency_ms: { type: integer }
+
+    AuditTrail:
+      type: object
+      required: [docId, events]
+      properties:
+        docId:  { type: string }
+        events: { type: array, items: { $ref: "#/components/schemas/AuditEvent" } }
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:   { type: string }
+        details: { type: array, items: {} }
+
+  responses:
+    BadRequest:
+      description: Неверный запрос
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unauthorized:
+      description: Требуется авторизация
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Не найден
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    BadGateway:
+      description: Ошибка upstream
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+tags:
+  - name: System
+    description: Служебные endpoints
+  - name: Protocol
+    description: Протокольный анализ
+  - name: Catalog
+    description: Каталог 132 параметров
+  - name: Audit
+    description: Аудиторский след
