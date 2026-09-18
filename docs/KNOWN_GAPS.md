@@ -15,6 +15,7 @@
 | GAP-IOS4-VAL | IOS4-078/079 executable на синтетике; recall на frozen val не измерен | экстрактор берёт первую сторону сечения, не площадь мм² | гейт J |
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | bake-off есть, живого пайплайна в запросе нет | гейт I |
+| GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной evidence_group | после RC freeze |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
 `put_finding` по `evidence_group_id`; протокол/находки после рестарта — GAP-PROCESS-FINDINGS.
@@ -22,12 +23,36 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 `GAP-ISOLATE` не закрыт `pdf_guard`: `wait_for` / ThreadPool ограничивают ожидание,
 но не убивают поток pdfium и не выносят разбор в дочерний процесс.
 
+## Red Team фактчекинг PR #36 (2026-09-18)
+
+PR #36 содержал 6 критических несоответствий реальному API main:
+
+| ID | Фактчекинг | Правда |
+|---|---|---|
+| RT-1 | `engine_health_summary` — плоский словарь {name: label} | Нет. API: {healthy/degraded/failed/skipped: list[str]} |
+| RT-2 | `/capabilities` ключи overall_kit_status, engine_status | Нет. Ключи: overall, kit_blocked, engines, health |
+| RT-3 | `/capabilities` вызывался без auth | Нет. 401 без токена |
+| RT-4 | `parse_with_timeout()`, `process_id` поле | Нет. API: `run_pdf_parse_sync(parser, data)`, нет `process_id` |
+| RT-5 | `overall_kit_status == "BLOCKED"` | Нет. Значения: AVAILABLE/DEGRADED/UNAVAILABLE |
+| RT-6 | UserWarning из Finding | Нет. Нет UserWarning в __post_init__ |
+
+## Триаж: что взяли, что нет
+
+| Область | Взяли (4c1c518) | Не взяли / Почему |
+|---|---|---|
+| Capabilities | kit_degraded + engine_health_summary + overall_kit_status + /capabilities endpoint | Дубль engine_status.py |
+| Provenance | Finding.source_id + evidence_refs + DisagreementKind (схема) | UserWarning (не в коде) |
+| PDF | run_pdf_parse + run_pdf_parse_sync + shutdown(wait=False) | process_id на таймауте |
+| IOS4 | dual-read + E2E ABSTAIN на двух сечениях | Площадь мм² (GAP-IOS4-VAL, Gate J) |
+| Frozen val | skip без корпуса | Recall/P/F1 |
+| Free-search | Загрузчик реестра MATRIX_GAP | 133-е правило |
+
 ## Неофициальные пометки созвона
 
 Канал, дата и идентификатор обращения в репозитории не зафиксированы —
 это не ответы организатора. Черновик: PDF-first; аналоги стека допустимы
-при OpenAPI; mock-адаптера РиН достаточно для архитектуры; лимиты — про
-интерактивную загрузку; «нормы не анализируем». Фиксация — в
+при OpenAPI; mock-адаптера РиН достаточно для архитектуры; лимиты про интерактивную загрузку;
+«нормы не анализируем». Фиксация — в
 [QUESTIONS_TO_ORGANIZER.md](QUESTIONS_TO_ORGANIZER.md).
 
 ## Закрытые пробелы
