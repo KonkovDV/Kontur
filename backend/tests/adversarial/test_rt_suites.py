@@ -3,16 +3,17 @@
 По одному представительному кейсу на набор. Каждый кейс фиксирует oracle:
 что именно система обязана сделать с враждебным входом.
 
-RT-A…RT-F, RT-H, RT-I закрыты регрессией. RT-G остаётся xfail: кэш паспорта
-не равен идемпотентности находки и протокола.
+RT-A…RT-I полностью закрыты регрессией (RT-G был xfail до PR #22).
 """
 
 from __future__ import annotations
 
+import asyncio
 import io
 import zipfile
 from datetime import date
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -20,6 +21,7 @@ from kontur.application.intake import RejectionReason, UploadCandidate, evaluate
 from kontur.application.revision_resolver import resolve_revision
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
 from kontur.infrastructure.access_control import AccessDeniedError, check_object_access
+from kontur.infrastructure.finding_store import claim_finding_slot
 from kontur.infrastructure.normative_db import NormativeDB, NormativeRevision, NormativeStatus
 from kontur.infrastructure.pdfium_tokens import file_sha256
 
@@ -187,11 +189,60 @@ def test_rt_f_unsigned_normative_chunk_is_not_used() -> None:
     assert result.revision is None
 
 
-@pytest.mark.xfail(reason="RT-G: идемпотентность находки/протокола, не кэш паспорта", strict=True)
 def test_rt_g_duplicate_queue_message_yields_one_business_effect() -> None:
-    """At-least-once доставка даёт ровно одну находку и одну версию протокола."""
+    """At-least-once доставка даёт ровно одну находку и одну версию протокола.
 
-    raise NotImplementedError("RT-G")
+    Oracle RT-G (docs/RED_TEAM.md §stop-ship п.11, ТЗ §9.1):
+      - Первое сообщение с (obj, rule, files) → claim_finding_slot → True;
+        пайплайн СОЗДАЁТ находку и версию протокола.
+      - Дубликат (те же ключи, at-least-once) → False;
+        пайплайн ПРОПУСКАЕТ создание — ровно один бизнес-эффект.
+
+    Закрывает: GAP-RT-G, PR #22.
+    Регрессия: краснеет если убрать nx=True из claim_finding_slot.
+    """
+
+    async def run() -> None:
+        stored: dict[str, bytes] = {}
+        client = AsyncMock()
+
+        async def fake_set(
+            key: str,
+            value: bytes,
+            *,
+            nx: bool = False,
+            ex: int | None = None,
+        ) -> bool | None:
+            if nx and key in stored:
+                return None  # Redis SETNX: None = ключ уже существует
+            stored[key] = value
+            return True
+
+        client.set.side_effect = fake_set
+
+        obj, rule, files = "OBJ-1", "PZ-001", ("pd-sha-001", "rd-sha-001")
+
+        # Первое сообщение очереди → слот свободен → создаём находку
+        first = await claim_finding_slot(client, obj, rule, files)
+        assert first is True, "Первое сообщение должно занять слот находки"
+
+        # Дубликат (at-least-once повтор) → слот занят → пропускаем
+        second = await claim_finding_slot(client, obj, rule, files)
+        assert second is False, "Дубликат не должен создавать вторую находку"
+
+        # Oracle: ровно один Redis-ключ создан (один бизнес-эффект)
+        keys_used = {c.args[0] for c in client.set.call_args_list}
+        assert len(keys_used) == 1, "Один obj/rule/files → один Redis-ключ находки"
+
+        # Третий дубликат также должен быть отклонён
+        third = await claim_finding_slot(client, obj, rule, files)
+        assert third is False, "Любой последующий дубликат должен быть отклонён"
+
+        # Другая тройка → новый слот (разные находки не мешают друг другу)
+        other = await claim_finding_slot(client, obj, "PZ-002", files)
+        assert other is True, "Другое правило → другой слот, не пересекается"
+
+    asyncio.run(run())
 
 
 def test_rt_h_cross_tenant_access_is_denied_without_side_effect() -> None:
