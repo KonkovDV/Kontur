@@ -54,6 +54,8 @@ def test_capabilities_are_honest_about_missing_ocr(client: TestClient) -> None:
     assert engines["drawing_analysis"]["status"] == "UNAVAILABLE"
     assert "ocr_text" in body["health"]["failed"]
     assert "vector_text" in body["health"]["healthy"]
+    assert "overall_kit_status" not in body
+    assert "engine_status" not in body
 
 
 def test_upload_without_token_is_401(client: TestClient) -> None:

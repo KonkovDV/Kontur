@@ -48,3 +48,17 @@ def test_async_success() -> None:
 def test_non_positive_timeout_is_configuration_error() -> None:
     with pytest.raises(ValueError, match="положительным"):
         run_pdf_parse_sync(_ok, b"x", timeout_s=0)
+
+
+def test_parser_exception_propagates() -> None:
+    def _raises(data: bytes) -> str:
+        raise ValueError("corrupt pdf")
+
+    with pytest.raises(ValueError, match="corrupt pdf"):
+        run_pdf_parse_sync(_raises, b"x", timeout_s=1.0)
+
+
+def test_timeout_error_has_no_process_id() -> None:
+    with pytest.raises(PdfParseTimeoutError) as caught:
+        run_pdf_parse_sync(_slow, b"pdf", timeout_s=0.05)
+    assert not hasattr(caught.value, "process_id")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from pathlib import Path
 
 import pytest
@@ -99,8 +100,29 @@ def test_optional_provenance_accepted() -> None:
 
 
 def test_optional_provenance_does_not_require_warning() -> None:
-    finding = Finding(
-        finding_id="f-p",
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        finding = Finding(
+            finding_id="f-p",
+            rule_code="PZ-001",
+            finding_status=FindingStatus.CANDIDATE,
+            review_priority=ReviewPriority.HIGH,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+            evidence_group_id="eg-1",
+            source_id="file-pd",
+            evidence_refs=("eg-1-PD",),
+            disagreement_kind=DisagreementKind.VALUE_DELTA,
+        )
+    assert not [item for item in caught if issubclass(item.category, UserWarning)]
+    assert finding.has_provenance is True
+    assert finding.counts_as_violation is False
+
+
+def test_has_provenance_needs_group_and_source() -> None:
+    group_only = Finding(
+        finding_id="f-g",
         rule_code="PZ-001",
         finding_status=FindingStatus.CANDIDATE,
         review_priority=ReviewPriority.HIGH,
@@ -108,12 +130,28 @@ def test_optional_provenance_does_not_require_warning() -> None:
         rule_version="0.1.0",
         model_version="none",
         evidence_group_id="eg-1",
-        source_id="file-pd",
-        evidence_refs=("eg-1-PD",),
-        disagreement_kind=DisagreementKind.VALUE_DELTA,
     )
-    assert finding.has_provenance is True
-    assert finding.counts_as_violation is False
+    source_only = Finding(
+        finding_id="f-s",
+        rule_code="PZ-001",
+        finding_status=FindingStatus.MISSING_EVIDENCE,
+        review_priority=ReviewPriority.HIGH,
+        matrix_version="draft-0",
+        rule_version="0.1.0",
+        model_version="none",
+        source_id="file-pd",
+    )
+    assert group_only.has_provenance is False
+    assert source_only.has_provenance is False
+
+
+def test_disagreement_kind_values_are_closed() -> None:
+    assert {member.value for member in DisagreementKind} == {
+        "VALUE_DELTA",
+        "MISSING_IN_STAGE",
+        "AMBIGUOUS_REFERENCE",
+        "FORMAT_MISMATCH",
+    }
 
 
 def test_valid_confirmed_violation_passes() -> None:

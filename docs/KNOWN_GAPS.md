@@ -15,6 +15,7 @@
 | GAP-IOS4-VAL | IOS4-078/079 executable на синтетике; recall на frozen val не измерен | экстрактор берёт первую сторону сечения, не площадь мм² | гейт J |
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | bake-off есть, живого пайплайна в запросе нет | гейт I |
+| GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
 `put_finding` по `evidence_group_id`; протокол/находки после рестарта — GAP-PROCESS-FINDINGS.

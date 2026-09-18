@@ -10,6 +10,7 @@ from kontur.application.review import (
     can_finalize,
     finalize_process,
     review,
+    split,
     unfinalize_process,
 )
 from kontur.domain.models import Finding
@@ -105,6 +106,11 @@ def test_clarification_does_not_block_finalize() -> None:
 def test_split_is_not_an_atomic_review_action() -> None:
     with pytest.raises(TransitionError, match="SPLIT"):
         review(candidate(), actor=INSPECTOR, action="SPLIT", comment=COMMENT)
+
+
+def test_split_is_unimplemented_until_each_part_has_evidence() -> None:
+    with pytest.raises(NotImplementedError, match="evidence_group"):
+        split(candidate(), parts=2)
 
 
 def test_missing_evidence_does_not_block_finalize() -> None:

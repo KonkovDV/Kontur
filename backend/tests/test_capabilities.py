@@ -74,3 +74,12 @@ def test_payload_overall_follows_live_kit_not_missing_ocr() -> None:
     assert isinstance(health, dict)
     assert "ocr_text" in health["failed"]
     assert "vector_text" in health["healthy"]
+    assert "overall_kit_status" not in payload
+    assert "engine_status" not in payload
+    assert "BLOCKED" not in {member.value for member in CapStatus}
+
+
+def test_advisory_degraded_does_not_degrade_the_kit() -> None:
+    caps = (describe("llm_advisory", CapStatus.DEGRADED),)
+    assert kit_degraded(caps) is False
+    assert overall_kit_status(caps) is CapStatus.AVAILABLE
