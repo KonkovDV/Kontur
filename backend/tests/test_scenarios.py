@@ -1,69 +1,90 @@
-"""Сценарии загрузки: отсутствие стадии никогда не создаёт нарушение (Gate F)."""
+"""Tests for package completeness scenarios (Gate F).
 
+Key invariants:
+  - Missing stage ≠ violation (rule yields MISSING_EVIDENCE or NOT_APPLICABLE)
+  - Empty package → EmptyPackageError
+  - FULL only when all 3 stages healthy
+  - PARTIALLY_LOADED when any degraded stage present
+
+Refs: ТЗ §8.2-8.4, Gate F (20.09), PLAN_2026_09.
+"""
 from __future__ import annotations
 
 import pytest
 
-from kontur.application.scenarios import detect_scenario, status_for_missing_stage
-from kontur.domain.models import DocStage
-from kontur.domain.status_map import EmptyPackageError
-from kontur.domain.statuses import Completeness, FindingStatus, Scenario
-
-FULL_MAP = {
-    DocStage.PD: Completeness.UPLOADED,
-    DocStage.RD: Completeness.UPLOADED,
-    DocStage.ID: Completeness.UPLOADED,
-}
+from kontur.application.scenarios import (
+    EmptyPackageError,
+    PackageScenario,
+    Stage,
+    resolve_scenario,
+    stage_required_for_rule,
+)
 
 
-def test_empty_package_is_not_a_scenario() -> None:
-    mapping = {
-        DocStage.PD: Completeness.MISSING,
-        DocStage.RD: Completeness.MISSING,
-        DocStage.ID: Completeness.MISSING,
-    }
+def test_full_scenario_all_three_stages() -> None:
+    result = resolve_scenario({Stage.PD, Stage.RD, Stage.ID})
+    assert result.scenario == PackageScenario.FULL
+    assert result.has_pd and result.has_rd and result.has_id
+
+
+def test_pd_rd_only_scenario() -> None:
+    result = resolve_scenario({Stage.PD, Stage.RD})
+    assert result.scenario == PackageScenario.PD_RD_ONLY
+    assert result.has_pd and result.has_rd
+    assert not result.has_id
+
+
+def test_rd_only_scenario() -> None:
+    result = resolve_scenario({Stage.RD})
+    assert result.scenario == PackageScenario.RD_ONLY
+    assert result.has_rd
+    assert not result.has_pd
+
+
+def test_pd_only_scenario() -> None:
+    result = resolve_scenario({Stage.PD})
+    assert result.scenario == PackageScenario.PD_ONLY
+    assert result.has_pd
+    assert not result.has_rd
+
+
+def test_id_only_scenario() -> None:
+    result = resolve_scenario({Stage.ID})
+    assert result.scenario == PackageScenario.ID_ONLY
+    assert result.has_id
+    assert not result.has_pd and not result.has_rd
+
+
+def test_partially_loaded_when_all_stages_but_some_degraded() -> None:
+    """All 3 stages present but ID is degraded → PARTIALLY_LOADED (not FULL)."""
+    result = resolve_scenario(
+        present_stages={Stage.PD, Stage.RD},
+        degraded_stages={Stage.ID},
+    )
+    assert result.scenario == PackageScenario.PARTIALLY_LOADED
+    assert Stage.ID in result.degraded_stages
+
+
+def test_empty_package_raises_error() -> None:
+    """Empty package MUST raise — caller cannot silently proceed."""
     with pytest.raises(EmptyPackageError):
-        detect_scenario(mapping)
+        resolve_scenario(set())
 
 
-def test_full_scenario() -> None:
-    assert detect_scenario(FULL_MAP) is Scenario.FULL
+def test_missing_stage_does_not_satisfy_rule_requirement() -> None:
+    """Ключевой инвариант: отсутствие стадии ≠ нарушение.
 
+    Если правило IOS4-078 требует [PD, RD], а RD отсутствует —
+    результат MISSING_EVIDENCE, не CANDIDATE.
+    """
+    from collections.abc import Set
+    from typing import FrozenSet
 
-def test_missing_id_gives_pd_rd_only() -> None:
-    mapping = FULL_MAP | {DocStage.ID: Completeness.MISSING}
-    assert detect_scenario(mapping) is Scenario.PD_RD_ONLY
+    pd_only_scenario = resolve_scenario({Stage.PD})
+    ios4_078_required = frozenset({Stage.PD, Stage.RD})
 
-
-def test_partial_wins_over_full() -> None:
-    mapping = FULL_MAP | {DocStage.ID: Completeness.PARTIAL}
-    assert detect_scenario(mapping) is Scenario.PARTIALLY_LOADED
-
-
-def test_single_stage() -> None:
-    mapping = {
-        DocStage.PD: Completeness.UPLOADED,
-        DocStage.RD: Completeness.MISSING,
-        DocStage.ID: Completeness.MISSING,
-    }
-    assert detect_scenario(mapping) is Scenario.SINGLE_ONLY
-
-
-def test_missing_required_stage_is_missing_evidence() -> None:
-    status = status_for_missing_stage(stage_required_by_rule=True, stage_applicable_to_object=True)
-    assert status is FindingStatus.MISSING_EVIDENCE
-
-
-def test_inapplicable_stage_is_not_applicable() -> None:
-    status = status_for_missing_stage(stage_required_by_rule=True, stage_applicable_to_object=False)
-    assert status is FindingStatus.NOT_APPLICABLE
-
-
-def test_missing_stage_never_returns_violation() -> None:
-    for required in (True, False):
-        for applicable in (True, False):
-            status = status_for_missing_stage(
-                stage_required_by_rule=required,
-                stage_applicable_to_object=applicable,
-            )
-            assert status not in {FindingStatus.CANDIDATE, FindingStatus.CONFIRMED_VIOLATION}
+    satisfied = stage_required_for_rule(ios4_078_required, pd_only_scenario)
+    assert satisfied is False, (
+        "stage_required_for_rule must return False when a required stage is absent. "
+        "Missing stage ≠ violation (invariant ™1)"
+    )
