@@ -1,13 +1,21 @@
-"""Доменные сущности. Зеркалят contracts/schemas — схема первична."""
+"""Доменные сущности. Зеркаляют contracts/schemas — схема первична.
+
+Аудит-2026-09:
+  Finding дополнен source_id + evidence_refs + disagreement_kind
+  (донор AeroBIM: persistence отказывает finding без source_id).
+  Здесь: soft UserWarning (обратная совместимость); hard enforcement — следующий PR.
+"""
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
 
 from kontur.domain.statuses import (
     STATUSES_REQUIRING_EVIDENCE,
+    DisagreementKind,
     FindingStatus,
     ReasonCode,
     ReviewPriority,
@@ -130,6 +138,15 @@ class Finding:
 
     Составной кандидат не существует: он дробится на атомарные находки, каждая
     со своим доказательством и своим решением (ТЗ п. 9.3).
+
+    Аудит-2026-09 (донор AeroBIM):
+      source_id       — локатор источника (цель: ≤ 3 клика до фрагмента)
+      evidence_refs   — кортежные ссылки на EvidenceFragment.fragment_id
+      disagreement_kind — тип расхождения из DisagreementKind
+
+    Правило soft-warning: если evidence_group_id указан, но source_id
+    отсутствует — UserWarning (не ValueError). Такая находка попадёт
+    в мониторинг качества до хард-валидации в следующем PR.
     """
 
     finding_id: str
@@ -146,6 +163,10 @@ class Finding:
     rationale: str = ""
     llm_draft: str | None = None
     inspector_decision: InspectorDecision | None = None
+    # --- Аудит-2026-09: провенанс и таксономия расхождения (донор AeroBIM) ---
+    source_id: str | None = None
+    evidence_refs: tuple[str, ...] = ()
+    disagreement_kind: DisagreementKind | None = None
 
     def __post_init__(self) -> None:
         if self.finding_status in STATUSES_REQUIRING_EVIDENCE and not self.evidence_group_id:
@@ -164,6 +185,15 @@ class Finding:
                 raise ValueError("NEGATIVE_VERIFIED requires reason_code")
             if not decision.comment or not decision.comment.strip():
                 raise ValueError("NEGATIVE_VERIFIED requires comment")
+        # Soft provenance warning (донор AeroBIM хард-отказ, здесь софт-предупреждение).
+        if self.evidence_group_id and self.source_id is None:
+            warnings.warn(
+                f"Finding {self.finding_id!r} has evidence_group_id but no source_id. "
+                "Inspectors will need >3 clicks to reach the source fragment. "
+                "Set source_id to enable one-click navigation (audit-2026-09).",
+                UserWarning,
+                stacklevel=2,
+            )
 
     @property
     def counts_as_violation(self) -> bool:
@@ -171,3 +201,8 @@ class Finding:
             self.finding_status is FindingStatus.CONFIRMED_VIOLATION
             and self.inspector_decision is not None
         )
+
+    @property
+    def has_provenance(self) -> bool:
+        """Провенанс установлен: source_id и хотя бы одна evidence_ref."""
+        return self.source_id is not None and len(self.evidence_refs) > 0
