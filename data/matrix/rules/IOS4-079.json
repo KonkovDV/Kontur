@@ -2,10 +2,10 @@
   "code": "IOS4-079",
   "section": "ИОС4",
   "name": "Характеристики вентиляторов общеобменной вентиляции",
-  "unit": "м³/ч / Па / кВт",
+  "unit": "м³/ч",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Подмена установок на аналоги с меньшей кратностью воздухообмена.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -38,8 +38,8 @@
     }
   },
   "extractor": {
-    "type": "semantic_candidate",
-    "regex": null,
+    "type": "number",
+    "regex": "(\\d[\\d\\s]*(?:[.,]\\d+)?)\\s*(?:\u043c[³3]/ч|м3/ч|куб\\.?\\s*м/ч)",
     "anchors": [
       "приточная установка",
       "венткамера",
@@ -47,7 +47,8 @@
     ],
     "normalization": [
       "nfc",
-      "collapse_spaces"
+      "collapse_spaces",
+      "decimal_comma"
     ],
     "dual_read_required": false
   },

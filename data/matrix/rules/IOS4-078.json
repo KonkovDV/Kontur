@@ -2,10 +2,10 @@
   "code": "IOS4-078",
   "section": "ИОС4",
   "name": "Сечения и геометрия воздуховодов общеобменной вентиляции",
-  "unit": "мм²",
+  "unit": "мм",
   "matrix_version": "draft-0",
-  "source_trigger_logic": "Уменьшение площади сечения воздуховода в РД (падение объема воздуха, рост шума).",
-  "coverage": "extractor_missing",
+  "source_trigger_logic": "Уменьшение площади сечения воздуховода в РД (падение объёма воздуха, рост шума).",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -38,8 +38,8 @@
     }
   },
   "extractor": {
-    "type": "geometry",
-    "regex": null,
+    "type": "number",
+    "regex": "(\\d{2,}(?:[.,]\\d+)?)\\s*[\u00d7x\u0445×]",
     "anchors": [
       "сечение воздуховода",
       "воздуховод",
@@ -53,7 +53,7 @@
     "dual_read_required": true
   },
   "comparator": {
-    "operator": "class_not_lower",
+    "operator": "ge",
     "rounding": "none",
     "unit_target": null
   },
@@ -76,7 +76,7 @@
       "expected_status": "AUTO_NO_DIFFERENCE"
     },
     {
-      "name": "reduced_section_or_missing_exhaust_gives_candidate",
+      "name": "reduced_section_gives_candidate",
       "expected_status": "CANDIDATE"
     },
     {
