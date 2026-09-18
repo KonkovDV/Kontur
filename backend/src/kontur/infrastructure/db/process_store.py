@@ -8,11 +8,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Protocol
 
-from kontur.domain.statuses import ProcessState, Scenario, SyncState
+from kontur.domain.statuses import FindingStatus, ProcessState, ReviewPriority, Scenario, SyncState
 
 MAX_PARSE_ATTEMPTS = 3
 MAX_SYNC_ATTEMPTS = 4
@@ -35,10 +35,32 @@ class ProcessSnapshot:
     protocol_id: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class FindingSnapshot:
+    """Снимок автоматической находки для хранения между рестартами."""
+
+    process_id: str
+    finding_id: str
+    rule_code: str
+    finding_status: FindingStatus
+    evidence_group_id: str | None = None
+    expected_value: str | None = None
+    actual_value: str | None = None
+    delta: str | None = None
+    rationale: str = ""
+    review_priority: ReviewPriority = ReviewPriority.HIGH
+    matrix_version: str = ""
+    missing_stage: str | None = None  # 'PD' | 'RD' | 'ID' | None
+
+
 class ProcessStore(Protocol):
     def load(self, process_id: str) -> ProcessSnapshot | None: ...
-
     def save(self, snapshot: ProcessSnapshot) -> None: ...
+
+
+class ProcessFindingStore(Protocol):
+    def save_finding(self, finding: FindingSnapshot) -> None: ...
+    def load_findings(self, process_id: str) -> list[FindingSnapshot]: ...
 
 
 def validate_snapshot(snapshot: ProcessSnapshot) -> None:
@@ -62,11 +84,16 @@ def validate_snapshot(snapshot: ProcessSnapshot) -> None:
             raise ValueError("выгрузка без protocol_id запрещена")
 
 
+# ─────────────────────────────────── MemoryProcessStore ──────────────────────
+
+
 class MemoryProcessStore:
     """Исполняемый DAO без Postgres: те же инварианты, что в schema.sql."""
 
     def __init__(self) -> None:
         self._rows: dict[str, ProcessSnapshot] = {}
+        # (process_id, finding_id) → FindingSnapshot  — dedup по ключу
+        self._findings: dict[tuple[str, str], FindingSnapshot] = {}
 
     def load(self, process_id: str) -> ProcessSnapshot | None:
         return self._rows.get(process_id)
@@ -75,9 +102,21 @@ class MemoryProcessStore:
         validate_snapshot(snapshot)
         self._rows[snapshot.process_id] = snapshot
 
+    def save_finding(self, finding: FindingSnapshot) -> None:
+        """Upsert finding; dedup key = (process_id, finding_id)."""
+        self._findings[(finding.process_id, finding.finding_id)] = finding
+
+    def load_findings(self, process_id: str) -> list[FindingSnapshot]:
+        return [
+            f for (pid, _), f in self._findings.items() if pid == process_id
+        ]
+
     def clear(self) -> None:
         self._rows.clear()
+        self._findings.clear()
 
+
+# ─────────────────────────────────── SQL ─────────────────────────────────────
 
 UPSERT_PROCESS_SQL = """
 INSERT INTO processes (
@@ -121,6 +160,38 @@ INSERT INTO protocols (
 ON CONFLICT (id) DO NOTHING
 """
 
+UPSERT_FINDING_SQL = """
+INSERT INTO process_findings (
+    process_id, finding_id, rule_code, finding_status,
+    evidence_group_id, expected_value, actual_value, delta,
+    rationale, review_priority, matrix_version, missing_stage, updated_at
+) VALUES (
+    %(process_id)s, %(finding_id)s, %(rule_code)s, %(finding_status)s,
+    %(evidence_group_id)s, %(expected_value)s, %(actual_value)s, %(delta)s,
+    %(rationale)s, %(review_priority)s, %(matrix_version)s, %(missing_stage)s, now()
+)
+ON CONFLICT (process_id, finding_id) DO UPDATE SET
+    finding_status    = EXCLUDED.finding_status,
+    evidence_group_id = EXCLUDED.evidence_group_id,
+    expected_value    = EXCLUDED.expected_value,
+    actual_value      = EXCLUDED.actual_value,
+    delta             = EXCLUDED.delta,
+    rationale         = EXCLUDED.rationale,
+    review_priority   = EXCLUDED.review_priority,
+    missing_stage     = EXCLUDED.missing_stage,
+    updated_at        = now()
+"""
+
+LOAD_FINDINGS_SQL = """
+SELECT
+    process_id, finding_id, rule_code, finding_status,
+    evidence_group_id, expected_value, actual_value, delta,
+    rationale, review_priority, matrix_version, missing_stage
+FROM process_findings
+WHERE process_id = %(process_id)s
+ORDER BY created_at, finding_id
+"""
+
 
 def snapshot_params(snapshot: ProcessSnapshot) -> dict[str, object]:
     if snapshot.process_state is ProcessState.FINALIZED:
@@ -148,11 +219,33 @@ def snapshot_params(snapshot: ProcessSnapshot) -> dict[str, object]:
     }
 
 
+def finding_params(finding: FindingSnapshot) -> dict[str, object]:
+    return {
+        "process_id": finding.process_id,
+        "finding_id": finding.finding_id,
+        "rule_code": finding.rule_code,
+        "finding_status": finding.finding_status.value,
+        "evidence_group_id": finding.evidence_group_id,
+        "expected_value": finding.expected_value,
+        "actual_value": finding.actual_value,
+        "delta": finding.delta,
+        "rationale": finding.rationale,
+        "review_priority": finding.review_priority.value,
+        "matrix_version": finding.matrix_version,
+        "missing_stage": finding.missing_stage,
+    }
+
+
+# ─────────────────────────────────── PostgresProcessStore ────────────────────
+
+
 class PostgresProcessStore:
     """Пишет в schema.sql. psycopg — extra `store`, не обязательная зависимость pytest."""
 
     def __init__(self, connection: object) -> None:
         self._connection = connection
+
+    # ── snapshot ──────────────────────────────────────────────────────────────
 
     def load(self, process_id: str) -> ProcessSnapshot | None:
         cursor = self._connection.execute(  # type: ignore[attr-defined]
@@ -188,3 +281,37 @@ class PostgresProcessStore:
         if snapshot.process_state is ProcessState.FINALIZED and snapshot.protocol_id:
             self._connection.execute(PLACEHOLDER_PROTOCOL_SQL, params)  # type: ignore[attr-defined]
         self._connection.execute(UPSERT_PROCESS_SQL, params)  # type: ignore[attr-defined]
+
+    # ── findings ──────────────────────────────────────────────────────────────
+
+    def save_finding(self, finding: FindingSnapshot) -> None:
+        """Upsert finding; dedup key = (process_id, finding_id)."""
+        self._connection.execute(  # type: ignore[attr-defined]
+            UPSERT_FINDING_SQL,
+            finding_params(finding),
+        )
+
+    def load_findings(self, process_id: str) -> list[FindingSnapshot]:
+        cursor = self._connection.execute(  # type: ignore[attr-defined]
+            LOAD_FINDINGS_SQL,
+            {"process_id": process_id},
+        )
+        result: list[FindingSnapshot] = []
+        for row in cursor.fetchall():
+            result.append(
+                FindingSnapshot(
+                    process_id=str(row[0]),
+                    finding_id=str(row[1]),
+                    rule_code=str(row[2]),
+                    finding_status=FindingStatus(str(row[3])),
+                    evidence_group_id=None if row[4] is None else str(row[4]),
+                    expected_value=None if row[5] is None else str(row[5]),
+                    actual_value=None if row[6] is None else str(row[6]),
+                    delta=None if row[7] is None else str(row[7]),
+                    rationale="" if row[8] is None else str(row[8]),
+                    review_priority=ReviewPriority(str(row[9])),
+                    matrix_version="" if row[10] is None else str(row[10]),
+                    missing_stage=None if row[11] is None else str(row[11]),
+                )
+            )
+        return result
