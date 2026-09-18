@@ -119,6 +119,25 @@ paths:
               schema: { $ref: "./schemas/protocol.schema.json" }
         "404": { description: Процесс не найден или протокол ещё не собран }
 
+  /processes/{process_id}/audit:
+    get:
+      summary: Журнал правок инспектора по процессу
+      description: >
+        In-memory вариант (GAP-EDIT частично): после рестарта журнал пуст.
+        Полная персистентность — Gate L (отдельная user_action_log таблица с timestamp).
+      operationId: getAuditLog
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          description: Журнал событий
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditLog" }
+        "404": { description: Процесс не найден }
+
   /findings/{finding_id}/review:
     post:
       summary: Решение инспектора по атомарной находке
@@ -244,7 +263,7 @@ components:
     Forbidden:
       description: Роль субъекта не допускает операцию (ТЗ п. 12)
     Rejected:
-      description: Файл или пакет отклонён
+      description: Файл или пакет отклён
       content:
         application/json:
           schema: { $ref: "#/components/schemas/RejectionReason" }
@@ -342,6 +361,24 @@ components:
         dataset_version: { type: string }
         input_manifest_hash: { type: string }
         git_sha: { type: string }
+
+    AuditLog:
+      type: object
+      required: [process_id, total, events]
+      description: Журнал действий инспектора по процессу.
+      properties:
+        process_id: { type: string }
+        total: { type: integer, minimum: 0 }
+        events:
+          type: array
+          items:
+            type: object
+            required: [seq, actor_id, action, payload]
+            properties:
+              seq: { type: integer, minimum: 0 }
+              actor_id: { type: string }
+              action: { type: string }
+              payload: { type: object }
 
     SystemCapabilities:
       type: object

@@ -3,6 +3,17 @@
 Разбор 18.09.2026. Уникальные честные куски влиты в `main`. GitHub-merge
 красных PR целиком не делаем: они независимо от `main` и ломают инварианты.
 
+## В обзоре (18.09.2026)
+
+| PR | Ветка | Что |
+|---|---|---|
+| #40 | `gate-l/process-findings-persist` | `ProcessStore.save_finding/load_findings`; runtime `put_finding`→store, `get`→restore; 4 теста |
+| #41 | `gate-l/k6-status-load` | k6 100 VU 60s `p(95)<200`; `tests/load/k6_status.js`; `tests/load/fixtures/minimal.pdf` |
+| #42 | `gate-k/audit-log-endpoint` | `GET /api/v1/processes/{id}/audit`; `rbac.py +getAuditLog`; 6 тестов |
+| #43 | `gate-f/scenario-completeness-tests` | Gate F: все 6 сценариев, pipeline cascade, `status_for_missing_stage` |
+| #44 | `gate-l/retry-idempotency` | `attach_file` dedup hash+stage; HTTP retry accepted==[]; retry_policy таблица |
+| #45 | `docs/pr-queue-update-40-44-and-openapi-audit` | Данный PR: очередь + openapi |
+
 ## Что вошло в `main`
 
 | PR | Решение |
