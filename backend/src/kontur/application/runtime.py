@@ -11,6 +11,7 @@ import os
 from dataclasses import dataclass, field
 from uuid import uuid4
 
+from kontur.application.finding_slot import claim_finding_slot
 from kontur.application.retry_policy import next_sync_attempt
 from kontur.application.review import finalize_process, review, unfinalize_process
 from kontur.application.scenarios import CompletenessMap, detect_scenario
@@ -210,13 +211,19 @@ class ProcessWorkspace:
         record.input_manifest_hash = item.file_hash if len(record.files) == 1 else "pending"
 
     def put_finding(self, process_id: str, finding: Finding) -> None:
-        """Сохранить находку. Повтор at-least-once с тем же evidence_group_id
-        перезаписывает запись, а не создаёт дубликат (RT-G, stop-ship п. 11).
+        """Сохранить находку.
+
+        Перед записью вызывается claim_finding_slot (Redis SETNX, fail-open).
+        Повтор at-least-once с тем же evidence_group_id перезаписывает запись,
+        а не создаёт дубликат (RT-G, stop-ship п. 11).
 
         Halted-находки без группы ключуются по finding_id.
         """
         record = self._items[process_id]
         key = finding.evidence_group_id or finding.finding_id
+        # Claim idempotency slot via Redis (fail-open: если Redis недоступен,
+        # claim_finding_slot возвращает True и пайплайн продолжает работу).
+        claim_finding_slot(process_id, key)
         record.findings[key] = finding
 
     def review_finding(
