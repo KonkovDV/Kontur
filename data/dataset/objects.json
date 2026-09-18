@@ -9,7 +9,9 @@
     "train_public_objects": ["OBJ-TYUMENSKAYA-5-GOLD-SEED", "OBJ-NOVOSLOBODSKAYA"],
     "test_hidden_objects": ["OBJ-RECHNIKOV-7-7"],
     "excluded_file_ids": ["F0149", "F0418"],
-    "note": "F0149 — дубль по SHA-256; F0418 — повреждённый PDF (Invalid XRef). Оба вне корпуса.",
+    "organizer_has_validation_split": false,
+    "validation_objects": [],
+    "note": "F0149 — дубль по SHA-256; F0418 — повреждённый PDF (Invalid XRef). Оба вне корпуса. Организатор не задал validation: только TRAIN_PUBLIC и TEST_HIDDEN. Публичный gold — 15 проверок TRAIN_PUBLIC, не frozen val (docs/ORGANIZER_GOLD.md).",
     "leakage_caveat": "Документы OBJ-RECHNIKOV-7-7 (213 шт., UNLABELED) физически лежат в открытом пакете 01_ДОКУМЕНТАЦИЯ. Ответов там нет, но corpus скрытого теста открыт: для обучения/порогов использовать запрещено — только конкурсный прогон. Dataset builder обязан работать по allowlist train-объектов, не по blocklist карантина."
   },
   "objects": [

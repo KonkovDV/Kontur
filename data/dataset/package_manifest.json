@@ -166,7 +166,7 @@
       "object_id": null,
       "size_kb": 3840762,
       "sha256": null,
-      "notes": "Открытая разметка для обучения и валидации. Разбиение — только по object_id."
+      "notes": "Открытая разметка для обучения. Разбиение validation организатор не задал. 15 публичных gold-проверок ≠ frozen val (docs/ORGANIZER_GOLD.md)."
     }
   ]
 }

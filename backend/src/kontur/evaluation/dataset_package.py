@@ -18,6 +18,9 @@ from kontur.evaluation.inventory import QuarantineViolation, is_quarantined
 MANIFEST_PATH: Final[Path] = (
     Path(__file__).resolve().parents[4] / "data" / "dataset" / "package_manifest.json"
 )
+GOLD_INVENTORY_PATH: Final[Path] = (
+    Path(__file__).resolve().parents[4] / "data" / "dataset" / "gold_inventory.json"
+)
 
 OPEN_ACCESS: Final[str] = "open"
 QUARANTINE_ACCESS: Final[str] = "quarantine"
@@ -34,10 +37,12 @@ HIDDEN_TEST_OBJECT_IDS: Final[frozenset[str]] = frozenset({"OBJ-RECHNIKOV-7-7"})
 
 __all__ = (
     "ACCESS_MODES",
+    "GOLD_INVENTORY_PATH",
     "HIDDEN_TEST_KIND",
     "HIDDEN_TEST_OBJECT_IDS",
     "LABELED_TRAIN_OBJECT_IDS",
     "MANIFEST_PATH",
+    "load_gold_inventory",
     "OPEN_ACCESS",
     "QUARANTINE_ACCESS",
     "PackageEntry",
@@ -120,6 +125,49 @@ def _entry_from_raw(raw: object) -> PackageEntry:
         sha256=_as_optional_str(item.get("sha256"), "sha256"),
         notes=_as_str(item.get("notes", ""), "notes"),
     )
+
+
+_GOLD_INVENTORY_REQUIRED: Final[frozenset[str]] = frozenset(
+    {
+        "schema_version",
+        "observed_at",
+        "package_version",
+        "hidden_test_contents_inspected",
+        "verdict",
+        "organizer_split",
+        "workspace_observation",
+        "train_public_annotations",
+        "public_gold_checks",
+        "gold_evidence_fragments",
+        "derived_constraints",
+        "gate_moves",
+        "forbidden",
+    }
+)
+
+
+def load_gold_inventory(path: Path | None = None) -> dict[str, object]:
+    """Открытый gold-seed. Не читает TEST_HIDDEN и не закрывает гейт J."""
+
+    target = GOLD_INVENTORY_PATH if path is None else path
+    with target.open(encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise TypeError("gold_inventory должен быть объектом JSON")
+    missing = _GOLD_INVENTORY_REQUIRED - payload.keys()
+    if missing:
+        raise ValueError(f"gold_inventory: нет полей {sorted(missing)}")
+    if payload.get("hidden_test_contents_inspected") is not False:
+        raise ValueError("gold_inventory не должен утверждать просмотр TEST_HIDDEN")
+    verdict = payload.get("verdict")
+    if not isinstance(verdict, dict):
+        raise TypeError("gold_inventory.verdict должен быть объектом")
+    if verdict.get("closes_gate_j") is not False:
+        raise ValueError("публичный gold не имеет права закрывать гейт J")
+    if verdict.get("frozen_validation_corpus_for_132") is not False:
+        raise ValueError("TRAIN_PUBLIC gold-seed не является frozen val на 132")
+    result: dict[str, object] = payload
+    return result
 
 
 def load_manifest(path: Path | None = None) -> dict[str, object]:

@@ -81,6 +81,14 @@ def test_total_volume_is_plausible_for_disk_budget() -> None:
     assert total_size_kb(load_entries()) > 50_000_000
 
 
+def test_objects_record_that_organizer_has_no_validation_split() -> None:
+    payload = json.loads(OBJECTS_PATH.read_text(encoding="utf-8"))
+    policy = payload["organizer_split_policy"]
+    assert policy["organizer_has_validation_split"] is False
+    assert policy["validation_objects"] == []
+    assert set(policy["train_public_objects"]) == set(LABELED_TRAIN_OBJECT_IDS)
+
+
 def test_objects_file_is_isolated_by_object_id() -> None:
     payload = json.loads(OBJECTS_PATH.read_text(encoding="utf-8"))
     ids = [item["object_id"] for item in payload["objects"]]

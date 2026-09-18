@@ -4,6 +4,7 @@
 
 | Каталог | Назначение | Доступ |
 |---|---|---|
+| `files/` | локальная копия поставки (gitignored) | открытые единицы — чтение; `РАЗМЕЧЕННЫЙ_TEST__213` — **карантин**, даже если лежит рядом с train |
 | `data/incoming/` | исходные архивы как получены | только чтение после хеширования |
 | `data/quarantine/` | `РАЗМЕЧЕННЫЙ_TEST__213.zip`, каталог `РАЗМЕЧЕННЫЙ_TEST_HIDDEN_ОРГАНИЗАТОР_213` и `annotated_documents` **скрытого теста** | **не открывать** |
 | `data/work/` | распаковка train/validation | чтение и запись |
@@ -17,8 +18,10 @@
 
 Состав архива описан в [`data/dataset/package_manifest.json`](../data/dataset/package_manifest.json),
 объекты и разбиение — в [`data/dataset/objects.json`](../data/dataset/objects.json),
+открытый gold — в [`data/dataset/gold_inventory.json`](../data/dataset/gold_inventory.json),
 разбор и барьер доступа — в `backend/src/kontur/evaluation/dataset_package.py`.
-Подробности и чек-лист Gate A: [`DATASET_PACKAGE.md`](DATASET_PACKAGE.md).
+Подробности: [`DATASET_PACKAGE.md`](DATASET_PACKAGE.md),
+[`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md).
 
 Карантин определяется двумя независимыми источниками: полем `access` в манифесте
 и нормализованным именем пути (`evaluation/inventory.normalize` — схлопывает

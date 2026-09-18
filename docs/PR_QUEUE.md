@@ -61,10 +61,12 @@
 | #47 as-is | миграция вне `schema.sql`/`checks.sql` |
 | #48 as-is | rbac без OpenAPI |
 | #49 as-is | синтетический recall 16/20 = gold; `tests/gate_j` не собирается |
-| #50 as-is | закрытие GAP-IOS4-VAL без корпуса frozen val |
+| #50 as-is | закрытие GAP-IOS4-VAL: поставка документов ≠ frozen val (см. `docs/ORGANIZER_GOLD.md`) |
 | #51 as-is | `FormData` без импорта; `tests/load/test_k6_script_contract.py` не в pytest |
 | #52 as-is | `kontur.evaluation.recall` нет; `tests/gate_j` не собирается; нет `object_id` |
 
-Не публиковать F1/P/R и recall критических на frozen val. Площадь A×B на
-синтетике не закрывает гейт J. k6 p95 не измерен. Dry-run 132 — прогон
-движка на пустой комплектности, без заявления, что вся матрица executable.
+Не публиковать F1/P/R и recall критических на frozen val. Поставка
+организатора и 15 публичных gold-проверок **не** закрывают гейт J
+([`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md)). Площадь A×B на синтетике не
+закрывает гейт J. k6 p95 не измерен. Dry-run 132 — прогон движка на пустой
+комплектности, без заявления, что вся матрица executable.

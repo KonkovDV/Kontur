@@ -2,7 +2,9 @@
 
 Что пришло, что запрещено открывать, чего не хватает и сколько нужно диска.
 Машиночитаемый источник — [`data/dataset/package_manifest.json`](../data/dataset/package_manifest.json),
-разбиение по объектам — [`data/dataset/objects.json`](../data/dataset/objects.json).
+разбиение по объектам — [`data/dataset/objects.json`](../data/dataset/objects.json),
+публичный gold vs frozen val — [`gold_inventory.json`](../data/dataset/gold_inventory.json)
+и [`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md).
 Сами архивы в git не попадают (`.gitignore`, `test_no_dataset_files_are_committed`).
 
 ## Состав поставки
@@ -110,9 +112,15 @@ blocklist карантина.
 Паспорт разметки v0.1: 3 подтверждённых нарушения, **0 подтверждённых
 отрицательных**; UNLABELED ≠ NO_VIOLATION. `public_gold_checks.jsonl` —
 15 проверок (10 VIOLATION_PRESENT / 5 NO_VIOLATION, последние помечены
-`score_eligible: false`). Два нарушения привязаны к матрице кандидатно
-(IOS4-079, IOS4-078), третье — вне матрицы (`FREE-HEATING-001`, пробел
-реестра: система тёплых полов).
+`score_eligible: false`). Из десяти позитивов четыре — `FREE-HEATING-001`
+(вне матрицы). В матрице для скоринга остаются **6** позитивов
+(`IOS4-079` ×1, `IOS4-078` ×5). Это gold-seed TRAIN_PUBLIC, не frozen
+validation: сплита `validation` у организатора нет, 106 критических не
+размечены, Wilson на 6/6 не берёт порог recall ТЗ. Подробности и запрет
+закрывать гейт J — [`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md).
+
+13 119 `MATRIX_FIELD` в `annotations.jsonl` имеют статус
+`AUTO_FIELD_CANDIDATE` и **не** являются экспертным gold сверки.
 
 ## Объекты и разбиение
 
@@ -141,5 +149,7 @@ blocklist карантина.
 - [ ] Дубликаты по content hash между сводным пакетом и объектами 10–18 найдены.
 - [ ] `split` проставлен по `object_id`, аудит пересечений даёт 0 (фактическое разбиение из `split_policy.json`: TRAIN_PUBLIC = Новослободская + Тюменская-5; TEST_HIDDEN = Речников 7-7).
 - [ ] Карантинный архив не смонтирован в рабочее окружение и не распакован.
+      Наблюдение 18.09.2026: в `files/` каталог `РАЗМЕЧЕННЫЙ_TEST__213`
+      распакован рядом с train — перенести в `data/quarantine/`, не читать.
 - [ ] Вопросы организатору отправлены **и** в репозитории есть артефакт отправки.
 - [ ] Решение по документам Речникова в открытом пакете зафиксировано (allowlist TRAIN_PUBLIC в dataset builder + вопрос организатору).

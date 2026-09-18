@@ -1,0 +1,136 @@
+{
+  "schema_version": "1.0.0",
+  "observed_at": "2026-09-18",
+  "package_version": "lct2026-task10-20260915",
+  "purpose": "Машиночитаемый снимок открытого gold организатора. Не корпус frozen validation. Не содержимое TEST_HIDDEN.",
+  "human_doc": "docs/ORGANIZER_GOLD.md",
+  "sources_open_only": [
+    "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../VALIDATION.json",
+    "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../QA_SUMMARY.json",
+    "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../data/public_gold_checks.jsonl",
+    "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../data/annotations.jsonl",
+    "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/.../data/split_policy.json",
+    "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/.../data/public_train_checks.jsonl",
+    "data/dataset/package_manifest.json"
+  ],
+  "hidden_test_contents_inspected": false,
+  "verdict": {
+    "documents_received": true,
+    "frozen_validation_corpus_for_132": false,
+    "closes_gate_j": false,
+    "closes_gate_i": false,
+    "closes_gate_k": false,
+    "closes_gate_l": false,
+    "summary": "Организатор прислал документы и публичный gold-seed TRAIN_PUBLIC. Это не held-out validation по object_id и не разметка 106 критических параметров. Пороги ТЗ по нижней границе Wilson на этом gold недостижимы даже при нуле промахов."
+  },
+  "organizer_split": {
+    "train_public": ["OBJ-TYUMENSKAYA-5-GOLD-SEED", "OBJ-NOVOSLOBODSKAYA"],
+    "test_hidden": ["OBJ-RECHNIKOV-7-7"],
+    "validation": [],
+    "excluded_file_ids": ["F0149", "F0418"],
+    "do_not_release": [
+      "all_gold_checks.jsonl",
+      "review_queue.jsonl",
+      "evidence_index.jsonl for TEST_HIDDEN"
+    ],
+    "note": "split_policy.json задаёт TRAIN_PUBLIC и TEST_HIDDEN. Сплита validation у организатора нет. Внутренний split=validation в objects.json для открытых объектов не назначен: оба — train."
+  },
+  "workspace_observation": {
+    "root": "files/",
+    "in_git": false,
+    "present_top_level": [
+      "01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА",
+      "02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА",
+      "10. Мосстройнадзор.pdf",
+      "ЛЦТ2026 Шаблон презентации.pptx",
+      "РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203",
+      "РАЗМЕЧЕННЫЙ_TEST__213"
+    ],
+    "object_archives_10_18_present": false,
+    "data_incoming_empty": true,
+    "data_work_empty": true,
+    "hidden_test_unpacked_beside_train": true,
+    "action_on_unpacked_hidden_test": "Считать карантином. Перенести в data/quarantine/. Не открывать annotated_documents скрытого теста. Не использовать для порогов."
+  },
+  "train_public_annotations": {
+    "expected_files": 203,
+    "n_annotations": 30318,
+    "all_split": "TRAIN_PUBLIC",
+    "by_type": {
+      "DOCUMENT_FIELD": 17167,
+      "MATRIX_FIELD": 13119,
+      "CONFIRMED_VIOLATION_EVIDENCE": 20,
+      "SECOND_REVIEW_CHECK": 12
+    },
+    "by_status": {
+      "AUTO_FIELD_CANDIDATE": 30286,
+      "FINAL_GOLD_EXISTENCE": 20,
+      "SECOND_REVIEW_REQUIRED": 12
+    },
+    "matrix_field_distinct_codes": 131,
+    "matrix_field_is_gold": false,
+    "matrix_field_status": "AUTO_FIELD_CANDIDATE",
+    "pages_without_native_text_layer": 11731,
+    "native_text_pages": 14379,
+    "qa_visualized_source_pages_note": "QA_SUMMARY: visualized source corpus 26110 pages; VALIDATION.json source_pages_visualized 10142"
+  },
+  "public_gold_checks": {
+    "n": 15,
+    "violation_present": 10,
+    "no_violation": 5,
+    "score_eligible_true": 10,
+    "score_eligible_false": 5,
+    "free_search_score_eligible": 4,
+    "score_eligible_violation_present_in_matrix": 6,
+    "confirmed_negative_in_passport": 0,
+    "unlabeled_is_not_no_violation": true,
+    "rows": [
+      {"check_id": "TRAIN-0001", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-079", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0002", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "FREE-HEATING-001", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "FREE_SEARCH"},
+      {"check_id": "TRAIN-0003", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "FREE-HEATING-001", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "FREE_SEARCH"},
+      {"check_id": "TRAIN-0004", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "FREE-HEATING-001", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "FREE_SEARCH"},
+      {"check_id": "TRAIN-0005", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "FREE-HEATING-001", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "FREE_SEARCH"},
+      {"check_id": "TRAIN-0006", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0007", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0008", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0009", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0010", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0011", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "PZ-009", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0012", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "KR-055", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0013", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "KR-055", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0014", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "KR-055", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX"},
+      {"check_id": "TRAIN-0015", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "KR-058", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX"}
+    ]
+  },
+  "gold_evidence_fragments": {
+    "n": 20,
+    "status": "FINAL_GOLD_EXISTENCE",
+    "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED",
+    "by_code": {
+      "IOS4-078": 10,
+      "FREE-HEATING-001": 8,
+      "IOS4-079": 2
+    }
+  },
+  "derived_constraints": {
+    "tz_recall_threshold": 0.8,
+    "wilson_z": 1.96,
+    "perfect_n_min_to_meet_tz_recall": 16,
+    "matrix_score_eligible_positives": 6,
+    "perfect_six_meets_tz_recall": false,
+    "critical_106_labeled": false
+  },
+  "gate_moves": {
+    "J": "Не закрывается этим gold. Harness: backend/tests/test_frozen_val.py. Публикация P/R/F1 запрещена.",
+    "I": "В методике есть OCR-пилот 300 страниц (zip+xlsx). В train 11731 страниц без текстового слоя. CA на пилоте не измерен; capabilities OCR = UNAVAILABLE.",
+    "K": "PDF Тюменской и Новослободской — материал для 5 инспекторов. Сессий нет.",
+    "L": "Документы поставки p95 не измеряют. Нужен живой k6 на стенде."
+  },
+  "forbidden": [
+    "Считать AUTO_FIELD_CANDIDATE / MATRIX_FIELD золотой разметкой сверки",
+    "Открывать РАЗМЕЧЕННЫЙ_TEST__213 и annotated_documents скрытого теста",
+    "Подбирать пороги, prompt, regex по OBJ-RECHNIKOV-7-7",
+    "Закрывать GAP-IOS4-VAL или гейт J публикацией F1/P/R по 15 строкам",
+    "Назначать внутренний validation тем же object_id, что train, без изоляции"
+  ]
+}

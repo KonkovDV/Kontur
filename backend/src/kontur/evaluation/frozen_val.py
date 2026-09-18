@@ -1,7 +1,9 @@
-"""Замер recall на frozen val. Без корпуса цифры не публикуются.
+"""Замер recall на frozen val. Без held-out JSONL цифры не публикуются.
 
-Синтетический gold=pred и `tests/gate_j` вне pytest сюда не входят.
-Порог ТЗ считается по нижней границе Wilson, не по точечной оценке.
+Публичный gold TRAIN_PUBLIC (15 проверок, см. data/dataset/gold_inventory.json)
+не является frozen validation: нет сплита validation, n матричных позитивов = 6,
+106 критических не размечены. Синтетический gold=pred и `tests/gate_j` вне
+pytest сюда не входят. Порог ТЗ — нижняя граница Wilson, не точка.
 Карантин скрытого теста (`test_213`, TEST_HIDDEN) читать нельзя.
 Строка JSONL обязана нести `object_id`: разбиение — по объекту, не по файлу.
 """
