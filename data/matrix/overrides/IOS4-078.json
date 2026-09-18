@@ -42,6 +42,7 @@
     { "name": "same_duct_section_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
     { "name": "reduced_section_gives_candidate", "expected_status": "CANDIDATE" },
     { "name": "rd_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" },
-    { "name": "object_without_ducts_is_not_applicable", "expected_status": "NOT_APPLICABLE" }
+    { "name": "object_without_ducts_is_not_applicable", "expected_status": "NOT_APPLICABLE" },
+    { "name": "reads_disagree_gives_abstain", "expected_status": "ABSTAIN" }
   ]
 }
