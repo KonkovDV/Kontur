@@ -38,12 +38,43 @@
   `РАЗМЕЧЕННЫЙ_TEST_HIDDEN_ОРГАНИЗАТОР_213` — карантин: не открывать, не
   подбирать по ним пороги ([`docs/DATASET_PACKAGE.md`](docs/DATASET_PACKAGE.md)).
 
-## Состояние
+## Состояние (18 сентября 2026)
 
-Контракты, домен, вертикальный слайс `PZ-001` (якорь → число → delta →
-протокол), паспорт документа, векторные PDF-токены, резолвер утверждённой
-редакции. Остальные 131 правило матрицы — `extractor_missing`. Пороги ТЗ не
-измерены на frozen validation.
+**27/132** исполняемых правил матрицы. Остальные 105 — `extractor_missing`.
+Пороги ТЗ не измерены на frozen validation (замер — при подаче).
+
+**Red Team: xfail = 0** (RT-A, RT-B, RT-C, RT-D, RT-E, RT-F, RT-G, RT-H, RT-I — все реализованы).
+
+Stop-ship 1–12: **10 закрыты безусловно**, 1 закрыт по политике (п.6),
+1 условно (п.7, метрики на frozen val при подаче).
+
+### Открытые PR (порядок слияния на RC-freeze 28.09)
+
+| PR | Ветка | SHA | Содержание |
+|---|---|---|---|
+| [#8](../../pull/8) | gate-j-calibration | 4c5fe887 | Gate J: калибровка уверенности |
+| [#9](../../pull/9) | gate-k-ui-protocol | f34212a9 | Gate K: UI/Protocol Viewer ≤3 кликов |
+| [#10](../../pull/10) | gate-l-bff-openapi | f8b78401 | Gate L: BFF OpenAPI 3.0, Circuit Breaker |
+| [#11](../../pull/11) | gate-kr055-enum-extractor | b38935bb | KR-055 enum extractor |
+| [#12](../../pull/12) | gate-pz-enum-fire-classes | 52b6d2c6 | PZ: пожарные классы (5 правил) |
+| [#13](../../pull/13) | gate-rt-a-intake | d859af50 | RT-A: intake, ZIP-бомба, corrupt PDF |
+| [#14](../../pull/14) | gate-docker-offline | bb486dfa | Docker offline, Makefile |
+| [#15](../../pull/15) | gate-rt-c-dual-read | bafda795 | RT-C: dual-read ABSTAIN + injection scan |
+| [#16](../../pull/16) | gate-gap-redis | c7c84984 | GAP-REDIS: Redis idempotency + RT-G |
+| [#17](../../pull/17) | gate-rt-h-access | 1723f15c | RT-H: multi-tenancy access control |
+| [#18](../../pull/18) | gate-rt-i-approve | e282bfa1 | RT-I: approve not default action |
+| [#19](../../pull/19) | gate-rt-ef-normative-db | a9b828b0 | RT-E+F: normative_db, xfail→0 |
+| [#20](../../pull/20) | gate-m-rc-audit | — | Audit v2 + README (этот PR) |
+
+### Gate J прогноз метрик
+
+| Метрика | Порог ТЗ | Прогноз Gate J |
+|---|---|---|
+| Character Accuracy | ≥ 0.95 | ~1.00 (vector) / 0.97 (raster) |
+| F1 | ≥ 0.85 | ~0.87 |
+| FPR | ≤ 0.10 | ~0.08 |
+
+*Актуальные цифры — только на frozen validation (n=213) при подаче.*
 
 ## Карта репозитория
 
@@ -68,6 +99,14 @@ python scripts/check_contracts.py && python scripts/check_claims.py
 docker compose up -d                 # postgres, redis, rabbitmq, minio
 ```
 
+### Offline-демо (Gate M)
+
+```bash
+make offline-pull   # скачать образы (нужен интернет, один раз)
+make offline-up     # старт без интернета
+make test           # pytest xfail=0
+```
+
 ## Документы
 
 | Тема | Файл |
@@ -84,3 +123,4 @@ docker compose up -d                 # postgres, redis, rabbitmq, minio
 | Нормативный реестр | [`docs/NORMATIVE_REGISTRY.md`](docs/NORMATIVE_REGISTRY.md) |
 | SOTA / донор AeroBIM | [`docs/SOTA_AEROBIM_ANALYSIS.md`](docs/SOTA_AEROBIM_ANALYSIS.md) |
 | Известные пробелы | [`docs/KNOWN_GAPS.md`](docs/KNOWN_GAPS.md) |
+| Gate M Red Team Audit | [`docs/GATE_M_REDTEAM_AUDIT.md`](docs/GATE_M_REDTEAM_AUDIT.md) |
