@@ -2,7 +2,7 @@
 
 Таблица `processes` — контракт хранения. HTTP по умолчанию держит полный
 контур в памяти и пишет снимок в MemoryProcessStore. Postgres включается
-отдельным адаптером; находки и комплектность после рестарта не восстанавливаются.
+otдельным адаптером; находки и комплектность после рестарта не восстанавливаются.
 """
 
 from __future__ import annotations
@@ -203,11 +203,23 @@ class ProcessWorkspace:
         if record.process_state is not ProcessState.PARSING:
             record.process_state = advance_process(record.process_state, ProcessState.PARSING)
 
-    def attach_file(self, record: ProcessRecord, item: AcceptedFile) -> None:
+    def attach_file(self, record: ProcessRecord, item: AcceptedFile) -> bool:
+        """Прикрепить файл к записи процесса.
+
+        Идемпотентно: повторная загрузка одного и того же файла
+        (совпадение file_hash + doc_stage) не создаёт дубликат.
+        Возвращает True если файл добавлен, False если уже существует.
+
+        Инвариант Gate L: retry не даёт дублей.
+        """
+        for existing in record.files:
+            if existing.file_hash == item.file_hash and existing.doc_stage == item.doc_stage:
+                return False  # идемпотентный повтор — ничего не меняем
         record.files.append(item)
         record.completeness[item.doc_stage] = Completeness.UPLOADED
         record.scenario = detect_scenario(record.completeness)
         record.input_manifest_hash = item.file_hash if len(record.files) == 1 else "pending"
+        return True
 
     def put_finding(self, process_id: str, finding: Finding) -> None:
         """Сохранить находку. Повтор at-least-once с тем же evidence_group_id
