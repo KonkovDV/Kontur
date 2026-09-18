@@ -1,8 +1,7 @@
 """E2E IOS4-078/079: number-экстрактор для золотых критических правил.
 
 Источник правды — overrides + compile_matrix, не правка generated rules/.
-Первая сторона «500×300» — прокси ширины, не площадь мм²; recall на frozen
-val не заявляется.
+Extracts section area in mm²: A×B, not the first side.
 """
 
 from __future__ import annotations
@@ -207,3 +206,27 @@ def test_executable_count_includes_ios4() -> None:
     assert "IOS4-078" in executable
     assert "IOS4-079" in executable
     assert len(executable) >= 28
+
+
+def test_ios4_078_area_mm2_not_first_side() -> None:
+    """GAP-IOS4-VAL закрыт: экстрактор возвращает площадь мм², не первую сторону.
+
+    500×300 = 150 000 мм²; 400×200 = 80 000 мм²  →  80 000 < 150 000 → CANDIDATE.
+    expected_value = 150 000, actual_value = 80 000 (не 500 и не 400).
+    """
+    rule = _REGISTRY.get("IOS4-078")
+    pages = {
+        DocStage.PD: _page(DocStage.PD, "078-area-pd", "сечение воздуховода", "500×300", "мм"),
+        DocStage.RD: _page(DocStage.RD, "078-area-rd", "воздуховод", "400×200", "мм"),
+    }
+    result = evaluate_rule(rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness())
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.has_provenance is True
+    assert result.finding.expected_value == 150_000.0
+    assert result.finding.actual_value == 80_000.0
+
+
+def test_ios4_078_rule_unit_is_mm2() -> None:
+    """Единица измерения правила — мм², а не мм (первая сторона)."""
+    rule = _REGISTRY.get("IOS4-078")
+    assert rule["unit"] == "мм²"

@@ -9,6 +9,8 @@ from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN, ROUND_HALF_UP, 
 
 _UNIT_TAIL = re.compile(r"(?:м\u00b2|м2|m2|м\^2)\s*$", re.IGNORECASE)
 _SPACES = re.compile(r"[\s\u00a0\u202f]+")
+# Сопоставляет «A×B» после collapse_spaces+decimal_comma; группы — оба числа.
+_DIM_SEP = re.compile(r"^(\d+(?:\.\d+)?)[×xх](\d+(?:\.\d+)?)$")
 
 _ROUNDING = {
     "none": None,
@@ -53,6 +55,12 @@ def apply_number_normalizations(raw: str, steps: Sequence[str]) -> str:
             text = text.replace(".", "").replace(",", ".")
         else:
             text = text.replace(",", ".")
+    if "multiply_dimensions" in ordered:
+        _m = _DIM_SEP.match(text)
+        if _m:
+            a, b = float(_m.group(1)), float(_m.group(2))
+            product = a * b
+            text = str(int(product) if product == int(product) else product)
     if "upper" in ordered:
         text = text.upper()
     return text

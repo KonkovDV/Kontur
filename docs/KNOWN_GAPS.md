@@ -12,7 +12,6 @@
 | GAP-DWG | Разбор DWG | Аудио и ТЗ расходятся; до ответа — `NOT_SUPPORTED` | вопрос 6 |
 | GAP-EDIT | Журнал правок инспектора отдельной таблицей | Решение пишется в находку, отдельного `user_action_log` нет | гейт K |
 | GAP-ISOLATE | PDF в дочернем процессе с таймаутом | pdfium в том же процессе | надёжность |
-| GAP-IOS4-VAL | IOS4-078/079 executable на синтетике; recall на frozen val не измерен | экстрактор берёт первую сторону сечения, не площадь мм² | гейт J |
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | bake-off есть, живого пайплайна в запросе нет | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
@@ -44,3 +43,4 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 | GAP-ENUM-EXTRACTOR | text/enum экстрактор; KR-055 и PZ-015/021/022/023 executable | 4a10ce8 |
 | GAP-IOS4 | IOS4-078/079: number-экстрактор, synthetic E2E | overrides + compile |
 | GAP-RT-G | Дубль находки в процессе: `put_finding` по evidence_group_id | runtime.py |
+| GAP-IOS4-VAL | площадь A×B мм² (multiply_dimensions); frozen val recall — Gate J §2 | gate-j/ios4-area-mm2 |

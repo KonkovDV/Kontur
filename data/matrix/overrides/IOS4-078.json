@@ -18,9 +18,9 @@
   },
   "extractor": {
     "type": "number",
-    "regex": "(\\d{2,}(?:[.,]\\d+)?)\\s*[×xх]",
+    "regex": "(\\d{2,}(?:[.,]\\d+)?[×xх]\\d{2,}(?:[.,]\\d+)?)",
     "anchors": ["сечение воздуховода", "воздуховод", "вытяжная вентиляция"],
-    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
+    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit", "multiply_dimensions"],
     "dual_read_required": true
   },
   "comparator": {
@@ -38,7 +38,7 @@
     "reads_disagree": "ABSTAIN"
   },
   "review_priority": "HIGH",
-    "tests": [
+  "tests": [
     { "name": "same_duct_section_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
     { "name": "reduced_section_gives_candidate", "expected_status": "CANDIDATE" },
     { "name": "rd_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" },
