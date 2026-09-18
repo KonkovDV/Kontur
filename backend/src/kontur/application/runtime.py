@@ -2,7 +2,7 @@
 
 Таблица `processes` — контракт хранения. HTTP по умолчанию держит полный
 контур в памяти и пишет снимок в MemoryProcessStore. Postgres включается
-отдельным адаптером; находки и комплектность после рестарта не восстанавливаются.
+otдельным адаптером; находки и комплектность после рестарта не восстанавливаются.
 """
 
 from __future__ import annotations
@@ -210,8 +210,19 @@ class ProcessWorkspace:
         record.input_manifest_hash = item.file_hash if len(record.files) == 1 else "pending"
 
     def put_finding(self, process_id: str, finding: Finding) -> None:
+        """Сохранить находку с идемпотентным ключом (RT-G, ТЗ §9.1).
+
+        Ключ: evidence_group_id (comparison_key — детерминированный хеш тройки
+        object_id/rule_code/file_ids). Повторная доставка того же сообщения
+        at-least-once перезаписывает ту же запись вместо создания дубликата.
+
+        Для halted-находок без evidence_group (MISSING_EVIDENCE, LOW_QUALITY, …)
+        используем finding_id (uuid4) — эти статусы идемпотентны по смыслу
+        (одна и та же «нет данных» не вредна при дублировании).
+        """
         record = self._items[process_id]
-        record.findings[finding.finding_id] = finding
+        idempotency_key = finding.evidence_group_id or finding.finding_id
+        record.findings[idempotency_key] = finding
 
     def review_finding(
         self,
