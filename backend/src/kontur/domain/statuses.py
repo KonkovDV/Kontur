@@ -2,6 +2,7 @@
 
 Смешение доменов — источник ложных нарушений: «нет ИД» не является нарушением.
 В сводное число нарушений входит ровно один статус: CONFIRMED_VIOLATION.
+Аудит-2026-09: добавлен DisagreementKind (донор AeroBIM ConflictKind).
 """
 
 from __future__ import annotations
@@ -138,3 +139,25 @@ class ReviewPriority(StrEnum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
     LOW = "LOW"
+
+
+class DisagreementKind(StrEnum):
+    """Таксономия типов расхождений (донор AeroBIM ConflictKind, audit-2026-09).
+
+    Позволяет инспектору и модели различать природу расхождения без
+    свободного текста. Используется в Finding.disagreement_kind.
+
+    VALUE_DELTA        — числа/строки различаются сверх допустимого ε
+                         (пример IOS4-078: 600×300 vs 400×250 мм).
+    MISSING_IN_STAGE   — значение есть в одной стадии, полностью отсутствует
+                         в другой (пример: армирование есть в ПД, нет в РД).
+    AMBIGUOUS_REFERENCE — один нормативный код маппится на несколько значений
+                         в разных листах (FALSE_NEGATIVE риск).
+    FORMAT_MISMATCH    — одна физическая величина выражена в разных единицах
+                         (мм vs см, кг vs тс) без конвертации.
+    """
+
+    VALUE_DELTA = "VALUE_DELTA"
+    MISSING_IN_STAGE = "MISSING_IN_STAGE"
+    AMBIGUOUS_REFERENCE = "AMBIGUOUS_REFERENCE"
+    FORMAT_MISMATCH = "FORMAT_MISMATCH"
