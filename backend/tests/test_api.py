@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -121,6 +122,65 @@ def test_protocol_is_not_invented(client: TestClient) -> None:
     response = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR)
     assert response.status_code == 404
     assert "не собран" in response.json()["detail"]
+
+
+def test_protocol_available_after_completed(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    response = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["object_id"] == "obj-1"
+    assert body["status"] == "VERIFICATION_COMPLETED"
+    assert "process_state" not in body
+    assert isinstance(body["sections"]["candidates"], list)
+    assert body["violation_count"] == 0
+    assert "preliminary_no_difference" not in body["sections"]
+
+
+def test_protocol_lists_candidate_and_not_as_violation(client: TestClient) -> None:
+    process_id = _seed_completed(client, with_candidate=True)
+    response = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR)
+    assert response.status_code == 200
+    body = response.json()
+    candidates = body["sections"]["candidates"]
+    assert len(candidates) == 1
+    assert candidates[0]["rule_code"] == "PZ-001"
+    assert candidates[0]["finding_status"] == "CANDIDATE"
+    assert body["violation_count"] == 0
+
+
+def test_protocol_keeps_auto_no_difference_off_the_tz_wire(client: TestClient) -> None:
+    process_id = _seed_completed(client, with_candidate=True)
+    app.state.workspace.put_finding(
+        process_id,
+        Finding(
+            finding_id="f-eq",
+            evidence_group_id="eg-eq",
+            rule_code="PZ-001",
+            finding_status=FindingStatus.AUTO_NO_DIFFERENCE,
+            review_priority=ReviewPriority.LOW,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+        ),
+    )
+    body = client.get(
+        f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR
+    ).json()
+    assert "AUTO_NO_DIFFERENCE" not in json.dumps(body)
+    assert body["sections"]["candidates"][0]["finding_status"] == "CANDIDATE"
+
+
+def test_protocol_404_for_unknown_process(client: TestClient) -> None:
+    response = client.get("/api/v1/processes/does-not-exist/protocol", headers=INSPECTOR)
+    assert response.status_code == 404
+    assert "не найден" in response.json()["detail"]
+
+
+def test_protocol_requires_token(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    response = client.get(f"/api/v1/processes/{process_id}/protocol")
+    assert response.status_code == 401
 
 
 def test_review_and_finalize_require_matching_subject(client: TestClient) -> None:

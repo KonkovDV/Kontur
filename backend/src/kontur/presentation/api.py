@@ -3,6 +3,8 @@
 Обработка не выполняется в процессе запроса: загрузка принимает файлы,
 создаёт процесс и оставляет его в PARSING. Сравнение L1–L7 здесь не
 вызывается: экстракторов нет, и статус READY соврал бы.
+GET /protocol собирает черновик из ProcessRecord после READY; PENDING/PARSING
+дают 404. AUTO_NO_DIFFERENCE на этом проводе нет.
 """
 
 from __future__ import annotations
@@ -21,12 +23,13 @@ from kontur.application.intake import (
     UploadCandidate,
     evaluate_batch,
 )
+from kontur.application.protocol import assemble_protocol
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.capabilities import capabilities_payload
 from kontur.domain.models import DocStage
 from kontur.domain.state_machines import TransitionError
-from kontur.domain.status_map import EmptyPackageError
+from kontur.domain.status_map import EmptyPackageError, protocol_status
 from kontur.domain.statuses import Completeness, ReasonCode
 from kontur.presentation.auth import actor_from_roles, parse_bearer
 from kontur.presentation.rbac import (
@@ -221,18 +224,39 @@ def get_protocol(
     process_id: str,
     version: int | None = None,
     authorization: Annotated[str | None, Header()] = None,
-) -> JSONResponse:
+) -> dict[str, object] | JSONResponse:
     _require("getProtocol", authorization)
     record = _workspace().get(process_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     del version
-    return JSONResponse(
-        status_code=404,
-        content={
-            "detail": "протокол не собран: исполняемого извлечения нет, L9 не вызывается"
+    if protocol_status(record.process_state) is None:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "протокол не собран: PENDING/PARSING"},
+        )
+    payload = assemble_protocol(
+        protocol_id=record.protocol_id or record.process_id,
+        object_id=record.object_id,
+        findings=tuple(record.findings.values()),
+        completeness=record.completeness,
+        files=[{"file_id": item.file_id, "file_hash": item.file_hash} for item in record.files],
+        versions={
+            "matrix_version": record.matrix_version,
+            "model_version": record.model_version,
+            "dataset_version": record.dataset_version,
+            "git_sha": record.git_sha,
         },
+        process_state=record.process_state,
+        input_manifest_hash=record.input_manifest_hash,
     )
+    raw_sections = payload["sections"]
+    if not isinstance(raw_sections, dict):
+        raise TypeError("assemble_protocol: sections")
+    sections = {str(key): value for key, value in raw_sections.items()}
+    sections.pop("preliminary_no_difference", None)
+    payload["sections"] = sections
+    return payload
 
 
 @app.post("/api/v1/findings/{finding_id}/review", response_model=None)
