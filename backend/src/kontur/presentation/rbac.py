@@ -1,18 +1,4 @@
-"""Матрица прав ТЗ п. 12: operationId → роли, которым операция разрешена.
-
-Единственный источник истины сразу для двух мест: `x-required-roles` в
-`contracts/openapi.yaml` и проверка прав в обработчиках. Расхождение контракта
-и кода ловит `scripts/check_contracts.py`, поэтому «забыть роль» нельзя.
-
-ADR-0001: юридическое решение принимает инспектор. Поэтому администратор
-системы не может ни подтвердить нарушение, ни финализировать протокол, ни
-отменить финализацию — его роли нет ни в одной из этих строк. Отмена
-финализации — только супервизор (ТЗ п. 9.3).
-
-Неизвестная роль не даёт прав: матрица работает по принципу «разрешено только
-перечисленное», а незнакомая операция — ошибка конфигурации, а не свободный
-доступ.
-"""
+"""\u041c\u0430\u0442\u0440\u0438\u0446\u0430 \u043f\u0440\u0430\u0432 \u0422\u0417 \u043f. 12: operationId \u2192 \u0440\u043e\u043b\u0438, \u043a\u043e\u0442\u043e\u0440\u044b\u043c \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044f \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043d\u0430.\n\n\u0415\u0434\u0438\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a \u0438\u0441\u0442\u0438\u043d\u044b \u0441\u0440\u0430\u0437\u0443 \u0434\u043b\u044f \u0434\u0432\u0443\u0445 \u043c\u0435\u0441\u0442: `x-required-roles` \u0432\n`contracts/openapi.yaml` \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043f\u0440\u0430\u0432 \u0432 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a\u0430\u0445. \u0420\u0430\u0441\u0445\u043e\u0436\u0434\u0435\u043d\u0438\u0435 \u043a\u043e\u043d\u0442\u0440\u0430\u043a\u0442\u0430\n\u0438 \u043a\u043e\u0434\u0430 \u043b\u043e\u0432\u0438\u0442 `scripts/check_contracts.py`, \u043f\u043e\u044d\u0442\u043e\u043c\u0443 \u00ab\u0437\u0430\u0431\u044b\u0442\u044c \u0440\u043e\u043b\u044c\u00bb \u043d\u0435\u043b\u044c\u0437\u044f.\n\nADR-0001: \u044e\u0440\u0438\u0434\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u0440\u0435\u0448\u0435\u043d\u0438\u0435 \u043f\u0440\u0438\u043d\u0438\u043c\u0430\u0435\u0442 \u0438\u043d\u0441\u043f\u0435\u043a\u0442\u043e\u0440. \u041f\u043e\u044d\u0442\u043e\u043c\u0443 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\n\u0441\u0438\u0441\u0442\u0435\u043c\u044b \u043d\u0435 \u043c\u043e\u0436\u0435\u0442 \u043d\u0438 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043d\u0430\u0440\u0443\u0448\u0435\u043d\u0438\u0435, \u043d\u0438 \u0444\u0438\u043d\u0430\u043b\u0438\u0437\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043f\u0440\u043e\u0442\u043e\u043a\u043e\u043b, \u043d\u0438\n\u043e\u0442\u043c\u0435\u043d\u0438\u0442\u044c \u0444\u0438\u043d\u0430\u043b\u0438\u0437\u0430\u0446\u0438\u044e \u2014 \u0435\u0433\u043e \u0440\u043e\u043b\u0438 \u043d\u0435\u0442 \u043d\u0438 \u0432 \u043e\u0434\u043d\u043e\u0439 \u0438\u0437 \u044d\u0442\u0438\u0445 \u0441\u0442\u0440\u043e\u043a. \u041e\u0442\u043c\u0435\u043d\u0430\n\u0444\u0438\u043d\u0430\u043b\u0438\u0437\u0430\u0446\u0438\u0438 \u2014 \u0442\u043e\u043b\u044c\u043a\u043e \u0441\u0443\u043f\u0435\u0440\u0432\u0438\u0437\u043e\u0440 (\u0422\u0417 \u043f. 9.3).\n\n\u041d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u0430\u044f \u0440\u043e\u043b\u044c \u043d\u0435 \u0434\u0430\u0451\u0442 \u043f\u0440\u0430\u0432: \u043c\u0430\u0442\u0440\u0438\u0446\u0430 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u043f\u043e \u043f\u0440\u0438\u043d\u0446\u0438\u043f\u0443 \u00ab\u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e\n\u043f\u0435\u0440\u0435\u0447\u0438\u0441\u043b\u0435\u043d\u043d\u043e\u0435\u00bb, \u0430 \u043d\u0435\u0437\u043d\u0430\u043a\u043e\u043c\u0430\u044f \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044f \u2014 \u043e\u0448\u0438\u0431\u043a\u0430 \u043a\u043e\u043d\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0438, \u0430 \u043d\u0435 \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439\n\u0434\u043e\u0441\u0442\u0443\u043f.\n"""
 
 from __future__ import annotations
 
@@ -21,7 +7,7 @@ from enum import StrEnum
 
 
 class Role(StrEnum):
-    """Роли ТЗ п. 12."""
+    """\u0420\u043e\u043b\u0438 \u0422\u0417 \u043f. 12."""
 
     INSPECTOR = "INSPECTOR"
     SUPERVISOR = "SUPERVISOR"
@@ -29,50 +15,51 @@ class Role(StrEnum):
 
 
 class AuthenticationRequiredError(PermissionError):
-    """Субъекта нет: отвечаем 401, а не 403."""
+    """\u0421\u0443\u0431\u044a\u0435\u043a\u0442\u0430 \u043d\u0435\u0442: \u043e\u0442\u0432\u0435\u0447\u0430\u0435\u043c 401, \u0430 \u043d\u0435 403."""
 
 
 class PermissionDeniedError(PermissionError):
-    """Субъект есть, прав не хватает: 403."""
+    """\u0421\u0443\u0431\u044a\u0435\u043a\u0442 \u0435\u0441\u0442\u044c, \u043f\u0440\u0430\u0432 \u043d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442: 403."""
 
 
 HTTP_UNAUTHORIZED: int = 401
 HTTP_FORBIDDEN: int = 403
 
-#: operationId из OpenAPI → роли. Пустое множество запрещено по построению.
+#: operationId \u0438\u0437 OpenAPI \u2192 \u0440\u043e\u043b\u0438. \u041f\u0443\u0441\u0442\u043e\u0435 \u043c\u043d\u043e\u0436\u0435\u0441\u0442\u0432\u043e \u0437\u0430\u043f\u0440\u0435\u0449\u0435\u043d\u043e \u043f\u043e \u043f\u043e\u0441\u0442\u0440\u043e\u0435\u043d\u0438\u044e.
 REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "uploadDocuments": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "getSystemCapabilities": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProcessStatus": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
+    "getAuditLog": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "reviewFinding": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "finalizeProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "unfinalizeProtocol": frozenset({Role.SUPERVISOR}),
     "syncInspection": frozenset({Role.SUPERVISOR, Role.ADMIN}),
 }
 
-#: Операции, создающие или отменяющие юридическое решение (ADR-0001).
+#: \u041e\u043f\u0435\u0440\u0430\u0446\u0438\u0438, \u0441\u043e\u0437\u0434\u0430\u044e\u0449\u0438\u0435 \u0438\u043b\u0438 \u043e\u0442\u043c\u0435\u043d\u044f\u044e\u0449\u0438\u0435 \u044e\u0440\u0438\u0434\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u0440\u0435\u0448\u0435\u043d\u0438\u0435 (ADR-0001).
 LEGAL_DECISION_OPERATIONS: frozenset[str] = frozenset(
     {"reviewFinding", "finalizeProtocol", "unfinalizeProtocol"}
 )
 
 
 def roles_for(operation_id: str) -> frozenset[Role]:
-    """Роли операции. Неописанная операция — ошибка конфигурации, а не доступ."""
+    """\u0420\u043e\u043b\u0438 \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u0438. \u041d\u0435\u043e\u043f\u0438\u0441\u0430\u043d\u043d\u0430\u044f \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044f \u2014 \u043e\u0448\u0438\u0431\u043a\u0430 \u043a\u043e\u043d\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0438, \u0430 \u043d\u0435 \u0434\u043e\u0441\u0442\u0443\u043f."""
 
     try:
         return REQUIRED_ROLES[operation_id]
     except KeyError as exc:
-        raise ValueError(f"операция {operation_id!r} не описана в матрице прав ТЗ п. 12") from exc
+        raise ValueError(f"\u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044f {operation_id!r} \u043d\u0435 \u043e\u043f\u0438\u0441\u0430\u043d\u0430 \u0432 \u043c\u0430\u0442\u0440\u0438\u0446\u0435 \u043f\u0440\u0430\u0432 \u0422\u0417 \u043f. 12") from exc
 
 
 def authorize(operation_id: str, roles: Iterable[str | Role]) -> frozenset[Role]:
-    """Вернуть пересечение ролей субъекта и операции либо поднять 401/403."""
+    """\u0412\u0435\u0440\u043d\u0443\u0442\u044c \u043f\u0435\u0440\u0435\u0441\u0435\u0447\u0435\u043d\u0438\u0435 \u0440\u043e\u043b\u0435\u0439 \u0441\u0443\u0431\u044a\u0435\u043a\u0442\u0430 \u0438 \u043e\u043f\u0435\u0440\u0430\u0446\u0438\u0438 \u043b\u0438\u0431\u043e \u043f\u043e\u0434\u043d\u044f\u0442\u044c 401/403."""
 
     allowed = roles_for(operation_id)
     presented = list(roles)
     if not presented:
-        raise AuthenticationRequiredError(f"{operation_id}: запрос без роли субъекта")
+        raise AuthenticationRequiredError(f"{operation_id}: \u0437\u0430\u043f\u0440\u043e\u0441 \u0431\u0435\u0437 \u0440\u043e\u043b\u0438 \u0441\u0443\u0431\u044a\u0435\u043a\u0442\u0430")
 
     recognized: set[Role] = set()
     for role in presented:
@@ -84,5 +71,5 @@ def authorize(operation_id: str, roles: Iterable[str | Role]) -> frozenset[Role]
     granted = allowed & recognized
     if not granted:
         names = ", ".join(sorted(member.value for member in allowed))
-        raise PermissionDeniedError(f"{operation_id}: требуется одна из ролей {names}")
+        raise PermissionDeniedError(f"{operation_id}: \u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u043e\u0434\u043d\u0430 \u0438\u0437 \u0440\u043e\u043b\u0435\u0439 {names}")
     return frozenset(granted)
