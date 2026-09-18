@@ -1,155 +1,167 @@
-"""Gate N: frozen val метрики ≥ порогов ТЗ §13 (Red Team Gate N).
+"""Gate N: Frozen validation recall/precision/F1/FPR gate.
 
-Тесты запускаются отдельно (pytest -m frozen_val) и требуют:
-  KONTUR_FROZEN_VAL_PATH — путь к frozen_val.jsonl (одна JSON-запись на строку).
+Normal CI: all tests skip automatically (KONTUR_FROZEN_VAL_PATH not set).
+RC freeze gate (28.09):
+    KONTUR_FROZEN_VAL_PATH=data/frozen_val.jsonl pytest -m frozen_val -v --tb=short
 
-Формат входного файла
----------------------
-Каждая строка — JSON-объект с полями:
-  label     : "CANDIDATE" | <любое другое>  (истинный класс)
-  predicted : "CANDIDATE" | <любое другое>  (предсказание системы)
+Format frozen_val.jsonl (one JSON per line):
+    {"label": "CANDIDATE", "predicted": "CANDIDATE"}
+    {"label": "AUTO_NO_DIFFERENCE", "predicted": "AUTO_NO_DIFFERENCE"}
 
-Без файла тест автоматически пропускается — обычный CI не ломается.
-С файлом — обязательные пороги:
-  Recall    >= 0.80
-  Precision >= 0.90
-  F1        >= 0.85
-  FPR       <= 0.10
+Positive labels: CANDIDATE, MISSING_EVIDENCE
+Negative labels: everything else (AUTO_NO_DIFFERENCE, NOT_APPLICABLE, ABSTAIN, ...)
 
-Закрывает: GAP-IOS4-VAL (KNOWN_GAPS.md) — recall на frozen val не заявлялся.
+Refs: TZ p.14 acceptance thresholds, Gate N, GAP-IOS4-VAL.
 """
 from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
-from typing import Any
+import pathlib
+from typing import NamedTuple
 
 import pytest
 
-# ── конфигурация ──────────────────────────────────────────────────────────────
-
-FROZEN_VAL_PATH: str = os.getenv("KONTUR_FROZEN_VAL_PATH", "")
-
-RECALL_MIN: float = 0.80
-PRECISION_MIN: float = 0.90
-F1_MIN: float = 0.85
-FPR_MAX: float = 0.10
-
-POSITIVE_CLASS: str = "CANDIDATE"
+_FROZEN_VAL_PATH_ENV = "KONTUR_FROZEN_VAL_PATH"
+_POSITIVE_LABELS = frozenset({"CANDIDATE", "MISSING_EVIDENCE"})
 
 pytestmark = pytest.mark.frozen_val
 
 
-# ── фикстуры ──────────────────────────────────────────────────────────────────
+class _Metrics(NamedTuple):
+    recall: float
+    precision: float
+    f1: float
+    fpr: float
+    tp: int
+    fp: int
+    fn: int
+    tn: int
+    n_total: int
 
 
-@pytest.fixture(scope="module")
-def frozen_val_rows() -> list[dict[str, Any]]:
-    if not FROZEN_VAL_PATH:
-        pytest.skip("KONTUR_FROZEN_VAL_PATH не задан — frozen val тесты пропущены")
-    path = Path(FROZEN_VAL_PATH)
+def _is_positive(label: str) -> bool:
+    return label in _POSITIVE_LABELS
+
+
+def _load_metrics() -> _Metrics:
+    path_str = os.getenv(_FROZEN_VAL_PATH_ENV, "")
+    if not path_str:
+        pytest.skip(
+            f"{_FROZEN_VAL_PATH_ENV} is not set -- frozen_val gate skipped in normal CI"
+        )
+    path = pathlib.Path(path_str)
     if not path.exists():
-        pytest.skip(f"frozen val файл не найден: {path}")
-    rows = [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
-    if not rows:
-        pytest.skip("frozen val файл пуст")
-    return rows
+        pytest.skip(f"frozen_val file not found: {path}")
 
-
-# ── вспомогательная функция ───────────────────────────────────────────────────
-
-
-def _metrics(rows: list[dict[str, Any]]) -> dict[str, float | int]:
-    """Посчитать бинарные метрики (positive = CANDIDATE)."""
     tp = fp = fn = tn = 0
-    for row in rows:
-        label = str(row.get("label", ""))
-        pred = str(row.get("predicted", ""))
-        is_pos_label = label == POSITIVE_CLASS
-        is_pos_pred = pred == POSITIVE_CLASS
-        if is_pos_label and is_pos_pred:
-            tp += 1
-        elif not is_pos_label and is_pos_pred:
-            fp += 1
-        elif is_pos_label and not is_pos_pred:
-            fn += 1
-        else:
-            tn += 1
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    with path.open(encoding="utf-8") as fh:
+        for lineno, raw in enumerate(fh, 1):
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                row = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                pytest.fail(f"frozen_val.jsonl line {lineno}: invalid JSON -- {exc}")
+
+            if "label" not in row or "predicted" not in row:
+                pytest.fail(
+                    f"frozen_val.jsonl line {lineno}: missing 'label' or 'predicted'"
+                )
+
+            gold = _is_positive(row["label"])
+            pred = _is_positive(row["predicted"])
+
+            if gold and pred:
+                tp += 1
+            elif not gold and pred:
+                fp += 1
+            elif gold and not pred:
+                fn += 1
+            else:
+                tn += 1
+
+    n_total = tp + fp + fn + tn
+    if n_total == 0:
+        pytest.fail("frozen_val.jsonl is empty or contains only blank lines")
+
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     f1 = (
         2 * precision * recall / (precision + recall)
         if (precision + recall) > 0
         else 0.0
     )
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
-    return {
-        "precision": precision,
-        "recall": recall,
-        "f1": f1,
-        "fpr": fpr,
-        "tp": tp,
-        "fp": fp,
-        "fn": fn,
-        "tn": tn,
-    }
 
-
-# ── тесты ─────────────────────────────────────────────────────────────────────
-
-
-def test_frozen_val_recall(
-    frozen_val_rows: list[dict[str, Any]],
-) -> None:
-    """Recall >= 0.80 (ТЗ §13)."""
-    m = _metrics(frozen_val_rows)
-    assert m["recall"] >= RECALL_MIN, (
-        f"recall={m['recall']:.3f} < {RECALL_MIN} "
-        f"(tp={m['tp']}, fn={m['fn']}, n={len(frozen_val_rows)})"
+    return _Metrics(
+        recall=recall,
+        precision=precision,
+        f1=f1,
+        fpr=fpr,
+        tp=tp,
+        fp=fp,
+        fn=fn,
+        tn=tn,
+        n_total=n_total,
     )
 
 
-def test_frozen_val_precision(
-    frozen_val_rows: list[dict[str, Any]],
-) -> None:
-    """Precision >= 0.90 (ТЗ §13)."""
-    m = _metrics(frozen_val_rows)
-    assert m["precision"] >= PRECISION_MIN, (
-        f"precision={m['precision']:.3f} < {PRECISION_MIN} "
-        f"(tp={m['tp']}, fp={m['fp']}, n={len(frozen_val_rows)})"
+def test_frozen_val_has_positive_examples() -> None:
+    """Sanity: dataset must contain at least 1 positive (CANDIDATE/MISSING_EVIDENCE) row."""
+    m = _load_metrics()
+    assert m.tp + m.fn >= 1, (
+        f"frozen_val.jsonl has no positive-label rows (tp={m.tp}, fn={m.fn})."
     )
 
 
-def test_frozen_val_f1(
-    frozen_val_rows: list[dict[str, Any]],
-) -> None:
-    """F1 >= 0.85 (ТЗ §13)."""
-    m = _metrics(frozen_val_rows)
-    assert m["f1"] >= F1_MIN, (
-        f"f1={m['f1']:.3f} < {F1_MIN} (prec={m['precision']:.3f}, rec={m['recall']:.3f})"
+def test_frozen_val_recall() -> None:
+    """Recall (TPR) >= 0.80 -- TZ p.14 gate.
+
+    For 106 critical parameters recall must be 1.00 (Gate J).
+    Skipping a critical parameter caps the score at 59/100.
+    """
+    m = _load_metrics()
+    threshold = 0.80
+    assert m.recall >= threshold, (
+        f"GATE FAILED: Recall = {m.recall:.4f} < {threshold}. "
+        f"tp={m.tp}, fn={m.fn}. "
+        f"Each fn on a critical param = 59/100 score cap."
     )
 
 
-def test_frozen_val_fpr(
-    frozen_val_rows: list[dict[str, Any]],
-) -> None:
-    """FPR <= 0.10 (ТЗ §13)."""
-    m = _metrics(frozen_val_rows)
-    assert m["fpr"] <= FPR_MAX, (
-        f"fpr={m['fpr']:.3f} > {FPR_MAX} (fp={m['fp']}, tn={m['tn']})"
+def test_frozen_val_precision() -> None:
+    """Precision >= 0.90 -- TZ p.14 gate."""
+    m = _load_metrics()
+    threshold = 0.90
+    assert m.precision >= threshold, (
+        f"GATE FAILED: Precision = {m.precision:.4f} < {threshold}. "
+        f"tp={m.tp}, fp={m.fp}."
     )
 
 
-def test_frozen_val_has_positive_examples(
-    frozen_val_rows: list[dict[str, Any]],
-) -> None:
-    """Замороженная выборка содержит хотя бы один CANDIDATE (метрики не вырождены)."""
-    positives = [r for r in frozen_val_rows if str(r.get("label", "")) == POSITIVE_CLASS]
-    assert positives, (
-        "frozen_val.jsonl не содержит ни одного CANDIDATE — метрики вырождены"
+def test_frozen_val_f1() -> None:
+    """F1 >= 0.85 -- TZ p.14 gate.
+
+    WARNING: harmonic mean of P=0.90 and R=0.80 is ~0.847 < 0.85.
+    The floor of both thresholds does NOT clear F1. Need precision headroom.
+    See PLAN_2026_09 stop-conditions 25.09.
+    """
+    m = _load_metrics()
+    threshold = 0.85
+    assert m.f1 >= threshold, (
+        f"GATE FAILED: F1 = {m.f1:.4f} < {threshold}. "
+        f"P={m.precision:.4f}, R={m.recall:.4f}. "
+        f"P=0.90 + R=0.80 harmonic = 0.847 -- raise precision margin."
+    )
+
+
+def test_frozen_val_fpr() -> None:
+    """FPR (False Positive Rate) <= 0.10 -- TZ p.14 gate."""
+    m = _load_metrics()
+    threshold = 0.10
+    assert m.fpr <= threshold, (
+        f"GATE FAILED: FPR = {m.fpr:.4f} > {threshold}. "
+        f"fp={m.fp}, tn={m.tn}."
     )
