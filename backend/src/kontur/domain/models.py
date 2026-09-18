@@ -1,7 +1,15 @@
-"""Доменные сущности. Зеркалят contracts/schemas — схема первична."""
+"""Доменные сущности. Зеркалят contracts/schemas — схема первична.
+
+Changelog:
+  - Add source_id: str | None  on Finding (donor: AeroBIM source_id pattern)
+  - Add evidence_refs: tuple[EvidenceRef, ...] on Finding
+  - Add disagreement_kind: DisagreementKind | None on Finding
+  - soft-warning in __post_init__ if evidence_group_id present but source_id absent
+"""
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
@@ -130,6 +138,16 @@ class Finding:
 
     Составной кандидат не существует: он дробится на атомарные находки, каждая
     со своим доказательством и своим решением (ТЗ п. 9.3).
+
+    source_id (donor: AeroBIM): exact PDF location or IFC element GUID that
+    produced this finding. Enables Gate K ≤3-click traceability. SHOULD be
+    set on every auto-generated finding that has an evidence_group_id.
+
+    evidence_refs (donor: AeroBIM): lightweight references to the EvidenceFragments
+    that support this finding. UI can jump to each ref without loading the full group.
+
+    disagreement_kind (donor: AeroBIM ConflictKind): why the two source reads disagree.
+    Set when finding_status is READS_DISAGREE / ABSTAIN.
     """
 
     finding_id: str
@@ -140,6 +158,11 @@ class Finding:
     rule_version: str
     model_version: str
     evidence_group_id: str | None = None
+    # --- AeroBIM provenance fields ---
+    source_id: str | None = None        # e.g. "pd:page12:frag-abc123"
+    evidence_refs: tuple = ()           # tuple[EvidenceRef, ...] from provenance.py
+    disagreement_kind: str | None = None  # DisagreementKind value
+    # --- end provenance fields ---
     expected_value: str | float | bool | None = None
     actual_value: str | float | bool | None = None
     delta: str | float | None = None
@@ -150,6 +173,16 @@ class Finding:
     def __post_init__(self) -> None:
         if self.finding_status in STATUSES_REQUIRING_EVIDENCE and not self.evidence_group_id:
             raise ValueError(f"{self.finding_status} requires evidence_group_id")
+        # Soft enforcement: evidence_group_id present but source_id absent
+        # means an inspector cannot reach the source in ≤3 clicks (Gate K).
+        if self.evidence_group_id and self.source_id is None:
+            warnings.warn(
+                f"Finding {self.finding_id}: evidence_group_id is set but "
+                "source_id is None — Gate K ≤3-click traceability degraded. "
+                "Set source_id to a fragment locator string.",
+                UserWarning,
+                stacklevel=2,
+            )
         if self.finding_status is FindingStatus.CONFIRMED_VIOLATION:
             decision = self.inspector_decision
             if decision is None or decision.action != "CONFIRM":
