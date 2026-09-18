@@ -49,6 +49,34 @@ def test_single_stage() -> None:
     assert detect_scenario(mapping) is Scenario.SINGLE_ONLY
 
 
+def test_missing_rd_gives_pd_id_only() -> None:
+    mapping = FULL_MAP | {DocStage.RD: Completeness.MISSING}
+    assert detect_scenario(mapping) is Scenario.PD_ID_ONLY
+
+
+def test_missing_pd_gives_rd_id_only() -> None:
+    mapping = FULL_MAP | {DocStage.PD: Completeness.MISSING}
+    assert detect_scenario(mapping) is Scenario.RD_ID_ONLY
+
+
+def test_single_rd_is_single_only() -> None:
+    mapping = {
+        DocStage.PD: Completeness.MISSING,
+        DocStage.RD: Completeness.UPLOADED,
+        DocStage.ID: Completeness.MISSING,
+    }
+    assert detect_scenario(mapping) is Scenario.SINGLE_ONLY
+
+
+def test_single_id_is_single_only() -> None:
+    mapping = {
+        DocStage.PD: Completeness.MISSING,
+        DocStage.RD: Completeness.MISSING,
+        DocStage.ID: Completeness.UPLOADED,
+    }
+    assert detect_scenario(mapping) is Scenario.SINGLE_ONLY
+
+
 def test_missing_required_stage_is_missing_evidence() -> None:
     status = status_for_missing_stage(stage_required_by_rule=True, stage_applicable_to_object=True)
     assert status is FindingStatus.MISSING_EVIDENCE

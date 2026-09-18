@@ -276,6 +276,49 @@ def test_inspector_cannot_unfinalize(client: TestClient) -> None:
     assert response.status_code == 403
 
 
+def test_duplicate_upload_same_hash_stage_is_empty_accepted(client: TestClient) -> None:
+    first = _upload(client)
+    process_id = first.json()["process_id"]
+    retry = client.post(
+        "/api/v1/documents/upload",
+        headers=INSPECTOR,
+        data={"object_id": "obj-1", "doc_stage": "PD", "process_id": process_id},
+        files=[("files", ("pz.pdf", PDF, "application/pdf"))],
+    )
+    assert retry.status_code == 202
+    assert retry.json()["accepted"] == []
+    assert retry.json()["process_id"] == process_id
+
+
+def test_audit_log_requires_token(client: TestClient) -> None:
+    process_id = _upload(client).json()["process_id"]
+    assert client.get(f"/api/v1/processes/{process_id}/audit").status_code == 401
+
+
+def test_audit_log_lists_review_events(client: TestClient) -> None:
+    process_id = _seed_completed(client, with_candidate=True)
+    client.post(
+        "/api/v1/findings/f-1/review",
+        headers=INSPECTOR,
+        json={
+            "action": "CONFIRM",
+            "inspector_id": "insp-7",
+            "comment": "совпало по штампу",
+        },
+    )
+    response = client.get(f"/api/v1/processes/{process_id}/audit", headers=INSPECTOR)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["process_id"] == process_id
+    actions = [event["action"] for event in body["events"]]
+    assert "REVIEW" in actions
+
+
+def test_audit_log_unknown_process_is_404(client: TestClient) -> None:
+    response = client.get("/api/v1/processes/does-not-exist/audit", headers=INSPECTOR)
+    assert response.status_code == 404
+
+
 def _seed_completed(client: TestClient, *, with_candidate: bool = False) -> str:
     process_id = _upload(client).json()["process_id"]
     record = app.state.workspace.get(process_id)

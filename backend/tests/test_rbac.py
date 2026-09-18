@@ -49,6 +49,7 @@ def test_only_supervisor_unfinalizes() -> None:
 
 def test_inspector_works_and_every_row_grants_someone() -> None:
     assert authorize("reviewFinding", [Role.INSPECTOR]) == frozenset({Role.INSPECTOR})
+    assert authorize("getAuditLog", [Role.ADMIN]) == frozenset({Role.ADMIN})
     assert authorize("uploadDocuments", ["INSPECTOR", "ADMIN"]) == frozenset({Role.INSPECTOR})
     for operation, allowed in REQUIRED_ROLES.items():
         assert allowed, operation

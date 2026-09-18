@@ -197,8 +197,8 @@ async def upload_documents(
             doc_stage=doc_stage,
             size_bytes=item.size_bytes,
         )
-        workspace.attach_file(record, stored)
-        accepted.append({"file_id": stored.file_id, "file_hash": stored.file_hash})
+        if workspace.attach_file(record, stored):
+            accepted.append({"file_id": stored.file_id, "file_hash": stored.file_hash})
 
     return {
         "process_id": record.process_id,
@@ -257,6 +257,24 @@ def get_protocol(
     sections.pop("preliminary_no_difference", None)
     payload["sections"] = sections
     return payload
+
+
+@app.get("/api/v1/processes/{process_id}/audit", response_model=None)
+def get_audit(
+    process_id: str,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    _require("getAuditLog", authorization)
+    record = _workspace().get(process_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    return {
+        "process_id": process_id,
+        "events": [
+            {"actor_id": actor_id, "action": action, "payload": payload}
+            for actor_id, action, payload in record.audit.records
+        ],
+    }
 
 
 @app.post("/api/v1/findings/{finding_id}/review", response_model=None)

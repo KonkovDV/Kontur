@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
 
+from kontur.domain.models import Finding
 from kontur.domain.statuses import ProcessState, Scenario, SyncState
 
 MAX_PARSE_ATTEMPTS = 3
@@ -40,6 +41,10 @@ class ProcessStore(Protocol):
 
     def save(self, snapshot: ProcessSnapshot) -> None: ...
 
+    def save_finding(self, process_id: str, finding: Finding) -> None: ...
+
+    def load_findings(self, process_id: str) -> list[Finding]: ...
+
 
 def validate_snapshot(snapshot: ProcessSnapshot) -> None:
     """Те же границы, что CHECK в schema.sql. Молчание не считается успехом."""
@@ -67,6 +72,7 @@ class MemoryProcessStore:
 
     def __init__(self) -> None:
         self._rows: dict[str, ProcessSnapshot] = {}
+        self._findings: dict[str, dict[str, Finding]] = {}
 
     def load(self, process_id: str) -> ProcessSnapshot | None:
         return self._rows.get(process_id)
@@ -75,8 +81,16 @@ class MemoryProcessStore:
         validate_snapshot(snapshot)
         self._rows[snapshot.process_id] = snapshot
 
+    def save_finding(self, process_id: str, finding: Finding) -> None:
+        key = finding.evidence_group_id or finding.finding_id
+        self._findings.setdefault(process_id, {})[key] = finding
+
+    def load_findings(self, process_id: str) -> list[Finding]:
+        return list(self._findings.get(process_id, {}).values())
+
     def clear(self) -> None:
         self._rows.clear()
+        self._findings.clear()
 
 
 UPSERT_PROCESS_SQL = """
@@ -188,3 +202,10 @@ class PostgresProcessStore:
         if snapshot.process_state is ProcessState.FINALIZED and snapshot.protocol_id:
             self._connection.execute(PLACEHOLDER_PROTOCOL_SQL, params)  # type: ignore[attr-defined]
         self._connection.execute(UPSERT_PROCESS_SQL, params)  # type: ignore[attr-defined]
+
+    def save_finding(self, process_id: str, finding: Finding) -> None:
+        del process_id, finding
+
+    def load_findings(self, process_id: str) -> list[Finding]:
+        del process_id
+        return []

@@ -2,7 +2,9 @@
 
 Таблица `processes` — контракт хранения. HTTP по умолчанию держит полный
 контур в памяти и пишет снимок в MemoryProcessStore. Postgres включается
-отдельным адаптером; находки и комплектность после рестарта не восстанавливаются.
+отдельным адаптером. Находки в MemoryProcessStore переживают смену
+ProcessWorkspace на том же store; completeness при hydrate пустая, Postgres
+load_findings пуст (GAP-PROCESS-FINDINGS).
 """
 
 from __future__ import annotations
@@ -124,7 +126,11 @@ class ProcessRecord:
 
 
 class ProcessWorkspace:
-    """Процессы в памяти плюс снимок DAO. Находки после рестарта не восстанавливаются."""
+    """Процессы в памяти плюс снимок DAO.
+
+    Находки на MemoryProcessStore переживают смену workspace. Completeness,
+    файлы и MemoryAudit при hydrate пустые — GAP-PROCESS-FINDINGS / GAP-EDIT.
+    """
 
     def __init__(self, store: ProcessStore | None = None) -> None:
         self._items: dict[str, ProcessRecord] = {}
@@ -182,6 +188,9 @@ class ProcessWorkspace:
         if snapshot is None:
             return None
         record = self._hydrate(snapshot)
+        for finding in self._store.load_findings(process_id):
+            key = finding.evidence_group_id or finding.finding_id
+            record.findings[key] = finding
         self._items[process_id] = record
         return record
 
@@ -203,11 +212,17 @@ class ProcessWorkspace:
         if record.process_state is not ProcessState.PARSING:
             record.process_state = advance_process(record.process_state, ProcessState.PARSING)
 
-    def attach_file(self, record: ProcessRecord, item: AcceptedFile) -> None:
+    def attach_file(self, record: ProcessRecord, item: AcceptedFile) -> bool:
+        """Прикрепить файл. Повтор hash+stage не дублирует (как UNIQUE в schema.sql)."""
+
+        for existing in record.files:
+            if existing.file_hash == item.file_hash and existing.doc_stage == item.doc_stage:
+                return False
         record.files.append(item)
         record.completeness[item.doc_stage] = Completeness.UPLOADED
         record.scenario = detect_scenario(record.completeness)
         record.input_manifest_hash = item.file_hash if len(record.files) == 1 else "pending"
+        return True
 
     def put_finding(self, process_id: str, finding: Finding) -> None:
         """Сохранить находку. Повтор at-least-once с тем же evidence_group_id
@@ -218,6 +233,7 @@ class ProcessWorkspace:
         record = self._items[process_id]
         key = finding.evidence_group_id or finding.finding_id
         record.findings[key] = finding
+        self._store.save_finding(process_id, finding)
 
     def review_finding(
         self,
@@ -246,6 +262,7 @@ class ProcessWorkspace:
                 comment=comment,
             )
             record.findings[stored_key] = updated
+            self._store.save_finding(record.process_id, updated)
             record.audit.record(
                 actor.actor_id,
                 "REVIEW",

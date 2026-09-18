@@ -119,6 +119,24 @@ paths:
               schema: { $ref: "./schemas/protocol.schema.json" }
         "404": { description: Процесс не найден или протокол ещё не собран }
 
+  /processes/{process_id}/audit:
+    get:
+      summary: Журнал действий текущего процесса
+      description: >
+        События MemoryAudit этого процесса (REVIEW, FINALIZE, UNFINALIZE).
+        Это не таблица user_action_log: после рестарта журнал пуст (GAP-EDIT).
+      operationId: getAuditLog
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditLog" }
+        "404": { description: Процесс не найден }
+
   /findings/{finding_id}/review:
     post:
       summary: Решение инспектора по атомарной находке
@@ -380,6 +398,21 @@ components:
             skipped:
               type: array
               items: { type: string }
+
+    AuditLog:
+      type: object
+      required: [process_id, events]
+      properties:
+        process_id: { type: string }
+        events:
+          type: array
+          items:
+            type: object
+            required: [actor_id, action, payload]
+            properties:
+              actor_id: { type: string }
+              action: { type: string }
+              payload: { type: object, additionalProperties: true }
 
     ReviewDecision:
       type: object

@@ -22,6 +22,11 @@
 | #37 | замки на реальный API: нет `BLOCKED`/`process_id`/`UserWarning`; `split()` = `NotImplementedError` |
 | #38 | IOS4-078: `multiply_dimensions` + compile `rules/`; площадь A×B на синтетике |
 | #39 | GET `/protocol` через `assemble_protocol`; статус п. 9.3; AUTO_NO_DIFFERENCE не на проводе |
+| #40 | MemoryProcessStore: `save_finding`/`load_findings`; без CONFIRMED_VIOLATION без инспектора |
+| #41 | `tests/load/k6_status.js` без порога p95; CI k6 не запускает |
+| #42+#45 | GET `/audit` + OpenAPI `getAuditLog` + rbac; GAP-EDIT открыт |
+| #43 | сценарии `PD_ID_ONLY` / `RD_ID_ONLY` / SINGLE RD, SINGLE ID в `test_scenarios.py` |
+| #44 | `attach_file` идемпотентен по hash+stage; повтор загрузки не дублирует `accepted` |
 
 ## Что не брали
 
@@ -43,6 +48,14 @@
 | #37 as-is | ruff I001/F401; 383 строки дубля уже зелёных тестов; grep `KNOWN_GAPS.md` |
 | #38 as-is | override без compile; нет `multiply_dimensions` в `rule.schema.json`; GAP закрыт при неизмеренном recall |
 | #39 as-is | смешал `COMPLETED` процесса со статусом протокола; AUTO_NO_DIFFERENCE мог уйти в JSON ТЗ |
+| #40 as-is | `CONFIRMED_VIOLATION` без инспектора ломает `Finding.__post_init__` |
+| #42 as-is | unicode-escape всего `api.py`; `getAuditLog` без OpenAPI |
+| #45 as-is | ложное закрытие GAP-EDIT; опечатка «отклён» |
+| #46 | dry-run: `MATRIX_PATH=rules` без compile; `DocumentRef`/`PageToken` не с main; `tests/gate_k` не в pytest |
+| #47 | миграция `process_findings` без `schema.sql`/`checks.sql` (db job миграции не гоняет) |
+| #48 | PostgresAuditStore без проводки в `schema.sql`; rbac без OpenAPI |
+| #49 | синтетический recall 16/20 = gold; порог Wilson не выполнен; `tests/gate_j` не собирается |
+| #50 | ложные закрытия GAP-EDIT / PROCESS-FINDINGS / IOS4-VAL |
 
 Не публиковать F1/P/R и recall критических на frozen val. Площадь A×B на
-синтетике не закрывает гейт J.
+синтетике не закрывает гейт J. k6 p95 не измерен.
