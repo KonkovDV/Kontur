@@ -3,6 +3,10 @@
 Обработка не выполняется в процессе запроса: загрузка принимает файлы,
 создаёт процесс и оставляет его в PARSING. Сравнение L1–L7 здесь не
 вызывается: экстракторов нет, и статус READY соврал бы.
+
+Аудит-2026-09:
+  Добавлен GET /api/v1/system/capabilities (донор AeroBIM capability honesty).
+  review_finding ответ дополнен source_id, evidence_refs, disagreement_kind.
 """
 
 from __future__ import annotations
@@ -23,6 +27,12 @@ from kontur.application.intake import (
 )
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
+from kontur.domain.capabilities import (
+    CapStatus,
+    Capability,
+    engine_health_summary,
+    overall_kit_status,
+)
 from kontur.domain.models import DocStage
 from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError
@@ -37,6 +47,16 @@ from kontur.presentation.rbac import (
 
 app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton")
 app.state.workspace = ProcessWorkspace()
+
+# Конфигурация движков по умолчанию (audit-2026-09, донор AeroBIM).
+# Заменяется через app.state.capabilities в интеграционных тестах.
+_DEFAULT_CAPABILITIES: tuple[Capability, ...] = (
+    Capability(name="vector_text", status=CapStatus.AVAILABLE, affects_verdict=True),
+    Capability(name="ocr_text", status=CapStatus.AVAILABLE, affects_verdict=True),
+    Capability(name="ocr_tables", status=CapStatus.AVAILABLE, affects_verdict=True),
+    Capability(name="drawing_analysis", status=CapStatus.AVAILABLE, affects_verdict=True),
+    Capability(name="llm_advisory", status=CapStatus.AVAILABLE, affects_verdict=False),
+)
 
 
 class FinalizeRequest(BaseModel):
@@ -61,6 +81,13 @@ def _workspace() -> ProcessWorkspace:
         store = ProcessWorkspace()
         app.state.workspace = store
     return store
+
+
+def _capabilities() -> tuple[Capability, ...]:
+    caps = getattr(app.state, "capabilities", None)
+    if caps is None:
+        return _DEFAULT_CAPABILITIES
+    return tuple(caps)
 
 
 def _empty_completeness() -> CompletenessMap:
@@ -108,6 +135,33 @@ async def _empty_package(_request: Request, exc: EmptyPackageError) -> JSONRespo
 @app.get("/api/v1/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/v1/system/capabilities")
+def get_capabilities() -> dict[str, object]:
+    """Таблица движков (донор AeroBIM capability honesty, audit-2026-09).
+
+    Возвращает ok | degraded | skipped | failed для каждого движка.
+    LLM-advisory UNAVAILABLE -> 'skipped', не 'failed' (ADR-003).
+    Verdict engine UNAVAILABLE -> 'failed' -> overall_kit_status=BLOCKED.
+    Verdict engine DEGRADED -> 'degraded' -> overall_kit_status=DEGRADED.
+    Silence is never success (AeroBIM ADR-001).
+    """
+    caps = _capabilities()
+    engines = engine_health_summary(caps)
+    kit_status = overall_kit_status(caps)
+    affected = [
+        cap.name for cap in caps
+        if cap.affects_verdict and cap.status is not CapStatus.AVAILABLE
+    ]
+    return {
+        "overall_kit_status": kit_status,
+        "engine_status": engines,
+        "affected_verdict_engines": affected,
+        "advisory": {
+            "note": "LLM-advisory failure is 'skipped', never 'failed' (ADR-003)",
+        },
+    }
 
 
 @app.post("/api/v1/documents/upload", status_code=202, response_model=None)
@@ -245,11 +299,15 @@ def review_finding(
         )
     except KeyError:
         return JSONResponse(status_code=404, content={"detail": "находка не найдена"})
+    # audit-2026-09: добавлены source_id, evidence_refs, disagreement_kind
     return {
         "finding_id": finding.finding_id,
         "finding_status": finding.finding_status.value,
         "rule_code": finding.rule_code,
         "evidence_group_id": finding.evidence_group_id,
+        "source_id": finding.source_id,
+        "evidence_refs": list(finding.evidence_refs),
+        "disagreement_kind": finding.disagreement_kind.value if finding.disagreement_kind else None,
     }
 
 
