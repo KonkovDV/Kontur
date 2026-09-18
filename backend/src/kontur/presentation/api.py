@@ -23,6 +23,11 @@ from kontur.application.intake import (
 )
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
+from kontur.domain.capabilities import AFFECTS_VERDICT, ADVISORY_ONLY, CapStatus
+from kontur.domain.engine_status import (
+    build_engine_report,
+    serialise_report,
+)
 from kontur.domain.models import DocStage
 from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError
@@ -37,6 +42,18 @@ from kontur.presentation.rbac import (
 
 app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton")
 app.state.workspace = ProcessWorkspace()
+
+# ---------------------------------------------------------------------------
+# Default capability statuses for skeleton (no live engines attached).
+# Real deployment overrides app.state.capability_statuses at startup.
+# ---------------------------------------------------------------------------
+_DEFAULT_CAPABILITY_STATUSES: dict[str, CapStatus] = {
+    "vector_text": CapStatus.AVAILABLE,
+    "ocr_text": CapStatus.AVAILABLE,
+    "ocr_tables": CapStatus.AVAILABLE,
+    "drawing_analysis": CapStatus.AVAILABLE,
+    "llm_advisory": CapStatus.UNAVAILABLE,  # advisory; SKIPPED not FAILED
+}
 
 
 class FinalizeRequest(BaseModel):
@@ -61,6 +78,10 @@ def _workspace() -> ProcessWorkspace:
         store = ProcessWorkspace()
         app.state.workspace = store
     return store
+
+
+def _capability_statuses() -> dict[str, CapStatus]:
+    return getattr(app.state, "capability_statuses", _DEFAULT_CAPABILITY_STATUSES)
 
 
 def _empty_completeness() -> CompletenessMap:
@@ -108,6 +129,19 @@ async def _empty_package(_request: Request, exc: EmptyPackageError) -> JSONRespo
 @app.get("/api/v1/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/v1/system/capabilities")
+def get_system_capabilities() -> dict[str, object]:
+    """Capability honesty endpoint (donor: AeroBIM).
+
+    Returns per-engine status and overall kit health.
+    Any verdict-affecting engine with status='failed' => overall_kit_status='DEGRADED'.
+    Advisory engines (LLM) appear as 'skipped' when unavailable — not failed.
+    Silence is never success: every engine is accounted for.
+    """
+    reports = build_engine_report(_capability_statuses())
+    return serialise_report(reports)
 
 
 @app.post("/api/v1/documents/upload", status_code=202, response_model=None)
