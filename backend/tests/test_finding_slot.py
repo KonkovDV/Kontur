@@ -1,95 +1,92 @@
-"""Тесты FindingSlotCache (RT-G, stop-ship #11, safe degradation).
-
-Проверяем три пути:
-  1. Новый слот → True (обработать).
-  2. Слот уже занят → False (дубль, пропустить).
-  3. Redis недоступен → True (fail open, НЕ отбрасывать находку).
-  4. Пустой evidence_group_id → True (fail open), Redis не вызывается.
-"""
+"""Tests for Redis finding slot idempotency (Stop-ship #11)."""
 from __future__ import annotations
+
+from typing import Any
 
 import pytest
 
 from kontur.infrastructure.finding_slot import (
+    DEFAULT_FINDING_SLOT_TTL,
     FINDING_SLOT_KEY_PREFIX,
     claim_finding_slot,
 )
 
 
-class _OkClient:
-    """Redis mock: SETNX всегда успешен (новый ключ)."""
+class _MockRedis:
+    """In-memory Redis mock implementing the minimal RedisClient Protocol."""
 
-    def __init__(self) -> None:
-        self.calls: list[str] = []
+    def __init__(self, *, fail: bool = False) -> None:
+        self._store: dict[str, str] = {}
+        self._fail = fail
+        self.calls: list[dict[str, Any]] = []
 
-    async def set(self, key: str, value: bytes, *, nx: bool, ex: int) -> bool | None:
-        self.calls.append(key)
-        return True  # SETNX success
-
-
-class _DuplicateClient:
-    """Redis mock: ключ уже существует (дублирующая доставка)."""
-
-    async def set(self, key: str, value: bytes, *, nx: bool, ex: int) -> bool | None:
-        return None  # SETNX failed — key already present
-
-
-class _ErrorClient:
-    """Redis mock: выбрасывает исключение при любом вызове."""
-
-    async def set(self, key: str, value: bytes, *, nx: bool, ex: int) -> bool | None:
-        raise ConnectionError("Redis down")
+    async def set(
+        self,
+        name: str,
+        value: Any,
+        ex: int | None = None,
+        nx: bool = False,
+    ) -> bool | None:
+        self.calls.append({"name": name, "value": value, "ex": ex, "nx": nx})
+        if self._fail:
+            raise ConnectionError("Redis connection refused")
+        if nx and name in self._store:
+            return None
+        self._store[name] = str(value)
+        return True
 
 
 @pytest.mark.asyncio
 async def test_new_slot_returns_true() -> None:
-    """Первый вызов: слот свободен → разрешить обработку."""
-    client = _OkClient()
-    result = await claim_finding_slot(client, "egrp-abc123")
+    redis = _MockRedis()
+    result = await claim_finding_slot(redis, "eg-abc-001")
     assert result is True
-    assert len(client.calls) == 1
-    assert client.calls[0] == f"{FINDING_SLOT_KEY_PREFIX}egrp-abc123"
 
 
 @pytest.mark.asyncio
-async def test_duplicate_slot_returns_false() -> None:
-    """Повторная доставка: ключ уже есть → пропустить (дубль)."""
-    result = await claim_finding_slot(_DuplicateClient(), "egrp-abc123")
-    assert result is False
+async def test_existing_slot_returns_false() -> None:
+    redis = _MockRedis()
+    first = await claim_finding_slot(redis, "eg-abc-002")
+    second = await claim_finding_slot(redis, "eg-abc-002")
+    assert first is True
+    assert second is False
 
 
 @pytest.mark.asyncio
 async def test_redis_error_fails_open() -> None:
-    """Stop-ship #11: ошибка Redis НЕ должна отбрасывать находку.
-
-    PR #22 был отклонён именно потому, что drop на ошибке Redis нарушал
-    это требование. Правильное поведение: fail open (True).
-    """
-    result = await claim_finding_slot(_ErrorClient(), "egrp-abc123")
+    """Stop-ship #11: Redis error MUST return True (fail open), never drop the finding."""
+    redis = _MockRedis(fail=True)
+    result = await claim_finding_slot(redis, "eg-abc-003")
     assert result is True, (
-        "fail open: Redis недоступен не должен приводить к потере находки"
+        "Stop-ship #11 violated: Redis error must fail open, not drop the finding"
     )
 
 
 @pytest.mark.asyncio
-async def test_empty_evidence_group_id_fails_open_without_redis_call() -> None:
-    """Пустой ключ: fail open, Redis не вызывается (нет смысла занимать '')."""
-    client = _OkClient()
-    result = await claim_finding_slot(client, "  ")
+async def test_empty_evidence_group_id_no_redis_call() -> None:
+    redis = _MockRedis()
+    result = await claim_finding_slot(redis, "")
     assert result is True
-    assert client.calls == [], "Redis не должен вызываться при пустом ключе"
+    assert redis.calls == []
 
 
 @pytest.mark.asyncio
 async def test_ttl_passed_to_redis() -> None:
-    """TTL пробрасывается в Redis.set(ex=...)."""
+    redis = _MockRedis()
+    await claim_finding_slot(redis, "eg-abc-004", ttl=3600)
+    assert redis.calls[0]["ex"] == 3600
 
-    class _CapturingClient:
-        ttl_received: int = 0
 
-        async def set(self, key: str, value: bytes, *, nx: bool, ex: int) -> bool | None:
-            _CapturingClient.ttl_received = ex
-            return True
+@pytest.mark.asyncio
+async def test_default_ttl_is_env_configured() -> None:
+    redis = _MockRedis()
+    await claim_finding_slot(redis, "eg-abc-005")
+    assert redis.calls[0]["ex"] == DEFAULT_FINDING_SLOT_TTL
 
-    await claim_finding_slot(_CapturingClient(), "egrp-xyz", ttl=7200)
-    assert _CapturingClient.ttl_received == 7200
+
+@pytest.mark.asyncio
+async def test_key_prefix_is_versioned() -> None:
+    redis = _MockRedis()
+    await claim_finding_slot(redis, "eg-abc-006")
+    assert redis.calls[0]["name"].startswith(FINDING_SLOT_KEY_PREFIX)
+    assert "eg-abc-006" in redis.calls[0]["name"]

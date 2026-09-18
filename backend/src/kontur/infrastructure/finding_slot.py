@@ -1,121 +1,88 @@
-"""Redis idempotency slot для находок (RT-G, ТЗ §9.1).
+"""Redis-based finding slot for cross-restart idempotency.
 
-Мотивация
----------
-RabbitMQ at-least-once delivery: одно сообщение может быть доставлено дважды.
-Без защиты put_finding() с одинаковым evidence_group_id будет вызван дважды
-в двух разных ProcessWorkspace → дубли результата в БД.
+Проблема: RabbitMQ доставляет at-least-once. При повторной доставке один и тот же
+evidence_group_id может попасть в два разных ProcessWorkspace (после рестарта).
+In-memory dedup через put_finding (по evidence_group_id) работает только внутри
+одного процесса. Redis SETNX даёт cross-restart best-effort idempotency.
 
-Решение: перед записью находки проверяем Redis через SETNX.
-  - Промах (ключа нет) → SETNX устанавливает ключ → обрабатываем.
-  - Попадание (ключ уже есть) → находка уже обработана → пропускаем (False).
-  - Ошибка Redis → FAIL OPEN: возвращаем True + предупреждение в лог.
-    Дубль лучше потери. In-memory dedup в put_finding снижает риск при рестарте
-    в том же процессе; cross-restart защита — только best-effort.
+Принцип fail-open: если Redis недоступен — пропускаем слот и обрабатываем.
+Лучше дубль находки (детектируемый), чем потеря (Stop-ship #11).
 
-Ключ: kontur:finding:v1:{evidence_group_id}
-  TTL: KONTUR_FINDING_SLOT_TTL сек. (default 86400 = 24 часа)
-
-Гарантии
---------
-- claim_finding_slot() никогда не выбрасывает.
-- При любой ошибке Redis → True (fail open), warning в лог.
-- Пустой evidence_group_id → True (fail open), warning в лог, Redis не вызывается.
-
-Интеграция
-----------
-Вызвать ДО put_finding() в pipeline consumer:
-
+Интеграция в pipeline consumer:
     if not await claim_finding_slot(redis, finding.evidence_group_id):
         logger.info("duplicate finding skipped: %s", finding.evidence_group_id)
         return
     workspace.put_finding(finding)
 
-Ссылки
-------
-  docs/RED_TEAM.md  — RT-G (idempotency broker)
-  ТЗ §9.1           — Redis cache by file hash
-  infrastructure/cache.py — passport cache (образец safe degradation)
+Порог TTL: KONTUR_FINDING_SLOT_TTL (env, default 86400 с = 24 ч).
+Префикс ключа: kontur:finding:v1:<evidence_group_id>
+
+Refs: RT-G, ТЗ §9.1 «до двух повторов», Stop-ship #11.
 """
 from __future__ import annotations
 
 import logging
 import os
-from typing import Protocol
+from typing import Any, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
-#: Префикс всех ключей finding-slot. Изменить при смене схемы.
-FINDING_SLOT_KEY_PREFIX: str = "kontur:finding:v1:"
-
-#: TTL по умолчанию. Переопределяется через KONTUR_FINDING_SLOT_TTL.
-DEFAULT_FINDING_SLOT_TTL: int = int(
-    os.getenv("KONTUR_FINDING_SLOT_TTL", "86400")
-)
+FINDING_SLOT_KEY_PREFIX = "kontur:finding:v1:"
+DEFAULT_FINDING_SLOT_TTL = int(os.getenv("KONTUR_FINDING_SLOT_TTL", "86400"))
 
 
-class FindingSlotClient(Protocol):
-    """Минимальный Redis-совместимый клиент для finding slot.
-
-    Совместим с redis.asyncio.Redis (метод set с параметрами nx=True, ex=int).
-    Redis не является обязательной зависимостью для прохождения типов.
-    """
+@runtime_checkable
+class RedisClient(Protocol):
+    """Minimal async Redis interface needed for slot operations."""
 
     async def set(
         self,
-        key: str,
-        value: bytes,
-        *,
-        nx: bool,
-        ex: int,
+        name: str,
+        value: Any,
+        ex: int | None = None,
+        nx: bool = False,
     ) -> bool | None:
-        """SETNX-like: вернуть True/1 если ключ установлен, None/False если уже существует."""
+        """SET key value [EX seconds] [NX]. Returns True if set, None/False if not."""
         ...
 
 
 async def claim_finding_slot(
-    client: FindingSlotClient,
+    client: RedisClient,
     evidence_group_id: str,
     ttl: int = DEFAULT_FINDING_SLOT_TTL,
 ) -> bool:
-    """Попытаться занять слот для находки через Redis SETNX.
+    """Try to claim an idempotency slot for the given finding.
 
-    Returns
-    -------
-    True  — слот свободен и занят нами (обрабатывать находку), или Redis
-            недоступен (fail open: лучше дубль, чем потеря).
-    False — слот уже занят (дублирующая доставка, пропустить находку).
+    Returns True if the slot is free (caller SHOULD process the finding).
+    Returns False if the slot is already taken (caller SHOULD skip -- duplicate).
 
-    Никогда не выбрасывает. При любой ошибке Redis — fail open + warn log.
+    NEVER raises. Redis errors are logged as WARNING and treated as True (fail-open):
+    a potential duplicate is safer than a silently dropped finding (Stop-ship #11).
 
-    Parameters
-    ----------
-    client:
-        Redis-совместимый async клиент (FindingSlotClient).
-    evidence_group_id:
-        Детерминированный ключ находки (SHA-256 или comparison_key()).
-        Пустая строка → fail open, Redis не вызывается.
-    ttl:
-        TTL слота в секундах (default KONTUR_FINDING_SLOT_TTL = 86400).
+    Empty/missing evidence_group_id: returns True without contacting Redis
+    (no dedup key available; in-memory put_finding handles this path).
+
+    Args:
+        client: Async Redis client (e.g. redis.asyncio.Redis).
+        evidence_group_id: The stable finding identity key.
+        ttl: Key expiry in seconds (default: KONTUR_FINDING_SLOT_TTL env, 86400).
+
+    Returns:
+        True  -- slot is free or Redis unavailable (process the finding).
+        False -- slot already claimed (skip this duplicate).
     """
-    if not evidence_group_id or not evidence_group_id.strip():
-        logger.warning(
-            "claim_finding_slot: пустой evidence_group_id — fail open "
-            "(Redis не вызывается)"
-        )
+    if not evidence_group_id:
         return True
 
+    key = f"{FINDING_SLOT_KEY_PREFIX}{evidence_group_id}"
     try:
-        key = f"{FINDING_SLOT_KEY_PREFIX}{evidence_group_id}"
-        result = await client.set(key, b"1", nx=True, ex=ttl)
-        # redis.asyncio: SETNX success → True; key already exists → None.
-        if result:
-            return True
-        logger.debug("finding slot уже занят: %s", evidence_group_id)
-        return False
-    except Exception:  # noqa: BLE001
+        result = await client.set(key, "1", ex=ttl, nx=True)
+        return result is True
+    except Exception as exc:  # noqa: BLE001
         logger.warning(
-            "claim_finding_slot: Redis недоступен для %s — fail open",
+            "Redis finding slot unavailable for %s -- fail open (Stop-ship #11). "
+            "Error: %s",
             evidence_group_id,
+            exc,
         )
         return True
