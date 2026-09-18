@@ -223,6 +223,13 @@ CREATE TABLE processes (
     matrix_version      TEXT NOT NULL,
     model_version       TEXT NOT NULL,
     dataset_version     TEXT,
+    completeness_pd     TEXT NOT NULL DEFAULT 'MISSING'
+                        CHECK (completeness_pd IN ('UPLOADED', 'PARTIAL', 'MISSING')),
+    completeness_rd     TEXT NOT NULL DEFAULT 'MISSING'
+                        CHECK (completeness_rd IN ('UPLOADED', 'PARTIAL', 'MISSING')),
+    completeness_id     TEXT NOT NULL DEFAULT 'MISSING'
+                        CHECK (completeness_id IN ('UPLOADED', 'PARTIAL', 'MISSING')),
+    input_manifest_hash TEXT NOT NULL DEFAULT 'pending',
     protocol_id         TEXT REFERENCES protocols (id),
     -- ТЗ п. 9.1: таймаут разбора повторяется не более двух раз (всего 3 попытки).
     parse_attempts      SMALLINT NOT NULL DEFAULT 0
@@ -282,6 +289,79 @@ CREATE TRIGGER processes_sync_requires_finalized_protocol
 
 CREATE INDEX processes_object_state ON processes (object_id, process_state);
 
+-- Очередь инспектора: находки процесса. Таблица checks — предметный чек с
+-- param_id; здесь живут CANDIDATE после рестарта, без молчаливого JSON в
+-- processes. Ключ store_key = evidence_group_id либо finding_id (RT-G).
+CREATE TABLE process_findings (
+    process_id          TEXT NOT NULL REFERENCES processes (id),
+    store_key           TEXT NOT NULL,
+    finding_id          TEXT NOT NULL,
+    evidence_group_id   TEXT,
+    rule_code           VARCHAR(20) NOT NULL,
+    finding_status      TEXT NOT NULL
+                        CHECK (finding_status IN (
+                            'CANDIDATE', 'CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED',
+                            'AUTO_NO_DIFFERENCE', 'MISSING_EVIDENCE', 'NOT_APPLICABLE',
+                            'NOT_COMPARABLE', 'LOW_QUALITY', 'ABSTAIN',
+                            'CLARIFICATION_REQUIRED', 'SUSPICION'
+                        )),
+    review_priority     VARCHAR(20),
+    matrix_version      TEXT NOT NULL,
+    rule_version        TEXT NOT NULL,
+    model_version       TEXT NOT NULL,
+    expected_value      TEXT,
+    actual_value        TEXT,
+    delta               TEXT,
+    rationale           TEXT NOT NULL DEFAULT '',
+    inspector_id        TEXT,
+    inspector_action    TEXT
+                        CHECK (inspector_action IS NULL OR inspector_action IN (
+                            'CONFIRM', 'REJECT', 'REQUEST_CLARIFICATION'
+                        )),
+    reason_code         TEXT,
+    comment             TEXT,
+    decided_at          TIMESTAMPTZ,
+    payload             JSONB NOT NULL DEFAULT '{}',
+    PRIMARY KEY (process_id, store_key),
+    UNIQUE (process_id, finding_id),
+    CONSTRAINT process_violation_requires_human CHECK (
+        finding_status <> 'CONFIRMED_VIOLATION'
+        OR (inspector_id IS NOT NULL AND decided_at IS NOT NULL
+            AND evidence_group_id IS NOT NULL
+            AND comment IS NOT NULL AND btrim(comment) <> ''
+            AND inspector_action = 'CONFIRM')
+    ),
+    CONSTRAINT process_negative_requires_human CHECK (
+        finding_status <> 'NEGATIVE_VERIFIED'
+        OR (inspector_id IS NOT NULL AND decided_at IS NOT NULL
+            AND reason_code IS NOT NULL AND btrim(reason_code) <> ''
+            AND comment IS NOT NULL AND btrim(comment) <> ''
+            AND inspector_action = 'REJECT')
+    ),
+    CONSTRAINT process_candidate_requires_evidence CHECK (
+        finding_status NOT IN (
+            'CANDIDATE', 'CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED',
+            'AUTO_NO_DIFFERENCE', 'SUSPICION'
+        )
+        OR evidence_group_id IS NOT NULL
+    )
+);
+
+CREATE INDEX process_findings_status ON process_findings (process_id, finding_status);
+
+-- Файлы процесса. UNIQUE как files(object_id, file_hash, doc_stage), но в
+-- границах процесса: повтор hash+stage не плодит accepted.
+CREATE TABLE process_files (
+    process_id  TEXT NOT NULL REFERENCES processes (id),
+    file_id     TEXT NOT NULL,
+    file_hash   CHAR(64) NOT NULL,
+    filename    TEXT NOT NULL,
+    doc_stage   TEXT NOT NULL CHECK (doc_stage IN ('PD', 'RD', 'ID')),
+    size_bytes  INTEGER NOT NULL CHECK (size_bytes >= 0),
+    PRIMARY KEY (process_id, file_id),
+    UNIQUE (process_id, file_hash, doc_stage)
+);
+
 CREATE TABLE object_splits (
     object_id       TEXT NOT NULL REFERENCES objects (id),
     dataset_version TEXT NOT NULL,
@@ -318,6 +398,7 @@ CREATE TABLE audit_log (
     user_id     TEXT NOT NULL,
     action      TEXT NOT NULL,
     object_id   TEXT,
+    process_id  TEXT REFERENCES processes (id),
     details     JSONB NOT NULL DEFAULT '{}',
     timestamp   TIMESTAMPTZ NOT NULL DEFAULT now(),
     ip_address  TEXT,
@@ -325,6 +406,7 @@ CREATE TABLE audit_log (
 );
 
 CREATE INDEX audit_log_object_ts ON audit_log (object_id, timestamp);
+CREATE INDEX audit_log_process_ts ON audit_log (process_id, timestamp);
 
 -- Остальные таблицы сводки ТЗ п. 10 (Rejection_Log, Dispute_Log, Suspicions,
 -- Logical_Rules, Normative_Base, ML_Retraining_Log, Monitoring_Metrics,

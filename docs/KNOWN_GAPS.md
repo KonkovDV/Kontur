@@ -6,11 +6,9 @@
 | ID | Пробел | Почему не закрыто | Куда |
 |---|---|---|---|
 | RT-2609-21 | Замер юзабилити на 5 инспекторах | Форма есть, сессий нет | гейт K |
-| GAP-PROCESS-FINDINGS | Находки и комплектность не в таблице `processes` | MemoryStore восстанавливает находки на том же store; completeness и files при hydrate пустые; Postgres `load_findings` пуст; `checks` не пишется | гейт L |
 | GAP-OCR-ROT | Поворот и перекос скана | Векторный слой есть, OCR-пайплайна нет | гейт I |
 | GAP-STAMP | Штамп поверх текста | Нет сегментации штампа | гейт I |
 | GAP-DWG | Разбор DWG | Аудио и ТЗ расходятся; до ответа — `NOT_SUPPORTED` | вопрос 6 |
-| GAP-EDIT | Журнал правок инспектора отдельной таблицей | GET `/audit` читает MemoryAudit процесса; `user_action_log` нет, после рестарта журнал пуст | гейт K |
 | GAP-ISOLATE | PDF в дочернем процессе с таймаутом | pdfium в том же процессе | надёжность |
 | GAP-IOS4-VAL | Recall критических на frozen val не измерен | площадь A×B на синтетике есть; корпуса frozen val нет | гейт J |
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
@@ -18,7 +16,8 @@
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
-`put_finding` по `evidence_group_id`; протокол/находки после рестарта — GAP-PROCESS-FINDINGS.
+`put_finding` по `evidence_group_id`. Очередь после рестарта — `process_findings`,
+комплектность на `processes`, журнал — `audit_log`.
 
 `GAP-ISOLATE` не закрыт `pdf_guard`: `wait_for` / ThreadPool ограничивают ожидание,
 но не убивают поток pdfium и не выносят разбор в дочерний процесс.
@@ -44,3 +43,5 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 | GAP-ENUM-EXTRACTOR | text/enum экстрактор; KR-055 и PZ-015/021/022/023 executable | 4a10ce8 |
 | GAP-IOS4 | IOS4-078/079: number-экстрактор, synthetic E2E | overrides + compile |
 | GAP-RT-G | Дубль находки в процессе: `put_finding` по evidence_group_id | runtime.py |
+| GAP-PROCESS-FINDINGS | Находки, файлы и комплектность переживают смену workspace; Postgres пишет `process_findings` / `process_files` | schema.sql |
+| GAP-EDIT | Журнал REVIEW/FINALIZE/UNFINALIZE в `audit_log` и GET `/audit` | audit_store.py |

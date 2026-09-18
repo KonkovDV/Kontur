@@ -1,10 +1,8 @@
-"""Состояние процессов: снимок в DAO, находки — в памяти процесса API.
+"""Состояние процессов: снимок в DAO, очередь — в process_findings / audit_log.
 
-Таблица `processes` — контракт хранения. HTTP по умолчанию держит полный
-контур в памяти и пишет снимок в MemoryProcessStore. Postgres включается
-отдельным адаптером. Находки в MemoryProcessStore переживают смену
-ProcessWorkspace на том же store; completeness при hydrate пустая, Postgres
-load_findings пуст (GAP-PROCESS-FINDINGS).
+Таблица `processes` хранит состояние и комплектность. HTTP по умолчанию держит
+контур в памяти и пишет снимок в MemoryProcessStore. Postgres включает
+адаптер с теми же таблицами schema.sql.
 """
 
 from __future__ import annotations
@@ -28,26 +26,35 @@ from kontur.domain.statuses import (
     SyncState,
 )
 from kontur.infrastructure.db.process_store import (
+    FileRecord,
     MemoryProcessStore,
     ProcessSnapshot,
     ProcessStore,
 )
 
 
-def _empty_completeness() -> CompletenessMap:
-    return {
-        DocStage.PD: Completeness.MISSING,
-        DocStage.RD: Completeness.MISSING,
-        DocStage.ID: Completeness.MISSING,
-    }
-
-
 class MemoryAudit:
     def __init__(self) -> None:
         self.records: list[tuple[str, str, dict[str, object]]] = []
+        self._store: ProcessStore | None = None
+        self._process_id: str | None = None
+        self._object_id: str | None = None
+
+    def bind(self, store: ProcessStore, process_id: str, object_id: str) -> None:
+        self._store = store
+        self._process_id = process_id
+        self._object_id = object_id
 
     def record(self, actor_id: str, action: str, payload: dict[str, object]) -> None:
         self.records.append((actor_id, action, payload))
+        if self._store is not None and self._process_id is not None:
+            self._store.save_audit_event(
+                self._process_id,
+                actor_id,
+                action,
+                payload,
+                object_id=self._object_id,
+            )
 
 
 @dataclass
@@ -126,11 +133,7 @@ class ProcessRecord:
 
 
 class ProcessWorkspace:
-    """Процессы в памяти плюс снимок DAO.
-
-    Находки на MemoryProcessStore переживают смену workspace. Completeness,
-    файлы и MemoryAudit при hydrate пустые — GAP-PROCESS-FINDINGS / GAP-EDIT.
-    """
+    """Процессы в памяти плюс снимок DAO: находки, файлы, комплектность, аудит."""
 
     def __init__(self, store: ProcessStore | None = None) -> None:
         self._items: dict[str, ProcessRecord] = {}
@@ -157,6 +160,20 @@ class ProcessWorkspace:
             last_error_code=record.last_sync_notice,
             finalized_by=record.finalized_by,
             protocol_id=record.protocol_id,
+            completeness_pd=record.completeness[DocStage.PD],
+            completeness_rd=record.completeness[DocStage.RD],
+            completeness_id=record.completeness[DocStage.ID],
+            input_manifest_hash=record.input_manifest_hash,
+            files=tuple(
+                FileRecord(
+                    file_id=item.file_id,
+                    file_hash=item.file_hash,
+                    filename=item.filename,
+                    doc_stage=item.doc_stage,
+                    size_bytes=item.size_bytes,
+                )
+                for item in record.files
+            ),
         )
 
     def _persist(self, record: ProcessRecord) -> None:
@@ -167,7 +184,11 @@ class ProcessWorkspace:
             process_id=snapshot.process_id,
             object_id=snapshot.object_id,
             process_state=snapshot.process_state,
-            completeness=_empty_completeness(),
+            completeness={
+                DocStage.PD: snapshot.completeness_pd,
+                DocStage.RD: snapshot.completeness_rd,
+                DocStage.ID: snapshot.completeness_id,
+            },
             scenario=snapshot.scenario,
             sync_state=snapshot.sync_state,
             sync_attempts=snapshot.sync_attempts,
@@ -178,6 +199,17 @@ class ProcessWorkspace:
             dataset_version=snapshot.dataset_version or "unspecified",
             last_sync_notice=snapshot.last_error_code,
             protocol_id=snapshot.protocol_id,
+            input_manifest_hash=snapshot.input_manifest_hash,
+            files=[
+                AcceptedFile(
+                    file_id=item.file_id,
+                    file_hash=item.file_hash,
+                    filename=item.filename,
+                    doc_stage=item.doc_stage,
+                    size_bytes=item.size_bytes,
+                )
+                for item in snapshot.files
+            ],
         )
 
     def get(self, process_id: str) -> ProcessRecord | None:
@@ -191,6 +223,8 @@ class ProcessWorkspace:
         for finding in self._store.load_findings(process_id):
             key = finding.evidence_group_id or finding.finding_id
             record.findings[key] = finding
+        record.audit.records.extend(self._store.load_audit(process_id))
+        record.audit.bind(self._store, process_id, record.object_id)
         self._items[process_id] = record
         return record
 
@@ -203,6 +237,7 @@ class ProcessWorkspace:
             scenario=detect_scenario(completeness),
         )
         self._items[record.process_id] = record
+        record.audit.bind(self._store, record.process_id, record.object_id)
         self._persist(record)
         return record
 
@@ -222,6 +257,7 @@ class ProcessWorkspace:
         record.completeness[item.doc_stage] = Completeness.UPLOADED
         record.scenario = detect_scenario(record.completeness)
         record.input_manifest_hash = item.file_hash if len(record.files) == 1 else "pending"
+        self._persist(record)
         return True
 
     def put_finding(self, process_id: str, finding: Finding) -> None:

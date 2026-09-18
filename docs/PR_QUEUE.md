@@ -24,9 +24,13 @@
 | #39 | GET `/protocol` через `assemble_protocol`; статус п. 9.3; AUTO_NO_DIFFERENCE не на проводе |
 | #40 | MemoryProcessStore: `save_finding`/`load_findings`; без CONFIRMED_VIOLATION без инспектора |
 | #41 | `tests/load/k6_status.js` без порога p95; CI k6 не запускает |
-| #42+#45 | GET `/audit` + OpenAPI `getAuditLog` + rbac; GAP-EDIT открыт |
+| #42+#45 | GET `/audit` + OpenAPI `getAuditLog` + rbac; журнал в `audit_log` |
 | #43 | сценарии `PD_ID_ONLY` / `RD_ID_ONLY` / SINGLE RD, SINGLE ID в `test_scenarios.py` |
 | #44 | `attach_file` идемпотентен по hash+stage; повтор загрузки не дублирует `accepted` |
+| #46 | dry-run 132 по `data/matrix/rules/` через `evaluate_rule`; без документов, без человеческих вердиктов |
+| #47 | `process_findings` / `process_files` / completeness в `schema.sql` + `checks.sql` |
+| #48 | `PostgresAuditStore` → `audit_log.process_id`; GET `/audit` после hydrate |
+| #49 | путь замера Wilson-recall; 16/20 не закрывает порог; цифры не публикуем |
 
 ## Что не брали
 
@@ -51,11 +55,12 @@
 | #40 as-is | `CONFIRMED_VIOLATION` без инспектора ломает `Finding.__post_init__` |
 | #42 as-is | unicode-escape всего `api.py`; `getAuditLog` без OpenAPI |
 | #45 as-is | ложное закрытие GAP-EDIT; опечатка «отклён» |
-| #46 | dry-run: `MATRIX_PATH=rules` без compile; `DocumentRef`/`PageToken` не с main; `tests/gate_k` не в pytest |
-| #47 | миграция `process_findings` без `schema.sql`/`checks.sql` (db job миграции не гоняет) |
-| #48 | PostgresAuditStore без проводки в `schema.sql`; rbac без OpenAPI |
-| #49 | синтетический recall 16/20 = gold; порог Wilson не выполнен; `tests/gate_j` не собирается |
-| #50 | ложные закрытия GAP-EDIT / PROCESS-FINDINGS / IOS4-VAL |
+| #46 as-is | `MATRIX_PATH=rules` без compile; `DocumentRef`/`PageToken` не с main; `tests/gate_k` не в pytest |
+| #47 as-is | миграция вне `schema.sql`/`checks.sql` |
+| #48 as-is | rbac без OpenAPI |
+| #49 as-is | синтетический recall 16/20 = gold; `tests/gate_j` не собирается |
+| #50 as-is | закрытие GAP-IOS4-VAL без корпуса frozen val |
 
 Не публиковать F1/P/R и recall критических на frozen val. Площадь A×B на
-синтетике не закрывает гейт J. k6 p95 не измерен.
+синтетике не закрывает гейт J. k6 p95 не измерен. Dry-run 132 — прогон
+движка на пустой комплектности, без заявления, что вся матрица executable.

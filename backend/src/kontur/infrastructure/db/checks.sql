@@ -236,4 +236,64 @@ EXCEPTION
 END;
 $$;
 
+-- 14. Очередь процесса: CONFIRMED_VIOLATION без инспектора невозможна.
+INSERT INTO processes (
+    id, object_id, process_state, scenario, matrix_version, model_version
+) VALUES (
+    'prc-findings', 'obj-check', 'PARSING', 'SINGLE_ONLY', 'draft-0', 'm-0'
+);
+
+DO $$
+BEGIN
+    INSERT INTO process_findings (
+        process_id, store_key, finding_id, evidence_group_id, rule_code,
+        finding_status, matrix_version, rule_version, model_version
+    ) VALUES (
+        'prc-findings', 'eg-auto', 'f-auto', 'eg-auto', 'PZ-001',
+        'CONFIRMED_VIOLATION', 'draft-0', '0.1.0', 'none'
+    );
+    RAISE EXCEPTION 'process_findings: CONFIRMED_VIOLATION без инспектора прошёл'
+        USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN check_violation THEN NULL;
+END;
+$$;
+
+-- 15. Повтор hash+stage в процессе запрещён.
+INSERT INTO process_files (
+    process_id, file_id, file_hash, filename, doc_stage, size_bytes
+) VALUES (
+    'prc-findings', 'file-1', repeat('a', 64), 'pz.pdf', 'PD', 12
+);
+
+DO $$
+BEGIN
+    INSERT INTO process_files (
+        process_id, file_id, file_hash, filename, doc_stage, size_bytes
+    ) VALUES (
+        'prc-findings', 'file-2', repeat('a', 64), 'pz.pdf', 'PD', 12
+    );
+    RAISE EXCEPTION 'process_files: дубль hash+stage прошёл' USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN unique_violation THEN NULL;
+END;
+$$;
+
+-- 16. CANDIDATE без evidence_group_id не сохраняется.
+DO $$
+BEGIN
+    INSERT INTO process_findings (
+        process_id, store_key, finding_id, evidence_group_id, rule_code,
+        finding_status, matrix_version, rule_version, model_version
+    ) VALUES (
+        'prc-findings', 'f-bare', 'f-bare', NULL, 'PZ-001',
+        'CANDIDATE', 'draft-0', '0.1.0', 'none'
+    );
+    RAISE EXCEPTION 'process_findings: CANDIDATE без группы прошёл'
+        USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN check_violation THEN NULL;
+END;
+$$;
+
 ROLLBACK;

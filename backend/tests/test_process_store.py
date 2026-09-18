@@ -20,9 +20,14 @@ from kontur.domain.statuses import (
 from kontur.infrastructure.db.process_store import (
     ENSURE_OBJECT_SQL,
     PLACEHOLDER_PROTOCOL_SQL,
+    SELECT_FINDINGS_SQL,
+    UPSERT_FINDING_SQL,
     UPSERT_PROCESS_SQL,
     MemoryProcessStore,
+    PostgresProcessStore,
     ProcessSnapshot,
+    finding_from_row,
+    finding_to_params,
     snapshot_params,
     validate_snapshot,
 )
@@ -74,9 +79,12 @@ def test_parse_attempts_are_capped() -> None:
 
 def test_sql_matches_schema_columns() -> None:
     assert "INSERT INTO processes" in UPSERT_PROCESS_SQL
+    assert "completeness_pd" in UPSERT_PROCESS_SQL
     assert "ON CONFLICT (id) DO UPDATE" in UPSERT_PROCESS_SQL
     assert "INSERT INTO objects" in ENSURE_OBJECT_SQL
     assert "PROTOCOL_FINALIZED" in PLACEHOLDER_PROTOCOL_SQL
+    assert "INSERT INTO process_findings" in UPSERT_FINDING_SQL
+    assert "FROM process_findings" in SELECT_FINDINGS_SQL
     assert "assembled" in str(snapshot_params(_snap()).get("payload"))
 
 
@@ -117,7 +125,7 @@ def test_findings_survive_new_workspace_on_same_store() -> None:
     stored = next(iter(loaded.findings.values()))
     assert stored.finding_id == "f-persist"
     assert stored.finding_status is FindingStatus.CANDIDATE
-    assert loaded.completeness[DocStage.PD] is Completeness.MISSING
+    assert loaded.completeness[DocStage.PD] is Completeness.UPLOADED
 
 
 def test_reviewed_finding_survives_new_workspace() -> None:
@@ -167,3 +175,150 @@ def test_attach_file_is_idempotent_on_hash_and_stage() -> None:
     assert workspace.attach_file(record, retry) is False
     assert workspace.attach_file(record, other_stage) is True
     assert len(record.files) == 2
+
+
+def test_files_completeness_and_audit_survive_new_workspace() -> None:
+    store = MemoryProcessStore()
+    first = ProcessWorkspace(store=store)
+    created = first.create("obj-1", _completeness())
+    first.attach_file(
+        created,
+        AcceptedFile(
+            file_id="file-1",
+            file_hash="b" * 64,
+            filename="pz.pdf",
+            doc_stage=DocStage.PD,
+            size_bytes=12,
+        ),
+    )
+    first.put_finding(created.process_id, _candidate())
+    first.review_finding(
+        "f-persist",
+        actor=Actor(actor_id="insp-7", is_human=True),
+        action="REJECT",
+        reason_code=ReasonCode.OCR_ERROR,
+        comment="ошибка чтения",
+    )
+    second = ProcessWorkspace(store=store)
+    loaded = second.get(created.process_id)
+    assert loaded is not None
+    assert loaded.completeness[DocStage.PD] is Completeness.UPLOADED
+    assert len(loaded.files) == 1
+    assert loaded.files[0].file_hash == "b" * 64
+    assert "REVIEW" in [event[1] for event in loaded.audit.records]
+
+
+def test_finding_codec_roundtrip_keeps_inspector_reject() -> None:
+    store = MemoryProcessStore()
+    workspace = ProcessWorkspace(store=store)
+    created = workspace.create("obj-1", _completeness())
+    workspace.put_finding(created.process_id, _candidate())
+    reviewed = workspace.review_finding(
+        "f-persist",
+        actor=Actor(actor_id="insp-7", is_human=True),
+        action="REJECT",
+        reason_code=ReasonCode.OCR_ERROR,
+        comment="ошибка чтения",
+    )
+    params = finding_to_params(created.process_id, reviewed)
+    row = (
+        params["process_id"],
+        params["store_key"],
+        params["finding_id"],
+        params["evidence_group_id"],
+        params["rule_code"],
+        params["finding_status"],
+        params["review_priority"],
+        params["matrix_version"],
+        params["rule_version"],
+        params["model_version"],
+        params["expected_value"],
+        params["actual_value"],
+        params["delta"],
+        params["rationale"],
+        params["inspector_id"],
+        params["inspector_action"],
+        params["reason_code"],
+        params["comment"],
+        params["decided_at"],
+        params["payload"],
+    )
+    restored = finding_from_row(row)
+    assert restored.finding_status is FindingStatus.NEGATIVE_VERIFIED
+    assert restored.inspector_decision is not None
+    assert restored.inspector_decision.action == "REJECT"
+    assert restored.inspector_decision.reason_code is ReasonCode.OCR_ERROR
+
+
+class _Cursor:
+    def __init__(self, rows: list[object]) -> None:
+        self._rows = rows
+
+    def fetchone(self) -> object | None:
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self) -> list[object]:
+        return list(self._rows)
+
+
+class _Conn:
+    def __init__(self) -> None:
+        self.sql: list[str] = []
+        self.findings: list[object] = []
+        self.files: list[object] = []
+        self.process: object | None = None
+        self.audit: list[object] = []
+
+    def execute(self, sql: str, params: object = None) -> _Cursor:
+        del params
+        self.sql.append(sql)
+        text = " ".join(sql.split()).lower()
+        if text.startswith("select") and "from processes" in text:
+            return _Cursor([] if self.process is None else [self.process])
+        if "from process_files" in text:
+            return _Cursor(self.files)
+        if "from process_findings" in text:
+            return _Cursor(self.findings)
+        if "from audit_log" in text:
+            return _Cursor(self.audit)
+        return _Cursor([])
+
+
+def test_postgres_store_writes_findings_and_audit() -> None:
+    conn = _Conn()
+    store = PostgresProcessStore(conn)
+    store.save(_snap())
+    joined = "\n".join(conn.sql)
+    assert "INSERT INTO processes" in joined
+    assert "completeness_pd" in joined
+    store.save_finding("p-1", _candidate())
+    assert any("INSERT INTO process_findings" in item for item in conn.sql)
+    params = finding_to_params("p-1", _candidate())
+    conn.findings = [
+        (
+            params["process_id"],
+            params["store_key"],
+            params["finding_id"],
+            params["evidence_group_id"],
+            params["rule_code"],
+            params["finding_status"],
+            params["review_priority"],
+            params["matrix_version"],
+            params["rule_version"],
+            params["model_version"],
+            params["expected_value"],
+            params["actual_value"],
+            params["delta"],
+            params["rationale"],
+            params["inspector_id"],
+            params["inspector_action"],
+            params["reason_code"],
+            params["comment"],
+            params["decided_at"],
+            params["payload"],
+        )
+    ]
+    loaded = store.load_findings("p-1")
+    assert loaded[0].finding_id == "f-persist"
+    store.save_audit_event("p-1", "insp-7", "REVIEW", {"action": "REJECT"}, object_id="obj-1")
+    assert any("INSERT INTO audit_log" in item for item in conn.sql)

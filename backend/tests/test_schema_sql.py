@@ -68,6 +68,11 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
 
     sql = SCHEMA.read_text(encoding="utf-8")
     assert "CREATE TABLE processes" in sql
+    assert "completeness_pd" in sql
+    assert "CREATE TABLE process_findings" in sql
+    assert "CREATE TABLE process_files" in sql
+    assert "process_violation_requires_human" in sql
+    assert "audit_log_process_ts" in sql
     assert "processes_object_state" in sql
     assert "parse_attempts BETWEEN 0 AND 3" in sql
     assert "sync_attempts BETWEEN 0 AND 4" in sql
@@ -89,7 +94,9 @@ def test_checks_sql_asserts_instead_of_merely_running() -> None:
     """checks.sql обязан ловить отсутствие ограничения, а не любую ошибку подряд."""
 
     checks = CHECKS.read_text(encoding="utf-8")
-    assert checks.count("DO $$") >= 12
+    assert checks.count("DO $$") >= 15
+    assert "process_findings" in checks
+    assert "process_files" in checks
     assert checks.count("DO $$") == checks.count("END;\n$$;")
     assert "KNT99" in checks
     assert "KNT02" in checks
