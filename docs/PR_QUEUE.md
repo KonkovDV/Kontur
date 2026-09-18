@@ -20,6 +20,7 @@
 | #34/#36 capabilities | `kit_degraded` / `engine_health_summary` / `GET /system/capabilities` |
 | #35/#36 pdf_guard | `asyncio.wait_for` + ThreadPool, `TimeoutError`, без SIGKILL |
 | #37 | замки на реальный API: нет `BLOCKED`/`process_id`/`UserWarning`; `split()` = `NotImplementedError` |
+| #38 | IOS4-078: `multiply_dimensions` + compile `rules/`; площадь A×B на синтетике |
 
 ## Что не брали
 
@@ -39,6 +40,7 @@
 | #34 engine_status.py | дубль `domain/capabilities.py` |
 | #36 as-is | ruff UP041/B904/I001/E501; влит очищенный срез |
 | #37 as-is | ruff I001/F401; 383 строки дубля уже зелёных тестов; grep `KNOWN_GAPS.md` |
+| #38 as-is | override без compile; нет `multiply_dimensions` в `rule.schema.json`; GAP закрыт при неизмеренном recall |
 
-Не публиковать F1/P/R и recall критических на frozen val. IOS4 на синтетике
-не равен площади мм² и не закрывает гейт J.
+Не публиковать F1/P/R и recall критических на frozen val. Площадь A×B на
+синтетике не закрывает гейт J.

@@ -1,8 +1,7 @@
 """E2E IOS4-078/079: number-экстрактор для золотых критических правил.
 
 Источник правды — overrides + compile_matrix, не правка generated rules/.
-Первая сторона «500×300» — прокси ширины, не площадь мм²; recall на frozen
-val не заявляется.
+IOS4-078: площадь A×B мм² на синтетике. Recall на frozen val не заявляется.
 """
 
 from __future__ import annotations
@@ -11,6 +10,7 @@ from pathlib import Path
 
 from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.extractors.number import PageToken
+from kontur.application.normalize import parse_number
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
 from kontur.domain.statuses import Completeness, DisagreementKind, FindingStatus
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
@@ -68,6 +68,8 @@ def test_ios4_078_is_executable() -> None:
     assert rule["coverage"] == "executable"
     assert rule["extractor"]["type"] == "number"
     assert rule["comparator"]["operator"] == "ge"
+    assert rule["unit"] == "мм²"
+    assert "multiply_dimensions" in rule["extractor"]["normalization"]
 
 
 def test_ios4_078_same_section_no_difference() -> None:
@@ -83,6 +85,8 @@ def test_ios4_078_same_section_no_difference() -> None:
     assert result.finding.has_provenance is True
     assert result.finding.source_id == pages[DocStage.PD].document.file_id
     assert result.finding.evidence_refs
+    assert result.finding.expected_value == 150_000.0
+    assert result.finding.actual_value == 150_000.0
 
 
 def test_ios4_078_reduced_section_gives_candidate() -> None:
@@ -95,6 +99,8 @@ def test_ios4_078_reduced_section_gives_candidate() -> None:
     assert result.finding.finding_status is FindingStatus.CANDIDATE
     assert result.finding.disagreement_kind is DisagreementKind.VALUE_DELTA
     assert result.finding.has_provenance is True
+    assert result.finding.expected_value == 150_000.0
+    assert result.finding.actual_value == 80_000.0
 
 
 def test_ios4_078_larger_rd_section_no_difference() -> None:
@@ -207,3 +213,22 @@ def test_executable_count_includes_ios4() -> None:
     assert "IOS4-078" in executable
     assert "IOS4-079" in executable
     assert len(executable) >= 28
+
+
+def test_multiply_dimensions_is_opt_in() -> None:
+    steps_area = ("nfc", "collapse_spaces", "decimal_comma", "multiply_dimensions")
+    assert parse_number("500×300", steps_area) == 150_000.0
+    assert parse_number("500 × 300", steps_area) == 150_000.0
+    assert parse_number("500,5×200", steps_area) == 100_100.0
+    assert parse_number("1500", ("nfc", "collapse_spaces", "decimal_comma")) == 1500.0
+
+
+def test_ios4_078_area_from_spaced_tokens() -> None:
+    rule = _REGISTRY.get("IOS4-078")
+    pages = {
+        DocStage.PD: _page(DocStage.PD, "078-sp", "сечение воздуховода", "500", "×", "300"),
+        DocStage.RD: _page(DocStage.RD, "078-sp", "сечение воздуховода", "500", "×", "300"),
+    }
+    result = evaluate_rule(rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness())
+    assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+    assert result.finding.expected_value == 150_000.0

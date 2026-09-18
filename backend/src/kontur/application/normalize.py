@@ -9,6 +9,8 @@ from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN, ROUND_HALF_UP, 
 
 _UNIT_TAIL = re.compile(r"(?:м\u00b2|м2|m2|м\^2)\s*$", re.IGNORECASE)
 _SPACES = re.compile(r"[\s\u00a0\u202f]+")
+# После collapse_spaces/decimal_comma: «500×300» / «500x300» / «500х300».
+_DIM_SEP = re.compile(r"^(\d+(?:\.\d+)?)[×xх](\d+(?:\.\d+)?)$")
 
 _ROUNDING = {
     "none": None,
@@ -53,6 +55,11 @@ def apply_number_normalizations(raw: str, steps: Sequence[str]) -> str:
             text = text.replace(".", "").replace(",", ".")
         else:
             text = text.replace(",", ".")
+    if "multiply_dimensions" in ordered:
+        matched = _DIM_SEP.match(text)
+        if matched is not None:
+            area = float(matched.group(1)) * float(matched.group(2))
+            text = str(int(area) if area == int(area) else area)
     if "upper" in ordered:
         text = text.upper()
     return text

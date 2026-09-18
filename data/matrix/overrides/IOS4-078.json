@@ -18,9 +18,9 @@
   },
   "extractor": {
     "type": "number",
-    "regex": "(\\d{2,}(?:[.,]\\d+)?)\\s*[×xх]",
+    "regex": "(\\d{2,}(?:[.,]\\d+)?\\s*[×xх]\\s*\\d{2,}(?:[.,]\\d+)?)",
     "anchors": ["сечение воздуховода", "воздуховод", "вытяжная вентиляция"],
-    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
+    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit", "multiply_dimensions"],
     "dual_read_required": true
   },
   "comparator": {

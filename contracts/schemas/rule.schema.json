@@ -68,7 +68,17 @@
         "anchors": { "type": "array", "items": { "type": "string" } },
         "normalization": {
           "type": "array",
-          "items": { "type": "string", "enum": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit", "upper"] }
+          "items": {
+            "type": "string",
+            "enum": [
+              "nfc",
+              "collapse_spaces",
+              "decimal_comma",
+              "strip_unit",
+              "upper",
+              "multiply_dimensions"
+            ]
+          }
         },
         "dual_read_required": {
           "type": "boolean",
