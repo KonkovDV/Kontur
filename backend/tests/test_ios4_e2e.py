@@ -12,7 +12,7 @@ from pathlib import Path
 from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.extractors.number import PageToken
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
-from kontur.domain.statuses import Completeness, FindingStatus
+from kontur.domain.statuses import Completeness, DisagreementKind, FindingStatus
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
 
 REPO = Path(__file__).resolve().parents[2]
@@ -80,6 +80,9 @@ def test_ios4_078_same_section_no_difference() -> None:
     result = evaluate_rule(rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness())
     assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
     assert result.evidence_group is not None
+    assert result.finding.has_provenance is True
+    assert result.finding.source_id == pages[DocStage.PD].document.file_id
+    assert result.finding.evidence_refs
 
 
 def test_ios4_078_reduced_section_gives_candidate() -> None:
@@ -90,6 +93,8 @@ def test_ios4_078_reduced_section_gives_candidate() -> None:
     }
     result = evaluate_rule(rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness())
     assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.disagreement_kind is DisagreementKind.VALUE_DELTA
+    assert result.finding.has_provenance is True
 
 
 def test_ios4_078_larger_rd_section_no_difference() -> None:
@@ -110,6 +115,24 @@ def test_ios4_078_rd_missing() -> None:
     )
     assert result.finding.finding_status is FindingStatus.MISSING_EVIDENCE
     assert result.finding.evidence_group_id is None
+    assert result.finding.has_provenance is False
+    assert result.finding.disagreement_kind is DisagreementKind.MISSING_IN_STAGE
+
+
+def test_ios4_078_dual_read_disagree_gives_abstain() -> None:
+    rule = _REGISTRY.get("IOS4-078")
+    pages = {
+        DocStage.PD: _page(
+            DocStage.PD, "078-dr", "сечение воздуховода", "500×300", "400×200"
+        ),
+        DocStage.RD: _page(
+            DocStage.RD, "078-dr", "сечение воздуховода", "500×300", "400×200"
+        ),
+    }
+    result = evaluate_rule(rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness())
+    assert result.finding.finding_status is FindingStatus.ABSTAIN
+    assert result.finding.evidence_group_id is None
+    assert result.finding.has_provenance is False
 
 
 def test_ios4_078_no_dimension_low_quality() -> None:
@@ -154,6 +177,7 @@ def test_ios4_079_mismatch_gives_candidate() -> None:
     }
     result = evaluate_rule(rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness())
     assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.disagreement_kind is DisagreementKind.VALUE_DELTA
 
 
 def test_ios4_079_rd_missing() -> None:

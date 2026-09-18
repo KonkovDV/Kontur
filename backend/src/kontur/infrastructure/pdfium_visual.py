@@ -14,6 +14,7 @@ from kontur.application.visual_text import (
 )
 from kontur.domain.coordinates import PageFrame
 from kontur.domain.geometry import bbox_from_polygon
+from kontur.infrastructure.pdf_guard import run_pdf_parse_sync
 from kontur.infrastructure.pdfium_tokens import extract_pdf_bytes
 
 RENDER_SCALE = 2.0
@@ -89,6 +90,10 @@ def _page_flags(
 def assess_pdf_bytes(data: bytes) -> VisualTextAssessment:
     """Сверить токены текстового слоя с растром той же страницы."""
 
+    return run_pdf_parse_sync(_assess_pdf_bytes, data)
+
+
+def _assess_pdf_bytes(data: bytes) -> VisualTextAssessment:
     extracted = extract_pdf_bytes(data)
     document = pdfium.PdfDocument(data)
     try:

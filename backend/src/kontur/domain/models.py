@@ -8,6 +8,7 @@ from enum import StrEnum
 
 from kontur.domain.statuses import (
     STATUSES_REQUIRING_EVIDENCE,
+    DisagreementKind,
     FindingStatus,
     ReasonCode,
     ReviewPriority,
@@ -146,6 +147,9 @@ class Finding:
     rationale: str = ""
     llm_draft: str | None = None
     inspector_decision: InspectorDecision | None = None
+    source_id: str | None = None
+    evidence_refs: tuple[str, ...] = ()
+    disagreement_kind: DisagreementKind | None = None
 
     def __post_init__(self) -> None:
         if self.finding_status in STATUSES_REQUIRING_EVIDENCE and not self.evidence_group_id:
@@ -171,3 +175,9 @@ class Finding:
             self.finding_status is FindingStatus.CONFIRMED_VIOLATION
             and self.inspector_decision is not None
         )
+
+    @property
+    def has_provenance(self) -> bool:
+        """Предметная находка с группой доказательств и file_id эталона."""
+
+        return bool(self.evidence_group_id) and bool(self.source_id)

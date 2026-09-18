@@ -85,6 +85,10 @@
       "expected_status": "MISSING_EVIDENCE"
     },
     {
+      "name": "dual_read_disagree_gives_abstain",
+      "expected_status": "ABSTAIN"
+    },
+    {
       "name": "object_without_ducts_is_not_applicable",
       "expected_status": "NOT_APPLICABLE"
     }

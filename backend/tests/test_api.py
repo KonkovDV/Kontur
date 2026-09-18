@@ -38,6 +38,24 @@ def test_healthz_is_public(client: TestClient) -> None:
     assert client.get("/api/v1/healthz").json() == {"status": "ok"}
 
 
+def test_capabilities_require_token(client: TestClient) -> None:
+    assert client.get("/api/v1/system/capabilities").status_code == 401
+
+
+def test_capabilities_are_honest_about_missing_ocr(client: TestClient) -> None:
+    response = client.get("/api/v1/system/capabilities", headers=INSPECTOR)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["overall"] == "AVAILABLE"
+    assert body["kit_blocked"] is False
+    engines = {item["name"]: item for item in body["engines"]}
+    assert engines["vector_text"]["status"] == "AVAILABLE"
+    assert engines["ocr_text"]["status"] == "UNAVAILABLE"
+    assert engines["drawing_analysis"]["status"] == "UNAVAILABLE"
+    assert "ocr_text" in body["health"]["failed"]
+    assert "vector_text" in body["health"]["healthy"]
+
+
 def test_upload_without_token_is_401(client: TestClient) -> None:
     response = _upload(client, headers={})
     assert response.status_code == 401

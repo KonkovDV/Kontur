@@ -50,6 +50,25 @@
       "description": "Детерминированное обоснование компаратора. Черновик пояснения от LLM хранится отдельно в llm_draft и не влияет на статус."
     },
     "llm_draft": { "type": ["string", "null"] },
+    "source_id": {
+      "type": ["string", "null"],
+      "description": "file_id эталона (ПД). Не заменяет evidence_group_id."
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Идентификаторы фрагментов группы. Пустой список допустим только если ключ опущен."
+    },
+    "disagreement_kind": {
+      "type": ["string", "null"],
+      "enum": [
+        "VALUE_DELTA",
+        "MISSING_IN_STAGE",
+        "AMBIGUOUS_REFERENCE",
+        "FORMAT_MISMATCH",
+        null
+      ]
+    },
     "normative_refs": {
       "type": "array",
       "items": {

@@ -46,6 +46,12 @@ def finding_to_schema(finding: Finding) -> dict[str, object]:
         payload["delta"] = finding.delta
     if finding.llm_draft is not None:
         payload["llm_draft"] = finding.llm_draft
+    if finding.source_id is not None:
+        payload["source_id"] = finding.source_id
+    if finding.evidence_refs:
+        payload["evidence_refs"] = list(finding.evidence_refs)
+    if finding.disagreement_kind is not None:
+        payload["disagreement_kind"] = finding.disagreement_kind.value
     decision = finding.inspector_decision
     if decision is not None:
         stamp = decision.timestamp

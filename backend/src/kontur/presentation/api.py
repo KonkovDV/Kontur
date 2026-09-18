@@ -23,6 +23,7 @@ from kontur.application.intake import (
 )
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
+from kontur.domain.capabilities import capabilities_payload
 from kontur.domain.models import DocStage
 from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError
@@ -108,6 +109,14 @@ async def _empty_package(_request: Request, exc: EmptyPackageError) -> JSONRespo
 @app.get("/api/v1/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/v1/system/capabilities")
+def system_capabilities(
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object]:
+    _require("getSystemCapabilities", authorization)
+    return capabilities_payload()
 
 
 @app.post("/api/v1/documents/upload", status_code=202, response_model=None)
@@ -245,12 +254,19 @@ def review_finding(
         )
     except KeyError:
         return JSONResponse(status_code=404, content={"detail": "находка не найдена"})
-    return {
+    payload: dict[str, object] = {
         "finding_id": finding.finding_id,
         "finding_status": finding.finding_status.value,
         "rule_code": finding.rule_code,
         "evidence_group_id": finding.evidence_group_id,
     }
+    if finding.source_id is not None:
+        payload["source_id"] = finding.source_id
+    if finding.evidence_refs:
+        payload["evidence_refs"] = list(finding.evidence_refs)
+    if finding.disagreement_kind is not None:
+        payload["disagreement_kind"] = finding.disagreement_kind.value
+    return payload
 
 
 @app.post("/api/v1/processes/{process_id}/finalize", response_model=None)

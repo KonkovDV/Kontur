@@ -7,6 +7,9 @@ from pathlib import Path
 
 import pytest
 
+from kontur.domain.models import Finding
+from kontur.domain.statuses import DisagreementKind, FindingStatus, ReviewPriority
+
 jsonschema = pytest.importorskip("jsonschema")
 
 SCHEMA_PATH = Path(__file__).resolve().parents[2] / "contracts" / "schemas" / "finding.schema.json"
@@ -77,6 +80,40 @@ def test_negative_requires_reason_and_comment() -> None:
     )
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.validate(payload, SCHEMA)
+
+
+def test_unknown_property_rejected() -> None:
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(_base(invented_field=True), SCHEMA)
+
+
+def test_optional_provenance_accepted() -> None:
+    jsonschema.validate(
+        _base(
+            source_id="file-pd",
+            evidence_refs=["eg-1-PD"],
+            disagreement_kind="VALUE_DELTA",
+        ),
+        SCHEMA,
+    )
+
+
+def test_optional_provenance_does_not_require_warning() -> None:
+    finding = Finding(
+        finding_id="f-p",
+        rule_code="PZ-001",
+        finding_status=FindingStatus.CANDIDATE,
+        review_priority=ReviewPriority.HIGH,
+        matrix_version="draft-0",
+        rule_version="0.1.0",
+        model_version="none",
+        evidence_group_id="eg-1",
+        source_id="file-pd",
+        evidence_refs=("eg-1-PD",),
+        disagreement_kind=DisagreementKind.VALUE_DELTA,
+    )
+    assert finding.has_provenance is True
+    assert finding.counts_as_violation is False
 
 
 def test_valid_confirmed_violation_passes() -> None:

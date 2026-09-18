@@ -42,6 +42,7 @@ HTTP_FORBIDDEN: int = 403
 #: operationId из OpenAPI → роли. Пустое множество запрещено по построению.
 REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "uploadDocuments": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
+    "getSystemCapabilities": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProcessStatus": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "reviewFinding": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),

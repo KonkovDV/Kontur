@@ -27,6 +27,24 @@ paths:
         "200":
           description: Процесс отвечает
 
+  /system/capabilities:
+    get:
+      summary: Честный снимок слоёв извлечения
+      description: >
+        overall — живой путь (сейчас векторный текст). Отсутствующие OCR,
+        таблицы и разбор чертежа перечислены явно: тишина не считается успехом.
+        LLM/VLM — advisory и не валят комплект.
+      operationId: getSystemCapabilities
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          description: Снимок возможностей
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SystemCapabilities" }
+
   /documents/upload:
     post:
       summary: Загрузка пакета документов (инкрементальная дозагрузка до финализации)
@@ -324,6 +342,44 @@ components:
         dataset_version: { type: string }
         input_manifest_hash: { type: string }
         git_sha: { type: string }
+
+    SystemCapabilities:
+      type: object
+      required: [overall, kit_blocked, engines, health]
+      properties:
+        overall:
+          type: string
+          enum: [AVAILABLE, DEGRADED, UNAVAILABLE]
+          description: Статус живого пути извлечения, не «все слои зелёные».
+        kit_blocked: { type: boolean }
+        note: { type: string }
+        engines:
+          type: array
+          items:
+            type: object
+            required: [name, status, affects_verdict]
+            properties:
+              name: { type: string }
+              status:
+                type: string
+                enum: [AVAILABLE, DEGRADED, UNAVAILABLE]
+              affects_verdict: { type: boolean }
+        health:
+          type: object
+          required: [healthy, degraded, failed, skipped]
+          properties:
+            healthy:
+              type: array
+              items: { type: string }
+            degraded:
+              type: array
+              items: { type: string }
+            failed:
+              type: array
+              items: { type: string }
+            skipped:
+              type: array
+              items: { type: string }
 
     ReviewDecision:
       type: object

@@ -138,3 +138,12 @@ class ReviewPriority(StrEnum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
     LOW = "LOW"
+
+
+class DisagreementKind(StrEnum):
+    """Вид расхождения. Не статус находки и не вердикт инспектора."""
+
+    VALUE_DELTA = "VALUE_DELTA"
+    MISSING_IN_STAGE = "MISSING_IN_STAGE"
+    AMBIGUOUS_REFERENCE = "AMBIGUOUS_REFERENCE"
+    FORMAT_MISMATCH = "FORMAT_MISMATCH"

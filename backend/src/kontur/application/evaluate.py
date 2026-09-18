@@ -18,6 +18,7 @@ from kontur.application.comparators import (
     PRESENCE_OPERATORS,
     SET_OPERATORS,
     STRING_OPERATORS,
+    Comparison,
     compare_values,
 )
 from kontur.application.extractors.number import NumberHit, PageToken, extract_number
@@ -40,7 +41,13 @@ from kontur.domain.models import (
     EvidenceRole,
     Finding,
 )
-from kontur.domain.statuses import HUMAN_ONLY_STATUSES, Completeness, FindingStatus, ReviewPriority
+from kontur.domain.statuses import (
+    HUMAN_ONLY_STATUSES,
+    Completeness,
+    DisagreementKind,
+    FindingStatus,
+    ReviewPriority,
+)
 
 _STAGE_ROLE: dict[DocStage, EvidenceRole] = {
     DocStage.PD: EvidenceRole.EXPECTED,
@@ -108,6 +115,9 @@ def _quality_finding(
     rationale: str,
 ) -> Finding:
     _assert_machine_status(status)
+    kind = None
+    if status is FindingStatus.MISSING_EVIDENCE:
+        kind = DisagreementKind.MISSING_IN_STAGE
     return Finding(
         finding_id=str(uuid4()),
         rule_code=str(rule["code"]),
@@ -117,6 +127,40 @@ def _quality_finding(
         rule_version="0.1.0",
         model_version="none",
         rationale=rationale,
+        disagreement_kind=kind,
+    )
+
+
+def _finding_from_comparison(
+    rule: dict[str, object],
+    comparison: Comparison,
+    *,
+    group_id: str,
+    fragments: tuple[EvidenceFragment, ...],
+    pages: dict[DocStage, StagePage],
+) -> Finding:
+    _assert_machine_status(comparison.status)
+    pd = pages.get(DocStage.PD)
+    source_id = pd.document.file_id if pd is not None else fragments[0].document.file_id
+    kind = None
+    if comparison.status is FindingStatus.CANDIDATE:
+        kind = DisagreementKind.VALUE_DELTA
+    return Finding(
+        finding_id=str(uuid4()),
+        rule_code=str(rule["code"]),
+        finding_status=comparison.status,
+        review_priority=_priority(rule),
+        matrix_version=str(rule["matrix_version"]),
+        rule_version="0.1.0",
+        model_version="none",
+        evidence_group_id=group_id,
+        expected_value=comparison.expected,
+        actual_value=comparison.actual,
+        delta=comparison.delta,
+        rationale=comparison.rationale,
+        source_id=source_id,
+        evidence_refs=tuple(item.fragment_id for item in fragments),
+        disagreement_kind=kind,
     )
 
 
@@ -413,19 +457,12 @@ def evaluate_rule(
             fragments=text_fragments,
             resolved_revisions=tuple(pages[stage].document for stage in text_hits),
         )
-        text_finding = Finding(
-            finding_id=str(uuid4()),
-            rule_code=str(rule["code"]),
-            finding_status=comparison.status,
-            review_priority=_priority(rule),
-            matrix_version=str(rule["matrix_version"]),
-            rule_version="0.1.0",
-            model_version="none",
-            evidence_group_id=group_id,
-            expected_value=comparison.expected,
-            actual_value=comparison.actual,
-            delta=comparison.delta,
-            rationale=comparison.rationale,
+        text_finding = _finding_from_comparison(
+            rule,
+            comparison,
+            group_id=group_id,
+            fragments=text_fragments,
+            pages=pages,
         )
         return RuleEvaluation(
             finding=text_finding, evidence_group=text_group, stages=text_stages
@@ -516,7 +553,6 @@ def evaluate_rule(
 
     file_ids = tuple(pages[stage].document.file_id for stage in hits)
     group_id = comparison_key(object_id, str(rule["code"]), file_ids)
-    _assert_machine_status(comparison.status)
     fragments = tuple(
         _fragment(
             hit,
@@ -534,18 +570,11 @@ def evaluate_rule(
         fragments=fragments,
         resolved_revisions=tuple(pages[stage].document for stage in hits),
     )
-    finding = Finding(
-        finding_id=str(uuid4()),
-        rule_code=str(rule["code"]),
-        finding_status=comparison.status,
-        review_priority=_priority(rule),
-        matrix_version=str(rule["matrix_version"]),
-        rule_version="0.1.0",
-        model_version="none",
-        evidence_group_id=group_id,
-        expected_value=comparison.expected,
-        actual_value=comparison.actual,
-        delta=comparison.delta,
-        rationale=comparison.rationale,
+    finding = _finding_from_comparison(
+        rule,
+        comparison,
+        group_id=group_id,
+        fragments=fragments,
+        pages=pages,
     )
     return RuleEvaluation(finding=finding, evidence_group=group, stages=stages)
