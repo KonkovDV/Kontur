@@ -5,7 +5,7 @@
   "unit": "Буква",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Снижение класса энергоэффективности в РД/ИД относительно ПД.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -27,18 +27,30 @@
   },
   "extractor": {
     "type": "enum",
-    "regex": null,
+    "regex": "A\\+{0,2}|[B-G]",
     "anchors": [
       "Класс энергетической эффективности"
     ],
     "normalization": [
       "nfc",
-      "collapse_spaces"
+      "collapse_spaces",
+      "upper"
     ],
     "dual_read_required": true
   },
   "comparator": {
     "operator": "class_not_lower",
+    "value": [
+      "G",
+      "F",
+      "E",
+      "D",
+      "C",
+      "B",
+      "A",
+      "A+",
+      "A++"
+    ],
     "rounding": "none",
     "unit_target": "Буква"
   },
@@ -46,7 +58,17 @@
     "expected",
     "actual"
   ],
-  "normative_refs": [],
+  "normative_refs": [
+    {
+      "identifier": "ФЗ № 261-ФЗ",
+      "issuer": "Федеральное Собрание России",
+      "clause": "Статья 11 (вребования энергетической эффективности зданий)",
+      "effective_from": "2009-11-23",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
+  ],
   "failure_mapping": {
     "source_absent": "MISSING_EVIDENCE",
     "not_comparable": "NOT_COMPARABLE",
@@ -57,20 +79,20 @@
   "review_priority": "HIGH",
   "tests": [
     {
-      "name": "equal_or_compliant_gives_no_difference",
+      "name": "same_energy_class_gives_no_difference",
       "expected_status": "AUTO_NO_DIFFERENCE"
     },
     {
-      "name": "triggering_difference_gives_candidate",
+      "name": "better_class_in_rd_is_not_violation",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "lower_energy_class_gives_candidate",
       "expected_status": "CANDIDATE"
     },
     {
       "name": "required_stage_absent_gives_missing_evidence",
       "expected_status": "MISSING_EVIDENCE"
-    },
-    {
-      "name": "parameter_not_applicable_on_object",
-      "expected_status": "NOT_APPLICABLE"
     }
   ]
 }

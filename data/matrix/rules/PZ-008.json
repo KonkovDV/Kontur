@@ -5,7 +5,7 @@
   "unit": "м",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Увеличение высоты здания в РД (риск нарушения ограничений приаэродромных зон).",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -22,7 +22,7 @@
       "description": "Раздел АР: Чертежи фасадов, разрезы"
     },
     "id": {
-      "description": "Исполнительная геодезическая съемка фасада"
+      "description": "Исполнительная геодезическая съёмка фасада"
     }
   },
   "extractor": {
@@ -33,7 +33,9 @@
     ],
     "normalization": [
       "nfc",
-      "collapse_spaces"
+      "collapse_spaces",
+      "decimal_comma",
+      "strip_unit"
     ],
     "dual_read_required": true
   },

@@ -18,7 +18,7 @@
   },
   "extractor": {
     "type": "number",
-    "regex": "([0-9]{3,4})\\s?(?:мм)?|([0-9][.,][0-9]{1,2})\\s?м",
+    "regex": "([0-9]{3,4})\\s?(?:мм)?|([0-9]+[.,][0-9]{1,2})\\s?м?",
     "anchors": ["Ширина проема", "Ширина двери", "Габариты проема"],
     "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
     "dual_read_required": true

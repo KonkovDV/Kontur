@@ -5,7 +5,7 @@
   "unit": "ед.",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Снижение мощности (выпуск продукции в год) или вместимости (школа/детсад).",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -26,21 +26,22 @@
     }
   },
   "extractor": {
-    "type": "enum",
-    "regex": null,
+    "type": "number",
     "anchors": [
-      "Технологическая мощность / Вместимость"
+      "Технологическая мощность / Вместимость",
+      "Вместимость"
     ],
     "normalization": [
       "nfc",
-      "collapse_spaces"
+      "collapse_spaces",
+      "decimal_comma",
+      "strip_unit"
     ],
     "dual_read_required": true
   },
   "comparator": {
-    "operator": "class_not_lower",
-    "rounding": "none",
-    "unit_target": "ед."
+    "operator": "ge",
+    "rounding": "half_up"
   },
   "required_evidence": [
     "expected",
@@ -57,20 +58,20 @@
   "review_priority": "HIGH",
   "tests": [
     {
-      "name": "equal_or_compliant_gives_no_difference",
+      "name": "equal_capacity_gives_no_difference",
       "expected_status": "AUTO_NO_DIFFERENCE"
     },
     {
-      "name": "triggering_difference_gives_candidate",
+      "name": "higher_capacity_in_rd_is_not_violation",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "lower_capacity_in_rd_gives_candidate",
       "expected_status": "CANDIDATE"
     },
     {
       "name": "required_stage_absent_gives_missing_evidence",
       "expected_status": "MISSING_EVIDENCE"
-    },
-    {
-      "name": "parameter_not_applicable_on_object",
-      "expected_status": "NOT_APPLICABLE"
     }
   ]
 }

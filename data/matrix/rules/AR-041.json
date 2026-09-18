@@ -5,7 +5,7 @@
   "unit": "м",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Ширина дверного полотна на путях эвакуации в РД/ИД < 0.9 м.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -39,7 +39,7 @@
   },
   "extractor": {
     "type": "number",
-    "regex": "([0-9]{3,4})\\s?(?:мм)?|([0-9][.,][0-9]{1,2})\\s?м",
+    "regex": "([0-9]{3,4})\\s?(?:мм)?|([0-9]+[.,][0-9]{1,2})\\s?м?",
     "anchors": [
       "Ширина проема",
       "Ширина двери",

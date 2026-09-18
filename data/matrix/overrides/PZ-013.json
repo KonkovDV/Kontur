@@ -1,0 +1,48 @@
+{
+  "code": "PZ-013",
+  "section": "ПЗ",
+  "name": "Технологическая мощность / Вместимость",
+  "unit": "ед.",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Снижение мощности (выпуск продукции в год) или вместимости (школа/детсад) в РД относительно ПД.",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": ["PD", "RD"],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {"description": "Раздел ПЗ: Текст (ТХ)"},
+    "rd": {"description": "Раздел ТХ: Лист \"\u041eбщие данные\"; Спецификация оборудования"},
+    "id": {"description": "Акт приемки оборудования; Акт ПНР"}
+  },
+  "extractor": {
+    "type": "number",
+    "anchors": [
+      "Технологическая мощность / Вместимость",
+      "Вместимость"
+    ],
+    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "ge",
+    "rounding": "half_up"
+  },
+  "required_evidence": ["expected", "actual"],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {"name": "equal_capacity_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE"},
+    {"name": "higher_capacity_in_rd_is_not_violation", "expected_status": "AUTO_NO_DIFFERENCE"},
+    {"name": "lower_capacity_in_rd_gives_candidate", "expected_status": "CANDIDATE"},
+    {"name": "required_stage_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE"}
+  ]
+}

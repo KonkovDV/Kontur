@@ -14,7 +14,7 @@ import pytest
 
 from kontur.application.extractors.number import PageToken
 from kontur.evaluation.metrics import character_accuracy
-from kontur.infrastructure.dual_read import DualReadResult, dual_read_number
+from kontur.infrastructure.dual_read import dual_read_number
 from kontur.infrastructure.ocr_bakeoff import (
     CA_GATE_I_THRESHOLD,
     GATE_I_DECISION,
@@ -22,7 +22,6 @@ from kontur.infrastructure.ocr_bakeoff import (
     needs_raster_verifier,
     primary_path_for,
 )
-
 
 # ── Синтетические токены ───────────────────────────────────────────────────
 

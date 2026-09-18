@@ -12,11 +12,17 @@
 
 from __future__ import annotations
 
+import io
 import re
+import zipfile
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import PurePosixPath
+
+#: Порог RT-A: коэффициент распаковки zip без чтения содержимого файлов.
+_BOMB_EXPAND_RATIO: float = 100.0
+_BOMB_UNCOMPRESSED_BYTES: int = 100 * 1024 * 1024
 
 #: ТЗ п. 9.1: один файл — не больше 50 МБ.
 MAX_FILE_BYTES: int = 50 * 1024 * 1024
@@ -167,6 +173,27 @@ def header_matches_suffix(suffix: str, header: bytes | None) -> bool:
     return any(header.startswith(prefix) for prefix in prefixes)
 
 
+def archive_looks_like_bomb(payload: bytes) -> bool:
+    """Zip-бомба по Central Directory, без распаковки. Неполный заголовок — нет."""
+
+    if not payload.startswith(b"PK\x03\x04"):
+        return False
+    try:
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            compressed = 0
+            uncompressed = 0
+            for info in archive.infolist():
+                compressed += max(0, info.compress_size or 0)
+                uncompressed += max(0, info.file_size or 0)
+    except zipfile.BadZipFile:
+        return False
+    if uncompressed > _BOMB_UNCOMPRESSED_BYTES:
+        return True
+    if compressed > 0 and uncompressed / compressed > _BOMB_EXPAND_RATIO:
+        return True
+    return False
+
+
 def check_file(candidate: UploadCandidate) -> Rejection | None:
     """Проверки одного файла в порядке дешевизны: имя, формат, размер, сигнатура."""
 
@@ -203,6 +230,13 @@ def check_file(candidate: UploadCandidate) -> Rejection | None:
             reason=RejectionReason.CORRUPTED_FILE,
             detail=f"содержимое не похоже на {suffix}: сигнатура не совпала",
         )
+    if suffix in {".zip", ".docx"} and candidate.header is not None:
+        if archive_looks_like_bomb(candidate.header):
+            return Rejection(
+                filename=name,
+                reason=RejectionReason.CORRUPTED_FILE,
+                detail="архив-бомба: коэффициент распаковки или размер после inflate",
+            )
     return None
 
 

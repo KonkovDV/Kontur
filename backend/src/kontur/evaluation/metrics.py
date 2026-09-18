@@ -1,4 +1,10 @@
-"""\u041c\u0435\u0442\u0440\u0438\u043a\u0438 \u043f\u0440\u0438\u0451\u043c\u043a\u0438 (\u0422\u0417 \u043f. 14.3).\n\n\u0421\u0447\u0438\u0442\u0430\u044e\u0442\u0441\u044f \u043f\u043e evidence_group, \u043d\u0438\u043a\u043e\u0433\u0434\u0430 \u043f\u043e \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0430\u043c \u0438\u043b\u0438 \u0444\u0430\u0439\u043b\u0430\u043c. \u0422\u043e\u0447\u0435\u0447\u043d\u0430\u044f \u043e\u0446\u0435\u043d\u043a\u0430\n\u043f\u0443\u0431\u043b\u0438\u043a\u0443\u0435\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0432\u043c\u0435\u0441\u0442\u0435 \u0441 \u0440\u0430\u0437\u043c\u0435\u0440\u043e\u043c \u0432\u044b\u0431\u043e\u0440\u043a\u0438, coverage \u0438 95% \u0434\u043e\u0432\u0435\u0440\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u043c\n\u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b\u043e\u043c. \u041f\u043e\u0440\u043e\u0433 \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044f \u0434\u043e\u0441\u0442\u0438\u0433\u043d\u0443\u0442\u044b\u043c \u043f\u043e \u043d\u0438\u0436\u043d\u0435\u0439 \u0433\u0440\u0430\u043d\u0438\u0446\u0435 \u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b\u0430; \u0434\u043b\u044f FPR \u2014\n\u043f\u043e \u0432\u0435\u0440\u0445\u043d\u0435\u0439.\n"""
+"""Метрики приёмки (ТЗ п. 14.3).
+
+Считаются по evidence_group, никогда по страницам или файлам. Точечная оценка
+публикуется только вместе с размером выборки, coverage и 95% доверительным
+интервалом. Порог считается достигнутым по нижней границе интервала; для FPR —
+по верхней.
+"""
 
 from __future__ import annotations
 
@@ -9,9 +15,9 @@ from dataclasses import dataclass
 
 from kontur.application.normalize import normalize_key_field
 
-#: \u041e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u044b\u0435 \u043c\u0438\u043d\u0438\u043c\u0443\u043c\u044b \u0422\u0417. \u042d\u0442\u043e \u043f\u043e\u0440\u043e\u0433\u0438 \u043f\u0440\u0438\u0451\u043c\u043a\u0438, \u0430 \u043d\u0435 \u0437\u0430\u044f\u0432\u043b\u0435\u043d\u043d\u044b\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442.
-#: \u0413\u0430\u0440\u043c\u043e\u043d\u0438\u043a\u0430 P=0.90 \u0438 R=0.80 \u2248 0.847 < 0.85: \u0442\u043e\u0447\u043a\u0430 \u043d\u0430 \u043f\u043e\u043b\u0443 precision \u0438 recall
-#: \u043d\u0435 \u043f\u0440\u043e\u0445\u043e\u0434\u0438\u0442 F1. \u0417\u0430\u043f\u0430\u0441 \u0434\u0435\u0440\u0436\u0438\u043c \u043f\u043e precision, \u043d\u0435 \u043f\u043e recall.
+#: Обязательные минимумы ТЗ. Это пороги приёмки, а не заявленный результат.
+#: Гармоника P=0.90 и R=0.80 ≈ 0.847 < 0.85: точка на полу precision и recall
+#: не проходит F1. Запас держим по precision, не по recall.
 TZ_THRESHOLDS: dict[str, float] = {
     "character_accuracy": 0.95,
     "key_field_exact_match": 0.90,
@@ -20,10 +26,10 @@ TZ_THRESHOLDS: dict[str, float] = {
     "precision": 0.90,
     "recall": 0.80,
     "f1": 0.85,
-    "false_positive_rate": 0.10,  # \u0432\u0435\u0440\u0445\u043d\u044f\u044f \u0433\u0440\u0430\u043d\u0438\u0446\u0430
+    "false_positive_rate": 0.10,  # верхняя граница
 }
 
-#: \u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0435 \u0446\u0435\u043b\u0438 \u043a\u043e\u043c\u0430\u043d\u0434\u044b. \u0412\u044b\u0448\u0435 \u043f\u043e\u0440\u043e\u0433\u043e\u0432, \u0447\u0442\u043e\u0431\u044b \u043f\u0440\u043e\u0441\u0430\u0434\u043a\u0430 \u043d\u0435 \u043b\u043e\u043c\u0430\u043b\u0430 \u043f\u0440\u0438\u0451\u043c\u043a\u0443.
+#: Внутренние цели команды. Выше порогов, чтобы просадка не ломала приёмку.
 INTERNAL_TARGETS: dict[str, float] = {
     "character_accuracy": 0.98,
     "key_field_exact_match": 0.96,
@@ -51,7 +57,7 @@ class Interval:
 
 
 def wilson(successes: int, n: int, z: float = 1.96) -> Interval:
-    """\u0418\u043d\u0442\u0435\u0440\u0432\u0430\u043b \u0423\u0438\u043b\u044c\u0441\u043e\u043d\u0430. \u041f\u0440\u0438 n = 0 \u0432\u043e\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0432\u044b\u0440\u043e\u0436\u0434\u0435\u043d\u043d\u044b\u0439 \u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b [0;1]."""
+    """Интервал Уильсона. При n = 0 возвращает вырожденный интервал [0;1]."""
 
     if n <= 0:
         return Interval(point=0.0, low=0.0, high=1.0, n=0)
@@ -63,7 +69,7 @@ def wilson(successes: int, n: int, z: float = 1.96) -> Interval:
 
 
 def meets_threshold(name: str, interval: Interval) -> bool:
-    """\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043f\u043e\u0440\u043e\u0433\u0430 \u043f\u043e \u043a\u043e\u043d\u0441\u0435\u0440\u0432\u0430\u0442\u0438\u0432\u043d\u043e\u0439 \u0433\u0440\u0430\u043d\u0438\u0446\u0435 \u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b\u0430."""
+    """Проверка порога по консервативной границе интервала."""
 
     threshold = TZ_THRESHOLDS[name]
     if name == "false_positive_rate":
@@ -78,7 +84,7 @@ def f1(precision: float, recall: float) -> float:
 
 
 def key_field_exact_match(gold: str, predicted: str | None) -> bool:
-    """Exact Match \u043f\u043e\u043b\u044f \u043f\u0430\u0441\u043f\u043e\u0440\u0442\u0430. None \u0438 \u043f\u0443\u0441\u0442\u0430\u044f \u0441\u0442\u0440\u043e\u043a\u0430 \u2014 \u043f\u0440\u043e\u043c\u0430\u0445, \u043d\u0435 \u00ab\u043f\u043e\u0445\u043e\u0436\u0435\u00bb."""
+    """Exact Match поля паспорта. None и пустая строка — промах, не «похоже»."""
 
     if predicted is None or not predicted.strip():
         return False
@@ -88,7 +94,7 @@ def key_field_exact_match(gold: str, predicted: str | None) -> bool:
 def key_field_exact_match_interval(
     pairs: list[tuple[str, str | None]],
 ) -> Interval:
-    """\u0414\u043e\u043b\u044f \u0441\u043e\u0432\u043f\u0430\u0432\u0448\u0438\u0445 \u043a\u043b\u044e\u0447\u0435\u0432\u044b\u0445 \u043f\u043e\u043b\u0435\u0439. \u041f\u0443\u0441\u0442\u0430\u044f \u0432\u044b\u0431\u043e\u0440\u043a\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043f\u043e\u0440\u043e\u0433."""
+    """Доля совпавших ключевых полей. Пустая выборка не подтверждает порог."""
 
     successes = sum(1 for gold, predicted in pairs if key_field_exact_match(gold, predicted))
     return wilson(successes, len(pairs))
@@ -106,13 +112,16 @@ def _signed_area(polygon: Polygon) -> float:
     if n < 3:
         return 0.0
     return (
-        sum(ring[i][0] * ring[(i + 1) % n][1] - ring[(i + 1) % n][0] * ring[i][1] for i in range(n))
+        sum(
+            ring[i][0] * ring[(i + 1) % n][1] - ring[(i + 1) % n][0] * ring[i][1]
+            for i in range(n)
+        )
         / 2.0
     )
 
 
 def _polygon_area(polygon: Polygon) -> float:
-    """\u041f\u043b\u043e\u0449\u0430\u0434\u044c \u043f\u043e \u0444\u043e\u0440\u043c\u0443\u043b\u0435 \u0413\u0430\u0443\u0441\u0441\u0430. \u0417\u043d\u0430\u043a \u043e\u0442\u0431\u0440\u0430\u0441\u044b\u0432\u0430\u0435\u0442\u0441\u044f."""
+    """Площадь по формуле Гаусса. Знак отбрасывается."""
 
     return abs(_signed_area(polygon))
 
@@ -129,7 +138,7 @@ def _clip_by_halfplane(
     edge_start: Point,
     edge_end: Point,
 ) -> list[Point]:
-    """\u041e\u0434\u043d\u0430 \u0438\u0442\u0435\u0440\u0430\u0446\u0438\u044f Sutherland\u2013Hodgman: \u043e\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u043b\u0435\u0432\u0443\u044e \u043f\u043e\u043b\u0443\u043f\u043b\u043e\u0441\u043a\u043e\u0441\u0442\u044c \u0440\u0435\u0431\u0440\u0430."""
+    """Одна итерация Sutherland–Hodgman: оставить левую полуплоскость ребра."""
 
     if not polygon:
         return []
@@ -137,7 +146,7 @@ def _clip_by_halfplane(
     ey = edge_end[1] - edge_start[1]
 
     def _cross(point: Point) -> float:
-        # \u0420\u0435\u0431\u0440\u043e \u00d7 (\u0442\u043e\u0447\u043a\u0430 \u2212 \u043d\u0430\u0447\u0430\u043b\u043e): >0 \u0441\u043b\u0435\u0432\u0430 \u043e\u0442 \u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043d\u043e\u0433\u043e \u0440\u0435\u0431\u0440\u0430 (\u0432\u043d\u0443\u0442\u0440\u0438 CCW).
+        # Ребро × (точка − начало): >0 слева от направленного ребра (внутри CCW).
         return ex * (point[1] - edge_start[1]) - ey * (point[0] - edge_start[0])
 
     def _inside(point: Point) -> bool:
@@ -165,7 +174,7 @@ def _clip_by_halfplane(
 
 
 def _intersect_polygons(subject: Polygon, clip: Polygon) -> Polygon:
-    """\u041f\u0435\u0440\u0435\u0441\u0435\u0447\u0435\u043d\u0438\u0435. \u041a\u043b\u0438\u043f \u043e\u0440\u0438\u0435\u043d\u0442\u0438\u0440\u043e\u0432\u0430\u043d CCW; \u0432\u043e\u0433\u043d\u0443\u0442\u044b\u0439 \u043a\u043b\u0438\u043f \u043d\u0435 \u0433\u0430\u0440\u0430\u043d\u0442\u0438\u0440\u043e\u0432\u0430\u043d."""
+    """Пересечение. Клип ориентирован CCW; вогнутый клип не гарантирован."""
 
     output: list[Point] = list(subject)
     clip_ring = _oriented_ccw(clip)
@@ -179,11 +188,11 @@ def _intersect_polygons(subject: Polygon, clip: Polygon) -> Polygon:
 
 
 def iou(poly_a: Polygon, poly_b: Polygon) -> float:
-    """IoU \u043d\u043e\u0440\u043c\u0430\u043b\u0438\u0437\u043e\u0432\u0430\u043d\u043d\u044b\u0445 \u043f\u043e\u043b\u0438\u0433\u043e\u043d\u043e\u0432 \u043f\u043e\u0441\u043b\u0435 CropBox/MediaBox/Rotate.
+    """IoU нормализованных полигонов после CropBox/MediaBox/Rotate.
 
-    \u041a\u043e\u043e\u0440\u0434\u0438\u043d\u0430\u0442\u044b \u2014 \u0432 [0;1], Y \u0432\u043d\u0438\u0437, \u043a\u0430\u043a \u0432 `domain/coordinates.py`. \u0412\u044b\u0440\u043e\u0436\u0434\u0435\u043d\u043d\u044b\u0435
-    \u043a\u043e\u043d\u0442\u0443\u0440\u044b (\u043f\u043b\u043e\u0449\u0430\u0434\u044c 0) \u0434\u0430\u044e\u0442 0. \u041f\u043e\u0440\u043e\u0433 \u00ab\u043b\u043e\u043a\u0430\u043b\u0438\u0437\u043e\u0432\u0430\u043d\u043e\u00bb \u2014 `IOU_THRESHOLD`, \u043d\u0435 0.95:
-    0.95 \u2014 \u043d\u0438\u0436\u043d\u044f\u044f \u0433\u0440\u0430\u043d\u0438\u0446\u0430 Wilson \u043f\u043e \u0434\u043e\u043b\u0435 \u043f\u0430\u0440, \u0430 \u043d\u0435 \u043f\u043e \u043e\u0434\u043d\u043e\u043c\u0443 IoU.
+    Координаты — в [0;1], Y вниз, как в `domain/coordinates.py`. Вырожденные
+    контуры (площадь 0) дают 0. Порог «локализовано» — `IOU_THRESHOLD`, не 0.95:
+    0.95 — нижняя граница Wilson по доле пар, а не по одному IoU.
     """
 
     left = _oriented_ccw(poly_a)
@@ -203,36 +212,36 @@ def evidence_localization_interval(
     pairs: list[tuple[Polygon, Polygon]],
     threshold: float = IOU_THRESHOLD,
 ) -> Interval:
-    """\u0414\u043e\u043b\u044f \u043f\u0430\u0440 \u0441 IoU \u2265 threshold. \u041f\u0443\u0441\u0442\u0430\u044f \u0432\u044b\u0431\u043e\u0440\u043a\u0430 \u043f\u043e\u0440\u043e\u0433 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442."""
+    """Доля пар с IoU ≥ threshold. Пустая выборка порог не подтверждает."""
 
     successes = sum(1 for gold, predicted in pairs if iou(gold, predicted) >= threshold)
     return wilson(successes, len(pairs))
 
 
 def character_accuracy(reference: str, hypothesis: str) -> float:
-    """1 \u2212 CER. Unicode NFC, \u0441\u0445\u043b\u043e\u043f\u044b\u0432\u0430\u043d\u0438\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u044b\u0445 \u043f\u0440\u043e\u0431\u0435\u043b\u043e\u0432.
+    """1 − CER. Unicode NFC, схлопывание повторных пробелов.
 
-    \u0420\u0435\u0433\u0438\u0441\u0442\u0440 \u043d\u0435 \u0441\u0432\u043e\u0440\u0430\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044f: \u0448\u0438\u0444\u0440\u044b \u0438 \u0440\u0435\u0434\u0430\u043a\u0446\u0438\u0438 \u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u044b \u043a \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0443
-    (\u0422\u0417 \u043f. 9.1). \u041d\u0435 \u0441\u043c\u0435\u0448\u0438\u0432\u0430\u0442\u044c \u0441 Exact Match \u043f\u043e\u043b\u0435\u0439.
+    Регистр не сворачивается: шифры и редакции чувствительны к регистру
+    (ТЗ п. 9.1). Не смешивать с Exact Match полей.
     """
 
     def _prepare(s: str) -> str:
-        """NFC + \u0441\u0445\u043b\u043e\u043f\u044b\u0432\u0430\u043d\u0438\u0435 \u0434\u0432\u043e\u0439\u043d\u044b\u0445 \u043f\u0440\u043e\u0431\u0435\u043b\u043e\u0432 + \u0437\u0430\u0447\u0438\u0441\u0442\u043a\u0430 \u043a\u0440\u0430\u0451\u0432."""
+        """NFC + схлопывание двойных пробелов + зачистка краёв."""
         return re.sub(r"  +", " ", unicodedata.normalize("NFC", s)).strip()
 
     ref = _prepare(reference)
     hyp = _prepare(hypothesis)
 
-    # \u0411\u044b\u0441\u0442\u0440\u044b\u0435 \u043f\u0443\u0442\u0438
+    # Быстрые пути
     if not ref and not hyp:
         return 1.0
     if not ref:
-        # \u041f\u0443\u0441\u0442\u043e\u0439 \u044d\u0442\u0430\u043b\u043e\u043d \u043f\u0440\u0438 \u043d\u0435\u043f\u0443\u0441\u0442\u043e\u0439 \u0433\u0438\u043f\u043e\u0442\u0435\u0437\u0435 \u2014 CER \u043d\u0435 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0451\u043d, \u0432\u043e\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u043c 0.
+        # Пустой эталон при непустой гипотезе — CER не определён, возвращаем 0.
         return 0.0
     if ref == hyp:
         return 1.0
 
-    # Wagner\u2013Fischer Levenshtein, O(m\u00b7n) time, O(n) space
+    # Wagner–Fischer Levenshtein, O(m·n) time, O(n) space
     m = len(ref)
     n_hyp = len(hyp)
     prev = list(range(n_hyp + 1))

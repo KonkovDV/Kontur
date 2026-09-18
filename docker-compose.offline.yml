@@ -1,0 +1,31 @@
+# docker-compose.offline.yml — override для запуска БЕЗ доступа в интернет.
+#
+# Использование:
+#   1) Сначала загрузить образы (нужен интернет, одноразово):
+#        make offline-pull
+#   2) Запустить в offline-режиме:
+#        make offline-up
+#      или вручную:
+#        docker compose -f docker-compose.yml -f docker-compose.offline.yml up -d
+#
+# pull_policy: never запрещает Docker Engine обращаться к registry.
+# Если образ отсутствует локально — Docker выдаст ошибку, а не повесится.
+
+services:
+  postgres:
+    pull_policy: never
+
+  redis:
+    pull_policy: never
+
+  rabbitmq:
+    pull_policy: never
+
+  minio:
+    pull_policy: never
+
+  core:
+    pull_policy: never
+
+  gateway:
+    pull_policy: never

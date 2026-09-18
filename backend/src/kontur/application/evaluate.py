@@ -1,9 +1,11 @@
 """Один проход правила: комплектность → извлечение → сравнение → находка.
 
-Слайс исполняет `extractor.type=number` и любой operator из NUMERIC_OPERATORS
-(delta, eq, ne, lt, le, gt, ge, range). Нечисловой оператор или иной тип
-экстрактора — отказ L6. Человеческий вердикт сюда не пишется: максимум
-CANDIDATE или AUTO_NO_DIFFERENCE.
+Слайс исполняет:
+  числовые  : extractor.type=number  + операторы из NUMERIC_OPERATORS
+  текстовые : extractor.type=enum    + операторы из STRING_OPERATORS | SET_OPERATORS
+              extractor.type=text_regex + те же операторы
+
+Человеческий вердикт сюда не пишется: максимум CANDIDATE или AUTO_NO_DIFFERENCE.
 """
 
 from __future__ import annotations
@@ -11,8 +13,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import uuid4
 
-from kontur.application.comparators import NUMERIC_OPERATORS, compare_values
+from kontur.application.comparators import (
+    NUMERIC_OPERATORS,
+    PRESENCE_OPERATORS,
+    SET_OPERATORS,
+    STRING_OPERATORS,
+    compare_values,
+)
 from kontur.application.extractors.number import NumberHit, PageToken, extract_number
+from kontur.application.extractors.text import TextHit, extract_text
 from kontur.application.pipeline import Stage, StageResult, run
 from kontur.application.revision_resolver import (
     ResolveStatus,
@@ -38,6 +47,10 @@ _STAGE_ROLE: dict[DocStage, EvidenceRole] = {
     DocStage.RD: EvidenceRole.ACTUAL,
     DocStage.ID: EvidenceRole.ACTUAL,
 }
+
+#: Типы экстракторов, работающих с текстом / enum-значениями.
+_TEXT_EXTRACTOR_TYPES: frozenset[str] = frozenset({"enum", "text_regex"})
+_TEXT_OPERATORS: frozenset[str] = STRING_OPERATORS | SET_OPERATORS | PRESENCE_OPERATORS
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,7 +150,7 @@ def _identity_ok(page: StagePage) -> bool:
     return all(token.page >= 1 for token in page.tokens)
 
 
-def _localize(hit: NumberHit) -> bool:
+def _localize(hit: NumberHit | TextHit) -> bool:
     return hit.page >= 1 and polygon_in_unit_square(hit.polygon_norm)
 
 
@@ -148,7 +161,7 @@ def _as_float(value: object) -> float:
 
 
 def _fragment(
-    hit: NumberHit,
+    hit: NumberHit | TextHit,
     *,
     role: EvidenceRole,
     document: DocumentRef,
@@ -165,6 +178,15 @@ def _fragment(
     )
 
 
+def _dual_read_required(rule: dict[str, object]) -> bool:
+    """Читаем флаг extractor.dual_read_required; по умолчанию True."""
+    extractor = rule.get("extractor")
+    if not isinstance(extractor, dict):
+        return True
+    dr = extractor.get("dual_read_required")
+    return dr is not False
+
+
 def evaluate_rule(
     rule: dict[str, object],
     *,
@@ -177,20 +199,25 @@ def evaluate_rule(
 
     extractor = rule.get("extractor")
     comparator = rule.get("comparator")
-    if not isinstance(extractor, dict) or extractor.get("type") != "number":
+    extractor_type = extractor.get("type") if isinstance(extractor, dict) else None
+    operator = comparator.get("operator") if isinstance(comparator, dict) else None
+    is_text = extractor_type in _TEXT_EXTRACTOR_TYPES
+    valid_operators = _TEXT_OPERATORS if is_text else NUMERIC_OPERATORS
+
+    if extractor_type not in ("number", *_TEXT_EXTRACTOR_TYPES):
         return _halt(
             rule,
             Stage.L6_MATRIX,
             FindingStatus.CLARIFICATION_REQUIRED,
-            "слайс исполняет только extractor.type=number",
+            f"слайс исполняет extractor.type=number/enum/text_regex, получено {extractor_type!r}",
         )
-    if not isinstance(comparator, dict) or comparator.get("operator") not in NUMERIC_OPERATORS:
+    if not isinstance(comparator, dict) or operator not in valid_operators:
         return _halt(
             rule,
             Stage.L6_MATRIX,
             FindingStatus.CLARIFICATION_REQUIRED,
-            f"слайс исполняет операторы {sorted(NUMERIC_OPERATORS)!r}, "
-            f"получен {comparator.get('operator')!r}",
+            f"слайс исполняет операторы {sorted(valid_operators)!r}, "
+            f"получен {operator!r}",
         )
 
     required = _required_stages(rule)
@@ -280,6 +307,131 @@ def evaluate_rule(
                     prior=identity_ok,
                 )
 
+    dual_req = _dual_read_required(rule)
+
+    # ── ветка текстового / enum экстрактора ───────────────────────────────────
+    if is_text:
+        text_hits: dict[DocStage, TextHit] = {}
+        for stage in required:
+            stage_page = pages.get(stage)
+            if stage_page is None:
+                mapped = _mapped(rule, "source_absent", FindingStatus.MISSING_EVIDENCE)
+                return _halt(
+                    rule,
+                    Stage.L2_EXTRACTION,
+                    mapped,
+                    f"{stage.value}: страница не передана",
+                    prior=identity_ok,
+                    missing_stage=stage,
+                )
+            hit = extract_text(stage_page.tokens, rule)
+            if hit is None:
+                return _halt(
+                    rule,
+                    Stage.L2_EXTRACTION,
+                    _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                    f"{stage.value}: якорь или значение не найдены",
+                    prior=identity_ok,
+                )
+            if dual_req and hit.extraction.second_read_agrees is not True:
+                return _halt(
+                    rule,
+                    Stage.L2_EXTRACTION,
+                    _mapped(rule, "reads_disagree", FindingStatus.ABSTAIN),
+                    f"{stage.value}: два чтения текста не совпали",
+                    prior=identity_ok,
+                )
+            if not hit.extraction.usable_for_automatic_finding:
+                return _halt(
+                    rule,
+                    Stage.L2_EXTRACTION,
+                    _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                    f"{stage.value}: значение не grounded",
+                    prior=identity_ok,
+                )
+            if not _localize(hit):
+                return _halt(
+                    rule,
+                    Stage.L3_LOCALIZATION,
+                    _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                    f"{stage.value}: polygon_norm вне [0;1] или страница < 1",
+                    prior=(
+                        *identity_ok,
+                        StageResult(Stage.L2_EXTRACTION, ok=True),
+                    ),
+                )
+            text_hits[stage] = hit
+
+        if DocStage.PD not in text_hits or DocStage.RD not in text_hits:
+            return _halt(
+                rule,
+                Stage.L5_PAIRING,
+                _mapped(rule, "not_comparable", FindingStatus.NOT_COMPARABLE),
+                "для текстового оператора нужны ПД и РД",
+                prior=(
+                    *identity_ok,
+                    StageResult(Stage.L2_EXTRACTION, ok=True),
+                    StageResult(Stage.L3_LOCALIZATION, ok=True),
+                    StageResult(Stage.L4_REVISION, ok=True),
+                ),
+            )
+
+        text_stages = (
+            StageResult(Stage.L1_IDENTITY, ok=True),
+            StageResult(Stage.L2_EXTRACTION, ok=True),
+            StageResult(Stage.L3_LOCALIZATION, ok=True),
+            StageResult(Stage.L4_REVISION, ok=True),
+            StageResult(Stage.L5_PAIRING, ok=True),
+            StageResult(Stage.L6_MATRIX, ok=True),
+            StageResult(Stage.L7_FINDINGS, ok=True),
+        )
+        if run(list(text_stages)) is not None:
+            raise RuntimeError("каскад L1-L7 закрылся до сравнения (text-path)")
+
+        comparison = compare_values(
+            text_hits[DocStage.PD].extraction.normalized_value,
+            text_hits[DocStage.RD].extraction.normalized_value,
+            rule,
+        )
+        file_ids = tuple(pages[stage].document.file_id for stage in text_hits)
+        group_id = comparison_key(object_id, str(rule["code"]), file_ids)
+        _assert_machine_status(comparison.status)
+        text_fragments = tuple(
+            _fragment(
+                hit,
+                role=_STAGE_ROLE[stage],
+                document=pages[stage].document,
+                fragment_id=f"{group_id}-{stage.value}",
+            )
+            for stage, hit in text_hits.items()
+        )
+        text_group = EvidenceGroup(
+            evidence_group_id=group_id,
+            object_id=object_id,
+            rule_code=str(rule["code"]),
+            matrix_version=str(rule["matrix_version"]),
+            fragments=text_fragments,
+            resolved_revisions=tuple(pages[stage].document for stage in text_hits),
+        )
+        text_finding = Finding(
+            finding_id=str(uuid4()),
+            rule_code=str(rule["code"]),
+            finding_status=comparison.status,
+            review_priority=_priority(rule),
+            matrix_version=str(rule["matrix_version"]),
+            rule_version="0.1.0",
+            model_version="none",
+            evidence_group_id=group_id,
+            expected_value=comparison.expected,
+            actual_value=comparison.actual,
+            delta=comparison.delta,
+            rationale=comparison.rationale,
+        )
+        return RuleEvaluation(
+            finding=text_finding, evidence_group=text_group, stages=text_stages
+        )
+
+    # ── ветка числового экстрактора (оригинальная логика) ────────────────────
     hits: dict[DocStage, NumberHit] = {}
     for stage in required:
         stage_page = pages.get(stage)
@@ -293,8 +445,8 @@ def evaluate_rule(
                 prior=identity_ok,
                 missing_stage=stage,
             )
-        hit = extract_number(stage_page.tokens, rule)
-        if hit is None:
+        number_hit = extract_number(stage_page.tokens, rule)
+        if number_hit is None:
             return _halt(
                 rule,
                 Stage.L2_EXTRACTION,
@@ -302,7 +454,7 @@ def evaluate_rule(
                 f"{stage.value}: якорь или число не найдены",
                 prior=identity_ok,
             )
-        if hit.extraction.second_read_agrees is not True:
+        if dual_req and number_hit.extraction.second_read_agrees is not True:
             return _halt(
                 rule,
                 Stage.L2_EXTRACTION,
@@ -310,7 +462,7 @@ def evaluate_rule(
                 f"{stage.value}: два чтения числа не совпали",
                 prior=identity_ok,
             )
-        if not hit.extraction.usable_for_automatic_finding:
+        if not number_hit.extraction.usable_for_automatic_finding:
             return _halt(
                 rule,
                 Stage.L2_EXTRACTION,
@@ -318,7 +470,7 @@ def evaluate_rule(
                 f"{stage.value}: значение не grounded",
                 prior=identity_ok,
             )
-        if not _localize(hit):
+        if not _localize(number_hit):
             return _halt(
                 rule,
                 Stage.L3_LOCALIZATION,
@@ -329,7 +481,7 @@ def evaluate_rule(
                     StageResult(Stage.L2_EXTRACTION, ok=True),
                 ),
             )
-        hits[stage] = hit
+        hits[stage] = number_hit
 
     if DocStage.PD not in hits or DocStage.RD not in hits:
         return _halt(
@@ -360,7 +512,7 @@ def evaluate_rule(
         StageResult(Stage.L7_FINDINGS, ok=True),
     )
     if run(list(stages)) is not None:
-        raise RuntimeError("каскад L1–L7 закрылся до сравнения")
+        raise RuntimeError("каскад L1-L7 закрылся до сравнения")
 
     file_ids = tuple(pages[stage].document.file_id for stage in hits)
     group_id = comparison_key(object_id, str(rule["code"]), file_ids)

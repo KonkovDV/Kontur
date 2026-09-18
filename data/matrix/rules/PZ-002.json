@@ -5,7 +5,7 @@
   "unit": "м²",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Дельта общей площади между ПД и РД (или ИД) > 1%.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -33,7 +33,9 @@
     ],
     "normalization": [
       "nfc",
-      "collapse_spaces"
+      "collapse_spaces",
+      "decimal_comma",
+      "strip_unit"
     ],
     "dual_read_required": true
   },

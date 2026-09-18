@@ -7,20 +7,36 @@
   "source_trigger_logic": "Превышение суммарной тепловой нагрузки в спецификациях и таблицах РД.",
   "coverage": "executable",
   "applicability": {
-    "stages_required": ["PD", "RD"],
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
     "object_types": [],
     "condition": null
   },
   "sources": {
-    "pd": { "description": "Раздел ПЗ: Текст (ТУ теплосети)" },
-    "rd": { "description": "Раздел ОВ: Лист \"Общие данные\", Таблица нагрузок" },
-    "id": { "description": "Акт готовности систем; Договор теплоснабжения" }
+    "pd": {
+      "description": "Раздел ПЗ: Текст (ТУ теплосети)"
+    },
+    "rd": {
+      "description": "Раздел ОВ: Лист \"Общие данные\", Таблица нагрузок"
+    },
+    "id": {
+      "description": "Акт готовности систем; Договор теплоснабжения"
+    }
   },
   "extractor": {
     "type": "number",
     "regex": null,
-    "anchors": ["Суммарная тепловая нагрузка"],
-    "normalization": ["nfc", "collapse_spaces"],
+    "anchors": [
+      "Суммарная тепловая нагрузка"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "decimal_comma",
+      "strip_unit"
+    ],
     "dual_read_required": true
   },
   "comparator": {
@@ -30,7 +46,10 @@
     "rounding": "half_up",
     "unit_target": "Гкал/ч"
   },
-  "required_evidence": ["expected", "actual"],
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
   "normative_refs": [],
   "failure_mapping": {
     "source_absent": "MISSING_EVIDENCE",
@@ -41,9 +60,21 @@
   },
   "review_priority": "HIGH",
   "tests": [
-    { "name": "equal_or_compliant_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
-    { "name": "triggering_difference_gives_candidate", "expected_status": "CANDIDATE" },
-    { "name": "required_stage_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" },
-    { "name": "parameter_not_applicable_on_object", "expected_status": "NOT_APPLICABLE" }
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
   ]
 }

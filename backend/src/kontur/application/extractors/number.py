@@ -74,14 +74,30 @@ def _regex(rule: dict[str, object]) -> re.Pattern[str]:
     return re.compile(source)
 
 
+_DEFAULT_NUMBER_STEPS = ("nfc", "collapse_spaces", "decimal_comma", "strip_unit")
+
+
 def _steps(rule: dict[str, object]) -> tuple[str, ...]:
     extractor = rule.get("extractor")
     if not isinstance(extractor, dict):
-        return ("nfc", "collapse_spaces", "decimal_comma", "strip_unit")
+        return _DEFAULT_NUMBER_STEPS
     raw = extractor.get("normalization")
     if not isinstance(raw, list) or not raw:
-        return ("nfc", "collapse_spaces", "decimal_comma", "strip_unit")
-    return tuple(str(item) for item in raw)
+        return _DEFAULT_NUMBER_STEPS
+    steps = tuple(str(item) for item in raw)
+    # Каталожный скелет пишет только nfc/collapse_spaces; без запятой
+    # русские ТЭП ("5000,0") не разбираются. Не подменяем заданный порядок.
+    extras = tuple(step for step in ("decimal_comma", "strip_unit") if step not in steps)
+    return steps + extras
+
+
+def _captured_number(match: re.Match[str]) -> str:
+    """Первая непустая группа, иначе весь матч (альтернативы мм|м)."""
+
+    for group in match.groups():
+        if group:
+            return group
+    return match.group(0)
 
 
 def _join(tokens: Sequence[PageToken]) -> str:
@@ -131,8 +147,8 @@ def extract_number(tokens: Sequence[PageToken], rule: dict[str, object]) -> Numb
     if not matches:
         return None
     steps = _steps(rule)
-    primary_raw = matches[0].group(1)
-    secondary_raw = matches[-1].group(1)
+    primary_raw = _captured_number(matches[0])
+    secondary_raw = _captured_number(matches[-1])
     try:
         primary = parse_number(primary_raw, steps)
         secondary = parse_number(secondary_raw, steps)

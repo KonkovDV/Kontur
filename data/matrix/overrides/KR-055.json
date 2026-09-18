@@ -4,28 +4,47 @@
   "name": "Класс прочности бетона монолитных конструкций",
   "unit": "Марка (B)",
   "matrix_version": "draft-0",
-  "source_trigger_logic": "Понижение класса бетона несущих элементов (например, B35 на B30) в РД/ИД.",
-  "coverage": "extractor_missing",
+  "source_trigger_logic": "Понижение класса бетона несущих элементов (например, B35 на B30) в РД относительно ПД.",
+  "coverage": "executable",
   "applicability": {
-    "stages_required": ["PD", "RD", "ID"],
+    "stages_required": ["PD", "RD"],
     "object_types": [],
     "condition": "Наличие монолитных конструкций в проекте"
   },
   "sources": {
-    "pd": { "discipline": ["КР"], "table": "Спецификация материалов", "description": "Общие данные; Спецификация материалов (КР)" },
-    "rd": { "discipline": ["КЖ"], "table": "Спецификация элементов", "description": "Общие указания; Спецификация элементов (КЖ)" },
-    "id": { "document_kind": ["Журнал бетонных работ"], "table": null, "description": "Журнал бетонных работ; Паспорта на БСГ; Протоколы испытаний" }
+    "pd": {
+      "discipline": ["КР"],
+      "table": "Спецификация материалов",
+      "description": "Общие данные; Спецификация материалов (КР)"
+    },
+    "rd": {
+      "discipline": ["КЖ"],
+      "table": "Спецификация элементов",
+      "description": "Общие указания; Спецификация элементов (КЖ)"
+    },
+    "id": {
+      "document_kind": ["Журнал бетонных работ"],
+      "table": null,
+      "description": "Журнал бетонных работ; Паспорта на БСГ; Протоколы испытаний"
+    }
   },
   "extractor": {
     "type": "enum",
     "regex": "B\\s?([0-9]{1,2}(?:[.,]5)?)",
-    "anchors": ["Класс бетона", "Класс прочности бетона", "Бетон класса"],
+    "anchors": [
+      "Класс бетона",
+      "Класс прочности бетона",
+      "Бетон класса"
+    ],
     "normalization": ["nfc", "collapse_spaces", "upper"],
     "dual_read_required": true
   },
   "comparator": {
     "operator": "class_not_lower",
-    "value": ["B7.5", "B10", "B12.5", "B15", "B20", "B22.5", "B25", "B30", "B35", "B40", "B45", "B50", "B55", "B60"],
+    "value": [
+      "B7.5", "B10", "B12.5", "B15", "B20", "B22.5",
+      "B25", "B30", "B35", "B40", "B45", "B50", "B55", "B60"
+    ],
     "rounding": "none",
     "unit_target": "B"
   },
@@ -59,10 +78,25 @@
   },
   "review_priority": "HIGH",
   "tests": [
-    { "name": "same_class_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
-    { "name": "lower_class_in_id_gives_candidate", "expected_status": "CANDIDATE" },
-    { "name": "higher_class_in_id_is_not_a_violation", "expected_status": "AUTO_NO_DIFFERENCE" },
-    { "name": "b22_5_parsed_not_as_b22", "expected_status": "AUTO_NO_DIFFERENCE" },
-    { "name": "concrete_log_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" }
+    {
+      "name": "same_class_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "lower_class_in_rd_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "higher_class_in_rd_is_not_a_violation",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "b22_5_parsed_not_as_b22",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "rd_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    }
   ]
 }

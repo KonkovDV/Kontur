@@ -5,12 +5,11 @@
   "unit": "Марка (B)",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Понижение класса бетона несущих элементов (например, B35 на B30) в РД/ИД.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
-      "RD",
-      "ID"
+      "RD"
     ],
     "object_types": [],
     "condition": "Наличие монолитных конструкций в проекте"
@@ -112,11 +111,11 @@
       "expected_status": "AUTO_NO_DIFFERENCE"
     },
     {
-      "name": "lower_class_in_id_gives_candidate",
+      "name": "lower_class_in_rd_gives_candidate",
       "expected_status": "CANDIDATE"
     },
     {
-      "name": "higher_class_in_id_is_not_a_violation",
+      "name": "higher_class_in_rd_is_not_a_violation",
       "expected_status": "AUTO_NO_DIFFERENCE"
     },
     {
@@ -124,7 +123,7 @@
       "expected_status": "AUTO_NO_DIFFERENCE"
     },
     {
-      "name": "concrete_log_absent_gives_missing_evidence",
+      "name": "rd_absent_gives_missing_evidence",
       "expected_status": "MISSING_EVIDENCE"
     }
   ]

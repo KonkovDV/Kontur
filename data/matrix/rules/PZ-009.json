@@ -5,7 +5,7 @@
   "unit": "м",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Несоответствие абсолютной отметки нуля на чертежах РД геоподоснове ПД.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -33,7 +33,9 @@
     ],
     "normalization": [
       "nfc",
-      "collapse_spaces"
+      "collapse_spaces",
+      "decimal_comma",
+      "strip_unit"
     ],
     "dual_read_required": true
   },

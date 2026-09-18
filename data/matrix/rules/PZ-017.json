@@ -5,7 +5,7 @@
   "unit": "Гкал/ч",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Превышение суммарной тепловой нагрузки в спецификациях и таблицах РД.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -33,7 +33,9 @@
     ],
     "normalization": [
       "nfc",
-      "collapse_spaces"
+      "collapse_spaces",
+      "decimal_comma",
+      "strip_unit"
     ],
     "dual_read_required": true
   },
