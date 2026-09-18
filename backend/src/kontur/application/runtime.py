@@ -2,7 +2,9 @@
 
 Таблица `processes` — контракт хранения. HTTP по умолчанию держит полный
 контур в памяти и пишет снимок в MemoryProcessStore. Postgres включается
-отдельным адаптером; находки и комплектность после рестарта не восстанавливаются.
+отдельным адаптером; находки после рестарта восстанавливаются из
+ProcessStore.load_findings (MemoryProcessStore). Postgres-путь пока возвращает
+[], что закрывается миграцией Gate L (GAP-PROCESS-FINDINGS).
 """
 
 from __future__ import annotations
@@ -124,7 +126,13 @@ class ProcessRecord:
 
 
 class ProcessWorkspace:
-    """Процессы в памяти плюс снимок DAO. Находки после рестарта не восстанавливаются."""
+    """Процессы в памяти плюс снимок DAO.
+
+    Находки персистируются через ProcessStore.save_finding и восстанавливаются
+    при get() из store.load_findings() (RT-GAP-PROCESS-FINDINGS). Для
+    MemoryProcessStore это сохраняет их между независимыми экземплярами
+    ProcessWorkspace с одним и тем же хранилищем.
+    """
 
     def __init__(self, store: ProcessStore | None = None) -> None:
         self._items: dict[str, ProcessRecord] = {}
@@ -182,6 +190,11 @@ class ProcessWorkspace:
         if snapshot is None:
             return None
         record = self._hydrate(snapshot)
+        # Restore findings persisted before this workspace instance was created
+        # (handles restart: same store, new ProcessWorkspace).
+        for finding in self._store.load_findings(process_id):
+            key = finding.evidence_group_id or finding.finding_id
+            record.findings[key] = finding
         self._items[process_id] = record
         return record
 
@@ -214,10 +227,12 @@ class ProcessWorkspace:
         перезаписывает запись, а не создаёт дубликат (RT-G, stop-ship п. 11).
 
         Halted-находки без группы ключуются по finding_id.
+        Находка персистируется в store для выживания рестарта.
         """
         record = self._items[process_id]
         key = finding.evidence_group_id or finding.finding_id
         record.findings[key] = finding
+        self._store.save_finding(process_id, finding)
 
     def review_finding(
         self,
