@@ -8,51 +8,61 @@
 
 ## 1. Capability Honesty Table (ADR-001 AeroBIM)
 
-**Идея:** каждый endpoint отвечает за состояние движков. Молчание ≠ успех.
-
-**Чем AeroBIM лучше:** у AeroBIM `SIGNOFF_PROFILE` проходит через capability check до каждого протокола.
+**Идея:** каждый endpoint отвечает за состояние движков.
+**Принцип AeroBIM:** Silence is never success.
 
 **Что сделано в Kontur:**
 - `capabilities.py`: `kit_degraded()`, `engine_health_summary()`, `overall_kit_status()`
 - `api.py`: `GET /api/v1/system/capabilities` — ok | degraded | skipped | failed
-- PR #34: endpoint, PR audit: `kit_degraded()` + `engine_health_summary()`
+- LLM-advisory UNAVAILABLE -> `skipped` (не `failed`). ADR-003 AeroBIM.
 
-**Принцип:** LLM-advisory UNAVAILABLE → `skipped` (не `failed`). ADR-003 AeroBIM.
-
----
-
-## 2. source_id + evidence_refs — ≤3 клика до источника
-
-**Идея:** AeroBIM persistence отказывает Finding без `source_id`. Инспектор всегда видит источник.
-
-**Что сделано:** `Finding.source_id`, `evidence_refs`, `has_provenance`
-- Soft UserWarning (не ValueError) — обратная совместимость
-- PR #33, PR audit: `models.py`
-
-**Вывод:** хард-валидация (ValueError если нет source_id) — следующий PR.
+**Mapping:**
+| CapStatus | affects_verdict | label |
+|---|---|---|
+| AVAILABLE | any | `ok` |
+| DEGRADED | any | `degraded` |
+| UNAVAILABLE | True | `failed` |
+| UNAVAILABLE | False | `skipped` |
 
 ---
 
-## 3. DisagreementKind — таксономия расхождений
+## 2. source_id + evidence_refs (≤3 клика до источника)
 
-**Идея:** AeroBIM `ConflictKind` — типизированная природа расхождения. Без неё — свободный текст в `rationale`.
+**Идея AeroBIM:** persistence отказывает Finding без `source_id`. Инспектор всегда видит источник.
 
-**Что сделано:** `statuses.DisagreementKind` (VALUE_DELTA, MISSING_IN_STAGE, AMBIGUOUS_REFERENCE, FORMAT_MISMATCH)
+**Что сделано:** `Finding.source_id`, `evidence_refs`, `has_provenance`, soft UserWarning
 
-**Пример:** IOS4-078 (600×300 vs 400×250 мм) → `VALUE_DELTA`
+**Формат source_id:** `"{stage}:p{page}:{fragment_id}"` (пример: `"pd:p12:frag-abc123"`)
+
+**Вывод:** хард-валидация (ValueError) — следующий PR после RC freeze.
 
 ---
 
-## 4. PDF Parse Timeout — wall-clock kill
+## 3. DisagreementKind (донор AeroBIM ConflictKind)
 
-**Идея:** AeroBIM PROC-01 (закрыт 2026-09-05): subprocess + RLIMIT_CPU.
+**Идея:** типизированная природа расхождения предотвращает дрейф в `rationale`.
 
-**Что сделано:** `infrastructure/pdf_guard.py` — `asyncio.wait_for` + ThreadPoolExecutor
-- `KONTUR_PDF_PARSE_TIMEOUT_S` (default 25.0)
-- `KONTUR_PDF_PARSE_WORKERS` (default 4)
-- PR #35, PR audit: `pdf_guard.py`
+| Значение | Пример |
+|---|---|
+| VALUE_DELTA | IOS4-078: 600×300 vs 400×250 мм |
+| MISSING_IN_STAGE | Армирование есть в ПД, нет в РД |
+| AMBIGUOUS_REFERENCE | Один код → несколько значений |
+| FORMAT_MISMATCH | мм vs см без конвертации |
 
-**Ограничение:** поток продолжает работать (нет SIGKILL). Follow-up: subprocess isolation.
+---
+
+## 4. PDF Parse Timeout (wall-clock kill)
+
+**Идея AeroBIM:** PROC-01 (subprocess + RLIMIT_CPU + Windows Job Object), закрыт 2026-09-05.
+
+**Контур-решение:** `asyncio.wait_for` + ThreadPoolExecutor (чистый Python).
+
+| Параметр | Значение по умолчанию |
+|---|---|
+| `KONTUR_PDF_PARSE_TIMEOUT_S` | 25.0 с |
+| `KONTUR_PDF_PARSE_WORKERS` | 4 |
+
+**Трейдофф:** поток продолжает работать после timeout (нет SIGKILL). Follow-up: subprocess isolation.
 
 ---
 
@@ -61,17 +71,18 @@
 | Область | Kontur | AeroBIM |
 |---|---|---|
 | Нормативная матрица | 132 параметра РФ | IDS (ISO 21597) |
-| Сценарии комплектности | Gate F: 7 сценариев | opt-in |
-| Состояние процесса | 6-шаговая машина + FINALIZED | summary.passed |
-| Redis idempotency | SETNX защита | in-process BackgroundTasks |
+| Сценарии | Gate F: 7 сценариев | opt-in |
+| Процесс | 6-шаговая FSM + FINALIZED | summary.passed |
+| Redis idempotency | SETNX | in-process |
 | Appendix 2 | полный Protocol (PR #29) | минимальный |
 
 ---
 
-## 6. Нереализованные идеи (P2 backlog)
+## 6. P2 Backlog (нереализованные идеи)
 
-- **Run versioning + revision diff** — `no_longer_reported ≠ resolved`
-- **Customer review pack CLI** — AeroBIM генерирует зип-пакет для заказчика
-- **BCF T0→T1** — BCF импорт требует полный Evidence ladder
-- **IDS 1.0 export** — AeroBIM STUB-IDS-ASSIST-001 (LOW, активен)
+- **Run versioning + revision diff** — `no_longer_reported != resolved`
+- **Customer review pack CLI** — zip-пакет для заказчика
+- **BCF T0->T1** — BCF импорт + Evidence ladder
+- **IDS 1.0 export** — AeroBIM STUB-IDS-ASSIST-001
 - **Subprocess isolation** — полный аналог PROC-01
+- **`to_status()` engine_status** — добавить поле в process status endpoint
