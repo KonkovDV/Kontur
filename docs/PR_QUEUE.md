@@ -31,6 +31,8 @@
 | #47 | `process_findings` / `process_files` / completeness в `schema.sql` + `checks.sql` |
 | #48 | `PostgresAuditStore` → `audit_log.process_id`; GET `/audit` после hydrate |
 | #49 | путь замера Wilson-recall; 16/20 не закрывает порог; цифры не публикуем |
+| #51 | k6: 100 VU / 60 с, p(95)<200 на теге `status`; контракт в `backend/tests`; без FormData |
+| #52 | JSONL frozen val с `object_id`; skip без env; `tests/gate_j` не брали |
 
 ## Что не брали
 
@@ -60,6 +62,8 @@
 | #48 as-is | rbac без OpenAPI |
 | #49 as-is | синтетический recall 16/20 = gold; `tests/gate_j` не собирается |
 | #50 as-is | закрытие GAP-IOS4-VAL без корпуса frozen val |
+| #51 as-is | `FormData` без импорта; `tests/load/test_k6_script_contract.py` не в pytest |
+| #52 as-is | `kontur.evaluation.recall` нет; `tests/gate_j` не собирается; нет `object_id` |
 
 Не публиковать F1/P/R и recall критических на frozen val. Площадь A×B на
 синтетике не закрывает гейт J. k6 p95 не измерен. Dry-run 132 — прогон

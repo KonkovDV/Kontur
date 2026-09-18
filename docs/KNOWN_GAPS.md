@@ -10,7 +10,8 @@
 | GAP-STAMP | Штамп поверх текста | Нет сегментации штампа | гейт I |
 | GAP-DWG | Разбор DWG | Аудио и ТЗ расходятся; до ответа — `NOT_SUPPORTED` | вопрос 6 |
 | GAP-ISOLATE | PDF в дочернем процессе с таймаутом | pdfium в том же процессе | надёжность |
-| GAP-IOS4-VAL | Recall критических на frozen val не измерен | площадь A×B на синтетике есть; корпуса frozen val нет | гейт J |
+| GAP-IOS4-VAL | Recall критических на frozen val не измерен | корпуса нет; 16/20 не закрывает Wilson; harness в `backend/tests/test_frozen_val.py`, не в `tests/gate_j` | гейт J |
+| GAP-K6-P95 | p95 `/status` не измерен | скрипт 100 VU / 60 с с порогом есть; CI k6 не запускает, дешёвый PARSING не публикуем | гейт L |
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | bake-off есть, живого пайплайна в запросе нет | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
