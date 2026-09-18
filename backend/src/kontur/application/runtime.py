@@ -210,8 +210,14 @@ class ProcessWorkspace:
         record.input_manifest_hash = item.file_hash if len(record.files) == 1 else "pending"
 
     def put_finding(self, process_id: str, finding: Finding) -> None:
+        """Сохранить находку. Повтор at-least-once с тем же evidence_group_id
+        перезаписывает запись, а не создаёт дубликат (RT-G, stop-ship п. 11).
+
+        Halted-находки без группы ключуются по finding_id.
+        """
         record = self._items[process_id]
-        record.findings[finding.finding_id] = finding
+        key = finding.evidence_group_id or finding.finding_id
+        record.findings[key] = finding
 
     def review_finding(
         self,
@@ -223,8 +229,14 @@ class ProcessWorkspace:
         comment: str,
     ) -> Finding:
         for record in self._items.values():
-            current = record.findings.get(finding_id)
-            if current is None:
+            stored_key: str | None = None
+            current: Finding | None = None
+            for key, item in record.findings.items():
+                if item.finding_id == finding_id or key == finding_id:
+                    stored_key = key
+                    current = item
+                    break
+            if current is None or stored_key is None:
                 continue
             updated = review(
                 current,
@@ -233,7 +245,7 @@ class ProcessWorkspace:
                 reason_code=reason_code,
                 comment=comment,
             )
-            record.findings[finding_id] = updated
+            record.findings[stored_key] = updated
             record.audit.record(
                 actor.actor_id,
                 "REVIEW",

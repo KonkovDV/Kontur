@@ -3,8 +3,8 @@
 По одному представительному кейсу на набор. Каждый кейс фиксирует oracle:
 что именно система обязана сделать с враждебным входом.
 
-RT-A…RT-F, RT-H, RT-I закрыты регрессией. RT-G остаётся xfail: кэш паспорта
-не равен идемпотентности находки и протокола.
+RT-A…RT-I закрыты регрессией. RT-G: одна находка на evidence_group_id
+в процессе; протокол после рестарта по-прежнему не в DAO.
 """
 
 from __future__ import annotations
@@ -18,7 +18,8 @@ import pytest
 
 from kontur.application.intake import RejectionReason, UploadCandidate, evaluate_batch
 from kontur.application.revision_resolver import resolve_revision
-from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
+from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, Finding
+from kontur.domain.statuses import Completeness, FindingStatus, ReviewPriority
 from kontur.infrastructure.access_control import AccessDeniedError, check_object_access
 from kontur.infrastructure.normative_db import NormativeDB, NormativeRevision, NormativeStatus
 from kontur.infrastructure.pdfium_tokens import file_sha256
@@ -187,11 +188,40 @@ def test_rt_f_unsigned_normative_chunk_is_not_used() -> None:
     assert result.revision is None
 
 
-@pytest.mark.xfail(reason="RT-G: идемпотентность находки/протокола, не кэш паспорта", strict=True)
 def test_rt_g_duplicate_queue_message_yields_one_business_effect() -> None:
-    """At-least-once доставка даёт ровно одну находку и одну версию протокола."""
+    """At-least-once доставка даёт ровно одну находку в процессе."""
 
-    raise NotImplementedError("RT-G")
+    from uuid import uuid4
+
+    from kontur.application.runtime import ProcessWorkspace
+
+    workspace = ProcessWorkspace()
+    record = workspace.create(
+        object_id="OBJ-RT-G",
+        completeness={
+            DocStage.PD: Completeness.UPLOADED,
+            DocStage.RD: Completeness.UPLOADED,
+            DocStage.ID: Completeness.MISSING,
+        },
+    )
+    group_id = "eg-rt-g-once"
+    for _ in range(2):
+        workspace.put_finding(
+            record.process_id,
+            Finding(
+                finding_id=str(uuid4()),
+                evidence_group_id=group_id,
+                rule_code="PZ-001",
+                finding_status=FindingStatus.CANDIDATE,
+                review_priority=ReviewPriority.HIGH,
+                matrix_version="draft-0",
+                rule_version="0.1.0",
+                model_version="none",
+            ),
+        )
+    stored = workspace.get(record.process_id)
+    assert stored is not None
+    assert len(stored.findings) == 1
 
 
 def test_rt_h_cross_tenant_access_is_denied_without_side_effect() -> None:

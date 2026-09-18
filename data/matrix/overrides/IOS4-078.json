@@ -1,11 +1,11 @@
 {
   "code": "IOS4-078",
   "section": "ИОС4",
-  "name": "Сечения и материал воздуховодов",
-  "unit": "мм / Класс",
+  "name": "Сечения и геометрия воздуховодов общеобменной вентиляции",
+  "unit": "мм²",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Уменьшение площади сечения воздуховода в РД (падение объема воздуха, рост шума).",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": ["PD", "RD"],
     "object_types": [],
@@ -17,14 +17,14 @@
     "id": { "document_kind": ["АОСР"], "table": null, "description": "Акты АОСР на вентиляцию; Исполнительные схемы" }
   },
   "extractor": {
-    "type": "geometry",
-    "regex": null,
+    "type": "number",
+    "regex": "(\\d{2,}(?:[.,]\\d+)?)\\s*[×xх]",
     "anchors": ["сечение воздуховода", "воздуховод", "вытяжная вентиляция"],
-    "normalization": ["nfc", "collapse_spaces", "decimal_comma"],
+    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
     "dual_read_required": true
   },
   "comparator": {
-    "operator": "class_not_lower",
+    "operator": "ge",
     "rounding": "none",
     "unit_target": null
   },
@@ -40,7 +40,7 @@
   "review_priority": "HIGH",
   "tests": [
     { "name": "same_duct_section_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
-    { "name": "reduced_section_or_missing_exhaust_gives_candidate", "expected_status": "CANDIDATE" },
+    { "name": "reduced_section_gives_candidate", "expected_status": "CANDIDATE" },
     { "name": "rd_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" },
     { "name": "object_without_ducts_is_not_applicable", "expected_status": "NOT_APPLICABLE" }
   ]

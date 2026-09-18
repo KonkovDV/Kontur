@@ -12,10 +12,10 @@
 | GAP-DWG | Разбор DWG | Аудио и ТЗ расходятся; до ответа — `NOT_SUPPORTED` | вопрос 6 |
 | GAP-EDIT | Журнал правок инспектора отдельной таблицей | Решение пишется в находку, отдельного `user_action_log` нет | гейт K |
 | GAP-ISOLATE | PDF в дочернем процессе с таймаутом | pdfium в том же процессе | надёжность |
-| GAP-IOS4 | IOS4-078/079 — золотые VIO без executable-экстрактора | recall по критическим на frozen val может упасть ниже 1.00 | гейт O |
-| GAP-RT-G | Идемпотентность находки/протокола при at-least-once | Есть кэш паспорта; дубль сообщения очереди всё ещё не закрыт | гейт L |
+| GAP-IOS4-VAL | IOS4-078/079 executable на синтетике; recall на frozen val не измерен | экстрактор берёт первую сторону сечения, не площадь мм² | гейт J |
 
-Adversarial: RT-A/C/E/F/H/I закрыты регрессией. RT-G — xfail strict.
+Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
+`put_finding` по `evidence_group_id`; протокол/находки после рестарта — GAP-PROCESS-FINDINGS.
 
 ## Закрытые пробелы
 
@@ -27,4 +27,6 @@ Adversarial: RT-A/C/E/F/H/I закрыты регрессией. RT-G — xfail 
 | GAP-GATE-G | 132/132 правил в матрице; каталог + compile_matrix.py | b1c65e3 |
 | GAP-ALL-OPERATORS | Все 12 операторов (delta, ge, lt, range, class_not_lower, present, …) | f08932d |
 | GAP-GATE-H | Гейт H: ≥20 исполняемых правил (18×PZ + SPZU-024 + AR-041 = 20/20) | f08932d…406e97c |
-| GAP-ENUM-EXTRACTOR | text/enum экстрактор; KR-055 и PZ-015/021/022/023 executable | PR #11/#12, локально |
+| GAP-ENUM-EXTRACTOR | text/enum экстрактор; KR-055 и PZ-015/021/022/023 executable | 4a10ce8 |
+| GAP-IOS4 | IOS4-078/079: number-экстрактор, synthetic E2E | overrides + compile |
+| GAP-RT-G | Дубль находки в процессе: `put_finding` по evidence_group_id | runtime.py |

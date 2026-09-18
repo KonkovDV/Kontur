@@ -5,7 +5,7 @@
   "unit": "м³/ч / Па / кВт",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Подмена установок на аналоги с меньшей кратностью воздухообмена.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": ["PD", "RD"],
     "object_types": [],
@@ -17,16 +17,18 @@
     "id": { "document_kind": ["Паспорт"], "table": null, "description": "Паспорта вентиляторов; Акты пусконаладки" }
   },
   "extractor": {
-    "type": "semantic_candidate",
-    "regex": null,
+    "type": "number",
+    "regex": "(\\d[\\d\\s]*(?:[.,]\\d+)?)\\s*(?:м[³3]/ч|м3/ч|куб\\.?\\s*м/ч)",
     "anchors": ["приточная установка", "венткамера", "кратность воздухообмена"],
-    "normalization": ["nfc", "collapse_spaces"],
+    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
     "dual_read_required": false
   },
   "comparator": {
-    "operator": "ne",
-    "rounding": "none",
-    "unit_target": null
+    "operator": "delta",
+    "tolerance_abs": 0.0,
+    "tolerance_rel": null,
+    "rounding": "half_up",
+    "unit_target": "м³/ч"
   },
   "required_evidence": ["expected", "actual"],
   "normative_refs": [],
