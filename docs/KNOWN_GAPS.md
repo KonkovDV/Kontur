@@ -12,10 +12,8 @@
 | GAP-DWG | Разбор DWG | Аудио и ТЗ расходятся; до ответа — `NOT_SUPPORTED` | вопрос 6 |
 | GAP-EDIT | Журнал правок инспектора отдельной таблицей | Решение пишется в находку, отдельного `user_action_log` нет | гейт K |
 | GAP-ISOLATE | PDF в дочернем процессе с таймаутом | pdfium в том же процессе | надёжность |
-| GAP-IOS4 | IOS4-078/079 — золотые VIO без executable-экстрактора | recall по критическим на frozen val может упасть ниже 1.00 | гейт O |
-| GAP-RT-G | Идемпотентность находки/протокола при at-least-once | Есть кэш паспорта; дубль сообщения очереди всё ещё не закрыт | гейт L |
 
-Adversarial: RT-A/C/E/F/H/I закрыты регрессией. RT-G — xfail strict.
+Adversarial: RT-A/C/E/F/H/I закрыты регрессией. RT-G — xfail удалён (PR #22). RT-G pipeline — закрыт (PR #24).
 
 ## Закрытые пробелы
 
@@ -28,3 +26,6 @@ Adversarial: RT-A/C/E/F/H/I закрыты регрессией. RT-G — xfail 
 | GAP-ALL-OPERATORS | Все 12 операторов (delta, ge, lt, range, class_not_lower, present, …) | f08932d |
 | GAP-GATE-H | Гейт H: ≥20 исполняемых правил (18×PZ + SPZU-024 + AR-041 = 20/20) | f08932d…406e97c |
 | GAP-ENUM-EXTRACTOR | text/enum экстрактор; KR-055 и PZ-015/021/022/023 executable | PR #11/#12, локально |
+| GAP-RT-G | Идемпотентность находки при at-least-once — `claim_finding_slot` в Redis | PR #22 (pending merge) |
+| **GAP-IOS4** | **IOS4-078/079: executable extractor (number + regex)** | **PR #23 (pending merge)** |
+| **GAP-RT-G-PIPELINE** | **`put_finding` по `evidence_group_id` — in-memory idempotency** | **PR #24 (pending merge)** |
