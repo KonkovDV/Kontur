@@ -23,6 +23,21 @@
 | #38 | IOS4-078: `multiply_dimensions` + compile `rules/`; площадь A×B на синтетике |
 | #39 | GET `/protocol` через `assemble_protocol`; статус п. 9.3; AUTO_NO_DIFFERENCE не на проводе |
 
+## Открытые PR (18.09.2026)
+
+| PR | Ветка | Что | Гейт |
+|---|---|---|---|
+| #40 | `gate-l/process-findings-persist` | `MemoryProcessStore.save_finding/load_findings`; 4 теста | L (27.09) |
+| #41 | `gate-l/k6-status-load` | k6 100 VU 60s p(95)<200ms; `tests/load/k6_status.js` | L (27.09) |
+| #42 | `gate-k/audit-log-endpoint` | `getAuditLog` в rbac.py; `GET /audit`; 6 тестов | K (26.09) |
+| #43 | `gate-f/scenario-completeness-tests` | `test_scenarios.py` + `test_pipeline_cascade.py` | F (20.09) |
+| #44 | `gate-l/retry-idempotency` | `attach_file` dedup; retry_policy тесты | L (27.09) |
+| #45 | `docs/pr-queue-update-40-44-and-openapi-audit` | PR_QUEUE #40-45 + `contracts/openapi.yaml` getAuditLog + KNOWN_GAPS | докс |
+| #46 | `gate-k/dry-run-132-params` | `tests/gate_k/conftest.py` + `test_dry_run.py`; dry run ≥132 правил ≤1800s | K (26.09) |
+| #47 | `gate-l/postgres-process-findings` | `PostgresProcessStore.save_finding/load_findings` + миграция `process_findings` | L (27.09) |
+| #48 | `gate-l/audit-log-persistent` | rbac `getAuditLog` фикс + `PostgresAuditStore` (audit_log) + 9 тестов | L (27.09) |
+| #49 | `gate-j/ios4-synthetic-recall` | `evaluation/recall.py` + `synthetic_corpus.py` 40 образцов + 10 тестов | J (25.09) |
+
 ## Что не брали
 
 | PR | Почему |
@@ -45,4 +60,4 @@
 | #39 as-is | смешал `COMPLETED` процесса со статусом протокола; AUTO_NO_DIFFERENCE мог уйти в JSON ТЗ |
 
 Не публиковать F1/P/R и recall критических на frozen val. Площадь A×B на
-синтетике не закрывает гейт J.
+синтетике не закрывает гейт J (нужны реальные документы).

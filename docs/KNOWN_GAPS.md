@@ -6,19 +6,16 @@
 | ID | Пробел | Почему не закрыто | Куда |
 |---|---|---|---|
 | RT-2609-21 | Замер юзабилити на 5 инспекторах | Форма есть, сессий нет | гейт K |
-| GAP-PROCESS-FINDINGS | Находки и комплектность не в таблице `processes` | Снимок состояния есть; очередь инспектора после рестарта пуста | гейт L |
 | GAP-OCR-ROT | Поворот и перекос скана | Векторный слой есть, OCR-пайплайна нет | гейт I |
 | GAP-STAMP | Штамп поверх текста | Нет сегментации штампа | гейт I |
 | GAP-DWG | Разбор DWG | Аудио и ТЗ расходятся; до ответа — `NOT_SUPPORTED` | вопрос 6 |
-| GAP-EDIT | Журнал правок инспектора отдельной таблицей | Решение пишется в находку, отдельного `user_action_log` нет | гейт K |
 | GAP-ISOLATE | PDF в дочернем процессе с таймаутом | pdfium в том же процессе | надёжность |
-| GAP-IOS4-VAL | Recall критических на frozen val не измерен | площадь A×B на синтетике есть; корпуса frozen val нет | гейт J |
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | bake-off есть, живого пайплайна в запросе нет | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
-`put_finding` по `evidence_group_id`; протокол/находки после рестарта — GAP-PROCESS-FINDINGS.
+`put_finding` по `evidence_group_id`.
 
 `GAP-ISOLATE` не закрыт `pdf_guard`: `wait_for` / ThreadPool ограничивают ожидание,
 но не убивают поток pdfium и не выносят разбор в дочерний процесс.
@@ -30,6 +27,16 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 при OpenAPI; mock-адаптера РиН достаточно для архитектуры; лимиты — про
 интерактивную загрузку; «нормы не анализируем». Фиксация — в
 [QUESTIONS_TO_ORGANIZER.md](QUESTIONS_TO_ORGANIZER.md).
+
+## Частично закрытые пробелы
+
+| ID | Что сделано | PR |
+|---|---|---|
+| GAP-EDIT | `GET /audit` endpoint + rbac `getAuditLog` + `PostgresAuditStore` в `audit_log` | #42, #48 |
+| GAP-PROCESS-FINDINGS | `MemoryProcessStore.save_finding/load_findings` + `PostgresProcessStore` + миграция | #40, #47 |
+| GAP-IOS4-VAL | `evaluation/recall.py` + синтетический корпус 40 образцов; recall ≥ 0.80 на синтетике | #49 |
+
+**Остаётся**: отдельный `user_action_log` для GAP-EDIT; frozen val корпус для GAP-IOS4-VAL.
 
 ## Закрытые пробелы
 
