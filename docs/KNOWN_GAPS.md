@@ -6,18 +6,17 @@
 | ID | Пробел | Почему не закрыто | Куда |
 |---|---|---|---|
 | RT-2609-21 | Замер юзабилити на 5 инспекторах | Форма есть, сессий нет | гейт K |
+| GAP-IOS4-VAL | Recall критических на frozen val не измерен | Корпуса frozen val нет; синтетика 16/20 не закрывает Wilson lower bound (нижняя граница ≲ 0.80); цифры не публикуем; harness — `tests/gate_j/test_frozen_val_recall.py` | гейт J |
+| GAP-K6-P95 | k6 p95 не измерен | Скрипт есть, CI не запускает k6 (нет сервера); threshold p(95)<200 есть в скрипте, намерен вручную | гейт L |
 | GAP-OCR-ROT | Поворот и перекос скана | Векторный слой есть, OCR-пайплайна нет | гейт I |
 | GAP-STAMP | Штамп поверх текста | Нет сегментации штампа | гейт I |
 | GAP-DWG | Разбор DWG | Аудио и ТЗ расходятся; до ответа — `NOT_SUPPORTED` | вопрос 6 |
 | GAP-ISOLATE | PDF в дочернем процессе с таймаутом | pdfium в том же процессе | надёжность |
-| GAP-IOS4-VAL | Recall критических на frozen val не измерен | площадь A×B на синтетике есть; корпуса frozen val нет | гейт J |
-| GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
+| GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора; добавлять 133-е правило нельзя | вопрос организатору |
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | bake-off есть, живого пайплайна в запросе нет | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
 
-Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
-`put_finding` по `evidence_group_id`. Очередь после рестарта — `process_findings`,
-комплектность на `processes`, журнал — `audit_log`.
+Adversarial: RT-A…RT-I закрыты регрессией.
 
 `GAP-ISOLATE` не закрыт `pdf_guard`: `wait_for` / ThreadPool ограничивают ожидание,
 но не убивают поток pdfium и не выносят разбор в дочерний процесс.
@@ -43,5 +42,5 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 | GAP-ENUM-EXTRACTOR | text/enum экстрактор; KR-055 и PZ-015/021/022/023 executable | 4a10ce8 |
 | GAP-IOS4 | IOS4-078/079: number-экстрактор, synthetic E2E | overrides + compile |
 | GAP-RT-G | Дубль находки в процессе: `put_finding` по evidence_group_id | runtime.py |
-| GAP-PROCESS-FINDINGS | Находки, файлы и комплектность переживают смену workspace; Postgres пишет `process_findings` / `process_files` | schema.sql |
-| GAP-EDIT | Журнал REVIEW/FINALIZE/UNFINALIZE в `audit_log` и GET `/audit` | audit_store.py |
+| GAP-PROCESS-FINDINGS | Находки/комплектность/файлы в Postgres (process_findings, process_files, processes) | b02aea1 |
+| GAP-EDIT | PostgresAuditStore в audit_log; GET /audit читает после hydrate | b02aea1 |
