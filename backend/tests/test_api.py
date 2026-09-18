@@ -123,6 +123,45 @@ def test_protocol_is_not_invented(client: TestClient) -> None:
     assert "не собран" in response.json()["detail"]
 
 
+def test_protocol_available_after_completed(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    response = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["object_id"] == "obj-1"
+    assert body["status"] in ("READY", "COMPLETED", "FINALIZED")
+    assert "sections" in body
+    assert isinstance(body["sections"]["candidates"], list)
+    assert body["violation_count"] == 0
+    assert "versions" in body
+    assert "input_manifest" in body
+
+
+def test_protocol_lists_candidate_in_sections(client: TestClient) -> None:
+    process_id = _seed_completed(client, with_candidate=True)
+    response = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR)
+    assert response.status_code == 200
+    body = response.json()
+    candidates = body["sections"]["candidates"]
+    assert len(candidates) == 1
+    assert candidates[0]["rule_code"] == "PZ-001"
+    assert candidates[0]["finding_status"] == "CANDIDATE"
+    # violation_count excludes CANDIDATE (only CONFIRMED_VIOLATION counts)
+    assert body["violation_count"] == 0
+
+
+def test_protocol_404_for_unknown_process(client: TestClient) -> None:
+    response = client.get("/api/v1/processes/does-not-exist/protocol", headers=INSPECTOR)
+    assert response.status_code == 404
+    assert "не найден" in response.json()["detail"]
+
+
+def test_protocol_requires_token(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    response = client.get(f"/api/v1/processes/{process_id}/protocol")
+    assert response.status_code == 401
+
+
 def test_review_and_finalize_require_matching_subject(client: TestClient) -> None:
     process_id = _seed_completed(client, with_candidate=True)
     forbidden = client.post(

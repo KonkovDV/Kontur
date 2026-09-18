@@ -21,6 +21,7 @@ from kontur.application.intake import (
     UploadCandidate,
     evaluate_batch,
 )
+from kontur.application.protocol import assemble_protocol
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.capabilities import capabilities_payload
@@ -221,18 +222,41 @@ def get_protocol(
     process_id: str,
     version: int | None = None,
     authorization: Annotated[str | None, Header()] = None,
-) -> JSONResponse:
+) -> dict[str, object] | JSONResponse:
     _require("getProtocol", authorization)
     record = _workspace().get(process_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     del version
-    return JSONResponse(
-        status_code=404,
-        content={
-            "detail": "протокол не собран: исполняемого извлечения нет, L9 не вызывается"
-        },
-    )
+    try:
+        payload = assemble_protocol(
+            protocol_id=record.protocol_id or f"placeholder-{record.process_id}",
+            object_id=record.object_id,
+            findings=list(record.findings.values()),
+            completeness=record.completeness,
+            files=[
+                {
+                    "file_id": f.file_id,
+                    "file_hash": f.file_hash,
+                    "filename": f.filename,
+                }
+                for f in record.files
+            ],
+            versions={
+                "matrix_version": record.matrix_version,
+                "model_version": record.model_version,
+                "dataset_version": record.dataset_version,
+                "git_sha": record.git_sha,
+            },
+            process_state=record.process_state,
+            input_manifest_hash=record.input_manifest_hash,
+        )
+    except ValueError as exc:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"протокол не собран: {exc}"},
+        )
+    return payload
 
 
 @app.post("/api/v1/findings/{finding_id}/review", response_model=None)
