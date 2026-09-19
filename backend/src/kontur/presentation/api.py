@@ -287,7 +287,7 @@ async def upload_documents(
         for upload in files:
             try:
                 await upload.close()
-            except Exception:  # noqa: BLE001 - close every upload best-effort
+            except Exception:  # noqa: BLE001, S110 - close every upload best-effort
                 pass
 
 
