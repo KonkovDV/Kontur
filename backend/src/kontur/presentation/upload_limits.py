@@ -1,4 +1,5 @@
 """Actual-byte limits for the authoritative Python upload boundary."""
+
 from __future__ import annotations
 
 import asyncio
@@ -114,7 +115,10 @@ async def read_upload_payload(
             raise UploadLimitExceeded
         staged.file().seek(0)
         body = staged.file().read(expected.size + 1)
-        if len(body) != expected.size or hashlib.sha256(body).hexdigest() != expected.digest:
+        if (
+            len(body) != expected.size
+            or hashlib.sha256(body).hexdigest() != expected.digest
+        ):
             raise UploadLimitExceeded
         setattr(upload, _VERIFIED_BODY_ATTR, body)
         staged.file().seek(0)
@@ -184,7 +188,11 @@ class ActualUploadLimitMiddleware:
         max_batch_bytes: int = MAX_UPLOAD_REQUEST_BYTES,
         max_concurrent_uploads: int | None = None,
     ) -> None:
-        slots = _configured_upload_slots() if max_concurrent_uploads is None else max_concurrent_uploads
+        slots = (
+            _configured_upload_slots()
+            if max_concurrent_uploads is None
+            else max_concurrent_uploads
+        )
         if max_batch_bytes < 0:
             raise ValueError("max_batch_bytes must be non-negative")
         if slots <= 0:
