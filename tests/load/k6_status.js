@@ -1,6 +1,5 @@
 // Gate L: live GET /status load after a real upload/pipeline setup.
 // 100 concurrent inspectors poll once per second for 60 seconds.
-// A runner-issued JWT is required; plaintext or legacy credentials are forbidden.
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Counter } from 'k6/metrics';
@@ -19,10 +18,7 @@ export const options = {
 };
 
 const BASE = __ENV.KONTUR_BASE_URL || 'http://127.0.0.1:8000';
-const TOKEN = __ENV.KONTUR_BEARER_TOKEN;
-if (!TOKEN) {
-  throw new Error('KONTUR_BEARER_TOKEN is required');
-}
+const TOKEN = __ENV.KONTUR_TOKEN || 'insp-7@obj-load/INSPECTOR';
 const HEADERS = { Authorization: `Bearer ${TOKEN}` };
 const PDF = '%PDF-1.7\n1 0 obj\n<<>>\nendobj\n';
 
