@@ -1,8 +1,9 @@
 """Прогон матрицы на загруженных PDF: токены → evaluate_rule → находки.
 
-Вызывается после intake. OCR не вызывается: нет текстового слоя — пустые
-токены и статусы качества данных, не нарушение. Автомат не пишет
-CONFIRMED_VIOLATION / NEGATIVE_VERIFIED.
+Гейт I (24.09): страницы без текстового слоя направляются в OCR-верификатор
+(Tesseract-5 region-crop ×3). Токены verifierа заменяют пустой вектор.
+Если Tesseract недоступен: пустые токены → статусы качества, не violation.
+Автомат не пишет CONFIRMED_VIOLATION / NEGATIVE_VERIFIED.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, Finding
 from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus
 from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
+from kontur.infrastructure.ocr_verifier import ocr_document_raster_pages
 from kontur.infrastructure.pdf_guard import PdfParseTimeoutError, run_pdf_parse_sync
 from kontur.infrastructure.pdfium_tokens import extract_pdf_bytes, flatten_tokens
 
@@ -58,6 +60,30 @@ def _document_ref(
     )
 
 
+def _augment_with_ocr(
+    raw: bytes,
+    document,  # PdfDocumentTokens
+) -> tuple:
+    """Дополнить токены OCR для растровых страниц (Gate I).
+
+    Векторные страницы: токены уже есть — OCR не запускается.
+    Растровые страницы: пустые токены заменяются на OCR-токены.
+    Если Tesseract недоступен — возвращаем пустые токены как есть.
+    """
+    ocr_by_page = ocr_document_raster_pages(raw, document.pages)
+    if not ocr_by_page:
+        return flatten_tokens(document)
+    result: list = []
+    for page in document.pages:
+        if page.has_embedded_text:
+            result.extend(page.tokens)
+        else:
+            ocr_result = ocr_by_page.get(page.page)
+            if ocr_result is not None:
+                result.extend(ocr_result.tokens)
+    return tuple(result)
+
+
 def _pages_from_blobs(
     files: Sequence[PipelineFile],
     blobs: Mapping[str, bytes],
@@ -76,7 +102,8 @@ def _pages_from_blobs(
         except (PdfParseTimeoutError, ValueError) as exc:
             errors.append(f"{item.file_id}: {exc}")
             continue
-        tokens = flatten_tokens(document)
+        # Gate I: растровые страницы → OCR-токены (fallback: пустой вектор)
+        tokens = _augment_with_ocr(raw, document)
         last = document.pages[-1]
         passport = read_passport(
             tokens,
@@ -142,4 +169,4 @@ def assert_machine_only(findings: Sequence[Finding]) -> None:
         if finding.finding_status in HUMAN_ONLY_STATUSES:
             raise RuntimeError(f"{finding.rule_code}: {finding.finding_status.value}")
         if finding.finding_status is FindingStatus.CONFIRMED_VIOLATION:
-            raise RuntimeError("CONFIRMED_VIOLATION из пайплайна")
+            raise RuntimeError("из пайплайна CONFIRMED_VIOLATION")
