@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import hashlib
+import io
 from collections.abc import Iterator
 from typing import Any
 
@@ -12,8 +14,10 @@ from fastapi import UploadFile
 from fastapi.testclient import TestClient
 
 from kontur.application.runtime import ProcessWorkspace
+from kontur.domain.models import DocStage
 from kontur.presentation import api
 from kontur.presentation.api import app
+from kontur.presentation.upload_limits import UploadLimitExceeded
 
 PDF = b"%PDF-1.7\n1 0 obj\n<<>>\nendobj\n"
 CORRUPTED = b"PK\x03\x04not-a-pdf"
@@ -54,6 +58,41 @@ def _record_snapshot(record: Any) -> object:
             record.audit.records,
             record.completeness,
         )
+    )
+
+
+class _SecondPassUpload(UploadFile):
+    """Return changed bytes or fail after the metadata pass rewinds."""
+
+    def __init__(self, second_body: bytes | None) -> None:
+        super().__init__(file=io.BytesIO(PDF), filename="changing.pdf")
+        self._first = io.BytesIO(PDF)
+        self._second = None if second_body is None else io.BytesIO(second_body)
+        self._pass = 0
+
+    async def read(self, size: int = -1) -> bytes:
+        if self._pass == 0:
+            return self._first.read(size)
+        if self._second is None:
+            raise OSError("second-pass read failed")
+        return self._second.read(size)
+
+    async def seek(self, offset: int) -> None:
+        if offset == 0 and self._pass == 0:
+            self._pass = 1
+        if self._pass == 0:
+            self._first.seek(offset)
+        elif self._second is not None:
+            self._second.seek(offset)
+
+
+async def _direct_upload(upload: UploadFile, process_id: str | None = None) -> None:
+    await api.upload_documents(
+        object_id="obj-1",
+        files=[upload],
+        authorization=INSPECTOR["Authorization"],
+        process_id=process_id,
+        doc_stage=DocStage.PD,
     )
 
 
@@ -121,6 +160,53 @@ def test_resumed_mixed_rejection_does_not_mutate_existing_record(
     same_record = app.state.workspace.get(process_id)
     assert same_record is record
     assert _record_snapshot(record) == before
+
+
+def test_changed_second_pass_leaves_new_workspace_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "1")
+    workspace = ProcessWorkspace()
+    app.state.workspace = workspace
+    pipeline_calls: list[object] = []
+    monkeypatch.setattr(
+        workspace,
+        "run_matrix_pipeline",
+        lambda record: pipeline_calls.append(record),
+    )
+
+    with pytest.raises(UploadLimitExceeded):
+        asyncio.run(_direct_upload(_SecondPassUpload(PDF + b"changed")))
+
+    assert workspace._items == {}  # noqa: SLF001
+    assert pipeline_calls == []
+
+
+def test_read_failure_second_pass_leaves_existing_process_unchanged(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    created = _upload(client)
+    assert created.status_code == 202
+    process_id = created.json()["process_id"]
+    workspace = app.state.workspace
+    record = workspace.get(process_id)
+    assert record is not None
+    before = _record_snapshot(record)
+    before_items = dict(workspace._items)  # noqa: SLF001
+    pipeline_calls: list[object] = []
+    monkeypatch.setattr(
+        workspace,
+        "run_matrix_pipeline",
+        lambda current: pipeline_calls.append(current),
+    )
+
+    with pytest.raises(OSError, match="second-pass read failed"):
+        asyncio.run(_direct_upload(_SecondPassUpload(None), process_id))
+
+    assert workspace._items == before_items  # noqa: SLF001
+    assert workspace.get(process_id) is record
+    assert _record_snapshot(record) == before
+    assert pipeline_calls == []
 
 
 def test_upload_hash_uses_actual_file_bytes(client: TestClient) -> None:

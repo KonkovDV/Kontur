@@ -50,22 +50,22 @@ class UploadPayload:
 class _StagedUpload:
     """Own one local spool until ownership moves to the UploadFile."""
 
-    spool: BinaryIO
+    spool: BinaryIO | None
 
     def close(self) -> None:
-        self.spool.close()
+        if self.spool is not None:
+            self.spool.close()
+            self.spool = None
+
+    def file(self) -> BinaryIO:
+        if self.spool is None:
+            raise RuntimeError("staged upload is closed")
+        return self.spool
 
     def release(self) -> BinaryIO:
-        spool = self.spool
-        self.spool = _ClosedFile()
+        spool = self.file()
+        self.spool = None
         return spool
-
-
-class _ClosedFile:
-    """A closed BinaryIO sentinel used after ownership transfer."""
-
-    def close(self) -> None:
-        return None
 
 
 async def _read_metadata(
@@ -103,7 +103,7 @@ async def read_upload_payload(
 ) -> UploadPayload:
     """Verify two bounded reads and replace the source with a local spool.
 
-    The first pass records metadata only.  The second pass copies into a
+    The first pass records metadata only. The second pass copies into a
     ``SpooledTemporaryFile`` while independently recomputing all metadata.
     Only a verified spool is installed on the UploadFile, so the endpoint's
     existing outer UploadFile cleanup owns and closes every staged body.
@@ -124,19 +124,22 @@ async def read_upload_payload(
     staged = _StagedUpload(
         tempfile.SpooledTemporaryFile(max_size=SPOOL_MEMORY_BYTES, mode="w+b")
     )
-    original = upload.file
+    original = getattr(upload, "file", None)
     try:
         actual = await _read_metadata(
             upload,
             max_file_bytes=max_file_bytes,
             chunk_size=chunk_size,
-            spool=staged.spool,
+            spool=staged.file(),
         )
         if actual != expected:
             raise UploadLimitExceeded
-        staged.spool.seek(0)
-        original.close()
-        upload.file = staged.release()
+        staged.file().seek(0)
+        if original is None:
+            staged.close()
+        else:
+            original.close()
+            upload.file = staged.release()
     except BaseException:
         staged.close()
         raise
