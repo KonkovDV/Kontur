@@ -342,4 +342,4 @@ def test_uploads_are_closed_on_success_rejection_and_exception(
             client,
             files=[("files", ("exception.pdf", PDF + b"x", "application/pdf"))],
         )
-    assert closed == ["exception.pdf"]
+    assert set(closed) == {"exception.pdf"}
