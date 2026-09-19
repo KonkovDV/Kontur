@@ -34,13 +34,13 @@ export function setup() {
   );
   check(response, { 'upload 202': (res) => res.status === 202 });
   if (response.status !== 202) {
-    throw new Error(`setup upload failed: ${response.status}`);
+    throw new Error(`setup: status=${response.status} body=${response.body}`);
   }
-  return { processId: response.json('process_id') };
+  return { process_id: response.json('process_id') };
 }
 
 export default function (data) {
-  const response = http.get(`${BASE}/api/v1/processes/${data.processId}/status`, {
+  const response = http.get(`${BASE}/api/v1/processes/${data.process_id}/status`, {
     headers: HEADERS,
     tags: { name: 'status' },
   });
