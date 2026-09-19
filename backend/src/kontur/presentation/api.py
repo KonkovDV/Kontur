@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from typing import Annotated
 from uuid import uuid4
 
@@ -11,7 +10,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from kontur.application.intake import (
-    MAX_BATCH_BYTES,
+    MAX_FILE_BYTES,
     Rejection,
     UploadCandidate,
     evaluate_batch,
@@ -32,8 +31,14 @@ from kontur.presentation.rbac import (
     Role,
     authorize,
 )
+from kontur.presentation.upload_limits import (
+    ActualUploadLimitMiddleware,
+    UploadLimitExceeded,
+    read_upload_payload,
+)
 
 app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton")
+app.add_middleware(ActualUploadLimitMiddleware)
 app.state.workspace = ProcessWorkspace()
 
 
@@ -155,101 +160,116 @@ def system_capabilities(
 
 @app.post("/api/v1/documents/upload", status_code=202, response_model=None)
 async def upload_documents(
-    request: Request,
     object_id: Annotated[str, Form()],
     files: Annotated[list[UploadFile], File()],
     authorization: Annotated[str | None, Header()] = None,
     process_id: Annotated[str | None, Form()] = None,
     doc_stage: Annotated[DocStage | None, Form()] = None,
 ) -> dict[str, object] | JSONResponse:
-    _subject, _granted, caller_object_id = _require("uploadDocuments", authorization)
-    normalized_object_id = object_id.strip()
-    if not normalized_object_id:
-        raise EmptyPackageError("object_id пуст")
-    _check_scope(normalized_object_id, caller_object_id)
-
-    workspace = _workspace()
-    record = workspace.get(process_id) if process_id else None
-    if process_id and record is None:
-        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
-    if record is not None:
-        _check_scope(record.object_id, caller_object_id)
-        if record.object_id != normalized_object_id:
-            return JSONResponse(status_code=409, content={"detail": "object_id не совпадает"})
-
-    length = request.headers.get("content-length")
-    if length is not None and int(length) > MAX_BATCH_BYTES:
-        return JSONResponse(
-            status_code=413,
-            content={
-                "file_name": "*",
-                "reason_code": "BATCH_LIMIT_EXCEEDED",
-                "message": f"Content-Length {length} больше лимита {MAX_BATCH_BYTES} Б",
-            },
-        )
-    if not files:
-        raise EmptyPackageError("empty package is not a TZ comparison scenario")
-    if doc_stage is None:
-        return JSONResponse(
-            status_code=422,
-            content={
-                "file_name": "*",
-                "reason_code": "UNSUPPORTED_FORMAT",
-                "message": "doc_stage обязателен: без стадии файл нельзя привязать к ПД/РД/ИД",
-            },
-        )
-
     payloads: list[tuple[UploadCandidate, bytes]] = []
-    for upload in files:
-        name = upload.filename or "unnamed"
-        body = await upload.read()
-        candidate = UploadCandidate(
-            filename=name,
-            size_bytes=len(body),
-            header=body[:16],
-            content_hash=hashlib.sha256(body).hexdigest(),
-        )
-        payloads.append((candidate, body))
-    decision = evaluate_batch(item for item, _body in payloads)
-    if decision.rejected and not decision.accepted:
-        worst = max(decision.rejected, key=lambda item: item.http_status)
-        return JSONResponse(status_code=worst.http_status, content=_rejection_body(worst))
+    bodies: dict[str, bytes] = {}
+    try:
+        _subject, _granted, caller_object_id = _require("uploadDocuments", authorization)
+        normalized_object_id = object_id.strip()
+        if not normalized_object_id:
+            raise EmptyPackageError("object_id пуст")
+        _check_scope(normalized_object_id, caller_object_id)
 
-    bodies = {
-        item.content_hash: body
-        for item, body in payloads
-        if item.content_hash is not None
-    }
+        workspace = _workspace()
+        record = workspace.get(process_id) if process_id else None
+        if process_id and record is None:
+            return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+        if record is not None:
+            _check_scope(record.object_id, caller_object_id)
+            if record.object_id != normalized_object_id:
+                return JSONResponse(
+                    status_code=409, content={"detail": "object_id не совпадает"}
+                )
 
-    if record is None:
-        completeness = _empty_completeness()
-        completeness[doc_stage] = Completeness.UPLOADED
-        record = workspace.create(normalized_object_id, completeness)
-    else:
-        workspace.reopen_for_upload(record)
+        if not files:
+            raise EmptyPackageError("empty package is not a TZ comparison scenario")
+        if doc_stage is None:
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "file_name": "*",
+                    "reason_code": "UNSUPPORTED_FORMAT",
+                    "message": (
+                        "doc_stage обязателен: без стадии файл нельзя привязать к ПД/РД/ИД"
+                    ),
+                },
+            )
 
-    accepted: list[dict[str, str]] = []
-    for item in decision.accepted:
-        digest = item.content_hash
-        if digest is None:
-            raise RuntimeError("принятый файл обязан иметь SHA-256")
-        stored = AcceptedFile(
-            file_id=str(uuid4()),
-            file_hash=digest,
-            filename=item.filename,
-            doc_stage=doc_stage,
-            size_bytes=item.size_bytes,
-        )
-        if workspace.attach_file(record, stored):
-            workspace.keep_blob(record, stored.file_id, bodies[digest])
-            accepted.append({"file_id": stored.file_id, "file_hash": stored.file_hash})
+        try:
+            for upload in files:
+                name = upload.filename or "unnamed"
+                payload = await read_upload_payload(
+                    upload,
+                    max_file_bytes=MAX_FILE_BYTES,
+                )
+                candidate = UploadCandidate(
+                    filename=name,
+                    size_bytes=payload.size,
+                    header=payload.header,
+                    content_hash=payload.digest,
+                )
+                payloads.append((candidate, payload.body))
+        except UploadLimitExceeded:
+            raise
 
-    workspace.run_matrix_pipeline(record)
-    return {
-        "process_id": record.process_id,
-        "accepted": accepted,
-        "rejected": [_rejection_body(item) for item in decision.rejected],
-    }
+        decision = evaluate_batch(item for item, _body in payloads)
+        if decision.rejected:
+            worst = max(decision.rejected, key=lambda item: item.http_status)
+            return JSONResponse(
+                status_code=worst.http_status,
+                content=_rejection_body(worst),
+            )
+
+        bodies = {
+            item.content_hash: body
+            for item, body in payloads
+            if item.content_hash is not None
+        }
+
+        if record is None:
+            completeness = _empty_completeness()
+            completeness[doc_stage] = Completeness.UPLOADED
+            record = workspace.create(normalized_object_id, completeness)
+        else:
+            workspace.reopen_for_upload(record)
+
+        accepted: list[dict[str, str]] = []
+        for item in decision.accepted:
+            digest = item.content_hash
+            if digest is None:
+                raise RuntimeError("принятый файл обязан иметь SHA-256")
+            stored = AcceptedFile(
+                file_id=str(uuid4()),
+                file_hash=digest,
+                filename=item.filename,
+                doc_stage=doc_stage,
+                size_bytes=item.size_bytes,
+            )
+            if workspace.attach_file(record, stored):
+                workspace.keep_blob(record, stored.file_id, bodies[digest])
+                accepted.append(
+                    {"file_id": stored.file_id, "file_hash": stored.file_hash}
+                )
+
+        workspace.run_matrix_pipeline(record)
+        return {
+            "process_id": record.process_id,
+            "accepted": accepted,
+            "rejected": [],
+        }
+    finally:
+        payloads.clear()
+        bodies.clear()
+        for upload in files:
+            try:
+                await upload.close()
+            except Exception:  # noqa: BLE001 - close every upload best-effort
+                pass
 
 
 @app.get("/api/v1/processes/{process_id}/status", response_model=None)
@@ -285,7 +305,10 @@ def get_protocol(
         object_id=record.object_id,
         findings=tuple(record.findings.values()),
         completeness=record.completeness,
-        files=[{"file_id": item.file_id, "file_hash": item.file_hash} for item in record.files],
+        files=[
+            {"file_id": item.file_id, "file_hash": item.file_hash}
+            for item in record.files
+        ],
         versions={
             "matrix_version": record.matrix_version,
             "model_version": record.model_version,
@@ -330,7 +353,9 @@ def review_finding(
 ) -> dict[str, object] | JSONResponse:
     subject, granted, object_id = _require("reviewFinding", authorization)
     if body.inspector_id != subject:
-        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
+        raise PermissionDeniedError(
+            "inspector_id не совпадает с субъектом токена"
+        )
     owner = _record_for_finding(finding_id)
     if owner is None:
         return JSONResponse(status_code=404, content={"detail": "находка не найдена"})
@@ -366,7 +391,9 @@ def _human_process_action(
 ) -> dict[str, object] | JSONResponse:
     subject, granted, object_id = _require(operation_id, authorization)
     if body.inspector_id != subject:
-        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
+        raise PermissionDeniedError(
+            "inspector_id не совпадает с субъектом токена"
+        )
     record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
@@ -423,7 +450,9 @@ def unfinalize_protocol(
 ) -> dict[str, object] | JSONResponse:
     subject, granted, object_id = _require("unfinalizeProtocol", authorization)
     if body.inspector_id != subject:
-        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
+        raise PermissionDeniedError(
+            "inspector_id не совпадает с субъектом токена"
+        )
     record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
