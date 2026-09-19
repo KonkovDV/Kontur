@@ -60,11 +60,18 @@ Harness: `make ocr-pilot` (Docker + Tesseract). SILVER, без Речников�
 
 ## Шаг 3 — прогон TRAIN_PUBLIC без публикации порога
 
+Срез на `main`: `train_public.py` читает `files_index.jsonl`, исходные PDF
+(не overlay), пропускает `RD_ID_MIXED`/`UNKNOWN`/Речников/TEST_HIDDEN.
+Пайплайн — последний файл стадии, как в HTTP. JSONL с `object_id`.
+`closes_gate_j` всегда false. `make train-public` — opt-in, без `files/` CI skip.
+Тюменская в индексе без RD/ID (только PD и MIXED) — сравнение IOS4 не из чего
+закрывать; это не «гейт закрыт».
+
 | | |
 |---|---|
 | requirement | 203 файла открытого train через пайплайн; 6 матричных gold Тюменской — инженерный отчёт |
-| artifact | JSONL предсказаний с `object_id` (не TEST_HIDDEN) |
-| test | `load_frozen_val_jsonl` требует `object_id`; 6/6 не закрывает Wilson recall |
+| artifact | `evaluation/train_public.py`; `out/train_public_pred.jsonl` вне git |
+| test | `test_train_public.py`: `object_id`; 6/6 не закрывает Wilson; даже 16/16 на train не закрывает J |
 | metric | только внутренняя; в README не писать |
 | stop | закрытие `GAP-IOS4-VAL` по 15 строкам |
 

@@ -35,6 +35,7 @@
 | #52 | JSONL frozen val с `object_id`; skip без env; `tests/gate_j` не брали |
 | OCR raster | `ocr_tesseract.py`: пустой растр → Tesseract fail-closed; `ocr_text` остаётся UNAVAILABLE |
 | OCR region-crop | `ocr_region_crop` в `evaluate_rule`; harness `ocr_pilot.py` без Речникова; гейт I открыт |
+| TRAIN_PUBLIC harness | `train_public.py`: исходные PDF, JSONL с `object_id`, 6/6 не закрывает J; MIXED не угадываем |
 
 ## Что не брали
 
@@ -68,6 +69,7 @@
 | #52 as-is | `kontur.evaluation.recall` нет; `tests/gate_j` не собирается; нет `object_id` |
 | #53 as-is | CI `backend` FAILURE (ruff I001/F401); `ocr_text=AVAILABLE` по `shutil.which`; дубль CA/Wilson z=1.645; `wilson(290,300)` как PASS пилота; импорт несуществующего `pdf_fixtures`; полный кадр назван region-crop; domain→infrastructure |
 | #54 as-is | `ocr_tesseract.py` одной строкой (invalid-syntax), CI backend FAILURE; «гейт I закрыт» до замера; tessdata-best нет в образе; `MIN_WORD_CONF` 40→35. Docker-прогон crop×3+oem1+autocontrast+PSM 7→6→8 на SILVER PDF_TEXT_LAYER: mean_ca тот же, tz_low и gate_i_low ниже, чем у текущего `main`. В прод не брали |
+| `feat/ocr-300dpi-step2-verifying` (`2ddc2b3`) | PR не открывался. Тот же усечённый push: `ocr_tesseract.py` одной строкой, 3161 байт. Заявлены wilson≥0.95 / tessdata-best / `MIN_WORD_CONF` 35. Не мержить |
 
 Не публиковать F1/P/R и recall критических на frozen val. Поставка
 организатора и 15 публичных gold-проверок **не** закрывают гейт J
