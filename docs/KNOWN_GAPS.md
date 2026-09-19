@@ -22,8 +22,10 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 `GAP-ISOLATE` не закрыт `pdf_guard`: `wait_for` / ThreadPool ограничивают ожидание,
 но не убивают поток pdfium и не выносят разбор в дочерний процесс.
 
-Поставка организатора и публичный gold-seed **не** закрывают `GAP-IOS4-VAL`:
-см. [`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md) и `data/dataset/gold_inventory.json`.
+Поставка организатора, публичный gold-seed и пакет без ответов v2.0 **не**
+закрывают `GAP-IOS4-VAL`: см. [`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md) и
+`data/dataset/gold_inventory.json`. На машине 20.09.2026 нет архивов объектов
+10–18 и нет frozen val; OCR-пилот SILVER порог не берёт.
 
 ## Неофициальные пометки созвона
 

@@ -1,9 +1,17 @@
 {
   "package_version": "lct2026-task10-20260915",
-  "observed_at": "2026-09-15",
+  "observed_at": "2026-09-20",
   "source": "Файловый архив организатора, зафиксирован по скриншотам каталога поставки. Размеры — как их показывает проводник (КБ). Сами архивы в репозиторий не попадают.",
   "hash_status": "pending",
   "hash_procedure": "SHA-256 считается до распаковки (evaluation/inventory.hash_archives), затем сверяется с SHA256SUMS.jsonl внутри пакета разметки.",
+  "workspace_observation": {
+    "root": "files/",
+    "in_git": false,
+    "object_archives_10_18_present": false,
+    "participant_package_without_answers_v2_present": true,
+    "original_tar_sha256_pending": true,
+    "note": "20.09.2026: распакован 01/02 и TRAIN_PUBLIC; объекты 10–18 отсутствуют; v2.0 без ответов лежит внутри 01, не отдельная единица манифеста. Закрытый zip организатора не открывать."
+  },
   "annotated_layout": [
     "annotated_documents/",
     "data/",
@@ -40,7 +48,7 @@
       "object_id": null,
       "size_kb": 8514948,
       "sha256": null,
-      "notes": "Сводный пакет участникам: по имени — 3 объекта. Состав раскрыть при инвентаризации (Gate A)."
+      "notes": "Сводный пакет участникам: по имени — 3 объекта. 20.09.2026 на машине распакован как ХАКАТОН_УЧАСТНИКАМ_ГОТОВО_К_ПЕРЕДАЧЕ, внутри ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0 (sha256sums 18/18). Исходный .tar и SHA-256 архива не зафиксированы."
     },
     {
       "name": "02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА.tar",
@@ -49,7 +57,7 @@
       "object_id": null,
       "size_kb": 505070,
       "sha256": null,
-      "notes": "Методика и эталонная разметка организатора: каталоги tz_review/tz_redline, *_comparison_*, lct_scoring_board_20260825, hackathon_gold_20260811."
+      "notes": "Методика и эталонная разметка организатора: каталоги tz_review/tz_redline, *_comparison_*, lct_scoring_board_20260825, hackathon_gold_20260811. В hackathon_gold лежит ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip — не открывать для порогов. OCR-пилот SILVER: ocr_pilot_20260811."
     },
     {
       "name": "10. Мосстройнадзор.pdf",
