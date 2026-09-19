@@ -33,4 +33,6 @@ def test_k6_script_records_reproducible_status_only_metrics() -> None:
     assert "statusRequests.add(1)" in src
     assert "sleep(1)" in src
     assert "name: 'setup-upload'" in src
+    assert "handleSummary" in src
+    assert "/work/out/k6-summary.json" in src
     assert "FormData" not in src

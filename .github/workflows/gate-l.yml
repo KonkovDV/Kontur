@@ -56,9 +56,9 @@ jobs:
           docker run --rm --network host \
             -v "$PWD:/work" -w /work \
             -e KONTUR_BASE_URL=http://127.0.0.1:8000 \
-            grafana/k6:0.54.0 run \
-            --summary-export=/work/out/k6-summary.json \
-            /work/tests/load/k6_status.js 2>&1 | tee out/k6.log
+            -e KONTUR_SUMMARY_PATH=/work/out/k6-summary.json \
+            grafana/k6:0.54.0 run /work/tests/load/k6_status.js \
+            2>&1 | tee out/k6.log
           k6_exit=${PIPESTATUS[0]}
           set -e
           report_exit=0

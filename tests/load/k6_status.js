@@ -48,3 +48,8 @@ export default function (data) {
   check(response, { 'status 200': (res) => res.status === 200 });
   sleep(1);
 }
+
+export function handleSummary(data) {
+  const path = __ENV.KONTUR_SUMMARY_PATH || '/work/out/k6-summary.json';
+  return { [path]: `${JSON.stringify(data)}\n` };
+}
