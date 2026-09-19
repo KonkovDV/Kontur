@@ -1,7 +1,4 @@
-"""Контракт k6-скрипта. CI k6 не запускает: нет сервера и нет бинарника.
-
-Проверяем текст harness, не p95. Порог в скрипте — цель прогона, не факт.
-"""
+"""Static contract for the k6 status harness; CI does not execute k6."""
 
 from __future__ import annotations
 
@@ -15,7 +12,7 @@ def _src() -> str:
     return SCRIPT.read_text(encoding="utf-8")
 
 
-def test_k6_script_declares_tz_load_shape() -> None:
+def test_k6_script_declares_tz_load_shape_and_requires_jwt_env() -> None:
     src = _src()
     assert SCRIPT.is_file()
     assert re.search(r"vus\s*:\s*100", src)
@@ -27,4 +24,6 @@ def test_k6_script_declares_tz_load_shape() -> None:
     assert "/status" in src
     assert "FormData" not in src
     assert "tags: { name: 'status' }" in src
-    assert "insp-7@obj-load/INSPECTOR" in src
+    assert "KONTUR_BEARER_TOKEN" in src
+    assert "KONTUR_TOKEN" not in src
+    assert "insp-7@obj-load/INSPECTOR" not in src

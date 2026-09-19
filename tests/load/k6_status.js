@@ -1,6 +1,5 @@
 // Нагрузочный harness GET /status. CI k6 не запускает и p95 не публикует.
-// Цель ТЗ: 100 VU, 60 с, p(95)<200 мс на синхронном /status.
-// Порог в скрипте — контракт прогона; без сервера это не замер.
+// Обязателен реально выданный JWT через KONTUR_BEARER_TOKEN; plaintext credential запрещён.
 import http from 'k6/http';
 import { check } from 'k6';
 
@@ -14,7 +13,10 @@ export const options = {
 };
 
 const BASE = __ENV.KONTUR_BASE_URL || 'http://127.0.0.1:8000';
-const TOKEN = __ENV.KONTUR_TOKEN || 'insp-7@obj-load/INSPECTOR';
+const TOKEN = __ENV.KONTUR_BEARER_TOKEN;
+if (!TOKEN) {
+  throw new Error('KONTUR_BEARER_TOKEN is required');
+}
 const HEADERS = { Authorization: `Bearer ${TOKEN}` };
 const PDF = '%PDF-1.7\n1 0 obj\n<<>>\nendobj\n';
 

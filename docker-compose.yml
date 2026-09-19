@@ -12,12 +12,10 @@ services:
 
   redis:
     image: redis:7-alpine
-    # Кеш парсинга по хешу файла (ТЗ п. 9.1, шаг 5). Не durable queue.
     ports: ["6379:6379"]
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    # Очередь по ТЗ п. 1.5. Доставка at-least-once, идемпотентность — на стороне ядра.
     ports: ["5672:5672", "15672:15672"]
 
   minio:
@@ -31,14 +29,17 @@ services:
       - minio:/data
 
   core:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    build: ./backend
     command: uvicorn kontur.presentation.api:app --host 0.0.0.0 --port 8000
     environment:
       KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
       KONTUR_REDIS_URL: redis://redis:6379/0
       KONTUR_AMQP_URL: amqp://guest:guest@rabbitmq:5672/
+      KONTUR_JWT_ISSUER: ${KONTUR_JWT_ISSUER}
+      KONTUR_JWT_AUDIENCE: ${KONTUR_JWT_AUDIENCE}
+      KONTUR_JWT_ALGORITHM: ${KONTUR_JWT_ALGORITHM:-RS256}
+      KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY}
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
     depends_on: [postgres, redis, rabbitmq, minio]
     ports: ["8000:8000"]
 
