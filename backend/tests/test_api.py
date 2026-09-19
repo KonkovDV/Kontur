@@ -162,6 +162,7 @@ def test_cross_object_review_has_no_side_effect(client: TestClient) -> None:
     record = app.state.workspace.get(process_id)
     assert record is not None
     before = record.findings["eg-1"]
+    audit_before = list(record.audit.records)
     response = client.post(
         "/api/v1/findings/f-1/review",
         headers=OTHER_INSPECTOR,
@@ -173,7 +174,7 @@ def test_cross_object_review_has_no_side_effect(client: TestClient) -> None:
     )
     assert response.status_code == 403
     assert record.findings["eg-1"] == before
-    assert record.audit.records == []
+    assert record.audit.records == audit_before
 
 
 def test_cross_object_state_transitions_have_no_side_effect(client: TestClient) -> None:
