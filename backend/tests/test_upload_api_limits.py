@@ -17,7 +17,7 @@ from kontur.presentation.api import app
 
 PDF = b"%PDF-1.7\n1 0 obj\n<<>>\nendobj\n"
 CORRUPTED = b"PK\x03\x04not-a-pdf"
-INSPECTOR = {"Authorization": "Bearer insp-7/INSPECTOR"}
+INSPECTOR = {"Authorization": "Bearer insp-7@obj-1/INSPECTOR"}
 
 
 @pytest.fixture
