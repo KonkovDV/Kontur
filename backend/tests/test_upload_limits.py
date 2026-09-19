@@ -503,9 +503,9 @@ def test_real_multipart_is_rejected_before_endpoint_or_workspace(
 
     @isolated.post(UPLOAD_PATH)
     async def sentinel(request: Request) -> dict[str, bool]:
+        await request.form()
         isolated.state.endpoint_calls += 1
         isolated.state.workspace_created = True
-        await request.form()
         return {"ok": True}
 
     with TestClient(isolated) as client:
