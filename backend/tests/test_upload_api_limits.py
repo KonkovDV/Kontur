@@ -210,7 +210,6 @@ def test_read_failure_second_pass_leaves_existing_process_unchanged(
     assert pipeline_calls == []
 
 
-
 def test_materialize_failure_on_second_file_does_not_create_process(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -297,6 +296,7 @@ def test_materialize_failure_on_second_file_does_not_mutate_resumed_process(
     assert workspace._items == before_items  # noqa: SLF001
     assert workspace.get(process_id) is record
     assert _record_snapshot(record) == before
+
 
 def test_upload_hash_uses_actual_file_bytes(client: TestClient) -> None:
     response = _upload(client)
