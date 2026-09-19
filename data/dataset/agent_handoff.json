@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-20",
-  "export_git_sha": "8a8c832310430cfc4e562826c28bf66d1c328077",
+  "export_git_sha": "7945fe2cf3a1e2748ab5d2fcf583f09cbfd41ffd",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -65,6 +65,7 @@
     "Treat static JWT public key as production OIDC/JWKS",
     "Open ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip or TEST_HIDDEN answers for thresholds",
     "Treat participant package without answers v2.0 as frozen val",
+    "Treat object 10_Полярная_25_СОШ1100к7 as frozen val or matrix gold",
     "Write CONFIRMED_VIOLATION from the automaton or LLM",
     "Guess non-gold RD_ID_MIXED as RD+ID",
     "Treat GOST Согласовано/ГИП header as approved etalon",

@@ -154,6 +154,7 @@ def build_handoff(
             "Treat static JWT public key as production OIDC/JWKS",
             "Open ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip or TEST_HIDDEN answers for thresholds",
             "Treat participant package without answers v2.0 as frozen val",
+            "Treat object 10_Полярная_25_СОШ1100к7 as frozen val or matrix gold",
             "Write CONFIRMED_VIOLATION from the automaton or LLM",
             "Guess non-gold RD_ID_MIXED as RD+ID",
             "Treat GOST Согласовано/ГИП header as approved etalon",

@@ -177,6 +177,16 @@ def test_v2_without_answers_is_not_frozen_val() -> None:
     assert isinstance(workspace, Mapping)
     assert workspace["participant_package_without_answers_v2_present"] is True
     assert workspace["object_archives_10_18_present"] is False
+    assert workspace["object_archive_10_present"] is True
+    assert workspace["object_archives_11_18_present"] is False
     blob = " ".join(str(item) for item in payload["forbidden"])
     assert "ЗАКРЫТЫЙ" in blob
     assert "v2.0" in blob
+    assert "Полярная" in blob
+    obj10 = payload["object_10_polyarnaya_school"]
+    assert isinstance(obj10, Mapping)
+    assert obj10["closes_gate_j"] is False
+    assert obj10["has_organizer_gold"] is False
+    assert obj10["in_train_public"] is False
+    assert obj10["in_test_hidden"] is False
+    assert missing["object_archive_10_missing"] is False

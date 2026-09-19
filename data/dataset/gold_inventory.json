@@ -43,11 +43,14 @@
       "01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА",
       "02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА",
       "10. Мосстройнадзор.pdf",
+      "10_Полярная_25_СОШ1100к7",
       "ЛЦТ2026 Шаблон презентации.pptx",
       "РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203",
       "РАЗМЕЧЕННЫЙ_TEST__213"
     ],
     "object_archives_10_18_present": false,
+    "object_archive_10_present": true,
+    "object_archives_11_18_present": false,
     "participant_package_without_answers_v2_present": true,
     "closed_organizer_answers_zip_present": true,
     "data_incoming_empty": true,
@@ -74,12 +77,30 @@
     "gold_ocr_approved_for_training": true,
     "approved_pd_revision_for_tyumen_f0171": true,
     "object_archives_10_18": true,
+    "object_archive_10_missing": false,
     "delivery_archive_sha256": true,
     "rin_sandbox_contract": true,
     "written_organizer_answers_3_19": true,
     "closes_gate_i": false,
     "closes_gate_j": false,
-    "note": "Код по ТЗ можно продолжать на текущих PDF и матрице. Пороги I/J этой поставкой не закрываются. Объекты 10–18 без публичного gold не заменяют frozen val."
+    "note": "Код по ТЗ можно продолжать на текущих PDF и матрице. Пороги I/J этой поставкой не закрываются. Объект 10 на диске есть, но без публичного gold; 11–18 отсутствуют. Набор 10–18 не заменяет frozen val."
+  },
+  "object_10_polyarnaya_school": {
+    "observed_at": "2026-09-20",
+    "relative_path": "files/10_Полярная_25_СОШ1100к7/",
+    "layout": "unpacked_dir_no_tar",
+    "inner_dir": "Полярная ул., 25_СОШ1100к.7",
+    "n_files": 3762,
+    "bytes": 20855847698,
+    "by_stage_dir": {"PD": 130, "RD": 142, "ID": 3490},
+    "n_pdf": 3102,
+    "n_dwg": 15,
+    "has_organizer_gold": false,
+    "split": null,
+    "in_train_public": false,
+    "in_test_hidden": false,
+    "closes_gate_j": false,
+    "note": "Две папки ПД: «изначальная» и «к ЗОС» (+ .sig). Не TRAIN_PUBLIC. Не frozen val. DWG в ИД остаётся NOT_SUPPORTED до ответа на вопрос 6."
   },
   "train_public_annotations": {
     "expected_files": 203,
@@ -152,7 +173,7 @@
   "gate_moves": {
     "J": "Не закрывается этим gold. Harness: backend/tests/test_frozen_val.py. Публикация P/R/F1 запрещена.",
     "I": "Пилот 300 стр. есть. Docker-замер SILVER (make ocr-pilot): Wilson ниже порога приёмки; не GOLD; Речников не брали; capabilities OCR = UNAVAILABLE; гейт I открыт.",
-    "K": "PDF Тюменской и Новослободской — материал для 5 инспекторов. Сессий нет.",
+    "K": "PDF Тюменской, Новослободской и объекта 10 — материал для 5 инспекторов. Сессий нет. Объект 10 не gold.",
     "L": "GHA live k6 измерен (docs/PERFORMANCE.md); не production SLA. Документы поставки p95 не меняют."
   },
   "forbidden": [
@@ -161,6 +182,7 @@
     "Распаковывать ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip для порогов, prompt и regex",
     "Подбирать пороги, prompt, regex по OBJ-RECHNIKOV-7-7",
     "Закрывать GAP-IOS4-VAL или гейт J публикацией F1/P/R по 15 строкам или по пакету без ответов v2.0",
+    "Считать распакованный объект 10_Полярная_25_СОШ1100к7 frozen val или gold 132",
     "Назначать внутренний validation тем же object_id, что train, без изоляции",
     "Считать 10 public_train_checks пакета без ответов заменой 15 public_gold_checks"
   ]

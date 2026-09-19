@@ -24,8 +24,9 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 
 Поставка организатора, публичный gold-seed и пакет без ответов v2.0 **не**
 закрывают `GAP-IOS4-VAL`: см. [`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md) и
-`data/dataset/gold_inventory.json`. На машине 20.09.2026 нет архивов объектов
-10–18 и нет frozen val; OCR-пилот SILVER порог не берёт.
+`data/dataset/gold_inventory.json`. На машине 20.09.2026 есть распакованный
+объект 10 (без gold); нет архивов 11–18 и нет frozen val; OCR-пилот SILVER
+порог не берёт.
 
 ## Неофициальные пометки созвона
 

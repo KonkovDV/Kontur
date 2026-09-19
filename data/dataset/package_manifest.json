@@ -8,9 +8,11 @@
     "root": "files/",
     "in_git": false,
     "object_archives_10_18_present": false,
+    "object_archive_10_present": true,
+    "object_archives_11_18_present": false,
     "participant_package_without_answers_v2_present": true,
     "original_tar_sha256_pending": true,
-    "note": "20.09.2026: распакован 01/02 и TRAIN_PUBLIC; объекты 10–18 отсутствуют; v2.0 без ответов лежит внутри 01, не отдельная единица манифеста. Закрытый zip организатора не открывать."
+    "note": "20.09.2026: распакован 01/02, TRAIN_PUBLIC и объект 10 (без .tar, ~20,9 ГБ). Объекты 11–18 отсутствуют. v2.0 без ответов внутри 01. Закрытый zip организатора не открывать для порогов."
   },
   "annotated_layout": [
     "annotated_documents/",
@@ -75,7 +77,7 @@
       "object_id": "10_Полярная_25_СОШ1100к7",
       "size_kb": 20465301,
       "sha256": null,
-      "notes": "Самый крупный объект поставки."
+      "notes": "Самый крупный объект поставки. 20.09.2026 на машине распакован каталог files/10_Полярная_25_СОШ1100к7 (~20,9 ГБ, ПД/РД/ИД). Исходный .tar и SHA-256 архива не зафиксированы. Публичного gold нет; split в objects.json остаётся null."
     },
     {
       "name": "11_Полярная_16.tar",

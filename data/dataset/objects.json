@@ -20,7 +20,9 @@
       "archive": "10_Полярная_25_СОШ1100к7.tar",
       "address_hint": "ул. Полярная, 25 — СОШ №1100, корп. 7",
       "size_kb": 20465301,
-      "split": null
+      "split": null,
+      "present_in_files": true,
+      "files_layout": "unpacked_dir_no_tar"
     },
     {
       "object_id": "11_Полярная_16",
