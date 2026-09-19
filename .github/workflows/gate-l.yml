@@ -50,6 +50,7 @@ jobs:
           KONTUR_LOAD_STAND: github-actions-ubuntu-latest-2core
         run: |
           mkdir -p out
+          chmod 0777 out
           set +e
           docker run --rm --network host \
             -v "$PWD:/work" -w /work \
