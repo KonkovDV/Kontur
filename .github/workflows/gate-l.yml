@@ -33,53 +33,6 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e "backend[dev]"
-      - name: Create ephemeral Gate L signing identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          umask 077
-          jwt_dir="$RUNNER_TEMP/kontur-gate-l-jwt"
-          mkdir -p "$jwt_dir"
-          private_key="$jwt_dir/private.pem"
-          public_key="$jwt_dir/public.pem"
-          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$private_key" 2>/dev/null
-          openssl pkey -in "$private_key" -pubout -out "$public_key" 2>/dev/null
-          token="$(PRIVATE_KEY_PATH="$private_key" python - <<'PY'
-          import os
-          import time
-          import jwt
-
-          now = int(time.time())
-          with open(os.environ["PRIVATE_KEY_PATH"], encoding="utf-8") as stream:
-              private_key = stream.read()
-          print(jwt.encode(
-              {
-                  "iss": "https://gate-l.invalid/",
-                  "aud": "kontur-api",
-                  "sub": "load-agent",
-                  "roles": ["INSPECTOR"],
-                  "object_id": "obj-load",
-                  "nbf": now - 5,
-                  "exp": now + 600,
-              },
-              private_key,
-              algorithm="RS256",
-          ))
-          PY
-          )"
-          echo "::add-mask::$token"
-          {
-            echo "KONTUR_JWT_PUBLIC_KEY<<KONTUR_JWT_PUBLIC_KEY_EOF"
-            cat "$public_key"
-            echo "KONTUR_JWT_PUBLIC_KEY_EOF"
-            echo "KONTUR_JWT_ISSUER=https://gate-l.invalid/"
-            echo "KONTUR_JWT_AUDIENCE=kontur-api"
-            echo "KONTUR_JWT_ALGORITHM=RS256"
-            echo "KONTUR_ALLOW_INSECURE_DEV_AUTH=false"
-            echo "KONTUR_BEARER_TOKEN=$token"
-          } >> "$GITHUB_ENV"
-          rm -f "$private_key" "$public_key"
-          rmdir "$jwt_dir"
       - name: Start live API
         run: |
           python -m uvicorn kontur.presentation.api:app \
@@ -104,7 +57,6 @@ jobs:
             -v "$PWD:/work" -w /work \
             -e KONTUR_BASE_URL=http://127.0.0.1:8000 \
             -e KONTUR_SUMMARY_PATH=/work/out/k6-summary.json \
-            -e KONTUR_BEARER_TOKEN \
             grafana/k6:0.54.0 run /work/tests/load/k6_status.js \
             2>&1 | tee out/k6.log
           k6_exit=${PIPESTATUS[0]}
