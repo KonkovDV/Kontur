@@ -5,8 +5,7 @@ from __future__ import annotations
 import contextvars
 import hashlib
 import json
-from collections.abc import Awaitable, Callable
-from typing import Any, TypedDict, cast
+from typing import cast
 
 from starlette.datastructures import UploadFile
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -16,12 +15,6 @@ from kontur.application.intake import MAX_BATCH_BYTES, MAX_FILE_BYTES
 UPLOAD_PATH = "/api/v1/documents/upload"
 READ_CHUNK_BYTES = 1024 * 1024
 _TOO_LARGE = json.dumps({"detail": "request too large"}, separators=(",", ":")).encode()
-
-
-class RequestFrame(TypedDict, total=False):
-    type: str
-    body: bytes
-    more_body: bool
 
 
 class UploadLimitExceeded(Exception):
@@ -69,7 +62,7 @@ def install_bounded_upload_read() -> None:
     """Install the idempotent UploadFile streaming read guard."""
 
     if UploadFile.read is not _bounded_read:
-        UploadFile.read = _bounded_read
+        UploadFile.read = _bounded_read  # type: ignore[method-assign]
 
 
 class ActualUploadLimitMiddleware:
@@ -112,7 +105,9 @@ class ActualUploadLimitMiddleware:
 
         clean_scope = dict(scope)
         clean_scope["headers"] = [
-            (name, value) for name, value in scope.get("headers", []) if name.lower() != b"content-length"
+            (name, value)
+            for name, value in scope.get("headers", [])
+            if name.lower() != b"content-length"
         ]
         uploads: list[UploadFile] = []
         token = _active_uploads.set(uploads)
@@ -149,11 +144,3 @@ class ActualUploadLimitMiddleware:
             }
         )
         await send({"type": "http.response.body", "body": _TOO_LARGE})
-
-
-class BoundedFastAPI:
-    """Factory mixin used to put the raw-byte guard around the application."""
-
-    @staticmethod
-    def wrap(app: ASGIApp) -> ASGIApp:
-        return ActualUploadLimitMiddleware(app)
