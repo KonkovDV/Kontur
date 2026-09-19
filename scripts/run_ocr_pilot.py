@@ -1,4 +1,4 @@
-"""CLI-обёртка: python scripts/run_ocr_pilot.py"""
+"""CLI-обёртка. Предпочтительно: make ocr-pilot (Docker + Tesseract)."""
 
 from __future__ import annotations
 

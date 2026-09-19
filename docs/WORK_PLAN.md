@@ -32,7 +32,8 @@
 Срез на `main`: `ocr_tesseract.py` заполняет пустые raster-страницы
 при наличии Tesseract; `evaluate_rule` зовёт **region-crop** как независимый
 второй источник для `dual_read_required`. `ocr_text` остаётся `UNAVAILABLE`.
-Harness пилота: `kontur.evaluation.ocr_pilot` (Речников исключён, SILVER ≠ GOLD).
+Harness: `make ocr-pilot` (Docker + Tesseract). SILVER, без Речникова;
+нижняя граница Wilson ниже порога приёмки. `ocr_text` остаётся `UNAVAILABLE`.
 
 | | |
 |---|---|

@@ -72,7 +72,7 @@ Harness замера: `backend/src/kontur/evaluation/frozen_val.py`, opt-in че
 
 | Гейт | Роль файлов | Что ещё нужно |
 |---|---|---|
-| I | OCR-пилот 300 стр. в `02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА/ocr_pilot_20260811`; 11 731 стр. train без текстового слоя | Region-crop dual-read в коде; CA harness без Речникова; SILVER ≠ GOLD; GAP-CAP-OCR открыт |
+| I | OCR-пилот 300 стр. в `02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА/ocr_pilot_20260811` | Docker SILVER-замер (`make ocr-pilot`) порог не берёт; не GOLD; GAP-CAP-OCR открыт |
 | K | Реальные PDF двух train-объектов; образец Приложения 2 найден | 5 инспекторов → `docs/USABILITY_RESULTS.md` (файла нет) |
 | L | Ничего | Живой k6, запись в `PERFORMANCE.md` |
 | A | Состав пакета известен | SHA-256 архивов = null; вопросы без артефакта отправки |

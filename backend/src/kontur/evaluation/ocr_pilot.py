@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from zipfile import ZipFile
@@ -29,6 +31,9 @@ from kontur.evaluation.metrics import (
 from kontur.infrastructure.ocr_bakeoff import CA_GATE_I_THRESHOLD
 
 OCR_PILOT_ENV = "KONTUR_OCR_PILOT_PATH"
+OCR_PILOT_OUT_ENV = "KONTUR_OCR_PILOT_OUT"
+OCR_PILOT_WORKERS_ENV = "KONTUR_OCR_PILOT_WORKERS"
+KONTUR_ROOT_ENV = "KONTUR_ROOT"
 PDF_TEXT_LAYER = "PDF_TEXT_LAYER"
 RECOGNITION_LINES = "data/recognition_lines.jsonl"
 
@@ -60,6 +65,32 @@ def discover_pilot_zip(root: Path) -> Path | None:
     if len(open_matches) != 1:
         return None
     return require_path_open(open_matches[0])
+
+
+def find_pilot_zip() -> Path | None:
+    """Путь из env, затем KONTUR_ROOT/cwd/репозиторий (Docker: /app)."""
+
+    found = resolve_pilot_path()
+    if found is not None:
+        return found
+    roots: list[Path] = []
+    raw_root = os.environ.get(KONTUR_ROOT_ENV)
+    if raw_root and raw_root.strip():
+        roots.append(Path(raw_root))
+    roots.append(Path.cwd())
+    here = Path(__file__).resolve()
+    if len(here.parents) >= 5:
+        roots.append(here.parents[4])
+    seen: set[Path] = set()
+    for root in roots:
+        resolved = root.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        match = discover_pilot_zip(resolved)
+        if match is not None:
+            return match
+    return None
 
 
 def eligible_for_ca(line: OcrPilotLine) -> bool:
@@ -119,18 +150,41 @@ def score_crop_bytes(
     lines: Sequence[OcrPilotLine],
     crops: Mapping[str, bytes],
     ocr: Callable[[bytes], str],
+    *,
+    workers: int = 1,
+    progress: Callable[[int, int], None] | None = None,
 ) -> tuple[tuple[str, str], ...]:
     """(reference, hypothesis) только по eligible строкам, для которых есть crop."""
 
-    pairs: list[tuple[str, str]] = []
+    jobs: list[tuple[str, bytes]] = []
     for line in lines:
         if not eligible_for_ca(line):
             continue
         payload = crops.get(line.crop_path)
         if payload is None:
             continue
-        pairs.append((line.reference, ocr(payload)))
-    return tuple(pairs)
+        jobs.append((line.reference, payload))
+    total = len(jobs)
+    if total == 0:
+        return ()
+    if workers <= 1:
+        pairs: list[tuple[str, str]] = []
+        for index, (reference, payload) in enumerate(jobs, start=1):
+            pairs.append((reference, ocr(payload)))
+            if progress is not None:
+                progress(index, total)
+        return tuple(pairs)
+    ordered: list[tuple[str, str]] = [("", "")] * total
+    done = 0
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending = {pool.submit(ocr, payload): index for index, (_ref, payload) in enumerate(jobs)}
+        for future in as_completed(pending):
+            index = pending[future]
+            ordered[index] = (jobs[index][0], future.result())
+            done += 1
+            if progress is not None:
+                progress(done, total)
+    return tuple(ordered)
 
 
 def load_crop_bytes(path: Path, lines: Sequence[OcrPilotLine]) -> dict[str, bytes]:
@@ -207,22 +261,37 @@ def main() -> int:
 
     from kontur.infrastructure.ocr_tesseract import ocr_image_bytes, tesseract_available
 
-    root = Path(__file__).resolve().parents[4]
-    path = resolve_pilot_path() or discover_pilot_zip(root)
+    path = find_pilot_zip()
     if path is None:
         print(f"нет корпуса: задайте {OCR_PILOT_ENV} или zip в files/02_*/ocr_pilot_20260811/")
         return 2
     if not tesseract_available():
         print("tesseract/pytesseract нет; замер не выполнялся, гейт I открыт")
         return 3
+    workers_raw = os.environ.get(OCR_PILOT_WORKERS_ENV, "4")
+    try:
+        workers = max(1, int(workers_raw))
+    except ValueError:
+        workers = 4
+
+    def _progress(done: int, total: int) -> None:
+        if done == total or done % 50 == 0:
+            print(f"ocr-pilot {done}/{total}", file=sys.stderr, flush=True)
+
     lines = load_recognition_lines(path)
     crops = load_crop_bytes(path, lines)
-    pairs = score_crop_bytes(lines, crops, ocr_image_bytes)
+    print(f"ocr-pilot crops={len(crops)} workers={workers}", file=sys.stderr, flush=True)
+    pairs = score_crop_bytes(lines, crops, ocr_image_bytes, workers=workers, progress=_progress)
     tz = accuracy_interval(pairs)
     gate_i = gate_i_interval(pairs)
+    accuracies = [character_accuracy(reference, hypothesis) for reference, hypothesis in pairs]
+    mean_ca = sum(accuracies) / len(accuracies) if accuracies else 0.0
     report = {
         "pilot_path": str(path),
         "n_pairs": len(pairs),
+        "n_crops": len(crops),
+        "workers": workers,
+        "mean_ca": mean_ca,
         "tz_point": tz.point,
         "tz_low": tz.low,
         "tz_high": tz.high,
@@ -235,7 +304,13 @@ def main() -> int:
         "closes_gate_i": False,
         "note": "SILVER PDF_TEXT_LAYER, без Речникова. Не публиковать как порог ТЗ.",
     }
+    out_raw = os.environ.get(OCR_PILOT_OUT_ENV, "").strip()
+    out_dir = Path(out_raw) if out_raw else Path.cwd() / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "ocr_pilot_ca.json"
+    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
+    print(f"wrote {out_path}", file=sys.stderr, flush=True)
     return 0
 
 

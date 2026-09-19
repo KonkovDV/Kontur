@@ -122,7 +122,7 @@
   },
   "gate_moves": {
     "J": "Не закрывается этим gold. Harness: backend/tests/test_frozen_val.py. Публикация P/R/F1 запрещена.",
-    "I": "Пилот 300 стр. есть (zip+xlsx). Harness: backend/src/kontur/evaluation/ocr_pilot.py. Речников из пилота не берём. SILVER PDF_TEXT_LAYER ≠ GOLD; capabilities OCR = UNAVAILABLE; гейт I открыт.",
+    "I": "Пилот 300 стр. есть. Docker-замер SILVER (make ocr-pilot): Wilson ниже порога приёмки; не GOLD; Речников не брали; capabilities OCR = UNAVAILABLE; гейт I открыт.",
     "K": "PDF Тюменской и Новослободской — материал для 5 инспекторов. Сессий нет.",
     "L": "Документы поставки p95 не измеряют. Нужен живой k6 на стенде."
   },

@@ -4,6 +4,7 @@
 .PHONY: help up down restart logs \
         offline-pull offline-up \
         test test-fast check lint types \
+        ocr-pilot \
         clean
 
 PYTHON   := python
@@ -34,6 +35,17 @@ offline-pull:  ## Загрузить все образы для offline-режи
 
 offline-up:    ## Запустить в offline-режиме (без интернета)
 	$(DC_OFF) up -d
+
+ocr-pilot:     ## SILVER CA пилота в Docker (Tesseract). Не закрывает гейт I
+	mkdir -p out
+	$(DC) build core
+	$(DC) run --rm --no-deps \
+		-v "$(CURDIR)/files:/app/files:ro" \
+		-v "$(CURDIR)/out:/app/out" \
+		-e KONTUR_ROOT=/app \
+		-e KONTUR_OCR_PILOT_OUT=/app/out \
+		-e KONTUR_OCR_PILOT_WORKERS=4 \
+		core python -m kontur.evaluation.ocr_pilot
 
 # ── Тесты и качество ────────────────────────────────────────────────────────
 

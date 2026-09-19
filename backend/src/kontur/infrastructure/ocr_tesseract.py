@@ -17,8 +17,6 @@ from dataclasses import replace
 from importlib import import_module
 from io import BytesIO
 
-import pypdfium2 as pdfium  # type: ignore[import-untyped]
-
 from kontur.application.extractors.number import PageToken
 from kontur.domain.coordinates import PageFrame, to_normalized
 from kontur.domain.geometry import bbox_from_polygon
@@ -45,6 +43,25 @@ def tesseract_available() -> bool:
     except ImportError:
         return False
     return True
+
+
+def _pdfium() -> object:
+    return import_module("pypdfium2")
+
+
+def _open_pdf(data: bytes) -> object | None:
+    try:
+        engine = _pdfium()
+    except ImportError:
+        return None
+    ctor = getattr(engine, "PdfDocument", None)
+    if ctor is None:
+        return None
+    try:
+        opened: object = ctor(data)
+    except Exception:
+        return None
+    return opened
 
 
 def raster_pages_need_ocr(document: PdfDocumentTokens) -> bool:
@@ -141,18 +158,20 @@ class PageImageCache:
         cached = self._images.get(page_number)
         if cached is not None:
             return cached
-        try:
-            pdf = pdfium.PdfDocument(self._data)
-        except pdfium.PdfiumError:
+        pdf = _open_pdf(self._data)
+        if pdf is None:
             return None
         try:
-            if page_number < 1 or page_number > len(pdf):
+            length = len(pdf)  # type: ignore[arg-type]
+            if page_number < 1 or page_number > length:
                 return None
-            image = _render_pil(pdf[page_number - 1])
-        except (OSError, RuntimeError, ValueError, AttributeError):
+            image = _render_pil(pdf[page_number - 1])  # type: ignore[index]
+        except (OSError, RuntimeError, ValueError, AttributeError, TypeError):
             return None
         finally:
-            pdf.close()
+            close = getattr(pdf, "close", None)
+            if close is not None:
+                close()
         if image is None:
             return None
         self._images[page_number] = image
@@ -235,9 +254,8 @@ def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocu
 
     if not tesseract_available() or not raster_pages_need_ocr(document):
         return document
-    try:
-        pdf = pdfium.PdfDocument(data)
-    except pdfium.PdfiumError:
+    pdf = _open_pdf(data)
+    if pdf is None:
         return document
     try:
         pages: list[PdfPageTokens] = []
@@ -246,14 +264,16 @@ def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocu
                 pages.append(page)
                 continue
             try:
-                tokens = _ocr_pdf_page(pdf[page.page - 1], page)
-            except (OSError, RuntimeError, ValueError, AttributeError):
+                tokens = _ocr_pdf_page(pdf[page.page - 1], page)  # type: ignore[index]
+            except (OSError, RuntimeError, ValueError, AttributeError, TypeError):
                 pages.append(page)
                 continue
             pages.append(replace(page, tokens=tokens) if tokens else page)
         return PdfDocumentTokens(file_hash=document.file_hash, pages=tuple(pages))
     finally:
-        pdf.close()
+        close = getattr(pdf, "close", None)
+        if close is not None:
+            close()
 
 
 def _field_float(payload: Mapping[str, Sequence[object]], name: str, index: int) -> float:

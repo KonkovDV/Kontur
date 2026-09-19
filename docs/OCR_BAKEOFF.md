@@ -52,8 +52,18 @@
 |---|---|---|
 | GAP-OCR-ROT | Поворот/перекос скана | Векторный слой есть, OCR-пайплайна нет |
 | GAP-STAMP | Штамп поверх текста | Сегментация не реализована |
-| GAP-CAP-OCR | OCR в запросе = `UNAVAILABLE` | Region-crop в коде; CA SILVER не GOLD |
-| OCR-пилот 300 стр. | `02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА/ocr_pilot_20260811` | CA на пилоте **не измерен**; не закрывает гейт I |
+| GAP-CAP-OCR | OCR в запросе = `UNAVAILABLE` | Region-crop в коде; SILVER Docker-замер порог не берёт; не GOLD |
+| OCR-пилот 300 стр. | `02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА/ocr_pilot_20260811` | SILVER, n=5935 кропов без Речникова, `make ocr-pilot`; гейт I открыт |
+
+## Замер SILVER в Docker (19.09.2026)
+
+Команда: `make ocr-pilot` (образ `core` с `tesseract-ocr` + `tesseract-ocr-rus`).
+Eligible: `PDF_TEXT_LAYER`, без `OBJ-RECHNIKOV-7-7`. Не GOLD
+(`approved_for_training=false`). JSON вне git: `out/ocr_pilot_ca.json`.
+
+Нижняя граница Wilson доли строк с CA ≥ порога приёмки **ниже** минимума ТЗ.
+`closes_gate_i=false`. `ocr_text` остаётся `UNAVAILABLE`. Таблица кандидатов
+выше — решение бейк-оффа, не этот прогон.
 
 ## Артефакты гейта I
 
@@ -62,4 +72,6 @@
 | `backend/src/kontur/infrastructure/ocr_bakeoff.py` | Решение бейк-оффа, OcrPath, BakeoffDecision |
 | `backend/src/kontur/infrastructure/dual_read.py` | Dual-path extraction, DualReadResult |
 | `backend/tests/test_ocr_bakeoff.py` | 17 тестов: CA ≥ 0.97 (×8 пар), dual-read (×7), стратегия слоя (×4) |
+| `backend/src/kontur/evaluation/ocr_pilot.py` | SILVER CA harness, Речников исключён |
+| `make ocr-pilot` | Docker-прогон; пишет `out/ocr_pilot_ca.json` |
 | `docs/OCR_BAKEOFF.md` | Этот документ |
