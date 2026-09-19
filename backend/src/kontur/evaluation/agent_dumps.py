@@ -139,9 +139,10 @@ def build_handoff(
         "gold_matrix_positives": 6,
         "wilson_perfect_n_min_recall": 16,
         "pipeline_limitations": [
-            "last_file_per_stage",
-            "RD_ID_MIXED_and_UNKNOWN_skipped",
-            "tyumen_index_has_no_RD_or_ID",
+            "last_file_per_stage_fallback",
+            "non_gold_RD_ID_MIXED_skipped",
+            "gold_RD_ID_MIXED_loaded_as_RD_only",
+            "pd_cover_without_filled_utverdil",
             "ocr_text_UNAVAILABLE",
         ],
         "do_not": [
@@ -151,7 +152,8 @@ def build_handoff(
             "Close GAP-IOS4-VAL on 15 gold rows or SILVER CA",
             "Publish P/R/F1/CA as TZ without frozen val n and 95% CI",
             "Write CONFIRMED_VIOLATION from the automaton or LLM",
-            "Guess RD_ID_MIXED as RD+ID",
+            "Guess non-gold RD_ID_MIXED as RD+ID",
+            "Treat GOST Согласовано/ГИП header as approved etalon",
             "Prefer annotated_documents overlays over source PDFs",
         ],
         "commands": {
@@ -163,6 +165,7 @@ def build_handoff(
         },
         "pointers": {
             "gold_inventory": "data/dataset/gold_inventory.json",
+            "gold_evidence_files": "data/dataset/gold_evidence_files.json",
             "coverage_snapshot": "data/matrix/coverage_snapshot.json",
             "index_stats": "data/dataset/train_public_index_stats.json",
             "train_public_engineering": "data/dataset/train_public_engineering.json",

@@ -123,14 +123,25 @@ def test_engineering_dump_and_pred_jsonl_keep_gate_j_open() -> None:
             encoding="utf-8"
         )
     )
-    assert report["hits"] == 0
     assert report["closes_gate_j"] is False
     assert report["recall_meets_tz"] is False
     assert report["gap_ios4_val_open"] is True
+    assert report["gold_mixed_loaded_as"] == "RD"
+    assert report["n_gold_matrix"] == 6
+    assert report["recall_n"] == 6
+    assert report["stage_page_model"] == "gold_evidence_mixed_as_rd"
+    gold_ids = report["gold_file_ids"]
+    assert isinstance(gold_ids, list)
+    assert "F0171" in gold_ids
+    assert "F0201" in gold_ids
+    assert "F0202" not in gold_ids
+    hits = int(report["hits"])
+    assert 0 <= hits <= 6
     rows = load_frozen_val_jsonl(root / "data" / "dataset" / "train_public_pred.jsonl")
     assert len(rows) == 6
     assert all(row.object_id == "OBJ-TYUMENSKAYA-5-GOLD-SEED" for row in rows)
-    assert all(row.gold_positive and not row.predicted_positive for row in rows)
+    assert all(row.gold_positive for row in rows)
+    assert sum(1 for row in rows if row.predicted_positive) == hits
     interval = critical_recall(
         [row.gold_positive for row in rows],
         [row.predicted_positive for row in rows],

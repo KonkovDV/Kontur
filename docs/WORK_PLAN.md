@@ -63,11 +63,12 @@ Harness: `make ocr-pilot` (Docker + Tesseract). SILVER, без Речников�
 ## Шаг 3 — прогон TRAIN_PUBLIC без публикации порога
 
 Срез на `main`: `train_public.py` читает `files_index.jsonl`, исходные PDF
-(не overlay), пропускает `RD_ID_MIXED`/`UNKNOWN`/Речников/TEST_HIDDEN.
-Пайплайн — последний файл стадии, как в HTTP. JSONL с `object_id`.
-`closes_gate_j` всегда false. `make train-public` — opt-in, без `files/` CI skip.
-Тюменская в индексе без RD/ID (только PD и MIXED) — сравнение IOS4 не из чего
-закрывать; это не «гейт закрыт».
+(не overlay). Не-gold `RD_ID_MIXED`/`UNKNOWN` пропускаются. Gold-файлы из
+`data/dataset/gold_evidence_files.json`: F0171 как PD, F0201 MIXED **только
+как RD** (не ID и не оба). Пайплайн иначе — последний файл стадии, как в HTTP.
+JSONL с `object_id`. `closes_gate_j` всегда false.
+Локальный gold-evidence прогон: PD+RD загружены, 0/6 — у ПД нет заполненной
+графы «Утвердил», компаратор не запускался. Это не «гейт закрыт».
 
 | | |
 |---|---|

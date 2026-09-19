@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-19",
-  "export_git_sha": "ad6a93f8f310e1ce04c119580df8d060aa068353",
+  "export_git_sha": "7c16e1c4d1649a156e64512e48b4622b013c20b8",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -50,9 +50,10 @@
   "gold_matrix_positives": 6,
   "wilson_perfect_n_min_recall": 16,
   "pipeline_limitations": [
-    "last_file_per_stage",
-    "RD_ID_MIXED_and_UNKNOWN_skipped",
-    "tyumen_index_has_no_RD_or_ID",
+    "last_file_per_stage_fallback",
+    "non_gold_RD_ID_MIXED_skipped",
+    "gold_RD_ID_MIXED_loaded_as_RD_only",
+    "pd_cover_without_filled_utverdil",
     "ocr_text_UNAVAILABLE"
   ],
   "do_not": [
@@ -62,7 +63,8 @@
     "Close GAP-IOS4-VAL on 15 gold rows or SILVER CA",
     "Publish P/R/F1/CA as TZ without frozen val n and 95% CI",
     "Write CONFIRMED_VIOLATION from the automaton or LLM",
-    "Guess RD_ID_MIXED as RD+ID",
+    "Guess non-gold RD_ID_MIXED as RD+ID",
+    "Treat GOST Согласовано/ГИП header as approved etalon",
     "Prefer annotated_documents overlays over source PDFs"
   ],
   "commands": {
@@ -74,6 +76,7 @@
   },
   "pointers": {
     "gold_inventory": "data/dataset/gold_inventory.json",
+    "gold_evidence_files": "data/dataset/gold_evidence_files.json",
     "coverage_snapshot": "data/matrix/coverage_snapshot.json",
     "index_stats": "data/dataset/train_public_index_stats.json",
     "train_public_engineering": "data/dataset/train_public_engineering.json",

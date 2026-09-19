@@ -16,6 +16,7 @@ from kontur.evaluation.inventory import QuarantineViolation
 from kontur.evaluation.metrics import wilson
 from kontur.evaluation.train_public import (
     TRAIN_PUBLIC_ENV,
+    GoldEvidenceFile,
     RunStats,
     TrainPublicFile,
     build_report,
@@ -24,6 +25,8 @@ from kontur.evaluation.train_public import (
     is_overlay_relative,
     is_predicted_positive,
     load_files_index,
+    load_gold_evidence_files,
+    loaded_stage_for_gold,
     matrix_gold_checks,
     parse_doc_stage,
     pred_payload,
@@ -31,6 +34,7 @@ from kontur.evaluation.train_public import (
     resolve_train_public_path,
     run_object_files,
     score_gold_rows,
+    select_gold_evidence_blobs,
     select_object_blobs,
 )
 
@@ -175,6 +179,7 @@ def test_six_of_six_does_not_meet_tz_or_close_gate_j() -> None:
     assert report["closes_gate_j"] is False
     assert report["gap_ios4_val_open"] is True
     assert report["train_public_not_frozen_val"] is True
+    assert report["gold_finding_status"] == {}
     assert not recall_meets_tz(wilson(6, 6))
 
 
@@ -279,3 +284,79 @@ def test_run_object_does_not_emit_human_verdicts() -> None:
     }
     codes = collect_candidates(findings)
     assert "FREE-HEATING-001" not in codes
+
+
+def test_gold_mixed_loads_as_rd_not_id() -> None:
+    assert loaded_stage_for_gold("PD", "PD") is DocStage.PD
+    assert loaded_stage_for_gold("RD_ID_MIXED", "RD") is DocStage.RD
+    with pytest.raises(ValueError, match="только как RD"):
+        loaded_stage_for_gold("RD_ID_MIXED", "ID")
+    with pytest.raises(ValueError, match="только как RD"):
+        loaded_stage_for_gold("RD_ID_MIXED", "PD")
+
+
+def test_committed_gold_evidence_keeps_gate_j_open() -> None:
+    rows = load_gold_evidence_files()
+    by_id = {row.file_id: row for row in rows}
+    assert by_id["F0171"].loaded_as is DocStage.PD
+    assert by_id["F0201"].loaded_as is DocStage.RD
+    assert by_id["F0201"].stage_raw == "RD_ID_MIXED"
+    assert "IOS4-078" in by_id["F0201"].matrix_codes
+    assert by_id["F0202"].matrix_codes == ()
+    assert all(row.object_id == "OBJ-TYUMENSKAYA-5-GOLD-SEED" for row in rows)
+
+
+def test_select_gold_evidence_reads_mixed_as_rd(tmp_path: Path) -> None:
+    files_root = tmp_path / "files"
+    dok = files_root / "01_ПАКЕТ" / "01_ДОКУМЕНТАЦИЯ"
+    dok.mkdir(parents=True)
+    pd_path = dok / "Документация" / "pd.pdf"
+    rd_path = dok / "Документация" / "mixed.pdf"
+    pd_path.parent.mkdir()
+    pd_path.write_bytes(ascii_pdf("PD"))
+    rd_path.write_bytes(ascii_pdf("RD"))
+    index = (
+        _row(
+            file_id="F0171",
+            object_id="OBJ-TYUMENSKAYA-5-GOLD-SEED",
+            stage="PD",
+            source="Документация/pd.pdf",
+        ),
+        _row(
+            file_id="F0201",
+            object_id="OBJ-TYUMENSKAYA-5-GOLD-SEED",
+            stage="RD_ID_MIXED",
+            source="Документация/mixed.pdf",
+        ),
+        _row(
+            file_id="F-other",
+            object_id="OBJ-TYUMENSKAYA-5-GOLD-SEED",
+            stage="RD_ID_MIXED",
+            source="Документация/mixed.pdf",
+        ),
+    )
+    evidence = (
+        GoldEvidenceFile(
+            file_id="F0171",
+            object_id="OBJ-TYUMENSKAYA-5-GOLD-SEED",
+            stage_raw="PD",
+            loaded_as=DocStage.PD,
+            matrix_codes=("IOS4-078",),
+        ),
+        GoldEvidenceFile(
+            file_id="F0201",
+            object_id="OBJ-TYUMENSKAYA-5-GOLD-SEED",
+            stage_raw="RD_ID_MIXED",
+            loaded_as=DocStage.RD,
+            matrix_codes=("IOS4-078",),
+        ),
+    )
+    blobs = select_gold_evidence_blobs(index, files_root, evidence)
+    tyumen = blobs["OBJ-TYUMENSKAYA-5-GOLD-SEED"]
+    stages = {item.doc_stage: item.file_id for item, _data in tyumen}
+    assert stages[DocStage.PD] == "F0171"
+    assert stages[DocStage.RD] == "F0201"
+    assert DocStage.ID not in stages
+    skipped, stats = select_object_blobs(index, files_root, excluded=frozenset())
+    assert stats.n_skip_stage == 2
+    assert skipped["OBJ-TYUMENSKAYA-5-GOLD-SEED"][0][0].file_id == "F0171"

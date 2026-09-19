@@ -35,6 +35,9 @@ TRAIN_PUBLIC_OUT_ENV = "KONTUR_TRAIN_PUBLIC_OUT"
 KONTUR_ROOT_ENV = "KONTUR_ROOT"
 FILES_INDEX = "data/files_index.jsonl"
 STAGE_PAGE_MODEL = "last_file_per_stage"
+GOLD_EVIDENCE_MODEL = "gold_evidence_mixed_as_rd"
+GOLD_EVIDENCE_FILE = "data/dataset/gold_evidence_files.json"
+GOLD_MATRIX_CODES = frozenset({"IOS4-078", "IOS4-079"})
 _RECHNIKOV = "речников"
 _OVERLAY_DIR = "annotated_documents"
 
@@ -46,6 +49,15 @@ class TrainPublicFile:
     stage_raw: str
     source_relative_path: str
     output_pdf: str
+
+
+@dataclass(frozen=True, slots=True)
+class GoldEvidenceFile:
+    file_id: str
+    object_id: str
+    stage_raw: str
+    loaded_as: DocStage
+    matrix_codes: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +79,13 @@ def parse_doc_stage(raw: str) -> DocStage | None:
         return DocStage(raw.strip())
     except ValueError:
         return None
+
+
+def _summary_int(payload: Mapping[str, object], key: str) -> int:
+    raw = payload[key]
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        raise TypeError(key)
+    return raw
 
 
 def is_overlay_relative(relative: str) -> bool:
@@ -134,6 +153,75 @@ def matrix_gold_checks(
         object_id = str(raw.get("object_id") or "")
         require_labeled_train_object(object_id)
         out.append(raw)
+    return tuple(out)
+
+
+def gold_evidence_path() -> Path:
+    """Снимок evidence в репозитории. Не annotations скрытого теста."""
+
+    env_root = os.environ.get(KONTUR_ROOT_ENV, "").strip()
+    candidates: list[Path] = []
+    if env_root:
+        candidates.append(Path(env_root) / GOLD_EVIDENCE_FILE)
+    for parent in Path(__file__).resolve().parents:
+        candidates.append(parent / GOLD_EVIDENCE_FILE)
+    for path in candidates:
+        if path.is_file() and not is_quarantined(path):
+            return path
+    raise FileNotFoundError(GOLD_EVIDENCE_FILE)
+
+
+def loaded_stage_for_gold(stage_raw: str, loaded_as: str) -> DocStage:
+    """PD как PD. Gold RD_ID_MIXED — только RD, не ID и не оба."""
+
+    wanted = DocStage(loaded_as)
+    parsed = parse_doc_stage(stage_raw)
+    if parsed is not None:
+        if parsed is not wanted:
+            raise ValueError(f"{stage_raw} нельзя грузить как {wanted.value}")
+        return parsed
+    if stage_raw.strip() != "RD_ID_MIXED":
+        raise ValueError(f"{stage_raw}: нет gold-маппинга стадии")
+    if wanted is not DocStage.RD:
+        raise ValueError("RD_ID_MIXED gold грузим только как RD")
+    return DocStage.RD
+
+
+def load_gold_evidence_files(path: Path | None = None) -> tuple[GoldEvidenceFile, ...]:
+    """Пары PD + MIXED-as-RD. MIXED без gold сюда не входит."""
+
+    target = path if path is not None else gold_evidence_path()
+    payload = json.loads(require_path_open(target).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise TypeError("gold_evidence_files")
+    if payload.get("closes_gate_j") is not False:
+        raise ValueError("gold evidence не имеет права закрывать гейт J")
+    if payload.get("hidden_test_contents_inspected") is not False:
+        raise ValueError("gold evidence не должен утверждать просмотр TEST_HIDDEN")
+    rows = payload.get("files")
+    if not isinstance(rows, list):
+        raise TypeError("gold_evidence_files.files")
+    out: list[GoldEvidenceFile] = []
+    for raw in rows:
+        if not isinstance(raw, dict):
+            raise TypeError("gold evidence row")
+        object_id = str(raw.get("object_id") or "")
+        require_labeled_train_object(object_id)
+        codes = raw.get("matrix_codes")
+        if not isinstance(codes, list):
+            raise TypeError("matrix_codes")
+        out.append(
+            GoldEvidenceFile(
+                file_id=str(raw.get("file_id") or ""),
+                object_id=object_id,
+                stage_raw=str(raw.get("stage_raw") or ""),
+                loaded_as=loaded_stage_for_gold(
+                    str(raw.get("stage_raw") or ""),
+                    str(raw.get("loaded_as") or ""),
+                ),
+                matrix_codes=tuple(str(code) for code in codes),
+            )
+        )
     return tuple(out)
 
 
@@ -340,6 +428,19 @@ def collect_candidates(findings: Sequence[Finding]) -> set[str]:
     return {item.rule_code for item in findings if is_predicted_positive(item.finding_status)}
 
 
+def gold_finding_echo(findings: Sequence[Finding]) -> dict[str, dict[str, str]]:
+    """Статус IOS4 на объекте gold. Не порог ТЗ."""
+
+    status: dict[str, str] = {}
+    rationale: dict[str, str] = {}
+    for item in findings:
+        if item.rule_code not in GOLD_MATRIX_CODES:
+            continue
+        status[item.rule_code] = item.finding_status.value
+        rationale[item.rule_code] = item.rationale
+    return {"status": status, "rationale": rationale}
+
+
 def score_gold_rows(
     candidates: Mapping[str, set[str]],
     checks: Sequence[Mapping[str, object]],
@@ -377,6 +478,10 @@ def pred_payload(row: FrozenValRow, *, check_id: str = "") -> dict[str, object]:
 def build_report(
     stats: RunStats,
     gold_rows: Sequence[FrozenValRow],
+    *,
+    stage_page_model: str = STAGE_PAGE_MODEL,
+    gold_file_ids: Sequence[str] = (),
+    gold_echo: Mapping[str, Mapping[str, str]] | None = None,
 ) -> dict[str, object]:
     """Всегда closes_gate_j=false: TRAIN_PUBLIC ≠ frozen val."""
 
@@ -384,6 +489,9 @@ def build_report(
         [row.gold_positive for row in gold_rows],
         [row.predicted_positive for row in gold_rows],
     )
+    echo = gold_echo or {}
+    status = echo.get("status", {})
+    rationale = echo.get("rationale", {})
     return {
         "n_index": stats.n_index,
         "n_read": stats.n_read,
@@ -393,7 +501,11 @@ def build_report(
         "n_skip_overlay": stats.n_skip_overlay,
         "n_objects_scored": stats.n_objects_scored,
         "stages_by_object": {key: list(value) for key, value in stats.stages_by_object},
-        "stage_page_model": STAGE_PAGE_MODEL,
+        "stage_page_model": stage_page_model,
+        "gold_mixed_loaded_as": "RD",
+        "gold_file_ids": list(gold_file_ids),
+        "gold_finding_status": dict(status),
+        "gold_finding_rationale": dict(rationale),
         "n_gold_matrix": len(gold_rows),
         "hits": sum(1 for row in gold_rows if row.predicted_positive),
         "recall_point": interval.point,
@@ -499,6 +611,51 @@ def select_object_blobs(
     return blobs, stats
 
 
+def _pipeline_from_source(
+    item: TrainPublicFile,
+    files_root: Path,
+    stage: DocStage,
+) -> tuple[PipelineFile, bytes] | None:
+    if is_overlay_relative(item.source_relative_path):
+        return None
+    source = resolve_source_pdf(files_root, item.source_relative_path)
+    if source is None:
+        return None
+    data = source.read_bytes()
+    pipe = PipelineFile(
+        file_id=item.file_id,
+        file_hash=hashlib.sha256(data).hexdigest(),
+        filename=source.name,
+        doc_stage=stage,
+    )
+    return pipe, data
+
+
+def select_gold_evidence_blobs(
+    index: Sequence[TrainPublicFile],
+    files_root: Path,
+    evidence: Sequence[GoldEvidenceFile],
+) -> dict[str, list[tuple[PipelineFile, bytes]]]:
+    """Файлы gold-evidence. MIXED без записи в снимке не берём."""
+
+    by_id = {item.file_id: item for item in index}
+    slots: dict[str, dict[DocStage, tuple[PipelineFile, bytes]]] = {}
+    for row in evidence:
+        if not row.matrix_codes:
+            continue
+        item = by_id.get(row.file_id)
+        if item is None or item.object_id != row.object_id:
+            continue
+        loaded = _pipeline_from_source(item, files_root, row.loaded_as)
+        if loaded is None:
+            continue
+        slots.setdefault(row.object_id, {})[row.loaded_as] = loaded
+    out: dict[str, list[tuple[PipelineFile, bytes]]] = {}
+    for object_id, by_stage in slots.items():
+        out[object_id] = [by_stage[stage] for stage in DocStage if stage in by_stage]
+    return out
+
+
 def run_package(
     package: Path,
     files_root: Path,
@@ -509,16 +666,58 @@ def run_package(
     index = load_files_index(package)
     checks = matrix_gold_checks(inventory)
     excluded = excluded_file_ids(inventory)
-    blobs, stats = select_object_blobs(index, files_root, excluded=excluded)
+    evidence = load_gold_evidence_files()
+    gold_blobs = select_gold_evidence_blobs(index, files_root, evidence)
+    gold_ids = [
+        row.file_id
+        for row in evidence
+        if row.matrix_codes and any(item.file_id == row.file_id for item in index)
+    ]
+    used_gold = any(bool(items) for items in gold_blobs.values())
+    if used_gold:
+        labeled = LABELED_TRAIN_OBJECT_IDS
+        blobs = {object_id: list(gold_blobs.get(object_id, [])) for object_id in labeled}
+        summary = summarize_index(index, excluded=excluded)
+        n_index = _summary_int(summary, "n_index")
+        n_runnable = _summary_int(summary, "n_runnable_stage")
+        n_excluded = _summary_int(summary, "n_excluded_in_index")
+        n_overlay = _summary_int(summary, "n_overlay_as_source")
+        n_read = sum(len(items) for items in blobs.values())
+        stages_by_object = tuple(
+            (object_id, tuple(pipe.doc_stage.value for pipe, _data in items))
+            for object_id, items in blobs.items()
+        )
+        stats = RunStats(
+            n_index=n_index,
+            n_read=n_read,
+            n_skip_stage=n_index - n_runnable - n_excluded - n_overlay,
+            n_skip_missing=0,
+            n_skip_excluded=n_excluded,
+            n_skip_overlay=n_overlay,
+            n_objects_scored=sum(1 for items in blobs.values() if items),
+            stages_by_object=stages_by_object,
+        )
+    else:
+        blobs, stats = select_object_blobs(index, files_root, excluded=excluded)
     by_object: dict[str, set[str]] = {object_id: set() for object_id in LABELED_TRAIN_OBJECT_IDS}
+    echo: dict[str, dict[str, str]] = {"status": {}, "rationale": {}}
     for object_id, items in blobs.items():
         if not items:
             continue
         print(f"train-public object={object_id} files={len(items)}", file=sys.stderr, flush=True)
         findings = run_object_files(items, object_id=object_id)
         by_object[object_id] = collect_candidates(findings)
+        if object_id == "OBJ-TYUMENSKAYA-5-GOLD-SEED":
+            echo = gold_finding_echo(findings)
     gold_rows = score_gold_rows(by_object, checks)
-    return gold_rows, build_report(stats, gold_rows)
+    model = GOLD_EVIDENCE_MODEL if used_gold else STAGE_PAGE_MODEL
+    return gold_rows, build_report(
+        stats,
+        gold_rows,
+        stage_page_model=model,
+        gold_file_ids=gold_ids,
+        gold_echo=echo,
+    )
 
 
 def _walk_blocked(path: Path) -> bool:

@@ -89,6 +89,37 @@ def test_unsigned_podp_does_not_mean_approved() -> None:
     assert passport.approval_status is ApprovalStatus.UNKNOWN
 
 
+def test_empty_utverdil_header_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("Утвердил", 0.08, 0.90),
+        _tok("Согласовано", 0.08, 0.94),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+
+
+def test_filled_utverdil_on_later_sheet_is_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82, page=1),
+        _tok("Утвердил", 0.08, 0.92, page=6),
+        _tok("Сердюков Р.С.", 0.22, 0.92, page=6),
+        _tok("08.04.2024", 0.40, 0.92, page=6),
+    )
+    assert passport.approval_status is ApprovalStatus.APPROVED
+    assert str(passport.approval_date) == "2024-04-08"
+    assert passport.document_code == "12345-PZ"
+
+
+def test_soglasovano_header_on_later_sheet_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82, page=1),
+        _tok("Согласовано", 0.02, 0.90, page=2),
+        _tok("ГИП", 0.08, 0.92, page=2),
+        _tok("Сердюков", 0.22, 0.92, page=2),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+
+
 def test_not_approved_beats_approved_token() -> None:
     passport = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82),

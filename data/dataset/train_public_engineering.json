@@ -3,21 +3,37 @@
   "observed_at": "2026-09-19",
   "source": "python -m kontur.evaluation.train_public",
   "in_git": true,
-  "purpose": "Инженерный снимок last_file_per_stage на TRAIN_PUBLIC. Не frozen val, не порог ТЗ.",
+  "purpose": "Инженерный снимок gold_evidence_mixed_as_rd на TRAIN_PUBLIC. Не frozen val, не порог ТЗ.",
   "pred_jsonl": "data/dataset/train_public_pred.jsonl",
-  "why_zero_hits": "Матричный gold Тюменской — IOS4-078/079, нужны PD и RD. В индексе у объекта только PD, RD_ID_MIXED и UNKNOWN; MIXED не угадываем. Последний файл стадии = один PD.",
+  "why_zero_hits": "Gold F0171 как PD, F0201 RD_ID_MIXED только как RD (не ID). Пайплайн видит PD+RD. F0201: заполненная графа «Утвердил» + ФИО → APPROVED. F0171 (обложка тома ПД): в штампе нет «утв.»/«Утвердил»+ФИО → L4 CLARIFICATION_REQUIRED, компаратор не запускался. Заголовок ГОСТ «Согласовано» не считаем утверждением. Гейт J открыт.",
   "n_index": 203,
-  "n_read": 191,
+  "n_read": 2,
   "n_skip_stage": 11,
-  "n_skip_missing": 1,
+  "n_skip_missing": 0,
   "n_skip_excluded": 0,
   "n_skip_overlay": 0,
-  "n_objects_scored": 2,
+  "n_objects_scored": 1,
   "stages_by_object": {
-    "OBJ-NOVOSLOBODSKAYA": ["PD", "RD", "ID"],
-    "OBJ-TYUMENSKAYA-5-GOLD-SEED": ["PD"]
+    "OBJ-NOVOSLOBODSKAYA": [],
+    "OBJ-TYUMENSKAYA-5-GOLD-SEED": [
+      "PD",
+      "RD"
+    ]
   },
-  "stage_page_model": "last_file_per_stage",
+  "stage_page_model": "gold_evidence_mixed_as_rd",
+  "gold_mixed_loaded_as": "RD",
+  "gold_file_ids": [
+    "F0171",
+    "F0201"
+  ],
+  "gold_finding_status": {
+    "IOS4-078": "CLARIFICATION_REQUIRED",
+    "IOS4-079": "CLARIFICATION_REQUIRED"
+  },
+  "gold_finding_rationale": {
+    "IOS4-078": "PD: эталон без признака утверждения",
+    "IOS4-079": "PD: эталон без признака утверждения"
+  },
   "n_gold_matrix": 6,
   "hits": 0,
   "recall_point": 0.0,

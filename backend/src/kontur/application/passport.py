@@ -36,9 +36,19 @@ _STAGE_LABELED = re.compile(
     re.IGNORECASE,
 )
 _STAGE_TOKEN = re.compile(r"(?:^|[_\-\s./])(pd|rd|id|пд|рд|ид)(?:[_\-\s./]|$)", re.IGNORECASE)
-_APPROVED = re.compile(r"\b(?:утв(?:ержд\w*)?|approved|согласован[оа]?)\b", re.IGNORECASE)
+_APPROVED = re.compile(r"\b(?:утв(?:ержд\w*)?|approved)\b", re.IGNORECASE)
 _NOT_APPROVED = re.compile(r"\b(?:не\s+утв|not\s+approved|черновик)\b", re.IGNORECASE)
 _DATE = re.compile(r"\b(\d{2})[.](\d{2})[.](\d{4})\b")
+_APPROVED_LABEL = re.compile(
+    r"^(?:утв\.?|утвердил|утвержд[её]н[аоы]?|approved)$",
+    re.IGNORECASE,
+)
+_PERSON_NAME = re.compile(
+    r"^[A-ZА-ЯЁ][a-zа-яё\-]+(?:\s+[A-ZА-ЯЁ]\.\s*[A-ZА-ЯЁ]\.?)?$"
+)
+_STAMP_Y0 = 0.70
+_APPROVAL_ROW_DY = 0.04
+_APPROVAL_MAX_DX = 0.40
 
 _STAGE_MAP = {
     "pd": DocStage.PD,
@@ -119,9 +129,69 @@ def _stamp_tokens(tokens: Sequence[PageToken]) -> tuple[PageToken, ...]:
     first_page = [item for item in tokens if item.page == 1]
     pool: Sequence[PageToken] = first_page or tokens
     bottom = [
-        item for item in pool if bbox_from_polygon(item.polygon_norm)[1] >= 0.70
+        item for item in pool if bbox_from_polygon(item.polygon_norm)[1] >= _STAMP_Y0
     ]
     return tuple(bottom) if bottom else tuple(pool)
+
+
+def _parse_approval_date(text: str) -> date | None:
+    match = _DATE.search(text)
+    if match is None:
+        return None
+    try:
+        return datetime(
+            int(match.group(3)),
+            int(match.group(2)),
+            int(match.group(1)),
+        ).date()
+    except ValueError:
+        return None
+
+
+def _title_block_approval(
+    tokens: Sequence[PageToken],
+) -> tuple[ApprovalStatus, date | None]:
+    """Заполненная графа «Утвердил»/«утв.» в штампе любого листа.
+
+    Заголовок «Согласовано» и пустая графа не считаются утверждением.
+    «подп.» само по себе — не эталон (см. test_unsigned_podp).
+    """
+
+    by_page: dict[int, list[PageToken]] = {}
+    for item in tokens:
+        if bbox_from_polygon(item.polygon_norm)[1] < _STAMP_Y0:
+            continue
+        by_page.setdefault(item.page, []).append(item)
+    found_date: date | None = None
+    filled = False
+    for page_tokens in by_page.values():
+        joined = _join(page_tokens)
+        if _NOT_APPROVED.search(joined):
+            return ApprovalStatus.NOT_APPROVED, _parse_approval_date(joined)
+        for label in page_tokens:
+            if _APPROVED_LABEL.search(label.text.strip()) is None:
+                continue
+            left, bottom, right, _top = bbox_from_polygon(label.polygon_norm)
+            for other in page_tokens:
+                if other is label:
+                    continue
+                ox0, oy0, _ox1, _oy1 = bbox_from_polygon(other.polygon_norm)
+                if ox0 + 0.01 < right:
+                    continue
+                if abs(oy0 - bottom) > _APPROVAL_ROW_DY:
+                    continue
+                if ox0 - left > _APPROVAL_MAX_DX:
+                    continue
+                text = other.text.strip()
+                if _NOT_APPROVED.search(text):
+                    return ApprovalStatus.NOT_APPROVED, _parse_approval_date(text)
+                if _PERSON_NAME.search(text) is None and _DATE.search(text) is None:
+                    continue
+                filled = True
+                found_date = found_date or _parse_approval_date(text)
+    if filled:
+        return ApprovalStatus.APPROVED, found_date
+    return ApprovalStatus.UNKNOWN, None
 
 
 def _first(pattern: re.Pattern[str], text: str) -> str | None:
@@ -151,17 +221,7 @@ def stage_from_filename(filename: str) -> DocStage | None:
 
 
 def _approval(text: str) -> tuple[ApprovalStatus, date | None]:
-    parsed_date: date | None = None
-    date_match = _DATE.search(text)
-    if date_match is not None:
-        try:
-            parsed_date = datetime(
-                int(date_match.group(3)),
-                int(date_match.group(2)),
-                int(date_match.group(1)),
-            ).date()
-        except ValueError:
-            parsed_date = None
+    parsed_date = _parse_approval_date(text)
     if _NOT_APPROVED.search(text):
         return ApprovalStatus.NOT_APPROVED, parsed_date
     if _APPROVED.search(text):
@@ -224,6 +284,9 @@ def read_passport(
         needs = True
         reason = reason or "шифр в основной надписи не найден"
     approval, approval_date = _approval(search)
+    if approval is ApprovalStatus.UNKNOWN:
+        later, later_date = _title_block_approval(tokens)
+        approval, approval_date = later, later_date or approval_date
     if text_render_agreement is False:
         approval, approval_date = ApprovalStatus.UNKNOWN, None
     filled = sum(1 for item in (code, revision, sheet) if item)

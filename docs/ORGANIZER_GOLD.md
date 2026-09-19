@@ -65,8 +65,10 @@ Harness замера: `backend/src/kontur/evaluation/frozen_val.py`, opt-in че
 Строка JSONL без `object_id` — ошибка. Синтетика 16/20 **не** закрывает порог
 (`test_synthetic_16_of_20_does_not_meet_tz_recall`).
 Прогон открытого train: `make train-public` / `train_public.py`. Исходные PDF,
-не overlay; JSONL совместим с `load_frozen_val_jsonl`. Это не frozen val:
-`closes_gate_j` остаётся false даже при идеальном recall на этих 6 строках.
+не overlay; JSONL совместим с `load_frozen_val_jsonl`. Gold `RD_ID_MIXED`
+(F0201) грузим только как RD, не как ID и не как оба; прочий MIXED skip.
+Это не frozen val: `closes_gate_j` остаётся false даже при идеальном recall
+на этих 6 строках.
 
 Публиковать P/R/F1 и recall критических по этому gold нельзя
 (`scripts/check_claims.py`, инвариант 12 `AGENTS.md`).
