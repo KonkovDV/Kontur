@@ -1,13 +1,4 @@
-"""FastAPI-фасад. Контракт — contracts/openapi.yaml.
-
-Загрузка принимает файлы и сразу прогоняет каскад L1–L7 по векторному слою.
-OCR в запросе нет: страницы без текста дают статусы качества данных, не
-нарушение. READY после прогона — не «132 проверки реализованы».
-GET /protocol собирает черновик из ProcessRecord после READY; PENDING/PARSING
-дают 404. Очередь открывает инспектор (READY→VERIFYING), закрывает
-(VERIFYING→COMPLETED), затем finalize. Автомат в FINALIZED не входит.
-AUTO_NO_DIFFERENCE на этом проводе нет.
-"""
+"""FastAPI-фасад с RBAC и fail-closed object scope для каждого процесса."""
 
 from __future__ import annotations
 
@@ -26,13 +17,14 @@ from kontur.application.intake import (
     evaluate_batch,
 )
 from kontur.application.protocol import assemble_protocol
-from kontur.application.runtime import AcceptedFile, ProcessWorkspace
+from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.capabilities import capabilities_payload
 from kontur.domain.models import DocStage
 from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError, protocol_status
 from kontur.domain.statuses import Completeness, ReasonCode
+from kontur.infrastructure.access_control import AccessDeniedError, check_object_access
 from kontur.presentation.auth import actor_from_roles, parse_bearer
 from kontur.presentation.rbac import (
     AuthenticationRequiredError,
@@ -77,10 +69,42 @@ def _empty_completeness() -> CompletenessMap:
     }
 
 
-def _require(operation_id: str, authorization: str | None) -> tuple[str, frozenset[Role]]:
-    subject, roles = parse_bearer(authorization)
-    granted = authorize(operation_id, roles)
-    return subject, granted
+def _require(
+    operation_id: str,
+    authorization: str | None,
+) -> tuple[str, frozenset[Role], str | None]:
+    context = parse_bearer(authorization)
+    granted = authorize(operation_id, context.roles)
+    return context.subject, granted, context.object_id
+
+
+def _check_scope(requested_object_id: str, caller_object_id: str | None) -> None:
+    check_object_access(
+        requested_object_id=requested_object_id,
+        caller_object_id=caller_object_id,
+    )
+
+
+def _record_for_access(
+    process_id: str,
+    caller_object_id: str | None,
+) -> ProcessRecord | None:
+    record = _workspace().get(process_id)
+    if record is None:
+        return None
+    _check_scope(record.object_id, caller_object_id)
+    return record
+
+
+def _record_for_finding(finding_id: str) -> ProcessRecord | None:
+    """Найти уже загруженный процесс так же, как текущий workspace.review_finding."""
+
+    workspace = _workspace()
+    for record in workspace._items.values():  # noqa: SLF001 - единая in-memory граница
+        for key, item in record.findings.items():
+            if item.finding_id == finding_id or key == finding_id:
+                return record
+    return None
 
 
 def _rejection_body(item: Rejection) -> dict[str, str]:
@@ -103,6 +127,11 @@ async def _auth_error(_request: Request, exc: AuthenticationRequiredError) -> JS
 
 @app.exception_handler(PermissionDeniedError)
 async def _forbid_error(_request: Request, exc: PermissionDeniedError) -> JSONResponse:
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+
+@app.exception_handler(AccessDeniedError)
+async def _object_forbid_error(_request: Request, exc: AccessDeniedError) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
@@ -133,7 +162,21 @@ async def upload_documents(
     process_id: Annotated[str | None, Form()] = None,
     doc_stage: Annotated[DocStage | None, Form()] = None,
 ) -> dict[str, object] | JSONResponse:
-    _require("uploadDocuments", authorization)
+    _subject, _granted, caller_object_id = _require("uploadDocuments", authorization)
+    normalized_object_id = object_id.strip()
+    if not normalized_object_id:
+        raise EmptyPackageError("object_id пуст")
+    _check_scope(normalized_object_id, caller_object_id)
+
+    workspace = _workspace()
+    record = workspace.get(process_id) if process_id else None
+    if process_id and record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    if record is not None:
+        _check_scope(record.object_id, caller_object_id)
+        if record.object_id != normalized_object_id:
+            return JSONResponse(status_code=409, content={"detail": "object_id не совпадает"})
+
     length = request.headers.get("content-length")
     if length is not None and int(length) > MAX_BATCH_BYTES:
         return JSONResponse(
@@ -144,8 +187,6 @@ async def upload_documents(
                 "message": f"Content-Length {length} больше лимита {MAX_BATCH_BYTES} Б",
             },
         )
-    if not object_id.strip():
-        raise EmptyPackageError("object_id пуст")
     if not files:
         raise EmptyPackageError("empty package is not a TZ comparison scenario")
     if doc_stage is None:
@@ -180,17 +221,11 @@ async def upload_documents(
         if item.content_hash is not None
     }
 
-    workspace = _workspace()
-    record = workspace.get(process_id) if process_id else None
-    if process_id and record is None:
-        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     if record is None:
         completeness = _empty_completeness()
         completeness[doc_stage] = Completeness.UPLOADED
-        record = workspace.create(object_id.strip(), completeness)
+        record = workspace.create(normalized_object_id, completeness)
     else:
-        if record.object_id != object_id.strip():
-            return JSONResponse(status_code=409, content={"detail": "object_id не совпадает"})
         workspace.reopen_for_upload(record)
 
     accepted: list[dict[str, str]] = []
@@ -210,7 +245,6 @@ async def upload_documents(
             accepted.append({"file_id": stored.file_id, "file_hash": stored.file_hash})
 
     workspace.run_matrix_pipeline(record)
-
     return {
         "process_id": record.process_id,
         "accepted": accepted,
@@ -223,8 +257,8 @@ def get_status(
     process_id: str,
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, object] | JSONResponse:
-    _require("getProcessStatus", authorization)
-    record = _workspace().get(process_id)
+    _subject, _granted, object_id = _require("getProcessStatus", authorization)
+    record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     return record.to_status()
@@ -236,8 +270,8 @@ def get_protocol(
     version: int | None = None,
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, object] | JSONResponse:
-    _require("getProtocol", authorization)
-    record = _workspace().get(process_id)
+    _subject, _granted, object_id = _require("getProtocol", authorization)
+    record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     del version
@@ -275,8 +309,8 @@ def get_audit(
     process_id: str,
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, object] | JSONResponse:
-    _require("getAuditLog", authorization)
-    record = _workspace().get(process_id)
+    _subject, _granted, object_id = _require("getAuditLog", authorization)
+    record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     return {
@@ -294,19 +328,20 @@ def review_finding(
     body: ReviewRequest,
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, object] | JSONResponse:
-    subject, granted = _require("reviewFinding", authorization)
+    subject, granted, object_id = _require("reviewFinding", authorization)
     if body.inspector_id != subject:
         raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
-    try:
-        finding = _workspace().review_finding(
-            finding_id,
-            actor=actor_from_roles(subject, granted),
-            action=body.action,
-            reason_code=body.reason_code,
-            comment=body.comment,
-        )
-    except KeyError:
+    owner = _record_for_finding(finding_id)
+    if owner is None:
         return JSONResponse(status_code=404, content={"detail": "находка не найдена"})
+    _check_scope(owner.object_id, object_id)
+    finding = _workspace().review_finding(
+        finding_id,
+        actor=actor_from_roles(subject, granted),
+        action=body.action,
+        reason_code=body.reason_code,
+        comment=body.comment,
+    )
     payload: dict[str, object] = {
         "finding_id": finding.finding_id,
         "finding_status": finding.finding_status.value,
@@ -322,20 +357,40 @@ def review_finding(
     return payload
 
 
+def _human_process_action(
+    process_id: str,
+    body: FinalizeRequest,
+    authorization: str | None,
+    operation_id: str,
+    action: str,
+) -> dict[str, object] | JSONResponse:
+    subject, granted, object_id = _require(operation_id, authorization)
+    if body.inspector_id != subject:
+        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    actor = actor_from_roles(subject, granted)
+    if action == "verify":
+        updated = _workspace().start_verification(process_id, actor)
+    elif action == "complete":
+        updated = _workspace().complete_verification(process_id, actor)
+    elif action == "finalize":
+        updated = _workspace().finalize(process_id, actor)
+    else:
+        raise RuntimeError(f"неизвестное действие {action}")
+    return updated.to_status()
+
+
 @app.post("/api/v1/processes/{process_id}/verify", response_model=None)
 def start_verification(
     process_id: str,
     body: FinalizeRequest,
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, object] | JSONResponse:
-    subject, granted = _require("startVerification", authorization)
-    if body.inspector_id != subject:
-        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
-    record = _workspace().get(process_id)
-    if record is None:
-        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
-    updated = _workspace().start_verification(process_id, actor_from_roles(subject, granted))
-    return updated.to_status()
+    return _human_process_action(
+        process_id, body, authorization, "startVerification", "verify"
+    )
 
 
 @app.post("/api/v1/processes/{process_id}/complete", response_model=None)
@@ -344,16 +399,9 @@ def complete_verification(
     body: FinalizeRequest,
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, object] | JSONResponse:
-    subject, granted = _require("completeVerification", authorization)
-    if body.inspector_id != subject:
-        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
-    record = _workspace().get(process_id)
-    if record is None:
-        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
-    updated = _workspace().complete_verification(
-        process_id, actor_from_roles(subject, granted)
+    return _human_process_action(
+        process_id, body, authorization, "completeVerification", "complete"
     )
-    return updated.to_status()
 
 
 @app.post("/api/v1/processes/{process_id}/finalize", response_model=None)
@@ -362,14 +410,9 @@ def finalize(
     body: FinalizeRequest,
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, object] | JSONResponse:
-    subject, granted = _require("finalizeProtocol", authorization)
-    if body.inspector_id != subject:
-        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
-    record = _workspace().get(process_id)
-    if record is None:
-        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
-    updated = _workspace().finalize(process_id, actor_from_roles(subject, granted))
-    return updated.to_status()
+    return _human_process_action(
+        process_id, body, authorization, "finalizeProtocol", "finalize"
+    )
 
 
 @app.post("/api/v1/processes/{process_id}/unfinalize", response_model=None)
@@ -378,10 +421,10 @@ def unfinalize_protocol(
     body: UnfinalizeRequest,
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, object] | JSONResponse:
-    subject, granted = _require("unfinalizeProtocol", authorization)
+    subject, granted, object_id = _require("unfinalizeProtocol", authorization)
     if body.inspector_id != subject:
         raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
-    record = _workspace().get(process_id)
+    record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     updated = _workspace().unfinalize(
@@ -395,8 +438,8 @@ def sync_inspection(
     process_id: str,
     authorization: Annotated[str | None, Header()] = None,
 ) -> str | JSONResponse:
-    _require("syncInspection", authorization)
-    record = _workspace().get(process_id)
+    _subject, _granted, object_id = _require("syncInspection", authorization)
+    record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     updated = _workspace().request_sync(process_id)
