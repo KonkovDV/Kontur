@@ -20,10 +20,10 @@ import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from kontur.application.extractors.number import PageToken
+from kontur.application.extractors.number import PageToken, engine_of
 from kontur.application.normalize import fold_label
 from kontur.domain.geometry import reading_key, union_rect_polygon, y_overlap
-from kontur.domain.models import Extraction, ExtractionEngine, Polygon
+from kontur.domain.models import Extraction, Polygon
 
 ENGINE_VERSION = "0.1.0"
 _MAX_ANCHOR_TOKENS = 8
@@ -172,7 +172,7 @@ def extract_text(tokens: Sequence[PageToken], rule: dict[str, object]) -> TextHi
     return TextHit(
         extraction=Extraction(
             raw_token=primary_raw,
-            engine=ExtractionEngine.VECTOR,
+            engine=engine_of(covering),
             engine_version=ENGINE_VERSION,
             confidence=0.99 if agrees else 0.40,
             normalized_value=primary_value,

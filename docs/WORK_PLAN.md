@@ -29,13 +29,17 @@
 
 ## Шаг 1 — OCR в запросе (гейт I)
 
+Срез на `main`: `ocr_tesseract.py` заполняет **пустые** raster-страницы
+при наличии Tesseract; `ocr_text` остаётся `UNAVAILABLE`. PR #53 as-is
+не вливался (красный CI, ложное закрытие гейта).
+
 | | |
 |---|---|
 | requirement | Страницы без текстового слоя идут в `RASTER_REGION_CROP`; dual-read на правилах с флагом; CA на пилоте 300 стр. |
 | artifact | вызов verifier из `process_pipeline`; не VLM |
 | test | raster PDF → не пустой успех vector; dual-read disagreement → `ABSTAIN` |
-| metric | CA, n, Wilson на `ocr_pilot_20260811` (не Речников) |
-| stop | CA verifier < 0,95; подбор порога по TEST_HIDDEN |
+| metric | CA, n, Wilson **95%** (`metrics.wilson`, z=1.96) на `ocr_pilot_20260811` (не Речников). Не `wilson(290,300)` без корпуса |
+| stop | CA verifier < 0,95; подбор порога по TEST_HIDDEN; `AVAILABLE` без замера |
 
 ## Шаг 2 — проводка READY → VERIFYING → COMPLETED
 

@@ -34,12 +34,22 @@ class PageToken:
     page: int
     polygon_source: Polygon
     polygon_norm: Polygon
+    engine: ExtractionEngine = ExtractionEngine.VECTOR
 
     def __post_init__(self) -> None:
         if self.page < 1:
             raise ValueError("номер страницы начинается с 1, а не с 0")
         if len(self.polygon_source) < 3 or len(self.polygon_norm) < 3:
             raise ValueError("у токена должен быть polygon, а не точка")
+
+
+def engine_of(tokens: Sequence[PageToken]) -> ExtractionEngine:
+    """OCR только если все токены окна из OCR. Смесь не маскируем под vector."""
+
+    engines = {item.engine for item in tokens}
+    if engines == {ExtractionEngine.OCR}:
+        return ExtractionEngine.OCR
+    return ExtractionEngine.VECTOR
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,7 +171,7 @@ def extract_number(tokens: Sequence[PageToken], rule: dict[str, object]) -> Numb
     return NumberHit(
         extraction=Extraction(
             raw_token=primary_raw,
-            engine=ExtractionEngine.VECTOR,
+            engine=engine_of(covering),
             engine_version=ENGINE_VERSION,
             confidence=0.99 if agrees else 0.4,
             normalized_value=primary,

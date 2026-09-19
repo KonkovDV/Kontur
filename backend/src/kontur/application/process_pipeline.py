@@ -1,7 +1,9 @@
 """Прогон матрицы на загруженных PDF: токены → evaluate_rule → находки.
 
-Вызывается после intake. OCR не вызывается: нет текстового слоя — пустые
-токены и статусы качества данных, не нарушение. Автомат не пишет
+Вызывается после intake. Пустой растр при наличии Tesseract идёт в
+`fill_empty_raster_pages`; иначе пустые токены. Ошибка OCR — статусы
+качества, не нарушение. `ocr_text` в capabilities не становится
+AVAILABLE: CA на пилоте не измерена. Автомат не пишет
 CONFIRMED_VIOLATION / NEGATIVE_VERIFIED.
 """
 
@@ -16,8 +18,13 @@ from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, Finding
 from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus
 from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
+from kontur.infrastructure.ocr_tesseract import (
+    fill_empty_raster_pages,
+    raster_pages_need_ocr,
+    tesseract_available,
+)
 from kontur.infrastructure.pdf_guard import PdfParseTimeoutError, run_pdf_parse_sync
-from kontur.infrastructure.pdfium_tokens import extract_pdf_bytes, flatten_tokens
+from kontur.infrastructure.pdfium_tokens import PdfDocumentTokens, extract_pdf_bytes, flatten_tokens
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +83,7 @@ def _pages_from_blobs(
         except (PdfParseTimeoutError, ValueError) as exc:
             errors.append(f"{item.file_id}: {exc}")
             continue
+        document = _maybe_ocr(document, raw)
         tokens = flatten_tokens(document)
         last = document.pages[-1]
         passport = read_passport(
@@ -133,6 +141,21 @@ def run_process_pipeline(
     )
     assert_machine_only(report.findings)
     return report
+
+
+def _maybe_ocr(document: PdfDocumentTokens, raw: bytes) -> PdfDocumentTokens:
+    """OCR вне векторного разбора. Таймаут оставляет исходные токены."""
+
+    if not tesseract_available() or not raster_pages_need_ocr(document):
+        return document
+
+    def _run(data: bytes) -> PdfDocumentTokens:
+        return fill_empty_raster_pages(document, data)
+
+    try:
+        return run_pdf_parse_sync(_run, raw)
+    except PdfParseTimeoutError:
+        return document
 
 
 def assert_machine_only(findings: Sequence[Finding]) -> None:
