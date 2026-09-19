@@ -16,6 +16,7 @@ dependencies = [
     "jsonschema>=4.23",
     "pyyaml>=6.0",
     "python-multipart>=0.0.12",
+    "PyJWT[crypto]>=2.9,<3",
 ]
 
 [project.optional-dependencies]

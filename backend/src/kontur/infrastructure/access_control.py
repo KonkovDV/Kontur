@@ -1,4 +1,4 @@
-"""Fail-closed контроль доступа к объектам (ТЗ §9.1, RT-H)."""
+"""Fail-closed object access control (TZ §9.1, RT-H)."""
 
 from __future__ import annotations
 
@@ -6,14 +6,12 @@ __all__ = ["AccessDeniedError", "check_object_access"]
 
 
 class AccessDeniedError(PermissionError):
-    """Попытка доступа без object scope или к чужому объекту."""
+    """Object scope is absent or does not match."""
 
     def __init__(self, *, requested: str | None, caller: str | None) -> None:
-        requested_label = requested if requested is not None else "<unassigned>"
-        caller_label = caller if caller is not None else "<missing-scope>"
-        super().__init__(
-            f"Access to object '{requested_label}' denied for caller '{caller_label}'"
-        )
+        # Keep identifiers available to trusted in-process diagnostics, but never put
+        # them in the exception text returned by the API.
+        super().__init__("access denied")
         self.requested_object_id = requested
         self.caller_object_id = caller
 
@@ -23,12 +21,7 @@ def check_object_access(
     requested_object_id: str | None,
     caller_object_id: str | None,
 ) -> None:
-    """Разрешить только точное совпадение непустых object_id.
-
-    Системный код, которому нужен глобальный доступ, не должен маскироваться
-    отсутствующим scope и обязан использовать отдельный доверенный путь.
-    HTTP-запрос без scope закрывается по умолчанию.
-    """
+    """Allow only an exact match between two non-empty object identifiers."""
 
     if (
         requested_object_id is not None
@@ -36,7 +29,4 @@ def check_object_access(
         and requested_object_id == caller_object_id
     ):
         return
-    raise AccessDeniedError(
-        requested=requested_object_id,
-        caller=caller_object_id,
-    )
+    raise AccessDeniedError(requested=requested_object_id, caller=caller_object_id)

@@ -39,6 +39,11 @@ services:
       KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
       KONTUR_REDIS_URL: redis://redis:6379/0
       KONTUR_AMQP_URL: amqp://guest:guest@rabbitmq:5672/
+      KONTUR_JWT_ISSUER: ${KONTUR_JWT_ISSUER}
+      KONTUR_JWT_AUDIENCE: ${KONTUR_JWT_AUDIENCE}
+      KONTUR_JWT_ALGORITHM: ${KONTUR_JWT_ALGORITHM:-RS256}
+      KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY}
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
     depends_on: [postgres, redis, rabbitmq, minio]
     ports: ["8000:8000"]
 
