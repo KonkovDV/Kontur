@@ -42,7 +42,7 @@ def test_stamp_fills_key_fields_and_matches_schema() -> None:
         _tok("изм. 3", 0.32, 0.82),
         _tok("лист 2", 0.50, 0.82),
         _tok("стадия ПД", 0.08, 0.88),
-        _tok("утв. 16.09.2026", 0.32, 0.88),
+        _tok("утв. Иванов И.И. 16.09.2026", 0.32, 0.88),
     )
     assert passport.document_code == "12345-PZ"
     assert passport.revision == "3"
@@ -96,6 +96,35 @@ def test_empty_utverdil_header_is_not_approved() -> None:
         _tok("Согласовано", 0.08, 0.94),
     )
     assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_date is None
+
+
+def test_empty_utv_abbreviation_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("утв.", 0.08, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_date is None
+
+
+def test_utverdil_with_date_but_without_person_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("Утвердил", 0.08, 0.90),
+        _tok("08.04.2024", 0.22, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_date is None
+
+
+def test_inline_utv_with_date_but_without_person_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("утв. 08.04.2024", 0.08, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_date is None
 
 
 def test_filled_utverdil_on_later_sheet_is_approved() -> None:
@@ -110,21 +139,41 @@ def test_filled_utverdil_on_later_sheet_is_approved() -> None:
     assert passport.document_code == "12345-PZ"
 
 
+def test_inline_utverdil_with_person_is_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("Утвердил: Сердюков Р.С. 08.04.2024", 0.08, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.APPROVED
+    assert str(passport.approval_date) == "2024-04-08"
+
+
+def test_utverdil_with_full_name_is_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("Утвердил", 0.08, 0.90),
+        _tok("Сердюков Роман Сергеевич", 0.22, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.APPROVED
+    assert passport.approval_date is None
+
+
 def test_soglasovano_header_on_later_sheet_is_not_approved() -> None:
     passport = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82, page=1),
         _tok("Согласовано", 0.02, 0.90, page=2),
         _tok("ГИП", 0.08, 0.92, page=2),
-        _tok("Сердюков", 0.22, 0.92, page=2),
+        _tok("Сердюков Р.С.", 0.22, 0.92, page=2),
     )
     assert passport.approval_status is ApprovalStatus.UNKNOWN
 
 
-def test_not_approved_beats_approved_token() -> None:
+def test_not_approved_beats_approved_evidence() -> None:
     passport = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82),
-        _tok("не утв", 0.40, 0.82),
-        _tok("утв. 01.02.2026", 0.60, 0.82),
+        _tok("не утв", 0.08, 0.90),
+        _tok("Утвердил", 0.32, 0.90),
+        _tok("Иванов И.И.", 0.50, 0.90),
     )
     assert passport.approval_status is ApprovalStatus.NOT_APPROVED
 
