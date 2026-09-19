@@ -41,9 +41,10 @@
 ## Состояние
 
 Контракты, домен, executable-слайсы матрицы (не 132/132), persist находок,
-GET `/protocol` и `/audit`. Пороги ТЗ на frozen validation **не измерены**.
-Организатор прислал TRAIN_PUBLIC и gold-seed из 15 проверок — это не
-held-out val на 132 параметра ([`docs/ORGANIZER_GOLD.md`](docs/ORGANIZER_GOLD.md)).
+GET `/protocol` и `/audit`. После загрузки PDF каскад L1–L7 **запускается**
+(векторный слой → `READY`). OCR в запросе нет. Пороги ТЗ на frozen validation
+**не измерены**. Организатор прислал TRAIN_PUBLIC и gold-seed из 15 проверок —
+это не held-out val ([`docs/ORGANIZER_GOLD.md`](docs/ORGANIZER_GOLD.md)).
 
 ## Карта репозитория
 
@@ -78,6 +79,8 @@ docker compose up -d                 # postgres, redis, rabbitmq, minio
 | Архитектурные решения | [`docs/adr/`](docs/adr/) |
 | Состав переданного пакета данных | [`docs/DATASET_PACKAGE.md`](docs/DATASET_PACKAGE.md) |
 | Публичный gold ≠ frozen val | [`docs/ORGANIZER_GOLD.md`](docs/ORGANIZER_GOLD.md) |
+| Errata аудита «46% ТЗ» | [`docs/AUDITOR_ERRATA.md`](docs/AUDITOR_ERRATA.md) |
+| План дальнейшей работы | [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md) |
 | Карантин датасета | [`docs/DATA_QUARANTINE.md`](docs/DATA_QUARANTINE.md) |
 | Производительность и нагрузка | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
 | Вопросы организатору | [`docs/QUESTIONS_TO_ORGANIZER.md`](docs/QUESTIONS_TO_ORGANIZER.md) |

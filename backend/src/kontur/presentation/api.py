@@ -1,8 +1,8 @@
 """FastAPI-фасад. Контракт — contracts/openapi.yaml.
 
-Обработка не выполняется в процессе запроса: загрузка принимает файлы,
-создаёт процесс и оставляет его в PARSING. Сравнение L1–L7 здесь не
-вызывается: экстракторов нет, и статус READY соврал бы.
+Загрузка принимает файлы и сразу прогоняет каскад L1–L7 по векторному слою.
+OCR в запросе нет: страницы без текста дают статусы качества данных, не
+нарушение. READY после прогона — не «132 проверки реализованы».
 GET /protocol собирает черновик из ProcessRecord после READY; PENDING/PARSING
 дают 404. AUTO_NO_DIFFERENCE на этом проводе нет.
 """
@@ -172,6 +172,12 @@ async def upload_documents(
         worst = max(decision.rejected, key=lambda item: item.http_status)
         return JSONResponse(status_code=worst.http_status, content=_rejection_body(worst))
 
+    bodies = {
+        item.content_hash: body
+        for item, body in payloads
+        if item.content_hash is not None
+    }
+
     workspace = _workspace()
     record = workspace.get(process_id) if process_id else None
     if process_id and record is None:
@@ -198,7 +204,10 @@ async def upload_documents(
             size_bytes=item.size_bytes,
         )
         if workspace.attach_file(record, stored):
+            workspace.keep_blob(record, stored.file_id, bodies[digest])
             accepted.append({"file_id": stored.file_id, "file_hash": stored.file_hash})
+
+    workspace.run_matrix_pipeline(record)
 
     return {
         "process_id": record.process_id,

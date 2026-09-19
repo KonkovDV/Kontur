@@ -12,12 +12,12 @@
 | 7 | 12 модулей системы | `application/` | — | skeleton |
 | 8 | Матрица 132 параметра, таблица `Params` | `data/matrix/`, `contracts/schemas/rule.schema.json` | `test_matrix_registry.py` | in_progress |
 
-| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/pipeline.py`, `domain/coordinates.py`, `infrastructure/pdfium_tokens.py`, `application/passport.py`, `application/revision_resolver.py`, `application/visual_text.py` | `test_pipeline.py`, `test_coordinates.py`, `test_pdf_tokens.py`, `test_passport.py`, `test_revision_resolver.py`, `test_visual_text.py` | in_progress (резолвер эталона есть; скрытый текст обнуляет штамп; OCR/CV/кеш нет; связка ≥0,97 не измерена) |
+| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/process_pipeline.py`, `pipeline.py`, `pdfium_tokens.py`, `passport.py`, `revision_resolver.py` | `test_process_pipeline.py`, `test_pipeline.py`, `test_pdf_tokens.py`, `test_passport.py` | in_progress (векторный каскад в HTTP; OCR/CV/кеш нет; связка ≥0,97 не измерена) |
 | 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `application/intake.py`, `application/retry_policy.py`, `presentation/api.py` | `test_intake.py`, `test_retry_policy.py`, `test_api.py` | in_progress |
 | 9.1 | Статусы загрузки `PD_/RD_/ID_UPLOADED/PARTIAL/MISSING` | `domain/status_map.py` | `test_status_map.py` | skeleton |
 | 9.2 | Сценарии FULL…PARTIALLY_LOADED; пустой пакет — ошибка | `application/scenarios.py` | `test_scenarios.py` | skeleton |
 | 9.2 | Карточка доказательства, протокол, `MISSING_EVIDENCE` | `application/protocol.py`, `contracts/schemas/` | `test_pz001.py`, `scripts/check_contracts.py` | in_progress |
-| 9.2 | Каскад L0–L9: безопасная остановка, L0 ≠ finding, нет автостатуса на L8–L9 | `application/pipeline.py`, `application/evaluate.py` | `test_pipeline.py`, `test_pipeline_halt.py`, `test_pz001.py` | in_progress |
+| 9.2 | Каскад L0–L9: безопасная остановка, L0 ≠ finding, нет автостатуса на L8–L9 | `application/pipeline.py`, `application/evaluate.py`, `application/process_pipeline.py` | `test_pipeline.py`, `test_pipeline_halt.py`, `test_process_pipeline.py`, `test_pz001.py` | in_progress (прогон после upload; OCR нет) |
 | 9.2 | Инкрементальное обновление при дозагрузке | — | — | skeleton |
 | 9.3 | Верификация, reason_code, атомарность, финализация, отмена | `application/review.py`, `domain/state_machines.py`, триггер `protocols_finalized_is_immutable` | `test_review.py`, `test_state_machines.py`, `db/checks.sql` § 1–3 | in_progress |
 | 9.3 | Юзабилити: ≤30 мин на протокол, ≤3 клика на находку | `web/`, `docs/USABILITY_PROTOCOL.md` | ручной протокол на 5 инспекторах | skeleton (форма замера есть, сессий нет) |

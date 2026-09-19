@@ -11,6 +11,11 @@ import os
 from dataclasses import dataclass, field
 from uuid import uuid4
 
+from kontur.application.process_pipeline import (
+    PipelineFile,
+    PipelineReport,
+    run_process_pipeline,
+)
 from kontur.application.retry_policy import next_sync_attempt
 from kontur.application.review import finalize_process, review, unfinalize_process
 from kontur.application.scenarios import CompletenessMap, detect_scenario
@@ -78,6 +83,7 @@ class ProcessRecord:
     parse_attempts: int = 0
     findings: dict[str, Finding] = field(default_factory=dict)
     files: list[AcceptedFile] = field(default_factory=list)
+    blobs: dict[str, bytes] = field(default_factory=dict)
     audit: MemoryAudit = field(default_factory=MemoryAudit)
     finalized_by: str | None = None
     matrix_version: str = "draft-0"
@@ -259,6 +265,45 @@ class ProcessWorkspace:
         record.input_manifest_hash = item.file_hash if len(record.files) == 1 else "pending"
         self._persist(record)
         return True
+
+    def keep_blob(self, record: ProcessRecord, file_id: str, content: bytes) -> None:
+        """Тело файла только в памяти процесса: Postgres снимок его не хранит."""
+
+        record.blobs[file_id] = content
+
+    def run_matrix_pipeline(self, record: ProcessRecord) -> PipelineReport:
+        """L1–L7 по загруженным PDF. Успех прогона → READY, не FINALIZED."""
+
+        report = run_process_pipeline(
+            object_id=record.object_id,
+            completeness=record.completeness,
+            files=tuple(
+                PipelineFile(
+                    file_id=item.file_id,
+                    file_hash=item.file_hash,
+                    filename=item.filename,
+                    doc_stage=item.doc_stage,
+                )
+                for item in record.files
+            ),
+            blobs=record.blobs,
+        )
+        for finding in report.findings:
+            self.put_finding(record.process_id, finding)
+        record.parse_attempts += 1
+        record.audit.record(
+            "system",
+            "PIPELINE",
+            {
+                "rules_evaluated": report.rules_evaluated,
+                "pages_built": report.pages_built,
+                "parse_errors": len(report.parse_errors),
+            },
+        )
+        if record.process_state is ProcessState.PARSING:
+            record.process_state = advance_process(record.process_state, ProcessState.READY)
+        self._persist(record)
+        return report
 
     def put_finding(self, process_id: str, finding: Finding) -> None:
         """Сохранить находку. Повтор at-least-once с тем же evidence_group_id

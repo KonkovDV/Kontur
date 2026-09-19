@@ -75,7 +75,7 @@ def test_admin_cannot_upload_or_confirm(client: TestClient) -> None:
     assert response.status_code == 403
 
 
-def test_upload_accepts_pdf_and_stays_in_parsing(client: TestClient) -> None:
+def test_upload_accepts_pdf_and_reaches_ready(client: TestClient) -> None:
     response = _upload(client)
     assert response.status_code == 202
     body = response.json()
@@ -86,9 +86,28 @@ def test_upload_accepts_pdf_and_stays_in_parsing(client: TestClient) -> None:
     )
     assert status.status_code == 200
     payload = status.json()
-    assert payload["process_state"] == "PARSING"
+    assert payload["process_state"] == "READY"
     assert payload["completeness"]["pd"] == "PD_UPLOADED"
     assert payload["completeness"]["rd"] == "RD_MISSING"
+    assert payload["counters"]["confirmed_violations"] == 0
+    record = app.state.workspace.get(body["process_id"])
+    assert record is not None
+    assert len(record.findings) == 132
+    assert all(
+        item.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+        for item in record.findings.values()
+    )
+
+
+def test_protocol_after_upload_is_draft_without_violations(client: TestClient) -> None:
+    process_id = _upload(client).json()["process_id"]
+    response = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "READY"
+    assert body["violation_count"] == 0
+    assert "AUTO_NO_DIFFERENCE" not in json.dumps(body)
+    assert "preliminary_no_difference" not in body["sections"]
 
 
 def test_zip_named_as_pdf_is_rejected(client: TestClient) -> None:
@@ -115,13 +134,6 @@ def test_content_length_limit_is_enforced_before_intake(
     response = _upload(client)
     assert response.status_code == 413
     assert response.json()["reason_code"] == "BATCH_LIMIT_EXCEEDED"
-
-
-def test_protocol_is_not_invented(client: TestClient) -> None:
-    process_id = _upload(client).json()["process_id"]
-    response = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR)
-    assert response.status_code == 404
-    assert "не собран" in response.json()["detail"]
 
 
 def test_protocol_available_after_completed(client: TestClient) -> None:
@@ -288,6 +300,10 @@ def test_duplicate_upload_same_hash_stage_is_empty_accepted(client: TestClient) 
     assert retry.status_code == 202
     assert retry.json()["accepted"] == []
     assert retry.json()["process_id"] == process_id
+    record = app.state.workspace.get(process_id)
+    assert record is not None
+    assert record.process_state is ProcessState.READY
+    assert len(record.findings) == 132
 
 
 def test_audit_log_requires_token(client: TestClient) -> None:
