@@ -6,7 +6,9 @@ import asyncio
 import hashlib
 import json
 import os
+import tempfile
 from dataclasses import dataclass
+from typing import BinaryIO
 
 from starlette.datastructures import UploadFile
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -21,6 +23,7 @@ from kontur.presentation.rbac import (
 
 UPLOAD_PATH = "/api/v1/documents/upload"
 READ_CHUNK_BYTES = 1024 * 1024
+SPOOL_MEMORY_BYTES = 1024 * 1024
 MULTIPART_OVERHEAD_BYTES = 1024 * 1024
 MAX_UPLOAD_REQUEST_BYTES = MAX_BATCH_BYTES + MULTIPART_OVERHEAD_BYTES
 _DEFAULT_MAX_CONCURRENT_UPLOADS = 2
@@ -43,18 +46,35 @@ class UploadPayload:
     digest: str
 
 
-async def read_upload_payload(
+@dataclass(slots=True)
+class _StagedUpload:
+    """Own one local spool until ownership moves to the UploadFile."""
+
+    spool: BinaryIO
+
+    def close(self) -> None:
+        self.spool.close()
+
+    def release(self) -> BinaryIO:
+        spool = self.spool
+        self.spool = _ClosedFile()
+        return spool
+
+
+class _ClosedFile:
+    """A closed BinaryIO sentinel used after ownership transfer."""
+
+    def close(self) -> None:
+        return None
+
+
+async def _read_metadata(
     upload: UploadFile,
-    max_file_bytes: int = MAX_FILE_BYTES,
-    chunk_size: int = READ_CHUNK_BYTES,
+    *,
+    max_file_bytes: int,
+    chunk_size: int,
+    spool: BinaryIO | None = None,
 ) -> UploadPayload:
-    """Read and rewind one upload while retaining metadata only."""
-
-    if max_file_bytes < 0:
-        raise ValueError("max_file_bytes must be non-negative")
-    if not 0 < chunk_size <= READ_CHUNK_BYTES:
-        raise ValueError(f"chunk_size must be between 1 and {READ_CHUNK_BYTES}")
-
     header = bytearray()
     digest = hashlib.sha256()
     size = 0
@@ -66,13 +86,62 @@ async def read_upload_payload(
         digest.update(chunk)
         if len(header) < 16:
             header.extend(chunk[: 16 - len(header)])
+        if spool is not None:
+            spool.write(chunk)
 
-    await upload.seek(0)
     return UploadPayload(
         size=size,
         header=bytes(header),
         digest=digest.hexdigest(),
     )
+
+
+async def read_upload_payload(
+    upload: UploadFile,
+    max_file_bytes: int = MAX_FILE_BYTES,
+    chunk_size: int = READ_CHUNK_BYTES,
+) -> UploadPayload:
+    """Verify two bounded reads and replace the source with a local spool.
+
+    The first pass records metadata only.  The second pass copies into a
+    ``SpooledTemporaryFile`` while independently recomputing all metadata.
+    Only a verified spool is installed on the UploadFile, so the endpoint's
+    existing outer UploadFile cleanup owns and closes every staged body.
+    """
+
+    if max_file_bytes < 0:
+        raise ValueError("max_file_bytes must be non-negative")
+    if not 0 < chunk_size <= READ_CHUNK_BYTES:
+        raise ValueError(f"chunk_size must be between 1 and {READ_CHUNK_BYTES}")
+
+    expected = await _read_metadata(
+        upload,
+        max_file_bytes=max_file_bytes,
+        chunk_size=chunk_size,
+    )
+    await upload.seek(0)
+
+    staged = _StagedUpload(
+        tempfile.SpooledTemporaryFile(max_size=SPOOL_MEMORY_BYTES, mode="w+b")
+    )
+    original = upload.file
+    try:
+        actual = await _read_metadata(
+            upload,
+            max_file_bytes=max_file_bytes,
+            chunk_size=chunk_size,
+            spool=staged.spool,
+        )
+        if actual != expected:
+            raise UploadLimitExceeded
+        staged.spool.seek(0)
+        original.close()
+        upload.file = staged.release()
+    except BaseException:
+        staged.close()
+        raise
+
+    return expected
 
 
 async def materialize_upload(
@@ -83,7 +152,7 @@ async def materialize_upload(
     max_file_bytes: int = MAX_FILE_BYTES,
     chunk_size: int = READ_CHUNK_BYTES,
 ) -> bytes:
-    """Materialize one bounded upload and verify its first-pass metadata."""
+    """Materialize one verified spool for the current keep_blob API."""
 
     if expected_size < 0:
         raise ValueError("expected_size must be non-negative")
