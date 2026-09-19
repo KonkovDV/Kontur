@@ -13,7 +13,7 @@
 | GAP-IOS4-VAL | Recall критических на frozen val не измерен | документы TRAIN_PUBLIC есть; frozen val на 132/106 нет (6 матричных позитивов, Wilson 6/6 ниже порога); harness в `backend/tests/test_frozen_val.py` | гейт J |
 | GAP-K6-P95 | p95 `/status` не измерен | скрипт 100 VU / 60 с с порогом есть; CI k6 не запускает, дешёвый PARSING не публикуем | гейт L |
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
-| GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | пайплайн зовёт Tesseract на пустом растре, если бинарник есть; CA на пилоте нет; dual-read vector↔OCR не в `evaluate_rule`; полный кадр ≠ region-crop | гейт I |
+| GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | region-crop dual-read в коде; CA на SILVER пилоте не закрывает гейт (нет GOLD, `approved_for_training=false`); Речников из пилота не берём | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт

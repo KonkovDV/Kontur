@@ -19,6 +19,7 @@ from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, Finding
 from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus
 from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
 from kontur.infrastructure.ocr_tesseract import (
+    PageImageCache,
     fill_empty_raster_pages,
     raster_pages_need_ocr,
     tesseract_available,
@@ -102,7 +103,14 @@ def _pages_from_blobs(
             passport.approval_status,
             passport.sheet,
         )
-        pages[item.doc_stage] = StagePage(document=ref, tokens=tokens)
+        cache = PageImageCache(raw) if tesseract_available() else None
+        pages[item.doc_stage] = StagePage(
+            document=ref,
+            tokens=tokens,
+            pdf_bytes=raw,
+            frames=tuple(page.frame for page in document.pages),
+            render_cache=cache,
+        )
     return pages, tuple(errors)
 
 

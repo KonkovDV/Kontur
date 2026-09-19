@@ -122,7 +122,7 @@
   },
   "gate_moves": {
     "J": "Не закрывается этим gold. Harness: backend/tests/test_frozen_val.py. Публикация P/R/F1 запрещена.",
-    "I": "В методике есть OCR-пилот 300 страниц (zip+xlsx). В train 11731 страниц без текстового слоя. CA на пилоте не измерен; capabilities OCR = UNAVAILABLE.",
+    "I": "Пилот 300 стр. есть (zip+xlsx). Harness: backend/src/kontur/evaluation/ocr_pilot.py. Речников из пилота не берём. SILVER PDF_TEXT_LAYER ≠ GOLD; capabilities OCR = UNAVAILABLE; гейт I открыт.",
     "K": "PDF Тюменской и Новослободской — материал для 5 инспекторов. Сессий нет.",
     "L": "Документы поставки p95 не измеряют. Нужен живой k6 на стенде."
   },

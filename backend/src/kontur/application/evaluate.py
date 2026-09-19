@@ -21,7 +21,12 @@ from kontur.application.comparators import (
     Comparison,
     compare_values,
 )
-from kontur.application.extractors.number import NumberHit, PageToken, extract_number
+from kontur.application.extractors.number import (
+    NumberHit,
+    PageToken,
+    extract_number,
+    parse_number_from_text,
+)
 from kontur.application.extractors.text import TextHit, extract_text
 from kontur.application.pipeline import Stage, StageResult, run
 from kontur.application.revision_resolver import (
@@ -30,6 +35,7 @@ from kontur.application.revision_resolver import (
     resolve_revision,
 )
 from kontur.application.scenarios import CompletenessMap, status_for_missing_stage
+from kontur.domain.coordinates import PageFrame
 from kontur.domain.geometry import polygon_in_unit_square
 from kontur.domain.idempotency import comparison_key
 from kontur.domain.models import (
@@ -48,6 +54,11 @@ from kontur.domain.statuses import (
     FindingStatus,
     ReviewPriority,
 )
+from kontur.infrastructure.ocr_tesseract import (
+    PageImageCache,
+    ocr_region_crop,
+    tesseract_available,
+)
 
 _STAGE_ROLE: dict[DocStage, EvidenceRole] = {
     DocStage.PD: EvidenceRole.EXPECTED,
@@ -64,6 +75,9 @@ _TEXT_OPERATORS: frozenset[str] = STRING_OPERATORS | SET_OPERATORS | PRESENCE_OP
 class StagePage:
     document: DocumentRef
     tokens: tuple[PageToken, ...]
+    pdf_bytes: bytes | None = None
+    frames: tuple[PageFrame, ...] = ()
+    render_cache: object | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,6 +243,36 @@ def _dual_read_required(rule: dict[str, object]) -> bool:
         return True
     dr = extractor.get("dual_read_required")
     return dr is not False
+
+
+def _ocr_region_agrees(hit: NumberHit, page: StagePage, rule: dict[str, object]) -> bool | None:
+    """Независимый region-crop. None — верификатор не запускался, не disagreement."""
+
+    if page.pdf_bytes is None or not page.frames:
+        return None
+    if not tesseract_available():
+        return None
+    if hit.page < 1 or hit.page > len(page.frames):
+        return None
+    frame = page.frames[hit.page - 1]
+    cache = page.render_cache if isinstance(page.render_cache, PageImageCache) else None
+    tokens = ocr_region_crop(
+        page.pdf_bytes,
+        page_number=hit.page,
+        frame=frame,
+        polygon=hit.polygon_source,
+        cache=cache,
+    )
+    if not tokens:
+        return None
+    value = parse_number_from_text(" ".join(item.text for item in tokens), rule)
+    if value is None:
+        return None
+    try:
+        primary = _as_float(hit.extraction.normalized_value)
+    except TypeError:
+        return None
+    return primary == value
 
 
 def evaluate_rule(
@@ -497,6 +541,14 @@ def evaluate_rule(
                 Stage.L2_EXTRACTION,
                 _mapped(rule, "reads_disagree", FindingStatus.ABSTAIN),
                 f"{stage.value}: два чтения числа не совпали",
+                prior=identity_ok,
+            )
+        if dual_req and _ocr_region_agrees(number_hit, stage_page, rule) is False:
+            return _halt(
+                rule,
+                Stage.L2_EXTRACTION,
+                _mapped(rule, "reads_disagree", FindingStatus.ABSTAIN),
+                f"{stage.value}: vector и OCR region-crop не совпали",
                 prior=identity_ok,
             )
         if not number_hit.extraction.usable_for_automatic_finding:

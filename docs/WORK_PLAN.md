@@ -29,17 +29,18 @@
 
 ## Шаг 1 — OCR в запросе (гейт I)
 
-Срез на `main`: `ocr_tesseract.py` заполняет **пустые** raster-страницы
-при наличии Tesseract; `ocr_text` остаётся `UNAVAILABLE`. PR #53 as-is
-не вливался (красный CI, ложное закрытие гейта).
+Срез на `main`: `ocr_tesseract.py` заполняет пустые raster-страницы
+при наличии Tesseract; `evaluate_rule` зовёт **region-crop** как независимый
+второй источник для `dual_read_required`. `ocr_text` остаётся `UNAVAILABLE`.
+Harness пилота: `kontur.evaluation.ocr_pilot` (Речников исключён, SILVER ≠ GOLD).
 
 | | |
 |---|---|
 | requirement | Страницы без текстового слоя идут в `RASTER_REGION_CROP`; dual-read на правилах с флагом; CA на пилоте 300 стр. |
-| artifact | вызов verifier из `process_pipeline`; не VLM |
-| test | raster PDF → не пустой успех vector; dual-read disagreement → `ABSTAIN` |
-| metric | CA, n, Wilson **95%** (`metrics.wilson`, z=1.96) на `ocr_pilot_20260811` (не Речников). Не `wilson(290,300)` без корпуса |
-| stop | CA verifier < 0,95; подбор порога по TEST_HIDDEN; `AVAILABLE` без замера |
+| artifact | `ocr_region_crop` из `evaluate_rule`; `ocr_pilot.py`; не VLM |
+| test | raster PDF → не violation; OCR disagreement → `ABSTAIN`; Речников не eligible |
+| metric | CA, n, Wilson **95%** (`metrics.wilson`, z=1.96) на eligible SILVER `PDF_TEXT_LAYER`. Не `wilson(290,300)` |
+| stop | CA verifier < 0,95; подбор порога по TEST_HIDDEN; `AVAILABLE` / «гейт закрыт» по SILVER |
 
 ## Шаг 2 — проводка READY → VERIFYING → COMPLETED
 

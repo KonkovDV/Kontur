@@ -140,6 +140,20 @@ def _window(tokens: Sequence[PageToken], anchor_end: int) -> list[PageToken]:
     return same_row or rest
 
 
+def parse_number_from_text(text: str, rule: dict[str, object]) -> float | None:
+    """Первое число из произвольной строки тем же regex/normalization, что extract."""
+
+    if not text.strip():
+        return None
+    matches = list(_regex(rule).finditer(text))
+    if not matches:
+        return None
+    try:
+        return parse_number(_captured_number(matches[0]), _steps(rule))
+    except ValueError:
+        return None
+
+
 def extract_number(tokens: Sequence[PageToken], rule: dict[str, object]) -> NumberHit | None:
     """Найти число после якоря. Нет якоря или нет числа — None, не догадка."""
 

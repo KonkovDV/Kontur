@@ -34,6 +34,7 @@
 | #51 | k6: 100 VU / 60 с, p(95)<200 на теге `status`; контракт в `backend/tests`; без FormData |
 | #52 | JSONL frozen val с `object_id`; skip без env; `tests/gate_j` не брали |
 | OCR raster | `ocr_tesseract.py`: пустой растр → Tesseract fail-closed; `ocr_text` остаётся UNAVAILABLE |
+| OCR region-crop | `ocr_region_crop` в `evaluate_rule`; harness `ocr_pilot.py` без Речникова; гейт I открыт |
 
 ## Что не брали
 

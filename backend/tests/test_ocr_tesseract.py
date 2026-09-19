@@ -24,6 +24,7 @@ from kontur.domain.statuses import Completeness, FindingStatus
 from kontur.evaluation import metrics
 from kontur.infrastructure import ocr_tesseract
 from kontur.infrastructure.ocr_tesseract import (
+    expand_user_region,
     fill_empty_raster_pages,
     raster_pages_need_ocr,
     tokens_from_tesseract_payload,
@@ -62,7 +63,40 @@ def _raster_page(*, rotate: int = 0, tokens: tuple[PageToken, ...] = ()) -> PdfP
     )
 
 
-def test_tesseract_payload_yields_grounded_ocr_tokens() -> None:
+def test_region_payload_maps_into_crop_user_space() -> None:
+    page = _raster_page()
+    region = (10.0, 80.0, 60.0, 100.0)
+    payload: dict[str, list[object]] = {
+        "text": ["12"],
+        "conf": ["90"],
+        "left": [0],
+        "top": [0],
+        "width": [50],
+        "height": [20],
+    }
+    tokens = tokens_from_tesseract_payload(payload, page, (50, 20), region=region)
+    assert len(tokens) == 1
+    assert tokens[0].text == "12"
+    xs = [point[0] for point in tokens[0].polygon_source]
+    ys = [point[1] for point in tokens[0].polygon_source]
+    assert min(xs) == pytest.approx(10.0)
+    assert max(xs) == pytest.approx(60.0)
+    assert min(ys) == pytest.approx(80.0)
+    assert max(ys) == pytest.approx(100.0)
+
+
+def test_expand_user_region_stays_inside_crop() -> None:
+    frame = PageFrame(media=(0.0, 0.0, 100.0, 100.0), crop=(0.0, 0.0, 100.0, 100.0), rotate=0)
+    polygon = ((0.0, 0.0), (5.0, 0.0), (5.0, 5.0), (0.0, 5.0))
+    region = expand_user_region(polygon, frame)
+    assert region is not None
+    left, bottom, right, top = region
+    assert left >= 0.0
+    assert bottom >= 0.0
+    assert right <= 100.0
+    assert top <= 100.0
+    assert right > left
+    assert top > bottom
     page = _raster_page()
     payload: dict[str, list[object]] = {
         "text": ["H", "12.5"],
