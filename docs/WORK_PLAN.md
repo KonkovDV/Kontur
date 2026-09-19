@@ -90,13 +90,19 @@ JSONL с `object_id`. `closes_gate_j` всегда false.
 
 ## Шаг 5 — гейт L
 
+Срез на `main`: workflow `gate-l-live-k6` поднимает Uvicorn, k6 делает
+`POST /upload` scoped-токеном, затем 100 VU × 60 с на tagged `GET /status`.
+Артефакт: SHA, стенд GHA, n, p50/p95/p99 в `docs/PERFORMANCE.md`.
+`GAP-K6-P95` закрыт этим замером. Production SLA не обещается.
+`closes_gate_l` в dump остаётся false: GHA ≠ конкурсный стенд.
+
 | | |
 |---|---|
 | requirement | k6 100 VU / 60 с на живом API после пайплайна |
 | artifact | строка в `PERFORMANCE.md`: стенд, SHA, n, p50/p95/p99 |
-| test | контракт скрипта уже в `backend/tests` |
-| metric | p95 ≤ 200 мс на теге `status` |
-| stop | дешёвый прогон на пустом `PARSING` как «гейт закрыт» |
+| test | `test_k6_script_contract.py`, `test_k6_summary.py`, workflow `status-load` |
+| metric | p95 < 200 мс на теге `status`; error rate < 1% |
+| stop | дешёвый прогон на пустом `PARSING` как «гейт закрыт»; GHA p95 как production SLA |
 
 ## Вне critical path (не делать вместо шагов 0–5)
 
