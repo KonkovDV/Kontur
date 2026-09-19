@@ -67,6 +67,7 @@
 | #51 as-is | `FormData` без импорта; `tests/load/test_k6_script_contract.py` не в pytest |
 | #52 as-is | `kontur.evaluation.recall` нет; `tests/gate_j` не собирается; нет `object_id` |
 | #53 as-is | CI `backend` FAILURE (ruff I001/F401); `ocr_text=AVAILABLE` по `shutil.which`; дубль CA/Wilson z=1.645; `wilson(290,300)` как PASS пилота; импорт несуществующего `pdf_fixtures`; полный кадр назван region-crop; domain→infrastructure |
+| #54 as-is | `ocr_tesseract.py` одной строкой (invalid-syntax), CI backend FAILURE; «гейт I закрыт» до замера; tessdata-best нет в образе; `MIN_WORD_CONF` 40→35. Docker-прогон crop×3+oem1+autocontrast+PSM 7→6→8 на SILVER PDF_TEXT_LAYER: mean_ca тот же, tz_low и gate_i_low ниже, чем у текущего `main`. В прод не брали |
 
 Не публиковать F1/P/R и recall критических на frozen val. Поставка
 организатора и 15 публичных gold-проверок **не** закрывают гейт J

@@ -65,6 +65,14 @@ Eligible: `PDF_TEXT_LAYER`, без `OBJ-RECHNIKOV-7-7`. Не GOLD
 `closes_gate_i=false`. `ocr_text` остаётся `UNAVAILABLE`. Таблица кандидатов
 выше — решение бейк-оффа, не этот прогон.
 
+Baseline (`ocr_image_bytes` без апскейла, OEM по умолчанию, PSM 7):
+n=5935, mean_ca≈0.760, tz_low≈0.615, gate_i_low≈0.579.
+
+Повтор в тот же день: Lanczos ×3 + grayscale/autocontrast + `--oem 1` +
+PSM 7→6→8 (первый непустой). Корпус тот же, SILVER `PDF_TEXT_LAYER`, не скан.
+mean_ca≈0.760, tz_low≈0.581, gate_i_low≈0.538. Доля строк над порогом упала;
+в `ocr_tesseract.py` на `main` этот пайплайн не влит. `GAP-CAP-OCR` открыт.
+
 ## Артефакты гейта I
 
 | Файл | Назначение |
