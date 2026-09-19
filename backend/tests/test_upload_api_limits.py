@@ -1,3 +1,4 @@
+# blob SHA: 66f87cd0190c4f2b40d7e05d41f9fe13dc0eca4a
 """HTTP upload intake: real multipart limits, atomicity, and cleanup."""
 
 from __future__ import annotations
@@ -208,6 +209,94 @@ def test_read_failure_second_pass_leaves_existing_process_unchanged(
     assert _record_snapshot(record) == before
     assert pipeline_calls == []
 
+
+
+def test_materialize_failure_on_second_file_does_not_create_process(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = api.materialize_upload
+    calls = 0
+
+    async def fail_second(
+        upload: UploadFile,
+        *,
+        expected_size: int,
+        expected_digest: str,
+        max_file_bytes: int,
+    ) -> bytes:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("materialize failed")
+        return await original(
+            upload,
+            expected_size=expected_size,
+            expected_digest=expected_digest,
+            max_file_bytes=max_file_bytes,
+        )
+
+    monkeypatch.setattr(api, "materialize_upload", fail_second)
+
+    with pytest.raises(OSError, match="materialize failed"):
+        _upload(
+            client,
+            files=[
+                ("files", ("first.pdf", PDF + b"first", "application/pdf")),
+                ("files", ("second.pdf", PDF + b"second", "application/pdf")),
+            ],
+        )
+
+    assert app.state.workspace._items == {}  # noqa: SLF001
+
+
+def test_materialize_failure_on_second_file_does_not_mutate_resumed_process(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    created = _upload(client)
+    assert created.status_code == 202
+    process_id = created.json()["process_id"]
+    workspace = app.state.workspace
+    record = workspace.get(process_id)
+    assert record is not None
+    before = _record_snapshot(record)
+    before_items = dict(workspace._items)  # noqa: SLF001
+
+    original = api.materialize_upload
+    calls = 0
+
+    async def fail_second(
+        upload: UploadFile,
+        *,
+        expected_size: int,
+        expected_digest: str,
+        max_file_bytes: int,
+    ) -> bytes:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("materialize failed")
+        return await original(
+            upload,
+            expected_size=expected_size,
+            expected_digest=expected_digest,
+            max_file_bytes=max_file_bytes,
+        )
+
+    monkeypatch.setattr(api, "materialize_upload", fail_second)
+
+    with pytest.raises(OSError, match="materialize failed"):
+        _upload(
+            client,
+            process_id=process_id,
+            files=[
+                ("files", ("first.pdf", PDF + b"first", "application/pdf")),
+                ("files", ("second.pdf", PDF + b"second", "application/pdf")),
+            ],
+        )
+
+    assert workspace._items == before_items  # noqa: SLF001
+    assert workspace.get(process_id) is record
+    assert _record_snapshot(record) == before
 
 def test_upload_hash_uses_actual_file_bytes(client: TestClient) -> None:
     response = _upload(client)
