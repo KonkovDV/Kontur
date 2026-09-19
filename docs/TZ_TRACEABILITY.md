@@ -22,7 +22,7 @@
 | 9.3 | Верификация, reason_code, атомарность, финализация, отмена | `application/review.py`, `domain/state_machines.py`, `POST /verify` `/complete` `/finalize` `/unfinalize`, триггер `protocols_finalized_is_immutable` | `test_review.py`, `test_state_machines.py`, `test_api.py`, `db/checks.sql` § 1–3 | in_progress (очередь по HTTP; `split()` нет) |
 | 9.3 | Юзабилити: ≤30 мин на протокол, ≤3 клика на находку | `web/`, `docs/USABILITY_PROTOCOL.md` | ручной протокол на 5 инспекторах | skeleton (форма замера есть, сессий нет) |
 | 9.4 | GOLD, версии, разбиение по объектам, пороги публикации модели | `evaluation/release_gate.py`, CHECK `gold_label` и `gold_requires_expert` в `db/schema.sql` | `db/checks.sql` § 4–6, `test_schema_sql.py`, `test_release_gate.py` | in_progress (подпись и полный набор категорий блокируют публикацию) |
-| 9.4 | Реестр поставки, карантин скрытого теста, изоляция по `object_id` | `data/dataset/package_manifest.json`, `gold_inventory.json`, `evaluation/dataset_package.py` | `test_dataset_package.py`, `test_gold_inventory.py`, `test_quarantine.py` | in_progress (публичный gold зафиксирован; frozen val на 132 нет; SHA-256 архивов pending) |
+| 9.4 | Реестр поставки, карантин скрытого теста, изоляция по `object_id` | `data/dataset/package_manifest.json`, `gold_inventory.json`, `evaluation/dataset_package.py` | `test_dataset_package.py`, `test_gold_inventory.py`, `test_quarantine.py` | in_progress (публичный gold и пакет без ответов v2.0 зафиксированы; frozen val на 132 нет; архивы 10–18 на машине отсутствуют; SHA-256 исходных `.tar` pending) |
 | 9.5 | SUSPICION, 4 подхода, дедупликация | `application/suspicion.py` | `test_suspicion.py` | in_progress (сигналы и дедупликация есть; в компаратор и протокол ТЗ не вшиты; сверка с нормой не является подходом) |
 | 9.6 | ИАИС «РиН»: только `PROTOCOL_FINALIZED`, УКЭП, 3 ретрая | `application/retry_policy.py`, ограничение `sync_only_after_finalize` | `test_retry_policy.py`, `db/checks.sql` § 8 | in_progress (УКЭП и sandbox отсутствуют) |
 | 10 | Таблицы БД | `infrastructure/db/schema.sql`, `infrastructure/db/process_store.py` | `test_schema_sql.py`, `test_process_store.py`, job `db` | in_progress (снимок процесса есть; находки/файлы не в DAO; 8 из 16 таблиц сводки ещё нет) |
@@ -35,7 +35,8 @@
 | Прил. 2 | Формат ответа участника (`submission_schema.json`) | `contracts/schemas/submission.schema.json`, `evaluation/submission.py` | `test_submission.py` | in_progress (формат `parameter_code` — вопрос 16) |
 
 Приложения 1 и 2 **найдены в поставке 15.09.2026**
-(`01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА\...\00_ТЗ_И_ПРИЛОЖЕНИЯ`). Каталог импортирован
+(`01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА\...\00_ТЗ_И_ПРИЛОЖЕНИЯ`) и байт-в-байт
+повторены 19.09.2026 в `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`. Каталог импортирован
 в `data/matrix/source/`, 132 правила собраны скриптом `scripts/compile_matrix.py`
 со статусом `extractor_missing` — это schema-valid скелет, не исполняемые
 проверки. Файла-подтверждения отправки организатору в репозитории нет.

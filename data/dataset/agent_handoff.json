@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "generated_on": "2026-09-19",
-  "export_git_sha": "9185004258fb032bbdb3ab1eb0b255f86e5b3a7f",
+  "generated_on": "2026-09-20",
+  "export_git_sha": "8a8c832310430cfc4e562826c28bf66d1c328077",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -63,6 +63,8 @@
     "Publish P/R/F1/CA as TZ without frozen val n and 95% CI",
     "Publish GHA k6 p95 as production SLA",
     "Treat static JWT public key as production OIDC/JWKS",
+    "Open ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip or TEST_HIDDEN answers for thresholds",
+    "Treat participant package without answers v2.0 as frozen val",
     "Write CONFIRMED_VIOLATION from the automaton or LLM",
     "Guess non-gold RD_ID_MIXED as RD+ID",
     "Treat GOST Согласовано/ГИП header as approved etalon",
@@ -88,6 +90,8 @@
     "gate_l_runbook": "docs/GATE_L_RUNBOOK.md",
     "pr_queue": "docs/PR_QUEUE.md",
     "organizer_gold": "docs/ORGANIZER_GOLD.md",
+    "dataset_package": "docs/DATASET_PACKAGE.md",
+    "questions_to_organizer": "docs/QUESTIONS_TO_ORGANIZER.md",
     "train_public_module": "backend/src/kontur/evaluation/train_public.py",
     "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py"
   },

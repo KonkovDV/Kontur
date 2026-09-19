@@ -29,10 +29,17 @@ F0201: заполненная графа «Утвердил» + ФИО → `APPR
 HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/ROLE` только при
 `KONTUR_ALLOW_INSECURE_DEV_AUTH`. Статический публичный ключ ≠ OIDC/JWKS.
 
+Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
+(checksums 18/18, те же ТЗ и 10 публичных позитивов). Нет frozen val, GOLD OCR,
+объектов 10–18, SHA исходных `.tar`, утверждённого ПД для F0171. Закрытый zip
+организатора и `РАЗМЕЧЕННЫЙ_TEST__213` не открывать.
+
 ## Что нельзя
 
 - Вливать `feat/ocr-gate-i-crop3x-oem1` и `feat/ocr-300dpi-step2-verifying` (усечённый `ocr_tesseract.py`).
 - Открывать TEST_HIDDEN / `РАЗМЕЧЕННЫЙ_TEST__213` / Речников для порогов.
+- Распаковывать `ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip` для порогов, prompt и regex.
+- Считать пакет без ответов v2.0 frozen val или закрытием гейта J.
 - Закрывать `GAP-IOS4-VAL` по 15 строкам gold или SILVER CA.
 - Ставить `ocr_text=AVAILABLE` без GOLD Wilson.
 - Угадывать не-gold `RD_ID_MIXED` как RD+ID. Overlay `annotated_documents` не источник скоринга.

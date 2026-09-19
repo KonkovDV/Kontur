@@ -60,6 +60,7 @@ def test_handoff_refuses_to_close_gates() -> None:
     assert "TEST_HIDDEN" in do_not
     assert "CONFIRMED_VIOLATION" in do_not
     assert "OIDC/JWKS" in do_not
+    assert "ЗАКРЫТЫЙ" in do_not or "frozen val" in do_not
     echo = payload["verdict_echo"]
     assert isinstance(echo, dict)
     assert echo["closes_gate_j"] is False

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "observed_at": "2026-09-18",
+  "observed_at": "2026-09-20",
   "package_version": "lct2026-task10-20260915",
   "purpose": "Машиночитаемый снимок открытого gold организатора. Не корпус frozen validation. Не содержимое TEST_HIDDEN.",
   "human_doc": "docs/ORGANIZER_GOLD.md",
@@ -11,6 +11,7 @@
     "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../data/annotations.jsonl",
     "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/.../data/split_policy.json",
     "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/.../data/public_train_checks.jsonl",
+    "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/.../ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0/",
     "data/dataset/package_manifest.json"
   ],
   "hidden_test_contents_inspected": false,
@@ -47,10 +48,38 @@
       "РАЗМЕЧЕННЫЙ_TEST__213"
     ],
     "object_archives_10_18_present": false,
+    "participant_package_without_answers_v2_present": true,
+    "closed_organizer_answers_zip_present": true,
     "data_incoming_empty": true,
     "data_work_empty": true,
     "hidden_test_unpacked_beside_train": true,
-    "action_on_unpacked_hidden_test": "Считать карантином. Перенести в data/quarantine/. Не открывать annotated_documents скрытого теста. Не использовать для порогов."
+    "action_on_unpacked_hidden_test": "Считать карантином. Перенести в data/quarantine/. Не открывать annotated_documents скрытого теста. Не использовать для порогов.",
+    "action_on_closed_organizer_zip": "Не распаковывать ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip для порогов, prompt и regex."
+  },
+  "participant_package_without_answers_v2": {
+    "observed_at": "2026-09-19",
+    "relative_path": "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/ХАКАТОН_УЧАСТНИКАМ_ГОТОВО_К_ПЕРЕДАЧЕ/ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0/",
+    "sha256sums_verified": 18,
+    "tz_appendices_byte_identical_to_00_TZ": true,
+    "data_byte_identical_to_02_FORMAT": true,
+    "public_train_checks_n": 10,
+    "omits_no_violation_TRAIN_0011_0015": true,
+    "positive_evidence_file_ids": ["F0171", "F0201", "F0202"],
+    "ground_truth_index_file_id": "F0194",
+    "closes_gate_j": false,
+    "note": "Участнический пакет без ответов скрытого теста. 10 публичных позитивов совпадают с TRAIN-0001…0010 из public_gold_checks.jsonl. Пять NO_VIOLATION Новослободской остаются только в размеченном TRAIN_PUBLIC zip и score_eligible=false."
+  },
+  "missing_from_files_for_tz_acceptance": {
+    "frozen_val_held_out_object_id": true,
+    "gold_ocr_approved_for_training": true,
+    "approved_pd_revision_for_tyumen_f0171": true,
+    "object_archives_10_18": true,
+    "delivery_archive_sha256": true,
+    "rin_sandbox_contract": true,
+    "written_organizer_answers_3_19": true,
+    "closes_gate_i": false,
+    "closes_gate_j": false,
+    "note": "Код по ТЗ можно продолжать на текущих PDF и матрице. Пороги I/J этой поставкой не закрываются. Объекты 10–18 без публичного gold не заменяют frozen val."
   },
   "train_public_annotations": {
     "expected_files": 203,
@@ -124,13 +153,15 @@
     "J": "Не закрывается этим gold. Harness: backend/tests/test_frozen_val.py. Публикация P/R/F1 запрещена.",
     "I": "Пилот 300 стр. есть. Docker-замер SILVER (make ocr-pilot): Wilson ниже порога приёмки; не GOLD; Речников не брали; capabilities OCR = UNAVAILABLE; гейт I открыт.",
     "K": "PDF Тюменской и Новослободской — материал для 5 инспекторов. Сессий нет.",
-    "L": "Документы поставки p95 не измеряют. Нужен живой k6 на стенде."
+    "L": "GHA live k6 измерен (docs/PERFORMANCE.md); не production SLA. Документы поставки p95 не меняют."
   },
   "forbidden": [
     "Считать AUTO_FIELD_CANDIDATE / MATRIX_FIELD золотой разметкой сверки",
     "Открывать РАЗМЕЧЕННЫЙ_TEST__213 и annotated_documents скрытого теста",
+    "Распаковывать ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip для порогов, prompt и regex",
     "Подбирать пороги, prompt, regex по OBJ-RECHNIKOV-7-7",
-    "Закрывать GAP-IOS4-VAL или гейт J публикацией F1/P/R по 15 строкам",
-    "Назначать внутренний validation тем же object_id, что train, без изоляции"
+    "Закрывать GAP-IOS4-VAL или гейт J публикацией F1/P/R по 15 строкам или по пакету без ответов v2.0",
+    "Назначать внутренний validation тем же object_id, что train, без изоляции",
+    "Считать 10 public_train_checks пакета без ответов заменой 15 public_gold_checks"
   ]
 }

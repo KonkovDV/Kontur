@@ -154,3 +154,29 @@ def test_loader_rejects_claim_that_hidden_test_was_read(tmp_path: Path) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(ValueError, match="TEST_HIDDEN"):
         load_gold_inventory(path)
+
+
+def test_v2_without_answers_is_not_frozen_val() -> None:
+    payload = load_gold_inventory()
+    pack = payload["participant_package_without_answers_v2"]
+    assert isinstance(pack, Mapping)
+    assert pack["closes_gate_j"] is False
+    assert pack["public_train_checks_n"] == 10
+    assert pack["omits_no_violation_TRAIN_0011_0015"] is True
+    assert pack["sha256sums_verified"] == 18
+    files = pack["positive_evidence_file_ids"]
+    assert isinstance(files, list)
+    assert files == ["F0171", "F0201", "F0202"]
+    missing = payload["missing_from_files_for_tz_acceptance"]
+    assert isinstance(missing, Mapping)
+    assert missing["frozen_val_held_out_object_id"] is True
+    assert missing["gold_ocr_approved_for_training"] is True
+    assert missing["object_archives_10_18"] is True
+    assert missing["closes_gate_j"] is False
+    workspace = payload["workspace_observation"]
+    assert isinstance(workspace, Mapping)
+    assert workspace["participant_package_without_answers_v2_present"] is True
+    assert workspace["object_archives_10_18_present"] is False
+    blob = " ".join(str(item) for item in payload["forbidden"])
+    assert "ЗАКРЫТЫЙ" in blob
+    assert "v2.0" in blob
