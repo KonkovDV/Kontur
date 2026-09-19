@@ -1,0 +1,93 @@
+name: gate-l-live-k6
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/gate-l.yml"
+      - "tests/load/**"
+      - "scripts/render_k6_summary.py"
+      - "backend/src/kontur/presentation/**"
+      - "backend/src/kontur/application/runtime.py"
+      - "backend/tests/test_k6_*.py"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/gate-l.yml"
+      - "tests/load/**"
+      - "scripts/render_k6_summary.py"
+      - "backend/src/kontur/presentation/**"
+      - "backend/src/kontur/application/runtime.py"
+
+permissions:
+  contents: read
+
+jobs:
+  status-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e "backend[dev]"
+      - name: Start live API
+        run: |
+          python -m uvicorn kontur.presentation.api:app \
+            --host 0.0.0.0 --port 8000 > /tmp/kontur-api.log 2>&1 &
+          echo $! > /tmp/kontur-api.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/api/v1/healthz; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/kontur-api.log
+          exit 1
+      - name: Run 100 VU for 60 seconds
+        env:
+          KONTUR_LOAD_STAND: github-actions-ubuntu-latest-2core
+        run: |
+          mkdir -p out
+          set +e
+          docker run --rm --network host \
+            -v "$PWD:/work" -w /work \
+            -e KONTUR_BASE_URL=http://127.0.0.1:8000 \
+            grafana/k6:0.54.0 run \
+            --summary-export=/work/out/k6-summary.json \
+            /work/tests/load/k6_status.js
+          k6_exit=$?
+          set -e
+          report_exit=0
+          if test -f out/k6-summary.json; then
+            GITHUB_SHA="$GITHUB_SHA" KONTUR_LOAD_STAND="$KONTUR_LOAD_STAND" \
+              python scripts/render_k6_summary.py out/k6-summary.json \
+              --json-out out/gate-l-report.json \
+              --markdown-out out/gate-l-report.md || report_exit=$?
+            if test -f out/gate-l-report.md; then
+              cat out/gate-l-report.md >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            report_exit=1
+          fi
+          if test "$k6_exit" -ne 0 || test "$report_exit" -ne 0; then
+            exit 1
+          fi
+      - name: Collect API log
+        if: always()
+        run: cp /tmp/kontur-api.log out/api.log || true
+      - name: Upload Gate L evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-l-${{ github.sha }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Stop API
+        if: always()
+        run: |
+          if test -f /tmp/kontur-api.pid; then
+            kill "$(cat /tmp/kontur-api.pid)" || true
+          fi

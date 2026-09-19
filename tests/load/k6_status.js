@@ -1,15 +1,19 @@
-// Нагрузочный harness GET /status. CI k6 не запускает и p95 не публикует.
-// Цель ТЗ: 100 VU, 60 с, p(95)<200 мс на синхронном /status.
-// Порог в скрипте — контракт прогона; без сервера это не замер.
+// Gate L: live GET /status load after a real upload/pipeline setup.
+// 100 concurrent inspectors poll once per second for 60 seconds.
 import http from 'k6/http';
-import { check } from 'k6';
+import { check, sleep } from 'k6';
+import { Counter } from 'k6/metrics';
+
+const statusRequests = new Counter('kontur_status_requests');
 
 export const options = {
   vus: 100,
   duration: '60s',
+  summaryTrendStats: ['avg', 'min', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
   thresholds: {
     'http_req_duration{name:status}': ['p(95)<200'],
     'http_req_failed{name:status}': ['rate<0.01'],
+    kontur_status_requests: ['count>0'],
   },
 };
 
@@ -26,7 +30,7 @@ export function setup() {
       doc_stage: 'PD',
       files: http.file(PDF, 'pz.pdf', 'application/pdf'),
     },
-    { headers: HEADERS },
+    { headers: HEADERS, tags: { name: 'setup-upload' } },
   );
   check(response, { 'upload 202': (res) => res.status === 202 });
   if (response.status !== 202) {
@@ -40,5 +44,7 @@ export default function (data) {
     headers: HEADERS,
     tags: { name: 'status' },
   });
+  statusRequests.add(1);
   check(response, { 'status 200': (res) => res.status === 200 });
+  sleep(1);
 }

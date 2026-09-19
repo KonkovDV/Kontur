@@ -1,7 +1,4 @@
-"""Контракт k6-скрипта. CI k6 не запускает: нет сервера и нет бинарника.
-
-Проверяем текст harness, не p95. Порог в скрипте — цель прогона, не факт.
-"""
+"""Контракт live k6 Gate L: форма нагрузки, scope и измеримые артефакты."""
 
 from __future__ import annotations
 
@@ -22,9 +19,18 @@ def test_k6_script_declares_tz_load_shape() -> None:
     assert re.search(r"duration\s*:\s*['\"]60s['\"]", src)
     assert "p(95)<200" in src
     assert "http_req_duration{name:status}" in src
-    assert "http_req_failed" in src
+    assert "http_req_failed{name:status}" in src
     assert "rate<0.01" in src
-    assert "/status" in src
-    assert "FormData" not in src
     assert "tags: { name: 'status' }" in src
     assert "insp-7@obj-load/INSPECTOR" in src
+
+
+def test_k6_script_records_reproducible_status_only_metrics() -> None:
+    src = _src()
+    assert "summaryTrendStats" in src
+    assert "'p(99)'" in src
+    assert "kontur_status_requests" in src
+    assert "statusRequests.add(1)" in src
+    assert "sleep(1)" in src
+    assert "name: 'setup-upload'" in src
+    assert "FormData" not in src
