@@ -1,14 +1,20 @@
-// Нагрузочный harness GET /status. CI k6 не запускает и p95 не публикует.
-// Обязателен реально выданный JWT через KONTUR_BEARER_TOKEN; plaintext credential запрещён.
+// Gate L: live GET /status load after a real upload/pipeline setup.
+// 100 concurrent inspectors poll once per second for 60 seconds.
+// A runner-issued JWT is required; plaintext or legacy credentials are forbidden.
 import http from 'k6/http';
-import { check } from 'k6';
+import { check, sleep } from 'k6';
+import { Counter } from 'k6/metrics';
+
+const statusRequests = new Counter('kontur_status_requests');
 
 export const options = {
   vus: 100,
   duration: '60s',
+  summaryTrendStats: ['avg', 'min', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
   thresholds: {
     'http_req_duration{name:status}': ['p(95)<200'],
     'http_req_failed{name:status}': ['rate<0.01'],
+    kontur_status_requests: ['count>0'],
   },
 };
 
@@ -28,19 +34,26 @@ export function setup() {
       doc_stage: 'PD',
       files: http.file(PDF, 'pz.pdf', 'application/pdf'),
     },
-    { headers: HEADERS },
+    { headers: HEADERS, tags: { name: 'setup-upload' } },
   );
   check(response, { 'upload 202': (res) => res.status === 202 });
   if (response.status !== 202) {
-    throw new Error(`setup: status=${response.status} body=${response.body}`);
+    throw new Error(`setup upload failed: ${response.status}`);
   }
-  return { process_id: response.json('process_id') };
+  return { processId: response.json('process_id') };
 }
 
 export default function (data) {
-  const response = http.get(`${BASE}/api/v1/processes/${data.process_id}/status`, {
+  const response = http.get(`${BASE}/api/v1/processes/${data.processId}/status`, {
     headers: HEADERS,
     tags: { name: 'status' },
   });
+  statusRequests.add(1);
   check(response, { 'status 200': (res) => res.status === 200 });
+  sleep(1);
+}
+
+export function handleSummary(data) {
+  const path = __ENV.KONTUR_SUMMARY_PATH || '/work/out/k6-summary.json';
+  return { [path]: `${JSON.stringify(data)}\n` };
 }
