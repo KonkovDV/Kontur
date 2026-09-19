@@ -54,7 +54,9 @@ def _legacy_context(token: str) -> AuthContext:
     return AuthContext(subject=subject, roles=roles, object_id=object_id)
 
 
-def _verification_key(public_key_pem: str, algorithm: str) -> object:
+def _verification_key(
+    public_key_pem: str, algorithm: str
+) -> rsa.RSAPublicKey | ec.EllipticCurvePublicKey:
     try:
         key = serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
     except (TypeError, ValueError) as exc:
