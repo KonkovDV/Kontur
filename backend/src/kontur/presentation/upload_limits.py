@@ -1,5 +1,4 @@
 """Actual-byte limits for the authoritative Python upload boundary."""
-
 from __future__ import annotations
 
 import asyncio
@@ -27,16 +26,15 @@ _TOO_LARGE = json.dumps({"detail": "request too large"}, separators=(",", ":")).
 _TOO_MANY = json.dumps({"detail": "too many requests"}, separators=(",", ":")).encode()
 _UNAUTHORIZED = json.dumps({"detail": "unauthorized"}, separators=(",", ":")).encode()
 _FORBIDDEN = json.dumps({"detail": "forbidden"}, separators=(",", ":")).encode()
+_VERIFIED_BODY_ATTR = "_kontur_verified_body"
 
 
 class UploadLimitExceeded(Exception):
-    """A request or file crossed its actual-byte limit or changed between reads."""
+    """An upload crossed a byte limit or changed while being verified."""
 
 
 @dataclass(frozen=True, slots=True)
 class UploadPayload:
-    """Bounded upload metadata calculated without retaining the body."""
-
     size: int
     header: bytes
     digest: str
@@ -44,8 +42,6 @@ class UploadPayload:
 
 @dataclass(slots=True)
 class _StagedUpload:
-    """Own one local spool until ownership moves to the UploadFile."""
-
     spool: BinaryIO | None
 
     def close(self) -> None:
@@ -83,7 +79,7 @@ async def _read_metadata(
             header.extend(chunk[: 16 - len(header)])
         if spool is not None:
             spool.write(chunk)
-    return UploadPayload(size=size, header=bytes(header), digest=digest.hexdigest())
+    return UploadPayload(size, bytes(header), digest.hexdigest())
 
 
 async def read_upload_payload(
@@ -91,19 +87,11 @@ async def read_upload_payload(
     max_file_bytes: int = MAX_FILE_BYTES,
     chunk_size: int = READ_CHUNK_BYTES,
 ) -> UploadPayload:
-    """Verify two bounded reads and replace the source with a local spool.
-
-    The first pass records metadata only. The second pass copies into a
-    ``SpooledTemporaryFile`` while independently recomputing all metadata.
-    Only a verified spool is installed on the UploadFile, so the endpoint's
-    existing outer UploadFile cleanup owns and closes every staged body.
-    """
-
+    """Bound, verify, spool and materialize an upload before workspace mutation."""
     if max_file_bytes < 0:
         raise ValueError("max_file_bytes must be non-negative")
     if not 0 < chunk_size <= READ_CHUNK_BYTES:
         raise ValueError(f"chunk_size must be between 1 and {READ_CHUNK_BYTES}")
-
     expected = await _read_metadata(
         upload, max_file_bytes=max_file_bytes, chunk_size=chunk_size
     )
@@ -125,12 +113,18 @@ async def read_upload_payload(
         if actual != expected:
             raise UploadLimitExceeded
         staged.file().seek(0)
+        body = staged.file().read(expected.size + 1)
+        if len(body) != expected.size or hashlib.sha256(body).hexdigest() != expected.digest:
+            raise UploadLimitExceeded
+        setattr(upload, _VERIFIED_BODY_ATTR, body)
+        staged.file().seek(0)
         if original is None:
             staged.close()
         else:
             original.close()
             upload.file = staged.release()
     except BaseException:
+        setattr(upload, _VERIFIED_BODY_ATTR, None)
         staged.close()
         raise
     return expected
@@ -144,39 +138,31 @@ async def materialize_upload(
     max_file_bytes: int = MAX_FILE_BYTES,
     chunk_size: int = READ_CHUNK_BYTES,
 ) -> bytes:
-    """Materialize one verified spool for the current keep_blob API."""
-
+    """Return immutable bytes materialized during bounded staging."""
     if expected_size < 0:
         raise ValueError("expected_size must be non-negative")
     if max_file_bytes < 0:
         raise ValueError("max_file_bytes must be non-negative")
     if not 0 < chunk_size <= READ_CHUNK_BYTES:
         raise ValueError(f"chunk_size must be between 1 and {READ_CHUNK_BYTES}")
-    if expected_size > max_file_bytes:
+    body = getattr(upload, _VERIFIED_BODY_ATTR, None)
+    if (
+        expected_size > max_file_bytes
+        or not isinstance(body, bytes)
+        or len(body) != expected_size
+        or hashlib.sha256(body).hexdigest() != expected_digest
+    ):
         raise UploadLimitExceeded
-    await upload.seek(0)
-    body = bytearray()
-    digest = hashlib.sha256()
-    size = 0
-    while chunk := await upload.read(chunk_size):
-        size += len(chunk)
-        if size > max_file_bytes or size > expected_size:
-            body.clear()
-            raise UploadLimitExceeded
-        body.extend(chunk)
-        digest.update(chunk)
-    if size != expected_size or digest.hexdigest() != expected_digest:
-        body.clear()
-        raise UploadLimitExceeded
-    return bytes(body)
+    setattr(upload, _VERIFIED_BODY_ATTR, None)
+    return body
 
 
 def _configured_upload_slots() -> int:
-    raw_value = os.getenv("KONTUR_MAX_CONCURRENT_UPLOADS")
-    if raw_value is None:
+    raw = os.getenv("KONTUR_MAX_CONCURRENT_UPLOADS")
+    if raw is None:
         return _DEFAULT_MAX_CONCURRENT_UPLOADS
     try:
-        value = int(raw_value)
+        value = int(raw)
     except ValueError:
         return _DEFAULT_MAX_CONCURRENT_UPLOADS
     return value if value > 0 else _DEFAULT_MAX_CONCURRENT_UPLOADS
@@ -190,7 +176,7 @@ def _authorization_header(scope: Scope) -> str | None:
 
 
 class ActualUploadLimitMiddleware:
-    """Authenticate, bound, and admission-control the upload request stream."""
+    """Authenticate, bound and admission-control the upload request stream."""
 
     def __init__(
         self,
@@ -198,11 +184,7 @@ class ActualUploadLimitMiddleware:
         max_batch_bytes: int = MAX_UPLOAD_REQUEST_BYTES,
         max_concurrent_uploads: int | None = None,
     ) -> None:
-        slots = (
-            _configured_upload_slots()
-            if max_concurrent_uploads is None
-            else max_concurrent_uploads
-        )
+        slots = _configured_upload_slots() if max_concurrent_uploads is None else max_concurrent_uploads
         if max_batch_bytes < 0:
             raise ValueError("max_batch_bytes must be non-negative")
         if slots <= 0:
