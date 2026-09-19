@@ -229,14 +229,7 @@ async def upload_documents(
                 content=_rejection_body(worst),
             )
 
-        if record is None:
-            completeness = _empty_completeness()
-            completeness[doc_stage] = Completeness.UPLOADED
-            record = workspace.create(normalized_object_id, completeness)
-        else:
-            workspace.reopen_for_upload(record)
-
-        accepted: list[dict[str, str]] = []
+        verified_files: list[tuple[AcceptedFile, bytes]] = []
         for item in decision.accepted:
             digest = item.content_hash
             if digest is None:
@@ -252,14 +245,29 @@ async def upload_documents(
                 expected_digest=digest,
                 max_file_bytes=MAX_FILE_BYTES,
             )
-            try:
-                stored = AcceptedFile(
-                    file_id=str(uuid4()),
-                    file_hash=digest,
-                    filename=item.filename,
-                    doc_stage=doc_stage,
-                    size_bytes=item.size_bytes,
+            verified_files.append(
+                (
+                    AcceptedFile(
+                        file_id=str(uuid4()),
+                        file_hash=digest,
+                        filename=item.filename,
+                        doc_stage=doc_stage,
+                        size_bytes=item.size_bytes,
+                    ),
+                    body,
                 )
+            )
+
+        if record is None:
+            completeness = _empty_completeness()
+            completeness[doc_stage] = Completeness.UPLOADED
+            record = workspace.create(normalized_object_id, completeness)
+        else:
+            workspace.reopen_for_upload(record)
+
+        accepted: list[dict[str, str]] = []
+        for stored, body in verified_files:
+            try:
                 if workspace.attach_file(record, stored):
                     workspace.keep_blob(record, stored.file_id, body)
                     accepted.append(
