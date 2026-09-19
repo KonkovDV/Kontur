@@ -1,31 +1,51 @@
-"""Разбор Bearer-токена. Пока нет OIDC, токен — это субъект и роли, не JWT.
+"""Разбор временного Bearer-токена до подключения OIDC.
 
-Формат: `Bearer <actor_id>/<ROLE>[,<ROLE>]`. Пример: `insp-7/INSPECTOR`.
-Короткая форма `Bearer INSPECTOR` — субъект совпадает с ролью (для тестов).
-Пустой заголовок — 401. Неизвестные имена ролей не повышают права.
+Формат для объектных операций: ``Bearer <actor_id>@<object_id>/<ROLE>[,<ROLE>]``.
+Пример: ``Bearer insp-7@OBJ-001/INSPECTOR``. Токен без ``@object_id`` допустим
+только для необъектных операций (например, capabilities); объектный API
+проверяет scope отдельно и закрывается по умолчанию.
 """
 
 from __future__ import annotations
+
+from dataclasses import dataclass
 
 from kontur.domain.state_machines import Actor
 from kontur.presentation.rbac import AuthenticationRequiredError, Role
 
 
-def parse_bearer(authorization: str | None) -> tuple[str, tuple[str, ...]]:
+@dataclass(frozen=True, slots=True)
+class AuthContext:
+    subject: str
+    roles: tuple[str, ...]
+    object_id: str | None
+
+
+def parse_bearer(authorization: str | None) -> AuthContext:
     if authorization is None or not authorization.lower().startswith("bearer "):
         raise AuthenticationRequiredError("нет заголовка Authorization")
     payload = authorization[7:].strip()
     if not payload:
         raise AuthenticationRequiredError("пустой Bearer-токен")
     if "/" in payload:
-        subject, _, roles_part = payload.partition("/")
+        principal, _, roles_part = payload.partition("/")
     else:
-        subject, roles_part = payload, payload
-    subject = subject.strip()
+        principal, roles_part = payload, payload
+    principal = principal.strip()
     roles = tuple(part.strip() for part in roles_part.split(",") if part.strip())
-    if not subject or not roles:
+    if not principal or not roles:
         raise AuthenticationRequiredError("токен без субъекта или роли")
-    return subject, roles
+
+    if "@" in principal:
+        subject, _, object_id = principal.rpartition("@")
+        subject = subject.strip()
+        object_id = object_id.strip()
+        if not subject or not object_id:
+            raise AuthenticationRequiredError("токен с пустым субъектом или object scope")
+    else:
+        subject = principal
+        object_id = None
+    return AuthContext(subject=subject, roles=roles, object_id=object_id)
 
 
 def actor_from_roles(subject: str, roles: frozenset[Role]) -> Actor:
