@@ -1,8 +1,8 @@
 """Матрица возможностей. Сбой advisory-слоя не валит комплект (донор AeroBIM).
 
-OCR и разбор чертежа влияют на возможность автоматического вердикта.
-LLM/VLM — sidecar: их отсутствие не превращает сверку в отказ комплекта.
-Тишина не считается успехом: отсутствующий слой объявляется явно.
+Gate I (24.09): ocr_text = AVAILABLE если Tesseract-5 установлен,
+иначе UNAVAILABLE (штатное поведение до Gate I).
+ОСТАЛЬНОЕ БЕЗ ИЗМЕНЕНИЙ.
 """
 
 from __future__ import annotations
@@ -96,18 +96,28 @@ def engine_health_summary(capabilities: tuple[Capability, ...]) -> dict[str, lis
     }
 
 
+def _ocr_text_status() -> CapStatus:
+    """Gate I: AVAILABLE если Tesseract-5 установлен, иначе UNAVAILABLE."""
+    try:
+        from kontur.infrastructure.ocr_verifier import tesseract_available  # noqa: PLC0415
+        return CapStatus.AVAILABLE if tesseract_available() else CapStatus.UNAVAILABLE
+    except ImportError:
+        return CapStatus.UNAVAILABLE
+
+
 def live_kit() -> tuple[Capability, ...]:
     """Слои, которые сейчас реально стоят на пути извлечения значения."""
-
-    return (describe("vector_text", CapStatus.AVAILABLE),)
+    caps: list[Capability] = [describe("vector_text", CapStatus.AVAILABLE)]
+    if _ocr_text_status() is CapStatus.AVAILABLE:
+        caps.append(describe("ocr_text", CapStatus.AVAILABLE))
+    return tuple(caps)
 
 
 def declared_capabilities() -> tuple[Capability, ...]:
-    """Честный снимок: вектор жив; OCR, чертёж и LLM в запросе не стоят."""
-
+    """Честный снимок: вектор жив; OCR — по наличию Tesseract; остальное не стоит."""
     return (
         describe("vector_text", CapStatus.AVAILABLE),
-        describe("ocr_text", CapStatus.UNAVAILABLE),
+        describe("ocr_text", _ocr_text_status()),
         describe("ocr_tables", CapStatus.UNAVAILABLE),
         describe("drawing_analysis", CapStatus.UNAVAILABLE),
         describe("llm_advisory", CapStatus.UNAVAILABLE),
@@ -130,7 +140,8 @@ def capabilities_payload() -> dict[str, object]:
         ],
         "health": engine_health_summary(declared),
         "note": (
-            "overall считается по живому пути (векторный текст). "
+            "overall считается по живому пути. "
+            "ocr_text=AVAILABLE при наличии Tesseract-5 (Gate I). "
             "UNAVAILABLE у OCR/чертежа — явный пробел, не тихий успех."
         ),
     }
