@@ -8,9 +8,11 @@ import pytest
 
 from kontur.application.review import (
     can_finalize,
+    complete_verification,
     finalize_process,
     review,
     split,
+    start_verification,
     unfinalize_process,
 )
 from kontur.domain.models import Finding
@@ -118,6 +120,53 @@ def test_missing_evidence_does_not_block_finalize() -> None:
     ok, pending = can_finalize([stalled])
     assert ok
     assert pending == []
+
+
+def test_start_verification_requires_human() -> None:
+    audit = MemoryAudit()
+    with pytest.raises(TransitionError, match="human"):
+        start_verification(
+            ProcessState.READY,
+            actor=Actor("worker", is_human=False),
+            audit=audit,
+        )
+    target = start_verification(ProcessState.READY, actor=INSPECTOR, audit=audit)
+    assert target is ProcessState.VERIFYING
+    assert audit.records[0][1] == "START_VERIFICATION"
+
+
+def test_complete_verification_blocked_by_candidate() -> None:
+    audit = MemoryAudit()
+    with pytest.raises(TransitionError, match="unprocessed"):
+        complete_verification(
+            ProcessState.VERIFYING,
+            actor=INSPECTOR,
+            findings=[candidate("f-1")],
+            audit=audit,
+        )
+
+
+def test_complete_verification_does_not_finalize() -> None:
+    audit = MemoryAudit()
+    target = complete_verification(
+        ProcessState.VERIFYING,
+        actor=INSPECTOR,
+        findings=[],
+        audit=audit,
+    )
+    assert target is ProcessState.COMPLETED
+    assert audit.records[0][1] == "COMPLETE_VERIFICATION"
+
+
+def test_finalize_from_ready_is_refused() -> None:
+    audit = MemoryAudit()
+    with pytest.raises(TransitionError, match="READY"):
+        finalize_process(
+            ProcessState.READY,
+            actor=INSPECTOR,
+            findings=[],
+            audit=audit,
+        )
 
 
 def test_finalize_process_requires_human_and_audit() -> None:

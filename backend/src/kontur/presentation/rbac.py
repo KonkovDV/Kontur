@@ -47,6 +47,8 @@ REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "getProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getAuditLog": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "reviewFinding": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
+    "startVerification": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
+    "completeVerification": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "finalizeProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "unfinalizeProtocol": frozenset({Role.SUPERVISOR}),
     "syncInspection": frozenset({Role.SUPERVISOR, Role.ADMIN}),

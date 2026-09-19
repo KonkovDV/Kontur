@@ -77,6 +77,26 @@ class Actor:
     is_supervisor: bool = False
 
 
+def enter_verifying(current: ProcessState, actor: Actor) -> ProcessState:
+    """Единственный легальный вход в VERIFYING. Без человека не вызывается."""
+
+    if not actor.is_human:
+        raise TransitionError("start verification requires a human inspector")
+    if current is not ProcessState.READY:
+        raise TransitionError(f"process: {current} -> VERIFYING")
+    return ProcessState.VERIFYING
+
+
+def enter_completed(current: ProcessState, actor: Actor) -> ProcessState:
+    """Единственный легальный вход в COMPLETED. Без человека не вызывается."""
+
+    if not actor.is_human:
+        raise TransitionError("complete verification requires a human inspector")
+    if current is not ProcessState.VERIFYING:
+        raise TransitionError(f"process: {current} -> COMPLETED")
+    return ProcessState.COMPLETED
+
+
 def enter_finalized(current: ProcessState, actor: Actor) -> ProcessState:
     """Единственный легальный вход в FINALIZED. Без человека не вызывается."""
 
@@ -88,8 +108,12 @@ def enter_finalized(current: ProcessState, actor: Actor) -> ProcessState:
 
 
 def advance_process(current: ProcessState, target: ProcessState) -> ProcessState:
-    """Обычные переходы процесса. В FINALIZED — только `finalize_process`."""
+    """Обычные переходы процесса. Очередь и финализация — только с актором."""
 
+    if target is ProcessState.VERIFYING:
+        raise TransitionError("VERIFYING только через start_verification с актором")
+    if target is ProcessState.COMPLETED:
+        raise TransitionError("COMPLETED только через complete_verification с актором и находками")
     if target is ProcessState.FINALIZED:
         raise TransitionError("FINALIZED только через finalize_process с актором и находками")
     if target not in PROCESS_TRANSITIONS[current]:

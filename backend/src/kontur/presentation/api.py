@@ -4,7 +4,9 @@
 OCR в запросе нет: страницы без текста дают статусы качества данных, не
 нарушение. READY после прогона — не «132 проверки реализованы».
 GET /protocol собирает черновик из ProcessRecord после READY; PENDING/PARSING
-дают 404. AUTO_NO_DIFFERENCE на этом проводе нет.
+дают 404. Очередь открывает инспектор (READY→VERIFYING), закрывает
+(VERIFYING→COMPLETED), затем finalize. Автомат в FINALIZED не входит.
+AUTO_NO_DIFFERENCE на этом проводе нет.
 """
 
 from __future__ import annotations
@@ -318,6 +320,40 @@ def review_finding(
     if finding.disagreement_kind is not None:
         payload["disagreement_kind"] = finding.disagreement_kind.value
     return payload
+
+
+@app.post("/api/v1/processes/{process_id}/verify", response_model=None)
+def start_verification(
+    process_id: str,
+    body: FinalizeRequest,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    subject, granted = _require("startVerification", authorization)
+    if body.inspector_id != subject:
+        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
+    record = _workspace().get(process_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    updated = _workspace().start_verification(process_id, actor_from_roles(subject, granted))
+    return updated.to_status()
+
+
+@app.post("/api/v1/processes/{process_id}/complete", response_model=None)
+def complete_verification(
+    process_id: str,
+    body: FinalizeRequest,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    subject, granted = _require("completeVerification", authorization)
+    if body.inspector_id != subject:
+        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
+    record = _workspace().get(process_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    updated = _workspace().complete_verification(
+        process_id, actor_from_roles(subject, granted)
+    )
+    return updated.to_status()
 
 
 @app.post("/api/v1/processes/{process_id}/finalize", response_model=None)

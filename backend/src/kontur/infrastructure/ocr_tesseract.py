@@ -6,6 +6,7 @@
 
 Ошибка, таймаут, поворот ≠ 0, нет pytesseract — исходные токены без
 исключения. Пустой результат — статусы качества, не violation.
+Растр для Tesseract — 300 dpi (scale = 300/72 относительно PDF user space).
 """
 
 from __future__ import annotations
@@ -23,7 +24,9 @@ from kontur.domain.geometry import bbox_from_polygon
 from kontur.domain.models import ExtractionEngine, Polygon
 from kontur.infrastructure.pdfium_tokens import PdfDocumentTokens, PdfPageTokens
 
-RENDER_SCALE = 3.0
+PDF_USER_DPI = 72.0
+OCR_RENDER_DPI = 300.0
+RENDER_SCALE = OCR_RENDER_DPI / PDF_USER_DPI
 MIN_WORD_CONF = 40.0
 REGION_PAD_FRAC = 0.15
 REGION_PAD_PT = 8.0
@@ -148,7 +151,7 @@ def tokens_from_tesseract_payload(
 
 
 class PageImageCache:
-    """PIL-кадры страниц ×3. Не сериализуется, не доказательство."""
+    """PIL-кадры страниц при 300 dpi. Не сериализуется, не доказательство."""
 
     def __init__(self, data: bytes) -> None:
         self._data = data

@@ -43,13 +43,18 @@ Harness: `make ocr-pilot` (Docker + Tesseract). SILVER, без Речников�
 | metric | CA, n, Wilson **95%** (`metrics.wilson`, z=1.96) на eligible SILVER `PDF_TEXT_LAYER`. Не `wilson(290,300)` |
 | stop | CA verifier < 0,95; подбор порога по TEST_HIDDEN; `AVAILABLE` / «гейт закрыт» по SILVER |
 
-## Шаг 2 — проводка READY → VERIFYING → COMPLETED
+## Шаг 2 — проводка READY → VERIFYING → COMPLETED (этот срез)
+
+Срез на `main`: инспектор открывает очередь `POST /verify` (`READY`→`VERIFYING`),
+закрывает `POST /complete` (`VERIFYING`→`COMPLETED`), затем `POST /finalize`.
+Первый `review` из `READY` тоже открывает очередь. Автомат не пишет
+`FINALIZED` / `VERIFYING` / `COMPLETED`.
 
 | | |
 |---|---|
 | requirement | Инспектор открывает очередь (`VERIFYING`), закрывает кандидатов, перевод в `COMPLETED`, затем finalize |
-| artifact | API-переход или кнопка UI; не авто-FINALIZED |
-| test | из READY нельзя finalize; CANDIDATE блокирует finalize |
+| artifact | `POST /processes/{id}/verify`, `POST /complete`; не авто-FINALIZED |
+| test | из READY нельзя finalize; CANDIDATE блокирует complete и finalize |
 | metric | ручной протокол, не F1 |
 | stop | автомат в `FINALIZED` |
 

@@ -11,13 +11,13 @@ import os
 from dataclasses import dataclass, field
 from uuid import uuid4
 
+from kontur.application import review as review_actions
 from kontur.application.process_pipeline import (
     PipelineFile,
     PipelineReport,
     run_process_pipeline,
 )
 from kontur.application.retry_policy import next_sync_attempt
-from kontur.application.review import finalize_process, review, unfinalize_process
 from kontur.application.scenarios import CompletenessMap, detect_scenario
 from kontur.domain.models import DocStage, Finding
 from kontur.domain.state_machines import Actor, TransitionError, advance_process
@@ -335,7 +335,7 @@ class ProcessWorkspace:
                     break
             if current is None or stored_key is None:
                 continue
-            updated = review(
+            updated = review_actions.review(
                 current,
                 actor=actor,
                 action=action,
@@ -349,12 +349,36 @@ class ProcessWorkspace:
                 "REVIEW",
                 {"finding_id": finding_id, "action": action},
             )
+            if record.process_state is ProcessState.READY:
+                record.process_state = review_actions.start_verification(
+                    record.process_state, actor=actor, audit=record.audit
+                )
+                self._persist(record)
             return updated
         raise KeyError(finding_id)
 
+    def start_verification(self, process_id: str, actor: Actor) -> ProcessRecord:
+        record = self._items[process_id]
+        record.process_state = review_actions.start_verification(
+            record.process_state, actor=actor, audit=record.audit
+        )
+        self._persist(record)
+        return record
+
+    def complete_verification(self, process_id: str, actor: Actor) -> ProcessRecord:
+        record = self._items[process_id]
+        record.process_state = review_actions.complete_verification(
+            record.process_state,
+            actor=actor,
+            findings=list(record.findings.values()),
+            audit=record.audit,
+        )
+        self._persist(record)
+        return record
+
     def finalize(self, process_id: str, actor: Actor) -> ProcessRecord:
         record = self._items[process_id]
-        record.process_state = finalize_process(
+        record.process_state = review_actions.finalize_process(
             record.process_state,
             actor=actor,
             findings=list(record.findings.values()),
@@ -369,7 +393,7 @@ class ProcessWorkspace:
         record = self._items[process_id]
         if record.sync_state is not SyncState.NOT_REQUESTED:
             raise TransitionError("нельзя отменить протокол, пока идёт или ожидается выгрузка")
-        record.process_state = unfinalize_process(
+        record.process_state = review_actions.unfinalize_process(
             record.process_state,
             actor=actor,
             reason=reason,

@@ -243,3 +243,9 @@ def test_ocr_module_does_not_fork_character_accuracy() -> None:
     assert not hasattr(ocr_tesseract, "wilson_lower")
     assert callable(metrics.character_accuracy)
     assert callable(metrics.wilson)
+
+
+def test_ocr_render_scale_is_300_dpi() -> None:
+    assert ocr_tesseract.OCR_RENDER_DPI == 300.0
+    assert ocr_tesseract.PDF_USER_DPI == 72.0
+    assert ocr_tesseract.RENDER_SCALE == pytest.approx(300.0 / 72.0)

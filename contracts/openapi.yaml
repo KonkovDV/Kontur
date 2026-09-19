@@ -123,7 +123,8 @@ paths:
     get:
       summary: Журнал действий текущего процесса
       description: >
-        События MemoryAudit этого процесса (REVIEW, FINALIZE, UNFINALIZE).
+        События MemoryAudit этого процесса (REVIEW, START_VERIFICATION,
+        COMPLETE_VERIFICATION, FINALIZE, UNFINALIZE).
         Это не таблица user_action_log: после рестарта журнал пуст (GAP-EDIT).
       operationId: getAuditLog
       x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
@@ -161,6 +162,62 @@ paths:
               schema: { $ref: "./schemas/finding.schema.json" }
         "409": { description: Недопустимый переход состояния }
         "422": { description: Отсутствует reason_code при отклонении }
+
+  /processes/{process_id}/verify:
+    post:
+      summary: Открыть очередь верификации
+      description: >
+        Человек переводит процесс READY → VERIFYING. Автомат и администратор
+        очередь не открывают. Это не финализация протокола.
+      operationId: startVerification
+      x-required-roles: [INSPECTOR, SUPERVISOR]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inspector_id]
+              properties:
+                inspector_id: { type: string }
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProcessStatus" }
+        "404": { description: Процесс не найден }
+        "409": { description: Не READY или вызывающий не инспектор }
+
+  /processes/{process_id}/complete:
+    post:
+      summary: Закрыть очередь верификации
+      description: >
+        Человек переводит VERIFYING → COMPLETED после обработки всех CANDIDATE
+        и SUSPICION. Не FINALIZED: финализация — отдельный POST /finalize.
+      operationId: completeVerification
+      x-required-roles: [INSPECTOR, SUPERVISOR]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inspector_id]
+              properties:
+                inspector_id: { type: string }
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProcessStatus" }
+        "404": { description: Процесс не найден }
+        "409": { description: Есть необработанные кандидаты, не VERIFYING или не инспектор }
 
   /processes/{process_id}/finalize:
     post:

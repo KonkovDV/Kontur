@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -333,6 +334,164 @@ def test_audit_log_lists_review_events(client: TestClient) -> None:
 def test_audit_log_unknown_process_is_404(client: TestClient) -> None:
     response = client.get("/api/v1/processes/does-not-exist/audit", headers=INSPECTOR)
     assert response.status_code == 404
+
+
+def test_finalize_from_ready_is_409(client: TestClient) -> None:
+    process_id = _upload(client).json()["process_id"]
+    response = client.post(
+        f"/api/v1/processes/{process_id}/finalize",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert response.status_code == 409
+
+
+def test_admin_cannot_open_or_close_queue(client: TestClient) -> None:
+    process_id = _upload(client).json()["process_id"]
+    assert (
+        client.post(
+            f"/api/v1/processes/{process_id}/verify",
+            headers=ADMIN,
+            json={"inspector_id": "admin-1"},
+        ).status_code
+        == 403
+    )
+    opened = client.post(
+        f"/api/v1/processes/{process_id}/verify",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert opened.status_code == 200
+    assert (
+        client.post(
+            f"/api/v1/processes/{process_id}/complete",
+            headers=ADMIN,
+            json={"inspector_id": "admin-1"},
+        ).status_code
+        == 403
+    )
+
+
+def test_ready_verify_complete_then_finalize(client: TestClient) -> None:
+    process_id = _upload(client).json()["process_id"]
+    started = client.post(
+        f"/api/v1/processes/{process_id}/verify",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert started.status_code == 200
+    assert started.json()["process_state"] == "VERIFYING"
+    _close_blocking(process_id)
+    completed = client.post(
+        f"/api/v1/processes/{process_id}/complete",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert completed.status_code == 200
+    assert completed.json()["process_state"] == "COMPLETED"
+    finalized = client.post(
+        f"/api/v1/processes/{process_id}/finalize",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert finalized.status_code == 200
+    assert finalized.json()["process_state"] == "FINALIZED"
+
+
+def test_candidate_blocks_complete_and_finalize(client: TestClient) -> None:
+    process_id = _upload(client).json()["process_id"]
+    assert (
+        client.post(
+            f"/api/v1/processes/{process_id}/verify",
+            headers=INSPECTOR,
+            json={"inspector_id": "insp-7"},
+        ).status_code
+        == 200
+    )
+    _close_blocking(process_id)
+    app.state.workspace.put_finding(
+        process_id,
+        Finding(
+            finding_id="f-open",
+            evidence_group_id="eg-open",
+            rule_code="PZ-001",
+            finding_status=FindingStatus.CANDIDATE,
+            review_priority=ReviewPriority.HIGH,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+        ),
+    )
+    blocked = client.post(
+        f"/api/v1/processes/{process_id}/complete",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert blocked.status_code == 409
+    still_open = client.post(
+        f"/api/v1/processes/{process_id}/finalize",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert still_open.status_code == 409
+    reviewed = client.post(
+        "/api/v1/findings/f-open/review",
+        headers=INSPECTOR,
+        json={
+            "action": "CONFIRM",
+            "inspector_id": "insp-7",
+            "comment": "совпало по штампу",
+        },
+    )
+    assert reviewed.status_code == 200
+    closed = client.post(
+        f"/api/v1/processes/{process_id}/complete",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert closed.status_code == 200
+    assert closed.json()["process_state"] == "COMPLETED"
+
+
+def test_first_review_opens_verification_queue(client: TestClient) -> None:
+    process_id = _upload(client).json()["process_id"]
+    _close_blocking(process_id)
+    app.state.workspace.put_finding(
+        process_id,
+        Finding(
+            finding_id="f-first",
+            evidence_group_id="eg-first",
+            rule_code="PZ-001",
+            finding_status=FindingStatus.CANDIDATE,
+            review_priority=ReviewPriority.HIGH,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+        ),
+    )
+    reviewed = client.post(
+        "/api/v1/findings/f-first/review",
+        headers=INSPECTOR,
+        json={
+            "action": "CONFIRM",
+            "inspector_id": "insp-7",
+            "comment": "совпало по штампу",
+        },
+    )
+    assert reviewed.status_code == 200
+    status = client.get(f"/api/v1/processes/{process_id}/status", headers=INSPECTOR)
+    assert status.json()["process_state"] == "VERIFYING"
+
+
+def _close_blocking(process_id: str) -> None:
+    record = app.state.workspace.get(process_id)
+    assert record is not None
+    blocking = {FindingStatus.CANDIDATE, FindingStatus.SUSPICION}
+    for key, finding in list(record.findings.items()):
+        if finding.finding_status in blocking:
+            record.findings[key] = replace(
+                finding, finding_status=FindingStatus.MISSING_EVIDENCE
+            )
 
 
 def _seed_completed(client: TestClient, *, with_candidate: bool = False) -> str:

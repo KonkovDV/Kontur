@@ -15,7 +15,9 @@ from kontur.domain.state_machines import (
     Actor,
     TransitionError,
     advance_finding,
+    enter_completed,
     enter_finalized,
+    enter_verifying,
     unfinalize,
 )
 from kontur.domain.statuses import FindingStatus, ProcessState, ReasonCode
@@ -57,6 +59,48 @@ def review(
         comment=comment.strip(),
     )
     return replace(finding, finding_status=target, inspector_decision=decision)
+
+
+def start_verification(
+    current: ProcessState,
+    *,
+    actor: Actor,
+    audit: AuditLog,
+) -> ProcessState:
+    """Инспектор открывает очередь: READY → VERIFYING."""
+
+    if not actor.is_human:
+        raise TransitionError("start verification requires a human inspector")
+    target = enter_verifying(current, actor)
+    audit.record(
+        actor.actor_id,
+        "START_VERIFICATION",
+        {"from": current.value, "to": target.value},
+    )
+    return target
+
+
+def complete_verification(
+    current: ProcessState,
+    *,
+    actor: Actor,
+    findings: list[Finding],
+    audit: AuditLog,
+) -> ProcessState:
+    """Инспектор закрывает очередь: VERIFYING → COMPLETED. Не FINALIZED."""
+
+    if not actor.is_human:
+        raise TransitionError("complete verification requires a human inspector")
+    ok, pending = can_finalize(findings)
+    if not ok:
+        raise TransitionError(f"unprocessed findings: {pending}")
+    target = enter_completed(current, actor)
+    audit.record(
+        actor.actor_id,
+        "COMPLETE_VERIFICATION",
+        {"from": current.value, "to": target.value},
+    )
+    return target
 
 
 def can_finalize(findings: list[Finding]) -> tuple[bool, list[str]]:

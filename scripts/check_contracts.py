@@ -91,9 +91,17 @@ def main() -> int:
         problems.append("ReviewDecision.action: SPLIT не должен быть атомарным действием")
     if "comment" not in components["ReviewDecision"].get("required", []):
         problems.append("ReviewDecision.comment обязателен по п. 9.3")
-    finalize = spec["paths"]["/processes/{process_id}/finalize"]["post"]
-    if "requestBody" not in finalize:
-        problems.append("finalize без inspector_id в теле запроса")
+    for path, label in (
+        ("/processes/{process_id}/verify", "verify"),
+        ("/processes/{process_id}/complete", "complete"),
+        ("/processes/{process_id}/finalize", "finalize"),
+    ):
+        if path not in spec["paths"]:
+            problems.append(f"нет POST {label}")
+            continue
+        operation = spec["paths"][path]["post"]
+        if "requestBody" not in operation:
+            problems.append(f"{label} без inspector_id в теле запроса")
     if "/processes/{process_id}/unfinalize" not in spec["paths"]:
         problems.append("нет POST unfinalize")
 

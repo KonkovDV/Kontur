@@ -50,3 +50,4 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 | GAP-PROCESS-FINDINGS | Находки, файлы и комплектность переживают смену workspace; Postgres пишет `process_findings` / `process_files` | schema.sql |
 | GAP-EDIT | Журнал REVIEW/FINALIZE/UNFINALIZE в `audit_log` и GET `/audit` | audit_store.py |
 | GAP-HTTP-PIPELINE | POST /upload гоняет L1–L7 по векторному слою и ставит READY | process_pipeline.py |
+| GAP-HTTP-VERIFY | READY→VERIFYING→COMPLETED по HTTP; finalize только из COMPLETED, не автомат | review.py / api.py |

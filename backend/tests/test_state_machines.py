@@ -111,3 +111,21 @@ def test_unfinalize_requires_supervisor_and_finalized() -> None:
 
 def test_upload_returns_process_to_parsing() -> None:
     assert advance_process(ProcessState.VERIFYING, ProcessState.PARSING) is ProcessState.PARSING
+
+
+def test_machine_cannot_open_or_close_queue_via_advance_process() -> None:
+    with pytest.raises(TransitionError, match="start_verification"):
+        advance_process(ProcessState.READY, ProcessState.VERIFYING)
+    with pytest.raises(TransitionError, match="complete_verification"):
+        advance_process(ProcessState.VERIFYING, ProcessState.COMPLETED)
+
+
+def test_enter_verifying_and_completed_require_human() -> None:
+    from kontur.domain.state_machines import enter_completed, enter_verifying
+
+    with pytest.raises(TransitionError, match="human"):
+        enter_verifying(ProcessState.READY, MACHINE)
+    assert enter_verifying(ProcessState.READY, INSPECTOR) is ProcessState.VERIFYING
+    with pytest.raises(TransitionError, match="human"):
+        enter_completed(ProcessState.VERIFYING, MACHINE)
+    assert enter_completed(ProcessState.VERIFYING, INSPECTOR) is ProcessState.COMPLETED
