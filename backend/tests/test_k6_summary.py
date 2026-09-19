@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from scripts.render_k6_summary import build_report, render_markdown
+from kontur.evaluation.k6_summary import build_report, render_markdown
 
 
 def _summary(*, p95: float = 12.5, error_rate: float = 0.0) -> dict[str, object]:
