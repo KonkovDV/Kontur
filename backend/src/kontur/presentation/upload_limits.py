@@ -15,11 +15,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from kontur.application.intake import MAX_BATCH_BYTES, MAX_FILE_BYTES
 from kontur.presentation.auth import parse_bearer
-from kontur.presentation.rbac import (
-    AuthenticationRequiredError,
-    PermissionDeniedError,
-    authorize,
-)
+from kontur.presentation.rbac import AuthenticationRequiredError, PermissionDeniedError, authorize
 
 UPLOAD_PATH = "/api/v1/documents/upload"
 READ_CHUNK_BYTES = 1024 * 1024
@@ -78,7 +74,6 @@ async def _read_metadata(
     header = bytearray()
     digest = hashlib.sha256()
     size = 0
-
     while chunk := await upload.read(chunk_size):
         size += len(chunk)
         if size > max_file_bytes:
@@ -88,12 +83,7 @@ async def _read_metadata(
             header.extend(chunk[: 16 - len(header)])
         if spool is not None:
             spool.write(chunk)
-
-    return UploadPayload(
-        size=size,
-        header=bytes(header),
-        digest=digest.hexdigest(),
-    )
+    return UploadPayload(size=size, header=bytes(header), digest=digest.hexdigest())
 
 
 async def read_upload_payload(
@@ -115,16 +105,16 @@ async def read_upload_payload(
         raise ValueError(f"chunk_size must be between 1 and {READ_CHUNK_BYTES}")
 
     expected = await _read_metadata(
-        upload,
-        max_file_bytes=max_file_bytes,
-        chunk_size=chunk_size,
+        upload, max_file_bytes=max_file_bytes, chunk_size=chunk_size
     )
     await upload.seek(0)
-
     staged = _StagedUpload(
         tempfile.SpooledTemporaryFile(max_size=SPOOL_MEMORY_BYTES, mode="w+b")
     )
-    original = getattr(upload, "file", None)
+    try:
+        original: BinaryIO | None = upload.file
+    except AttributeError:
+        original = None
     try:
         actual = await _read_metadata(
             upload,
@@ -143,7 +133,6 @@ async def read_upload_payload(
     except BaseException:
         staged.close()
         raise
-
     return expected
 
 
@@ -165,12 +154,10 @@ async def materialize_upload(
         raise ValueError(f"chunk_size must be between 1 and {READ_CHUNK_BYTES}")
     if expected_size > max_file_bytes:
         raise UploadLimitExceeded
-
     await upload.seek(0)
     body = bytearray()
     digest = hashlib.sha256()
     size = 0
-
     while chunk := await upload.read(chunk_size):
         size += len(chunk)
         if size > max_file_bytes or size > expected_size:
@@ -178,7 +165,6 @@ async def materialize_upload(
             raise UploadLimitExceeded
         body.extend(chunk)
         digest.update(chunk)
-
     if size != expected_size or digest.hexdigest() != expected_digest:
         body.clear()
         raise UploadLimitExceeded
@@ -221,7 +207,6 @@ class ActualUploadLimitMiddleware:
             raise ValueError("max_batch_bytes must be non-negative")
         if slots <= 0:
             raise ValueError("max_concurrent_uploads must be positive")
-
         self.app = app
         self.max_batch_bytes = max_batch_bytes
         self.max_concurrent_uploads = slots
@@ -232,7 +217,6 @@ class ActualUploadLimitMiddleware:
         if scope["type"] != "http" or scope.get("path") != UPLOAD_PATH:
             await self.app(scope, receive, send)
             return
-
         try:
             context = parse_bearer(_authorization_header(scope))
             authorize("uploadDocuments", context.roles)
@@ -242,11 +226,9 @@ class ActualUploadLimitMiddleware:
         except PermissionDeniedError:
             await self._send_json(send, 403, _FORBIDDEN)
             return
-
         if not await self._try_admit():
             await self._send_json(send, 429, _TOO_MANY)
             return
-
         response_started = False
         received_bytes = 0
 
