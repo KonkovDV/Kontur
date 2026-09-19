@@ -58,8 +58,8 @@ jobs:
             -e KONTUR_BASE_URL=http://127.0.0.1:8000 \
             grafana/k6:0.54.0 run \
             --summary-export=/work/out/k6-summary.json \
-            /work/tests/load/k6_status.js
-          k6_exit=$?
+            /work/tests/load/k6_status.js 2>&1 | tee out/k6.log
+          k6_exit=${PIPESTATUS[0]}
           set -e
           report_exit=0
           if test -f out/k6-summary.json; then
@@ -88,9 +88,13 @@ jobs:
               cat out/gate-l-report.md
             } > out/gate-l-comment.md
           else
-            printf '%s\n' '<!-- gate-l-live-k6 -->' \
-              'Gate L report is missing; inspect the uploaded raw summary and API log.' \
-              > out/gate-l-comment.md
+            {
+              echo '<!-- gate-l-live-k6 -->'
+              echo 'Gate L report is missing. Tail of k6 output:'
+              echo '```text'
+              tail -n 60 out/k6.log 2>/dev/null || echo 'k6.log is missing'
+              echo '```'
+            } > out/gate-l-comment.md
           fi
           jq -Rs '{body: .}' out/gate-l-comment.md > out/gate-l-comment.json
           curl --fail-with-body --request POST \
