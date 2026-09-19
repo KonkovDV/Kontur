@@ -27,3 +27,4 @@ def test_k6_script_declares_tz_load_shape() -> None:
     assert "/status" in src
     assert "FormData" not in src
     assert "tags: { name: 'status' }" in src
+    assert "insp-7@obj-load/INSPECTOR" in src

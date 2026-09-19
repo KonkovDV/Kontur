@@ -14,7 +14,7 @@ export const options = {
 };
 
 const BASE = __ENV.KONTUR_BASE_URL || 'http://127.0.0.1:8000';
-const TOKEN = __ENV.KONTUR_TOKEN || 'insp-7/INSPECTOR';
+const TOKEN = __ENV.KONTUR_TOKEN || 'insp-7@obj-load/INSPECTOR';
 const HEADERS = { Authorization: `Bearer ${TOKEN}` };
 const PDF = '%PDF-1.7\n1 0 obj\n<<>>\nendobj\n';
 
