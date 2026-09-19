@@ -15,9 +15,14 @@ Red Team RT-H обнаружил S0: API проверял роль, но не с
 
 ## Решение
 
-До подключения OIDC временный Bearer-контракт использует форму:
+Доверенный HTTP-вход — проверенный JWT (RS256 или ES256). Обязательные
+claims: `iss`, `aud`, `exp`, `nbf`, `sub`, `roles`; object scope берётся
+только из claim `object_id`. Алгоритм задаётся конфигурацией; `alg` в
+заголовке должен совпасть. Dotted-токен никогда не разбирается как legacy.
 
-`Bearer <actor_id>@<object_id>/<ROLE>[,<ROLE>]`
+Локальная грамматика `Bearer <actor_id>@<object_id>/<ROLE>[,<ROLE>]`
+включается только при `KONTUR_ALLOW_INSECURE_DEV_AUTH=true` и только если
+в токене нет точки.
 
 Каждая операция над объектом выполняет две независимые проверки:
 
@@ -48,9 +53,9 @@ HTTP-регрессии проверяют 403 и отсутствие побо�
 
 ## Последствия и границы
 
-- текущий формат — временная заглушка, не криптографическая аутентификация;
-- перед production требуется OIDC/JWT validation: подпись, issuer, audience,
-  expiration, revocation и доверенный claim object/tenant;
+- подпись, issuer, audience, exp/nbf и object claim проверяются (PR #58);
+- это не production IdP: нет JWKS rotation, revocation list и OIDC discovery;
+- `KONTUR_ALLOW_INSECURE_DEV_AUTH` нельзя включать в production;
 - ADMIN и SUPERVISOR не получают неявный cross-object доступ;
 - отказ происходит до бизнес-мутации, а cross-object попытка не пишет review,
   не меняет состояние и не прикрепляет файл.

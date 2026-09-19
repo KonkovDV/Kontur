@@ -129,7 +129,7 @@
 |-----|-------|----------|
 | GAP-ENUM-EXT (PZ-013/015/021/022/023) | extractor_missing | 🔴 P1 |
 | GAP-OCR-ROT (ротация/перекос) | нереализовано | 🔴 P1 |
-| GAP-AUTH (JWT верификация) | xfail RT-H | 🟡 P2 |
+| GAP-AUTH (OIDC/JWKS/revocation) | JWT RS256/ES256 на HTTP есть (PR #58); нет JWKS rotation и revocation | 🟡 P2 |
 | GAP-REDIS (idempotency) | xfail RT-G | 🟡 P2 |
 | GAP-NORMATIVE (устаревшие редакции) | xfail RT-E/F | 🟢 P3 |
 

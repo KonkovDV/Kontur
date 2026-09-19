@@ -51,3 +51,4 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 | GAP-HTTP-PIPELINE | POST /upload гоняет L1–L7 по векторному слою и ставит READY | process_pipeline.py |
 | GAP-HTTP-VERIFY | READY→VERIFYING→COMPLETED по HTTP; finalize только из COMPLETED, не автомат | review.py / api.py |
 | GAP-K6-P95 | Live `/status`: 100 VU × 60 с, n=6000, p95=18,26 мс, 0 ошибок; artifact workflow | PR #57 |
+| GAP-JWT-VERIFY | Проверенный JWT RS256/ES256; dotted-токен не падает в legacy; k6 без plaintext | PR #58 |

@@ -151,6 +151,7 @@ def build_handoff(
             "Close GAP-IOS4-VAL on 15 gold rows or SILVER CA",
             "Publish P/R/F1/CA as TZ without frozen val n and 95% CI",
             "Publish GHA k6 p95 as production SLA",
+            "Treat static JWT public key as production OIDC/JWKS",
             "Write CONFIRMED_VIOLATION from the automaton or LLM",
             "Guess non-gold RD_ID_MIXED as RD+ID",
             "Treat GOST Согласовано/ГИП header as approved etalon",

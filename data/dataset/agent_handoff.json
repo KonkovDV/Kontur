@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-19",
-  "export_git_sha": "2edf527af1740c863cef79f2de6e5612f529ae88",
+  "export_git_sha": "9185004258fb032bbdb3ab1eb0b255f86e5b3a7f",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -62,6 +62,7 @@
     "Close GAP-IOS4-VAL on 15 gold rows or SILVER CA",
     "Publish P/R/F1/CA as TZ without frozen val n and 95% CI",
     "Publish GHA k6 p95 as production SLA",
+    "Treat static JWT public key as production OIDC/JWKS",
     "Write CONFIRMED_VIOLATION from the automaton or LLM",
     "Guess non-gold RD_ID_MIXED as RD+ID",
     "Treat GOST Согласовано/ГИП header as approved etalon",

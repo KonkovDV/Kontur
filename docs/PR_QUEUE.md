@@ -36,6 +36,10 @@
 | OCR raster | `ocr_tesseract.py`: пустой растр → Tesseract fail-closed; `ocr_text` остаётся UNAVAILABLE |
 | OCR region-crop | `ocr_region_crop` в `evaluate_rule`; harness `ocr_pilot.py` без Речникова; гейт I открыт |
 | TRAIN_PUBLIC harness | `train_public.py`: исходные PDF, JSONL с `object_id`, 6/6 не закрывает J; MIXED не угадываем |
+| #55 | Эталон только при заполненной графе «Утвердил»+ФИО; «Согласовано»/ГИП не approval |
+| #56 | HTTP object scope обязателен (RT-H); unscoped → 403 на объектных операциях |
+| #57 | Live Gate L k6 после upload; p95 на GHA измерен, не production SLA |
+| #58 | JWT RS256/ES256 по умолчанию; legacy только с `KONTUR_ALLOW_INSECURE_DEV_AUTH` |
 
 ## Что не брали
 
@@ -74,6 +78,7 @@
 Не публиковать F1/P/R и recall критических на frozen val. Поставка
 организатора и 15 публичных gold-проверок **не** закрывают гейт J
 ([`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md)). Площадь A×B на синтетике не
-закрывает гейт J. k6 p95 не измерен. Dry-run 132 — прогон движка на пустой
-комплектности, без заявления, что вся матрица executable. Tesseract на
-PATH и `wilson(290, 300)` **не** закрывают гейт I.
+закрывает гейт J. GHA k6 p95 измерен и **не** является production SLA.
+Dry-run 132 — прогон движка на пустой комплектности, без заявления, что
+вся матрица executable. Tesseract на PATH и `wilson(290, 300)` **не**
+закрывают гейт I. JWT на HTTP — containment, не OIDC/JWKS.
