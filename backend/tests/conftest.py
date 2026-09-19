@@ -1,14 +1,23 @@
-"""Test-only compatibility for pre-JWT API access-control regression fixtures."""
+"""Shared test fixtures; insecure legacy authentication is opt-in per module."""
 
 from __future__ import annotations
+
+from collections.abc import Iterator
 
 import pytest
 
 
-@pytest.fixture(autouse=True)
-def _explicit_legacy_auth_for_existing_api_fixtures(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    # Existing access-control tests intentionally exercise the legacy token shape.
-    # Production defaults remain fail-closed; strict JWT tests delete this variable.
+@pytest.fixture
+def legacy_auth_enabled(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Enable the temporary legacy grammar for the compatibility API module only."""
+
     monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    yield
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Attach compatibility explicitly to the one pre-JWT regression module."""
+
+    for item in items:
+        if item.path.name == "test_api.py":
+            item.add_marker(pytest.mark.usefixtures("legacy_auth_enabled"))

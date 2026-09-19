@@ -2,17 +2,25 @@
 
 from __future__ import annotations
 
+import math
 import os
+import re
 from dataclasses import dataclass
 from typing import Any
 
 import jwt
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
 from kontur.domain.state_machines import Actor
 from kontur.presentation.rbac import AuthenticationRequiredError, Role
 
 _AUTHENTICATION_REQUIRED = "authentication required"
 _ALLOWED_ALGORITHMS = frozenset({"RS256", "ES256"})
+_LEGACY_TOKEN = re.compile(
+    r"(?:[A-Za-z0-9_-]+(?:@[A-Za-z0-9_-]+)?/"
+    r"[A-Z][A-Z0-9_]*(?:,[A-Z][A-Z0-9_]*)*|[A-Z][A-Z0-9_]*)\Z"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,8 +31,6 @@ class AuthContext:
 
 
 def _authentication_required() -> AuthenticationRequiredError:
-    # All malformed, missing, expired and unverifiable credentials cross the API
-    # boundary as the same error. Never expose parser or crypto details to callers.
     return AuthenticationRequiredError(_AUTHENTICATION_REQUIRED)
 
 
@@ -32,46 +38,66 @@ def _is_true(value: str | None) -> bool:
     return value is not None and value.lower() == "true"
 
 
-def _looks_like_jwt(token: str) -> bool:
-    return token.count(".") == 2
-
-
 def _legacy_context(token: str) -> AuthContext:
+    if _LEGACY_TOKEN.fullmatch(token) is None:
+        raise _authentication_required()
     if "/" in token:
-        principal, _, roles_part = token.partition("/")
+        principal, roles_part = token.split("/", maxsplit=1)
     else:
         principal, roles_part = token, token
-    principal = principal.strip()
-    roles = tuple(part.strip() for part in roles_part.split(",") if part.strip())
-    if not principal or not roles:
-        raise _authentication_required()
+    roles = tuple(roles_part.split(","))
     if "@" in principal:
-        subject, _, object_id = principal.rpartition("@")
-        subject = subject.strip()
-        object_id = object_id.strip()
-        if not subject or not object_id:
-            raise _authentication_required()
+        subject, object_id = principal.split("@", maxsplit=1)
     else:
         subject = principal
         object_id = None
     return AuthContext(subject=subject, roles=roles, object_id=object_id)
 
 
+def _verification_key(public_key_pem: str, algorithm: str) -> object:
+    try:
+        key = serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
+    except (TypeError, ValueError) as exc:
+        raise _authentication_required() from exc
+    if algorithm == "RS256" and isinstance(key, rsa.RSAPublicKey):
+        return key
+    if (
+        algorithm == "ES256"
+        and isinstance(key, ec.EllipticCurvePublicKey)
+        and isinstance(key.curve, ec.SECP256R1)
+    ):
+        return key
+    raise _authentication_required()
+
+
+def _numeric_date(claims: dict[str, Any], name: str) -> None:
+    value = claims.get(name)
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+    ):
+        raise _authentication_required()
+
+
 def _validated_claims(token: str) -> dict[str, Any]:
     algorithm = os.environ.get("KONTUR_JWT_ALGORITHM", "RS256").strip()
     issuer = os.environ.get("KONTUR_JWT_ISSUER", "").strip()
     audience = os.environ.get("KONTUR_JWT_AUDIENCE", "").strip()
-    public_key = os.environ.get("KONTUR_JWT_PUBLIC_KEY", "").replace("\\n", "\n").strip()
-    if algorithm not in _ALLOWED_ALGORITHMS or not issuer or not audience or not public_key:
+    public_key_pem = (
+        os.environ.get("KONTUR_JWT_PUBLIC_KEY", "").replace("\\n", "\n").strip()
+    )
+    if algorithm not in _ALLOWED_ALGORITHMS or not issuer or not audience or not public_key_pem:
         raise _authentication_required()
+    key = _verification_key(public_key_pem, algorithm)
 
     try:
         header = jwt.get_unverified_header(token)
         if header.get("alg") != algorithm:
             raise _authentication_required()
-        claims = jwt.decode(
+        decoded = jwt.decode(
             token,
-            public_key,
+            key,
             algorithms=[algorithm],
             issuer=issuer,
             audience=audience,
@@ -89,8 +115,11 @@ def _validated_claims(token: str) -> dict[str, Any]:
         raise
     except (jwt.PyJWTError, TypeError, ValueError, KeyError) as exc:
         raise _authentication_required() from exc
-    if not isinstance(claims, dict):
+    if not isinstance(decoded, dict):
         raise _authentication_required()
+    claims: dict[str, Any] = decoded
+    _numeric_date(claims, "exp")
+    _numeric_date(claims, "nbf")
     return claims
 
 
@@ -107,7 +136,9 @@ def _jwt_context(token: str) -> AuthContext:
         or any(not isinstance(role, str) or not role.strip() for role in roles)
     ):
         raise _authentication_required()
-    if object_id is not None and (not isinstance(object_id, str) or not object_id.strip()):
+    if object_id is not None and (
+        not isinstance(object_id, str) or not object_id.strip()
+    ):
         raise _authentication_required()
     return AuthContext(
         subject=subject.strip(),
@@ -123,8 +154,9 @@ def parse_bearer(authorization: str | None) -> AuthContext:
         token = authorization[7:].strip()
         if not token:
             raise _authentication_required()
-        if _looks_like_jwt(token):
-            # A bad JWT is always rejected; it can never downgrade to legacy auth.
+        # Every dotted token is JWT-shaped input. It must never reach legacy parsing,
+        # including one/two/four-part, truncated, prefixed, or suffixed variants.
+        if "." in token:
             return _jwt_context(token)
         if _is_true(os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH")):
             return _legacy_context(token)

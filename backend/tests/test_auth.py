@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import json
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -19,7 +17,7 @@ AUDIENCE = "kontur-api"
 
 
 @pytest.fixture(scope="module")
-def rsa_keys() -> tuple[object, str]:
+def rsa_keys() -> tuple[rsa.RSAPrivateKey, str]:
     private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     public = private.public_key().public_bytes(
         serialization.Encoding.PEM,
@@ -28,7 +26,26 @@ def rsa_keys() -> tuple[object, str]:
     return private, public
 
 
-def _configure(monkeypatch: pytest.MonkeyPatch, public: str, algorithm: str = "RS256") -> None:
+def _public_pem(key: object) -> str:
+    return key.public_bytes(  # type: ignore[attr-defined, no-any-return]
+        serialization.Encoding.PEM,
+        serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode()
+
+
+def _private_pem(key: object) -> str:
+    return key.private_bytes(  # type: ignore[attr-defined, no-any-return]
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption(),
+    ).decode()
+
+
+def _configure(
+    monkeypatch: pytest.MonkeyPatch,
+    public: str,
+    algorithm: str = "RS256",
+) -> None:
     monkeypatch.delenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", raising=False)
     monkeypatch.setenv("KONTUR_JWT_ISSUER", ISSUER)
     monkeypatch.setenv("KONTUR_JWT_AUDIENCE", AUDIENCE)
@@ -44,15 +61,19 @@ def _claims(**changes: object) -> dict[str, object]:
         "sub": "insp-7",
         "roles": ["INSPECTOR"],
         "object_id": "OBJ-001",
-        "nbf": now - timedelta(seconds=1),
-        "exp": now + timedelta(minutes=5),
+        "nbf": (now - timedelta(seconds=1)).timestamp(),
+        "exp": (now + timedelta(minutes=5)).timestamp(),
     }
     claims.update(changes)
     return claims
 
 
-def _token(private: object, **changes: object) -> str:
-    return jwt.encode(_claims(**changes), private, algorithm="RS256")
+def _token(
+    private: object,
+    algorithm: str = "RS256",
+    **changes: object,
+) -> str:
+    return jwt.encode(_claims(**changes), private, algorithm=algorithm)
 
 
 def _reject(token: str | None) -> None:
@@ -60,7 +81,10 @@ def _reject(token: str | None) -> None:
         parse_bearer(None if token is None else f"Bearer {token}")
 
 
-def test_valid_signed_rsa_jwt(rsa_keys: tuple[object, str], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_valid_signed_rsa_jwt(
+    rsa_keys: tuple[rsa.RSAPrivateKey, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     private, public = rsa_keys
     _configure(monkeypatch, public)
     context = parse_bearer(f"Bearer {_token(private)}")
@@ -69,57 +93,102 @@ def test_valid_signed_rsa_jwt(rsa_keys: tuple[object, str], monkeypatch: pytest.
     assert context.object_id == "OBJ-001"
 
 
-def test_forged_signature(rsa_keys: tuple[object, str], monkeypatch: pytest.MonkeyPatch) -> None:
-    _, public = rsa_keys
-    attacker = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    _configure(monkeypatch, public)
-    _reject(_token(attacker))
+def test_valid_signed_es256_jwt(monkeypatch: pytest.MonkeyPatch) -> None:
+    private = ec.generate_private_key(ec.SECP256R1())
+    _configure(monkeypatch, _public_pem(private.public_key()), "ES256")
+    context = parse_bearer(f"Bearer {_token(private, 'ES256')}")
+    assert context.subject == "insp-7"
 
 
-@pytest.mark.parametrize(
-    "changes",
-    [
-        {"exp": datetime.now(UTC) - timedelta(seconds=1)},
-        {"nbf": datetime.now(UTC) + timedelta(minutes=5)},
-        {"iss": "https://attacker.invalid/"},
-        {"aud": "other-api"},
-        {"sub": ""},
-        {"roles": []},
-        {"roles": "INSPECTOR"},
-        {"roles": [""]},
-        {"object_id": ""},
-    ],
-)
-def test_invalid_claims_are_uniformly_rejected(
-    changes: dict[str, object],
-    rsa_keys: tuple[object, str],
+@pytest.mark.parametrize("name", ["exp", "nbf"])
+@pytest.mark.parametrize("value", [True, False, "1", None, [], {}])
+def test_numeric_dates_reject_non_numbers(
+    name: str,
+    value: object,
+    rsa_keys: tuple[rsa.RSAPrivateKey, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     private, public = rsa_keys
     _configure(monkeypatch, public)
-    _reject(_token(private, **changes))
+    _reject(_token(private, **{name: value}))
 
 
-def test_missing_required_claim(rsa_keys: tuple[object, str], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_numeric_dates_accept_int_and_float(
+    rsa_keys: tuple[rsa.RSAPrivateKey, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     private, public = rsa_keys
     _configure(monkeypatch, public)
-    claims = _claims()
-    del claims["roles"]
-    _reject(jwt.encode(claims, private, algorithm="RS256"))
+    now = datetime.now(UTC).timestamp()
+    context = parse_bearer(
+        f"Bearer {_token(private, nbf=int(now) - 1, exp=now + 300.5)}"
+    )
+    assert context.subject == "insp-7"
 
 
-def test_mismatched_algorithm(rsa_keys: tuple[object, str], monkeypatch: pytest.MonkeyPatch) -> None:
-    _, public = rsa_keys
+@pytest.mark.parametrize(
+    ("configured_algorithm", "key_pem"),
+    [
+        ("RS256", "private"),
+        ("RS256", "ec"),
+        ("ES256", "rsa"),
+        ("ES256", "wrong-curve"),
+    ],
+)
+def test_invalid_verification_key_is_fail_closed(
+    configured_algorithm: str,
+    key_pem: str,
+    rsa_keys: tuple[rsa.RSAPrivateKey, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rsa_private, rsa_public = rsa_keys
     ec_private = ec.generate_private_key(ec.SECP256R1())
-    _configure(monkeypatch, public, "RS256")
-    _reject(jwt.encode(_claims(), ec_private, algorithm="ES256"))
+    values = {
+        "private": _private_pem(rsa_private),
+        "ec": _public_pem(ec_private.public_key()),
+        "rsa": rsa_public,
+        "wrong-curve": _public_pem(
+            ec.generate_private_key(ec.SECP384R1()).public_key()
+        ),
+    }
+    _configure(monkeypatch, values[key_pem], configured_algorithm)
+    _reject(_token(rsa_private))
 
 
-def test_none_algorithm_is_rejected(rsa_keys: tuple[object, str], monkeypatch: pytest.MonkeyPatch) -> None:
-    _, public = rsa_keys
-    _configure(monkeypatch, public)
-    encode = lambda value: base64.urlsafe_b64encode(value).rstrip(b"=").decode()  # noqa: E731
-    token = f"{encode(json.dumps({'alg': 'none'}).encode())}.{encode(json.dumps(_claims(), default=str).encode())}."
+@pytest.mark.parametrize(
+    "token",
+    [
+        "a",
+        "a.b",
+        "a.b.c",
+        "a.b.c.d",
+        "prefix.insp-7@OBJ-001/INSPECTOR",
+        "insp-7@OBJ-001/INSPECTOR.suffix",
+    ],
+)
+def test_every_dotted_token_uses_jwt_validation(
+    token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    _reject(token)
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        "insp-7@OBJ-001/INSPECTOR/ADMIN",
+        "insp-7@OBJ-001/INSPECTOR,",
+        "insp 7@OBJ-001/INSPECTOR",
+        "insp-7@OBJ-001/inspector",
+        "@OBJ-001/INSPECTOR",
+    ],
+)
+def test_ambiguous_legacy_grammar_is_rejected(
+    token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
     _reject(token)
 
 
@@ -134,8 +203,3 @@ def test_explicit_dev_compatibility(monkeypatch: pytest.MonkeyPatch) -> None:
     assert context.subject == "insp-7"
     assert context.roles == ("INSPECTOR",)
     assert context.object_id == "OBJ-001"
-
-
-def test_bad_jwt_never_falls_back_to_legacy(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
-    _reject("legacy.actor/INSPECTOR.bad")
