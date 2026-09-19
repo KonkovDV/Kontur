@@ -12,23 +12,32 @@ from starlette.datastructures import UploadFile
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from kontur.application.intake import MAX_BATCH_BYTES, MAX_FILE_BYTES
+from kontur.presentation.auth import parse_bearer
+from kontur.presentation.rbac import (
+    AuthenticationRequiredError,
+    PermissionDeniedError,
+    authorize,
+)
 
 UPLOAD_PATH = "/api/v1/documents/upload"
 READ_CHUNK_BYTES = 1024 * 1024
+MULTIPART_OVERHEAD_BYTES = 1024 * 1024
+MAX_UPLOAD_REQUEST_BYTES = MAX_BATCH_BYTES + MULTIPART_OVERHEAD_BYTES
 _DEFAULT_MAX_CONCURRENT_UPLOADS = 2
 _TOO_LARGE = json.dumps({"detail": "request too large"}, separators=(",", ":")).encode()
 _TOO_MANY = json.dumps({"detail": "too many requests"}, separators=(",", ":")).encode()
+_UNAUTHORIZED = json.dumps({"detail": "unauthorized"}, separators=(",", ":")).encode()
+_FORBIDDEN = json.dumps({"detail": "forbidden"}, separators=(",", ":")).encode()
 
 
 class UploadLimitExceeded(Exception):
-    """A request or file crossed its actual-byte limit."""
+    """A request or file crossed its actual-byte limit or changed between reads."""
 
 
 @dataclass(frozen=True, slots=True)
 class UploadPayload:
-    """A bounded upload body and metadata calculated while reading it."""
+    """Bounded upload metadata calculated without retaining the body."""
 
-    body: bytes
     size: int
     header: bytes
     digest: str
@@ -39,14 +48,13 @@ async def read_upload_payload(
     max_file_bytes: int = MAX_FILE_BYTES,
     chunk_size: int = READ_CHUNK_BYTES,
 ) -> UploadPayload:
-    """Read one upload incrementally without taking ownership of its lifetime."""
+    """Read and rewind one upload while retaining metadata only."""
 
     if max_file_bytes < 0:
         raise ValueError("max_file_bytes must be non-negative")
     if not 0 < chunk_size <= READ_CHUNK_BYTES:
         raise ValueError(f"chunk_size must be between 1 and {READ_CHUNK_BYTES}")
 
-    body = bytearray()
     header = bytearray()
     digest = hashlib.sha256()
     size = 0
@@ -54,19 +62,55 @@ async def read_upload_payload(
     while chunk := await upload.read(chunk_size):
         size += len(chunk)
         if size > max_file_bytes:
-            body.clear()
             raise UploadLimitExceeded
-        body.extend(chunk)
         digest.update(chunk)
         if len(header) < 16:
             header.extend(chunk[: 16 - len(header)])
 
+    await upload.seek(0)
     return UploadPayload(
-        body=bytes(body),
         size=size,
         header=bytes(header),
         digest=digest.hexdigest(),
     )
+
+
+async def materialize_upload(
+    upload: UploadFile,
+    *,
+    expected_size: int,
+    expected_digest: str,
+    max_file_bytes: int = MAX_FILE_BYTES,
+    chunk_size: int = READ_CHUNK_BYTES,
+) -> bytes:
+    """Materialize one bounded upload and verify its first-pass metadata."""
+
+    if expected_size < 0:
+        raise ValueError("expected_size must be non-negative")
+    if max_file_bytes < 0:
+        raise ValueError("max_file_bytes must be non-negative")
+    if not 0 < chunk_size <= READ_CHUNK_BYTES:
+        raise ValueError(f"chunk_size must be between 1 and {READ_CHUNK_BYTES}")
+    if expected_size > max_file_bytes:
+        raise UploadLimitExceeded
+
+    await upload.seek(0)
+    body = bytearray()
+    digest = hashlib.sha256()
+    size = 0
+
+    while chunk := await upload.read(chunk_size):
+        size += len(chunk)
+        if size > max_file_bytes or size > expected_size:
+            body.clear()
+            raise UploadLimitExceeded
+        body.extend(chunk)
+        digest.update(chunk)
+
+    if size != expected_size or digest.hexdigest() != expected_digest:
+        body.clear()
+        raise UploadLimitExceeded
+    return bytes(body)
 
 
 def _configured_upload_slots() -> int:
@@ -80,16 +124,27 @@ def _configured_upload_slots() -> int:
     return value if value > 0 else _DEFAULT_MAX_CONCURRENT_UPLOADS
 
 
+def _authorization_header(scope: Scope) -> str | None:
+    for name, value in scope.get("headers", ()):
+        if name.lower() == b"authorization":
+            return value.decode("latin-1")
+    return None
+
+
 class ActualUploadLimitMiddleware:
-    """Bound and admission-control the exact upload route's request stream."""
+    """Authenticate, bound, and admission-control the upload request stream."""
 
     def __init__(
         self,
         app: ASGIApp,
-        max_batch_bytes: int = MAX_BATCH_BYTES,
+        max_batch_bytes: int = MAX_UPLOAD_REQUEST_BYTES,
         max_concurrent_uploads: int | None = None,
     ) -> None:
-        slots = _configured_upload_slots() if max_concurrent_uploads is None else max_concurrent_uploads
+        slots = (
+            _configured_upload_slots()
+            if max_concurrent_uploads is None
+            else max_concurrent_uploads
+        )
         if max_batch_bytes < 0:
             raise ValueError("max_batch_bytes must be non-negative")
         if slots <= 0:
@@ -104,6 +159,16 @@ class ActualUploadLimitMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or scope.get("path") != UPLOAD_PATH:
             await self.app(scope, receive, send)
+            return
+
+        try:
+            context = parse_bearer(_authorization_header(scope))
+            authorize("uploadDocuments", context.roles)
+        except AuthenticationRequiredError:
+            await self._send_json(send, 401, _UNAUTHORIZED)
+            return
+        except PermissionDeniedError:
+            await self._send_json(send, 403, _FORBIDDEN)
             return
 
         if not await self._try_admit():

@@ -5,11 +5,12 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, Header, Request, UploadFile
+from fastapi import FastAPI, File, Form, Header, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from kontur.application.intake import (
+    MAX_BATCH_BYTES,
     MAX_FILE_BYTES,
     Rejection,
     UploadCandidate,
@@ -34,6 +35,7 @@ from kontur.presentation.rbac import (
 from kontur.presentation.upload_limits import (
     ActualUploadLimitMiddleware,
     UploadLimitExceeded,
+    materialize_upload,
     read_upload_payload,
 )
 
@@ -121,27 +123,27 @@ def _rejection_body(item: Rejection) -> dict[str, str]:
 
 
 @app.exception_handler(TransitionError)
-async def _transition_error(_request: Request, exc: TransitionError) -> JSONResponse:
+async def _transition_error(_request: object, exc: TransitionError) -> JSONResponse:
     return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
 @app.exception_handler(AuthenticationRequiredError)
-async def _auth_error(_request: Request, exc: AuthenticationRequiredError) -> JSONResponse:
+async def _auth_error(_request: object, exc: AuthenticationRequiredError) -> JSONResponse:
     return JSONResponse(status_code=401, content={"detail": str(exc)})
 
 
 @app.exception_handler(PermissionDeniedError)
-async def _forbid_error(_request: Request, exc: PermissionDeniedError) -> JSONResponse:
+async def _forbid_error(_request: object, exc: PermissionDeniedError) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
 @app.exception_handler(AccessDeniedError)
-async def _object_forbid_error(_request: Request, exc: AccessDeniedError) -> JSONResponse:
+async def _object_forbid_error(_request: object, exc: AccessDeniedError) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
 @app.exception_handler(EmptyPackageError)
-async def _empty_package(_request: Request, exc: EmptyPackageError) -> JSONResponse:
+async def _empty_package(_request: object, exc: EmptyPackageError) -> JSONResponse:
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
@@ -166,10 +168,11 @@ async def upload_documents(
     process_id: Annotated[str | None, Form()] = None,
     doc_stage: Annotated[DocStage | None, Form()] = None,
 ) -> dict[str, object] | JSONResponse:
-    payloads: list[tuple[UploadCandidate, bytes]] = []
-    bodies: dict[str, bytes] = {}
+    payloads: list[tuple[UploadCandidate, UploadFile]] = []
     try:
-        _subject, _granted, caller_object_id = _require("uploadDocuments", authorization)
+        _subject, _granted, caller_object_id = _require(
+            "uploadDocuments", authorization
+        )
         normalized_object_id = object_id.strip()
         if not normalized_object_id:
             raise EmptyPackageError("object_id пуст")
@@ -200,36 +203,31 @@ async def upload_documents(
                 },
             )
 
-        try:
-            for upload in files:
-                name = upload.filename or "unnamed"
-                payload = await read_upload_payload(
-                    upload,
-                    max_file_bytes=MAX_FILE_BYTES,
-                )
-                candidate = UploadCandidate(
-                    filename=name,
-                    size_bytes=payload.size,
-                    header=payload.header,
-                    content_hash=payload.digest,
-                )
-                payloads.append((candidate, payload.body))
-        except UploadLimitExceeded:
-            raise
+        batch_size = 0
+        for upload in files:
+            name = upload.filename or "unnamed"
+            payload = await read_upload_payload(
+                upload,
+                max_file_bytes=MAX_FILE_BYTES,
+            )
+            batch_size += payload.size
+            if batch_size > MAX_BATCH_BYTES:
+                raise UploadLimitExceeded
+            candidate = UploadCandidate(
+                filename=name,
+                size_bytes=payload.size,
+                header=payload.header,
+                content_hash=payload.digest,
+            )
+            payloads.append((candidate, upload))
 
-        decision = evaluate_batch(item for item, _body in payloads)
+        decision = evaluate_batch(item for item, _upload in payloads)
         if decision.rejected:
             worst = max(decision.rejected, key=lambda item: item.http_status)
             return JSONResponse(
                 status_code=worst.http_status,
                 content=_rejection_body(worst),
             )
-
-        bodies = {
-            item.content_hash: body
-            for item, body in payloads
-            if item.content_hash is not None
-        }
 
         if record is None:
             completeness = _empty_completeness()
@@ -243,18 +241,32 @@ async def upload_documents(
             digest = item.content_hash
             if digest is None:
                 raise RuntimeError("принятый файл обязан иметь SHA-256")
-            stored = AcceptedFile(
-                file_id=str(uuid4()),
-                file_hash=digest,
-                filename=item.filename,
-                doc_stage=doc_stage,
-                size_bytes=item.size_bytes,
+            upload = next(
+                upload
+                for candidate, upload in payloads
+                if candidate is item
             )
-            if workspace.attach_file(record, stored):
-                workspace.keep_blob(record, stored.file_id, bodies[digest])
-                accepted.append(
-                    {"file_id": stored.file_id, "file_hash": stored.file_hash}
+            body = await materialize_upload(
+                upload,
+                expected_size=item.size_bytes,
+                expected_digest=digest,
+                max_file_bytes=MAX_FILE_BYTES,
+            )
+            try:
+                stored = AcceptedFile(
+                    file_id=str(uuid4()),
+                    file_hash=digest,
+                    filename=item.filename,
+                    doc_stage=doc_stage,
+                    size_bytes=item.size_bytes,
                 )
+                if workspace.attach_file(record, stored):
+                    workspace.keep_blob(record, stored.file_id, body)
+                    accepted.append(
+                        {"file_id": stored.file_id, "file_hash": stored.file_hash}
+                    )
+            finally:
+                del body
 
         workspace.run_matrix_pipeline(record)
         return {
@@ -264,7 +276,6 @@ async def upload_documents(
         }
     finally:
         payloads.clear()
-        bodies.clear()
         for upload in files:
             try:
                 await upload.close()
@@ -305,10 +316,7 @@ def get_protocol(
         object_id=record.object_id,
         findings=tuple(record.findings.values()),
         completeness=record.completeness,
-        files=[
-            {"file_id": item.file_id, "file_hash": item.file_hash}
-            for item in record.files
-        ],
+        files=[{"file_id": item.file_id, "file_hash": item.file_hash} for item in record.files],
         versions={
             "matrix_version": record.matrix_version,
             "model_version": record.model_version,
@@ -353,9 +361,7 @@ def review_finding(
 ) -> dict[str, object] | JSONResponse:
     subject, granted, object_id = _require("reviewFinding", authorization)
     if body.inspector_id != subject:
-        raise PermissionDeniedError(
-            "inspector_id не совпадает с субъектом токена"
-        )
+        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
     owner = _record_for_finding(finding_id)
     if owner is None:
         return JSONResponse(status_code=404, content={"detail": "находка не найдена"})
@@ -391,9 +397,7 @@ def _human_process_action(
 ) -> dict[str, object] | JSONResponse:
     subject, granted, object_id = _require(operation_id, authorization)
     if body.inspector_id != subject:
-        raise PermissionDeniedError(
-            "inspector_id не совпадает с субъектом токена"
-        )
+        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
     record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
@@ -450,9 +454,7 @@ def unfinalize_protocol(
 ) -> dict[str, object] | JSONResponse:
     subject, granted, object_id = _require("unfinalizeProtocol", authorization)
     if body.inspector_id != subject:
-        raise PermissionDeniedError(
-            "inspector_id не совпадает с субъектом токена"
-        )
+        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
     record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
