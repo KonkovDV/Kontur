@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "generated_on": "2026-09-19",
+  "export_git_sha": "ad6a93f8f310e1ce04c119580df8d060aa068353",
+  "deadline": "2026-09-29T23:59:00+03:00",
+  "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
+  "human_doc": "docs/AGENT_HANDOFF.md",
+  "invariants_doc": "AGENTS.md",
+  "closes_gate_i": false,
+  "closes_gate_j": false,
+  "closes_gate_k": false,
+  "closes_gate_l": false,
+  "hidden_test_contents_inspected": false,
+  "allowlist_object_ids": [
+    "OBJ-NOVOSLOBODSKAYA",
+    "OBJ-TYUMENSKAYA-5-GOLD-SEED"
+  ],
+  "hidden_test_object_ids": [
+    "OBJ-RECHNIKOV-7-7"
+  ],
+  "work_plan_steps": {
+    "0_http_pipeline": "landed",
+    "1_ocr_in_request": "code_landed_gate_i_open",
+    "2_inspector_queue": "landed",
+    "3_train_public": "harness_landed_run_opt_in",
+    "4_gate_k_usability": "form_only_no_sessions",
+    "5_gate_l_k6": "script_landed_p95_not_measured"
+  },
+  "open_gaps": [
+    "GAP-CAP-OCR",
+    "GAP-OCR-ROT",
+    "GAP-STAMP",
+    "GAP-IOS4-VAL",
+    "GAP-K6-P95",
+    "RT-2609-21",
+    "GAP-FREE-SEARCH",
+    "GAP-DWG",
+    "GAP-ISOLATE",
+    "GAP-SPLIT"
+  ],
+  "coverage_counts": {
+    "advisory": 0,
+    "executable": 28,
+    "extractor_missing": 104,
+    "not_applicable": 0,
+    "source_missing": 0,
+    "declared": 132,
+    "expected_total": 132
+  },
+  "gold_matrix_positives": 6,
+  "wilson_perfect_n_min_recall": 16,
+  "pipeline_limitations": [
+    "last_file_per_stage",
+    "RD_ID_MIXED_and_UNKNOWN_skipped",
+    "tyumen_index_has_no_RD_or_ID",
+    "ocr_text_UNAVAILABLE"
+  ],
+  "do_not": [
+    "Merge leftover OCR branches (PR #54, 2ddc2b3 one-line ocr_tesseract.py)",
+    "Open TEST_HIDDEN / РАЗМЕЧЕННЫЙ_TEST__213 / Rechnikov for thresholds",
+    "Set ocr_text AVAILABLE without GOLD Wilson",
+    "Close GAP-IOS4-VAL on 15 gold rows or SILVER CA",
+    "Publish P/R/F1/CA as TZ without frozen val n and 95% CI",
+    "Write CONFIRMED_VIOLATION from the automaton or LLM",
+    "Guess RD_ID_MIXED as RD+ID",
+    "Prefer annotated_documents overlays over source PDFs"
+  ],
+  "commands": {
+    "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
+    "dumps": "python scripts/export_agent_dumps.py",
+    "train_public": "make train-public",
+    "ocr_pilot": "make ocr-pilot",
+    "dry_run_132": "python -m pytest backend/tests/test_dry_run.py -q"
+  },
+  "pointers": {
+    "gold_inventory": "data/dataset/gold_inventory.json",
+    "coverage_snapshot": "data/matrix/coverage_snapshot.json",
+    "index_stats": "data/dataset/train_public_index_stats.json",
+    "train_public_engineering": "data/dataset/train_public_engineering.json",
+    "train_public_pred": "data/dataset/train_public_pred.jsonl",
+    "work_plan": "docs/WORK_PLAN.md",
+    "known_gaps": "docs/KNOWN_GAPS.md",
+    "pr_queue": "docs/PR_QUEUE.md",
+    "organizer_gold": "docs/ORGANIZER_GOLD.md",
+    "train_public_module": "backend/src/kontur/evaluation/train_public.py",
+    "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py"
+  },
+  "leftover_refs_do_not_merge": [
+    "feat/ocr-gate-i-crop3x-oem1",
+    "feat/ocr-300dpi-step2-verifying"
+  ],
+  "index_stats_present": true,
+  "verdict_echo": {
+    "frozen_validation_corpus_for_132": false,
+    "closes_gate_j": false
+  }
+}

@@ -1,0 +1,14 @@
+---
+description: Операционный handoff Контура — гейты открыты, читать JSON до планирования
+alwaysApply: true
+---
+
+# Handoff
+
+Перед планом работ прочитай `data/dataset/agent_handoff.json` и `docs/AGENT_HANDOFF.md`.
+Инварианты — `AGENTS.md`. Coverage — `data/matrix/coverage_snapshot.json` (разбивка, не вся матрица executable).
+
+Гейты I/J/K/L открыты. Не закрывай `GAP-IOS4-VAL` / `GAP-CAP-OCR` по SILVER, n=6 или n=15.
+Не открывай TEST_HIDDEN. Не мержи `feat/ocr-gate-i-crop3x-oem1` и `feat/ocr-300dpi-step2-verifying`.
+Автомат и LLM не пишут `CONFIRMED_VIOLATION`. Overlay не источник скоринга. `RD_ID_MIXED` не угадывать.
+Пересборка снимков: `python scripts/export_agent_dumps.py`.

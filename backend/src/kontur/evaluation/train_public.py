@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import sys
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -173,6 +174,77 @@ def load_files_index(package_root: Path) -> tuple[TrainPublicFile, ...]:
             )
         )
     return tuple(rows)
+
+
+def summarize_index(
+    index: Sequence[TrainPublicFile],
+    files_root: Path | None = None,
+    *,
+    excluded: frozenset[str] | None = None,
+) -> dict[str, object]:
+    """Счётчики индекса. Без TEST_HIDDEN. Overlay и MIXED не runnable."""
+
+    skip = excluded if excluded is not None else excluded_file_ids()
+    by_stage: Counter[str] = Counter()
+    by_object: Counter[str] = Counter()
+    n_overlay = 0
+    n_excluded = 0
+    n_runnable = 0
+    for item in index:
+        by_stage[item.stage_raw or ""] += 1
+        by_object[item.object_id] += 1
+        if item.file_id in skip:
+            n_excluded += 1
+            continue
+        if is_overlay_relative(item.source_relative_path):
+            n_overlay += 1
+            continue
+        if parse_doc_stage(item.stage_raw) is not None:
+            n_runnable += 1
+    join: dict[str, object] = {}
+    if files_root is not None:
+        n_hit = 0
+        n_miss = 0
+        miss_ids: list[str] = []
+        for item in index:
+            if item.file_id in skip or is_overlay_relative(item.source_relative_path):
+                continue
+            if parse_doc_stage(item.stage_raw) is None:
+                continue
+            found = resolve_source_pdf(files_root, item.source_relative_path)
+            if found is None:
+                n_miss += 1
+                if len(miss_ids) < 8:
+                    miss_ids.append(item.file_id)
+            else:
+                n_hit += 1
+        join = {
+            "n_source_hit": n_hit,
+            "n_source_miss": n_miss,
+            "miss_file_ids_sample": miss_ids,
+        }
+    tyumen_stages = sorted(
+        {
+            item.stage_raw
+            for item in index
+            if item.object_id == "OBJ-TYUMENSKAYA-5-GOLD-SEED"
+        }
+    )
+    return {
+        "n_index": len(index),
+        "by_stage": dict(sorted(by_stage.items())),
+        "by_object": dict(sorted(by_object.items())),
+        "n_excluded_in_index": n_excluded,
+        "n_overlay_as_source": n_overlay,
+        "n_runnable_stage": n_runnable,
+        "tyumen_stages_in_index": tyumen_stages,
+        "tyumen_has_rd": "RD" in tyumen_stages,
+        "tyumen_has_id": "ID" in tyumen_stages,
+        "source_join": join,
+        "stage_page_model": STAGE_PAGE_MODEL,
+        "closes_gate_j": False,
+        "note": "RD_ID_MIXED и UNKNOWN не runnable. Overlay не источник.",
+    }
 
 
 def resolve_train_public_path(env: Mapping[str, str] | None = None) -> Path | None:

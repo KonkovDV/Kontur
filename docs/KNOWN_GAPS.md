@@ -10,7 +10,7 @@
 | GAP-STAMP | Штамп поверх текста | Нет сегментации штампа | гейт I |
 | GAP-DWG | Разбор DWG | Аудио и ТЗ расходятся; до ответа — `NOT_SUPPORTED` | вопрос 6 |
 | GAP-ISOLATE | PDF в дочернем процессе с таймаутом | pdfium в том же процессе | надёжность |
-| GAP-IOS4-VAL | Recall критических на frozen val не измерен | документы TRAIN_PUBLIC есть; frozen val на 132/106 нет (6 матричных позитивов, Wilson 6/6 ниже порога); harness в `backend/tests/test_frozen_val.py` | гейт J |
+| GAP-IOS4-VAL | Recall критических на frozen val не измерен | документы TRAIN_PUBLIC есть; frozen val на 132/106 нет (6 матричных позитивов, Wilson 6/6 ниже порога); локальный last-file-per-stage: 0/6, у Тюменской нет RD/ID; harness в `backend/tests/test_frozen_val.py` | гейт J |
 | GAP-K6-P95 | p95 `/status` не измерен | скрипт 100 VU / 60 с с порогом есть; CI k6 не запускает, дешёвый PARSING не публикуем | гейт L |
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | region-crop dual-read в коде; Docker SILVER-замер порог не берёт; нет GOLD | гейт I |

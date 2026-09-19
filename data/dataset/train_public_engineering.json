@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "observed_at": "2026-09-19",
+  "source": "python -m kontur.evaluation.train_public",
+  "in_git": true,
+  "purpose": "Инженерный снимок last_file_per_stage на TRAIN_PUBLIC. Не frozen val, не порог ТЗ.",
+  "pred_jsonl": "data/dataset/train_public_pred.jsonl",
+  "why_zero_hits": "Матричный gold Тюменской — IOS4-078/079, нужны PD и RD. В индексе у объекта только PD, RD_ID_MIXED и UNKNOWN; MIXED не угадываем. Последний файл стадии = один PD.",
+  "n_index": 203,
+  "n_read": 191,
+  "n_skip_stage": 11,
+  "n_skip_missing": 1,
+  "n_skip_excluded": 0,
+  "n_skip_overlay": 0,
+  "n_objects_scored": 2,
+  "stages_by_object": {
+    "OBJ-NOVOSLOBODSKAYA": ["PD", "RD", "ID"],
+    "OBJ-TYUMENSKAYA-5-GOLD-SEED": ["PD"]
+  },
+  "stage_page_model": "last_file_per_stage",
+  "n_gold_matrix": 6,
+  "hits": 0,
+  "recall_point": 0.0,
+  "recall_low": 0.0,
+  "recall_n": 6,
+  "recall_meets_tz": false,
+  "closes_gate_j": false,
+  "gap_ios4_val_open": true,
+  "train_public_not_frozen_val": true,
+  "note": "6 матричных позитивов TRAIN_PUBLIC. Не публиковать как порог ТЗ."
+}

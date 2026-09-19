@@ -1,0 +1,34 @@
+{
+  "n_index": 203,
+  "by_stage": {
+    "ID": 99,
+    "PD": 83,
+    "RD": 10,
+    "RD_ID_MIXED": 10,
+    "UNKNOWN": 1
+  },
+  "by_object": {
+    "OBJ-NOVOSLOBODSKAYA": 145,
+    "OBJ-TYUMENSKAYA-5-GOLD-SEED": 58
+  },
+  "n_excluded_in_index": 0,
+  "n_overlay_as_source": 0,
+  "n_runnable_stage": 192,
+  "tyumen_stages_in_index": [
+    "PD",
+    "RD_ID_MIXED",
+    "UNKNOWN"
+  ],
+  "tyumen_has_rd": false,
+  "tyumen_has_id": false,
+  "source_join": {
+    "n_source_hit": 191,
+    "n_source_miss": 1,
+    "miss_file_ids_sample": [
+      "F0152"
+    ]
+  },
+  "stage_page_model": "last_file_per_stage",
+  "closes_gate_j": false,
+  "note": "RD_ID_MIXED и UNKNOWN не runnable. Overlay не источник."
+}

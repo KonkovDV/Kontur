@@ -6,6 +6,7 @@
         test test-fast check lint types \
         ocr-pilot \
         train-public \
+        agent-dumps \
         clean
 
 PYTHON   := python
@@ -58,6 +59,9 @@ train-public:  ## TRAIN_PUBLIC JSONL в Docker. Не закрывает гейт
 		-e KONTUR_ROOT=/app \
 		-e KONTUR_TRAIN_PUBLIC_OUT=/app/out \
 		core python -m kontur.evaluation.train_public
+
+agent-dumps:   ## coverage + handoff JSON для следующего ИИ. Не закрывает гейты
+	$(PYTHON) scripts/export_agent_dumps.py
 
 # ── Тесты и качество ────────────────────────────────────────────────────────
 
