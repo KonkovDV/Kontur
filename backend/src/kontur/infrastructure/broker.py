@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 
-from kontur.infrastructure.outbox import PublishError, ROUTING_KEY
+from kontur.infrastructure.outbox import ROUTING_KEY, PublishError
 
 DEFAULT_TIMEOUT_SECONDS = 10.0
 
