@@ -33,7 +33,11 @@ def _payload(process_id: str, object_id: str) -> dict[str, object]:
         "version": 1,
         "status": "PROTOCOL_FINALIZED",
         "scenario": "SINGLE_ONLY",
-        "upload_status": {"pd": "PD_MISSING", "rd": "RD_MISSING", "id": "ID_MISSING"},
+        "upload_status": {
+            "pd": "PD_MISSING",
+            "rd": "RD_MISSING",
+            "id": "ID_MISSING",
+        },
         "sections": {
             "completeness": [],
             "candidates": [],
@@ -95,7 +99,8 @@ def _state(process_id: str) -> tuple[str, int, str | None, str, int]:
         ).fetchone()
     if row is None:
         raise AssertionError("sync state row missing")
-    return str(row[0]), int(row[1]), None if row[2] is None else str(row[2]), str(row[3]), int(row[4])
+    error = None if row[2] is None else str(row[2])
+    return str(row[0]), int(row[1]), error, str(row[3]), int(row[4])
 
 
 def main() -> None:
