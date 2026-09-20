@@ -166,7 +166,7 @@ jobs:
       - name: Build and start core and gateway
         run: |
           docker compose build core gateway
-          docker compose up -d core gateway
+          docker compose up -d --no-deps core gateway
       - name: Verify health and hardened runtime configuration
         run: |
           set -euo pipefail
