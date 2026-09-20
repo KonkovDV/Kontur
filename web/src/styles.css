@@ -8,20 +8,38 @@ body {
   margin: 0;
 }
 
+button,
+input,
+select {
+  font: inherit;
+}
+
 .workspace {
   display: grid;
   gap: 1rem;
   padding: 1.5rem;
 }
 
+.workspace__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: end;
+}
+
 .workspace__header h1 {
   margin: 0 0 0.25rem;
+}
+
+.workspace__header p {
+  max-width: 52rem;
 }
 
 .completeness,
 .quality,
 .pane,
-.card {
+.card,
+.summary {
   background: #fff;
   border: 1px solid #d7d0c4;
   padding: 1rem;
@@ -29,16 +47,32 @@ body {
 
 .completeness {
   display: flex;
+  flex-wrap: wrap;
   gap: 1.5rem;
+}
+
+.completeness strong {
+  margin-left: auto;
+}
+
+.participant,
+.card label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.participant input,
+.card select {
+  min-height: 2.5rem;
 }
 
 .panes {
   display: grid;
-  grid-template-columns: 1fr minmax(16rem, 20rem) 1fr;
+  grid-template-columns: 1fr minmax(18rem, 22rem) 1fr;
   gap: 1rem;
 }
 
-.placeholder {
+.evidence {
   min-height: 16rem;
   margin: 0;
   background: repeating-linear-gradient(
@@ -50,26 +84,66 @@ body {
   );
   display: grid;
   place-items: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.eyebrow {
+  color: #62584c;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.5rem;
   margin: 1rem 0;
 }
 
-.actions button:last-child {
-  margin-left: auto;
+.actions button,
+.summary button {
+  min-height: 2.75rem;
 }
 
-label {
-  display: grid;
-  gap: 0.35rem;
+.summary dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.summary dt {
+  color: #62584c;
+}
+
+.summary dd {
+  margin: 0.2rem 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.pass {
+  color: #176b36;
+}
+
+.fail {
+  color: #a31515;
+  font-weight: 700;
 }
 
 @media (max-width: 960px) {
+  .workspace__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .panes {
     grid-template-columns: 1fr;
+  }
+
+  .completeness strong {
+    margin-left: 0;
   }
 }
