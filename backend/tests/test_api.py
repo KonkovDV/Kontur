@@ -390,6 +390,7 @@ def test_duplicate_upload_same_hash_stage_is_empty_accepted(client: TestClient) 
     record = app.state.workspace.get(process_id)
     assert record is not None
     assert record.process_state is ProcessState.READY
+    assert record.parse_attempts == 1
     assert len(record.findings) == 132
 
 

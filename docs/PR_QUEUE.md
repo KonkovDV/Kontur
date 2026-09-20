@@ -41,6 +41,8 @@
 | #57 | Live Gate L k6 после upload; p95 на GHA измерен, не production SLA |
 | #58 | JWT RS256/ES256 по умолчанию; legacy только с `KONTUR_ALLOW_INSECURE_DEV_AUTH` |
 | #59 | Фактические байты upload: middleware считает `http.request`, файл читается чанками; 413 с `BATCH_LIMIT_EXCEEDED` / `FILE_TOO_LARGE`; смешанный accept/reject сохранён |
+| #60 | non-root UID/GID 10001, read-only rootfs, `cap_drop: ALL`, `no-new-privileges`, порты только loopback; smoke tests контейнеров |
+| upload retry | повтор hash+stage не `reopen_for_upload` и не pipeline; FINALIZED → 409; правка `runtime.py`/`api.py`, без monkeypatch |
 
 ## Что не брали
 
@@ -75,6 +77,7 @@
 | #53 as-is | CI `backend` FAILURE (ruff I001/F401); `ocr_text=AVAILABLE` по `shutil.which`; дубль CA/Wilson z=1.645; `wilson(290,300)` как PASS пилота; импорт несуществующего `pdf_fixtures`; полный кадр назван region-crop; domain→infrastructure |
 | #54 as-is | `ocr_tesseract.py` одной строкой (invalid-syntax), CI backend FAILURE; «гейт I закрыт» до замера; tessdata-best нет в образе; `MIN_WORD_CONF` 40→35. Docker-прогон crop×3+oem1+autocontrast+PSM 7→6→8 на SILVER PDF_TEXT_LAYER: mean_ca тот же, tz_low и gate_i_low ниже, чем у текущего `main`. В прод не брали |
 | #59 as-is | generic `{"detail":"request too large"}`, любой reject срывал mixed accept/reject, 429 admission, mypy `SpooledTemporaryFile`/`Any`; влит переписанный срез с кодами ТЗ |
+| #61 as-is | import-time monkeypatch `ProcessRecord` из `presentation/__init__.py`; динамические флаги; Red Team BLOCK; backend CI FAILURE. Закрыт 20.09.2026. Идемпотентность влита прямой правкой `runtime.py`/`api.py` |
 | `feat/ocr-300dpi-step2-verifying` (`2ddc2b3`) | PR не открывался. Тот же усечённый push: `ocr_tesseract.py` одной строкой, 3161 байт. Заявлены wilson≥0.95 / tessdata-best / `MIN_WORD_CONF` 35. Не мержить |
 
 Не публиковать F1/P/R и recall критических на frozen val. Поставка

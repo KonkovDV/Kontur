@@ -118,7 +118,7 @@ psql -v ON_ERROR_STOP=1 \
 | ID | Набор | Класс | Атака | Цена отказа | Исправление | Регрессия |
 |---|---|---|---|---|---|---|
 | RT-2609-19 | RT-G | S2 | OpenAPI 3.0.3 → JSON Schema 2020-12; `format: binary` ломало генераторы клиентов | SDK падали на multipart | Bump до 3.1.0; `contentMediaType` вместо `format: binary` | `contracts/openapi.yaml` (671d8b8) |
-| RT-2609-18 | RT-G | S2 | Фронтенд (React + TypeScript) не проверялся в CI | Ошибки типов не обнаруживались до деплоя | Job `frontend`: `npm install` + `npx tsc --noEmit` | `.github/workflows/ci.yml` (4669fe1) |
+| RT-2609-18 | RT-G | S2 | Фронтенд (React + TypeScript) не проверялся в CI | Ошибки типов не обнаруживались до деплоя | Job `frontend`: `npm ci` + `npx tsc --noEmit` | `.github/workflows/ci.yml` |
 | RT-2709-09 | RT-C | S3 | `character_accuracy()` бросала `NotImplementedError("E1")`; CER недоступен | Метрика гейта I отсутствует | Wagner–Fischer CER; CA = 1 − CER ∈ [0; 1]; NFC + схлопывание пробелов | `test_metrics.py::test_character_accuracy_*` — 8 кейсов (ea75e70, bee1a1b) |
 
 ## OSINT, привлечённый к прогону

@@ -158,6 +158,7 @@ def build_handoff(
             "Guess non-gold RD_ID_MIXED as RD+ID",
             "Treat GOST Согласовано/ГИП header as approved etalon",
             "Prefer annotated_documents overlays over source PDFs",
+            "Revive PR #61 import-time monkeypatch of ProcessRecord",
         ],
         "commands": {
             "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",

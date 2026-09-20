@@ -94,6 +94,14 @@ class ProcessRecord:
     last_sync_notice: str | None = None
     protocol_id: str | None = None
 
+    def has_file(self, content_hash: str, stage: DocStage) -> bool:
+        """True, если hash+stage уже прикреплены к процессу."""
+
+        return any(
+            item.file_hash == content_hash and item.doc_stage == stage
+            for item in self.files
+        )
+
     def to_status(self) -> dict[str, object]:
         counters = {
             "candidates": 0,
@@ -256,9 +264,8 @@ class ProcessWorkspace:
     def attach_file(self, record: ProcessRecord, item: AcceptedFile) -> bool:
         """Прикрепить файл. Повтор hash+stage не дублирует (как UNIQUE в schema.sql)."""
 
-        for existing in record.files:
-            if existing.file_hash == item.file_hash and existing.doc_stage == item.doc_stage:
-                return False
+        if record.has_file(item.file_hash, item.doc_stage):
+            return False
         record.files.append(item)
         record.completeness[item.doc_stage] = Completeness.UPLOADED
         record.scenario = detect_scenario(record.completeness)

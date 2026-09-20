@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-20",
-  "export_git_sha": "53ef8c94f93f3e9771762c9e17aa0a5200488854",
+  "export_git_sha": "6501930112884eda3b83c54c5de09da8681c2243",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -68,7 +68,8 @@
     "Write CONFIRMED_VIOLATION from the automaton or LLM",
     "Guess non-gold RD_ID_MIXED as RD+ID",
     "Treat GOST Согласовано/ГИП header as approved etalon",
-    "Prefer annotated_documents overlays over source PDFs"
+    "Prefer annotated_documents overlays over source PDFs",
+    "Revive PR #61 import-time monkeypatch of ProcessRecord"
   ],
   "commands": {
     "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",

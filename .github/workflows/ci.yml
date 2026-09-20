@@ -68,7 +68,6 @@ jobs:
 
   frontend:
     # RT-2609-18: проверка типов TypeScript в web/
-    # TODO: зафиксировать package-lock.json и заменить npm install на npm ci
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -78,8 +77,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
       - name: Установить зависимости
-        run: npm install
+        run: npm ci
       - name: Проверка типов TypeScript (noEmit в tsconfig.json)
         run: npx tsc --noEmit
 

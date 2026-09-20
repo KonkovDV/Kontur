@@ -29,6 +29,11 @@ F0201: заполненная графа «Утвердил» + ФИО → `APPR
 HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/ROLE` только при
 `KONTUR_ALLOW_INSECURE_DEV_AUTH`. Статический публичный ключ ≠ OIDC/JWKS.
 Разбор PDF — в дочернем процессе; таймаут убивает child, не поток API.
+Контейнеры core/gateway: non-root 10001, read-only rootfs, `cap_drop: ALL`,
+порты на loopback (PR #60). Повтор идентичной загрузки (hash+stage) не
+открывает процесс заново и не гоняет pipeline; `FINALIZED` → 409.
+`web/` и `gateway/` зафиксированы `package-lock.json`; CI frontend — `npm ci`.
+`main` по-прежнему без branch protection.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
@@ -47,6 +52,7 @@ HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/RO
 - Угадывать не-gold `RD_ID_MIXED` как RD+ID. Overlay `annotated_documents` не источник скоринга.
 - Считать заголовок ГОСТ «Согласовано» / строку «ГИП» утверждением редакции.
 - Писать `CONFIRMED_VIOLATION` автоматом или LLM.
+- Возвращать import-time monkeypatch `ProcessRecord` из закрытого PR #61.
 
 ## Следующие слайсы
 
@@ -54,5 +60,6 @@ HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/RO
 2. 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21`).
 3. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
 4. Экстракторы точечно по списку `extractor_missing` в coverage snapshot.
+5. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.
 
 Гейты I и J кодом не закрыть: нет GOLD OCR и нет frozen val на 106 критических.

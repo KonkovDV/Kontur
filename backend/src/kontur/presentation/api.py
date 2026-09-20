@@ -22,7 +22,7 @@ from kontur.domain.capabilities import capabilities_payload
 from kontur.domain.models import DocStage
 from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError, protocol_status
-from kontur.domain.statuses import Completeness, ReasonCode
+from kontur.domain.statuses import Completeness, ProcessState, ReasonCode
 from kontur.infrastructure.access_control import AccessDeniedError, check_object_access
 from kontur.presentation.auth import actor_from_roles, parse_bearer
 from kontur.presentation.rbac import (
@@ -116,6 +116,43 @@ def _rejection_body(item: Rejection) -> dict[str, str]:
         "file_name": item.filename,
         "reason_code": item.reason.value,
         "message": item.detail,
+    }
+
+
+def _attach_new_files(
+    workspace: ProcessWorkspace,
+    record: ProcessRecord,
+    accepted_items: tuple[UploadCandidate, ...],
+    bodies: dict[str, bytes],
+    doc_stage: DocStage,
+) -> list[dict[str, str]]:
+    attached: list[dict[str, str]] = []
+    for item in accepted_items:
+        digest = item.content_hash
+        if digest is None:
+            raise RuntimeError("принятый файл обязан иметь SHA-256")
+        stored = AcceptedFile(
+            file_id=str(uuid4()),
+            file_hash=digest,
+            filename=item.filename,
+            doc_stage=doc_stage,
+            size_bytes=item.size_bytes,
+        )
+        if workspace.attach_file(record, stored):
+            workspace.keep_blob(record, stored.file_id, bodies[digest])
+            attached.append({"file_id": stored.file_id, "file_hash": stored.file_hash})
+    return attached
+
+
+def _upload_receipt(
+    record: ProcessRecord,
+    attached: list[dict[str, str]],
+    rejected: tuple[Rejection, ...],
+) -> dict[str, object]:
+    return {
+        "process_id": record.process_id,
+        "accepted": attached,
+        "rejected": [_rejection_body(item) for item in rejected],
     }
 
 
@@ -248,31 +285,24 @@ async def _upload_documents(
         completeness = _empty_completeness()
         completeness[doc_stage] = Completeness.UPLOADED
         record = workspace.create(normalized_object_id, completeness)
-    else:
-        workspace.reopen_for_upload(record)
-
-    accepted: list[dict[str, str]] = []
-    for item in decision.accepted:
-        digest = item.content_hash
-        if digest is None:
-            raise RuntimeError("принятый файл обязан иметь SHA-256")
-        stored = AcceptedFile(
-            file_id=str(uuid4()),
-            file_hash=digest,
-            filename=item.filename,
-            doc_stage=doc_stage,
-            size_bytes=item.size_bytes,
+        attached = _attach_new_files(
+            workspace, record, decision.accepted, bodies, doc_stage
         )
-        if workspace.attach_file(record, stored):
-            workspace.keep_blob(record, stored.file_id, bodies[digest])
-            accepted.append({"file_id": stored.file_id, "file_hash": stored.file_hash})
+        workspace.run_matrix_pipeline(record)
+        return _upload_receipt(record, attached, decision.rejected)
 
+    if record.process_state is ProcessState.FINALIZED:
+        raise TransitionError("протокол финализирован, дозагрузка запрещена")
+
+    attached = _attach_new_files(
+        workspace, record, decision.accepted, bodies, doc_stage
+    )
+    if not attached:
+        return _upload_receipt(record, [], decision.rejected)
+
+    workspace.reopen_for_upload(record)
     workspace.run_matrix_pipeline(record)
-    return {
-        "process_id": record.process_id,
-        "accepted": accepted,
-        "rejected": [_rejection_body(item) for item in decision.rejected],
-    }
+    return _upload_receipt(record, attached, decision.rejected)
 
 
 @app.get("/api/v1/processes/{process_id}/status", response_model=None)
