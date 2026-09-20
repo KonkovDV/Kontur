@@ -302,7 +302,13 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: >
-        Токен доступа с ролями INSPECTOR / SUPERVISOR / ADMIN (ТЗ п. 12).
+        JWT проверяется только с одним настроенным асимметричным алгоритмом:
+        RS256 с RSA-ключом либо ES256 с ключом P-256. Валидируются подпись,
+        iss, aud, exp, nbf, непустой sub и массив roles с ролями INSPECTOR /
+        SUPERVISOR / ADMIN. Операции, привязанные к объекту, дополнительно
+        требуют непустой object_id в токене, совпадающий с объектом запроса;
+        несовпадение запрещает доступ. GET /healthz публичен. GET
+        /system/capabilities требует JWT, но не требует object_id.
         Администратор не подтверждает нарушения и не финализирует протокол
         (ADR-0001), отмена финализации — только супервизор (п. 9.3).
 
@@ -315,9 +321,15 @@ components:
 
   responses:
     Unauthorized:
-      description: Токен отсутствует или недействителен (ТЗ п. 12)
+      description: Аутентификация не пройдена — JWT отсутствует, недействителен или не прошёл проверку обязательных claims
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
     Forbidden:
-      description: Роль субъекта не допускает операцию (ТЗ п. 12)
+      description: JWT действителен, но роль, object_id или требование инспектора не допускают операцию
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
     Rejected:
       description: Файл или пакет отклонён
       content:
@@ -325,6 +337,13 @@ components:
           schema: { $ref: "#/components/schemas/RejectionReason" }
 
   schemas:
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail: { type: string }
+      additionalProperties: false
+
     UploadAccepted:
       type: object
       required: [process_id, accepted, rejected]

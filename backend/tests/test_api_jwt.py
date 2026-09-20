@@ -159,6 +159,30 @@ def test_missing_object_scope_on_object_endpoint_is_403(
     assert app.state.workspace._items == {}
 
 
+def test_objectless_jwt_is_limited_to_non_object_bound_endpoints(
+    client: TestClient,
+    rsa_private: rsa.RSAPrivateKey,
+) -> None:
+    assert client.get("/api/v1/healthz").status_code == 200
+
+    claims = _claims()
+    del claims["object_id"]
+    token = jwt.encode(claims, rsa_private, algorithm="RS256")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    capabilities = client.get("/api/v1/system/capabilities", headers=headers)
+    assert capabilities.status_code == 200
+
+    denied = client.post(
+        "/api/v1/documents/upload",
+        headers=headers,
+        data={"object_id": "OBJ-001", "doc_stage": "PD"},
+        files=[("files", ("pz.pdf", PDF, "application/pdf"))],
+    )
+    assert denied.status_code == 403
+    assert app.state.workspace._items == {}
+
+
 def test_valid_es256_happy_path(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
