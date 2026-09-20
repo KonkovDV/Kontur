@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import DocStage, Finding
