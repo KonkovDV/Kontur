@@ -7,7 +7,6 @@
 -- ошибке», иначе тест зеленел бы и от опечатки в имени таблицы.
 
 BEGIN;
-
 INSERT INTO objects (id, name) VALUES ('obj-check', 'Объект для проверок схемы');
 INSERT INTO evidence_groups (id, object_id, rule_code, matrix_version)
 VALUES ('eg-check', 'obj-check', 'PZ-001', 'draft-0');
@@ -20,7 +19,6 @@ INSERT INTO protocols (
     'proto-check', 'obj-check', 1, 'draft-0', 'v1', 'm-0',
     'hash', 'PROTOCOL_FINALIZED', '{}'::jsonb, now()
 );
-
 -- 1. Финализированный протокол неизменяем.
 DO $$
 BEGIN
@@ -31,7 +29,6 @@ EXCEPTION
     WHEN SQLSTATE 'KNT01' THEN NULL;
 END;
 $$;
-
 -- 2. Финализированный протокол не удаляется.
 DO $$
 BEGIN
@@ -41,7 +38,6 @@ EXCEPTION
     WHEN SQLSTATE 'KNT01' THEN NULL;
 END;
 $$;
-
 -- 3. Отмена финализации не может подменить payload в том же UPDATE.
 DO $$
 BEGIN
@@ -58,7 +54,6 @@ EXCEPTION
         PERFORM set_config('kontur.unfinalize_reason', '', true);
 END;
 $$;
-
 -- 4. Отмена финализации возможна, но только с причиной и без правки payload.
 DO $$
 BEGIN
@@ -75,12 +70,10 @@ BEGIN
     END IF;
 END;
 $$;
-
 -- Протокол снова финализирован: дальнейшие проверки выгрузки требуют живой печати.
 UPDATE protocols
    SET status = 'PROTOCOL_FINALIZED', finalized_at = now()
  WHERE id = 'proto-check';
-
 -- 5. Машинный статус не может быть GOLD-меткой (ТЗ п. 9.4).
 DO $$
 BEGIN
@@ -96,7 +89,6 @@ EXCEPTION
     WHEN check_violation THEN NULL;
 END;
 $$;
-
 -- 6. GOLD без ответственного эксперта не существует (ТЗ п. 9.4).
 DO $$
 BEGIN
@@ -112,7 +104,6 @@ EXCEPTION
     WHEN check_violation THEN NULL;
 END;
 $$;
-
 -- 7. Отрицательный вердикт требует кодированной причины (ТЗ п. 9.3).
 DO $$
 BEGIN
@@ -128,11 +119,9 @@ EXCEPTION
     WHEN check_violation THEN NULL;
 END;
 $$;
-
 -- 8. Подтверждённое нарушение без инспектора и комментария невозможно (п. 9.3).
 INSERT INTO params (code, matrix_version, section, parameter_name, compiled_rule, coverage)
 VALUES ('PZ-001', 'draft-0', 'ПЗ', 'Площадь застройки', '{}'::jsonb, 'extractor_missing');
-
 DO $$
 DECLARE
     param_id INTEGER;
@@ -150,7 +139,6 @@ EXCEPTION
     WHEN check_violation THEN NULL;
 END;
 $$;
-
 -- 9. Выгрузка в РиН до финализации запрещена (ТЗ п. 9.6).
 DO $$
 BEGIN
@@ -165,7 +153,6 @@ EXCEPTION
     WHEN SQLSTATE 'KNT02' THEN NULL;
 END;
 $$;
-
 -- 10. FINALIZED без человека и без протокола не существует (ТЗ п. 9.3).
 DO $$
 BEGIN
@@ -179,7 +166,6 @@ EXCEPTION
     WHEN check_violation THEN NULL;
 END;
 $$;
-
 -- 11. Счётчик повторов ограничен ТЗ: 1 попытка + 2 повтора.
 DO $$
 BEGIN
@@ -193,7 +179,6 @@ EXCEPTION
     WHEN check_violation THEN NULL;
 END;
 $$;
-
 -- 12. Нормальный путь обязан проходить: процесс, протокол, GOLD-метка.
 INSERT INTO processes (
     id, object_id, process_state, scenario, matrix_version, model_version,
@@ -202,7 +187,6 @@ INSERT INTO processes (
     'prc-ok', 'obj-check', 'FINALIZED', 'FULL', 'draft-0', 'm-0',
     'proto-check', 'inspector-7', now(), 'PENDING_SYNC', 3
 );
-
 INSERT INTO dataset_items (
     id, evidence_group_id, gold_label, expert_id, reason_code,
     dataset_version, object_group_id, object_id
@@ -210,7 +194,6 @@ INSERT INTO dataset_items (
     'ds-ok', 'eg-check', 'NEGATIVE_VERIFIED', 'exp-1', 'WRONG_REVISION_SELECTED',
     'v1', 'grp-1', 'obj-check'
 );
-
 -- 13. Выгрузка смотрит на статус протокола, не только на process_state.
 INSERT INTO protocols (
     id, object_id, version, matrix_version, dataset_version, model_version,
@@ -219,7 +202,6 @@ INSERT INTO protocols (
     'proto-open', 'obj-check', 2, 'draft-0', 'v1', 'm-0',
     'hash-2', 'VERIFICATION_COMPLETED', '{}'::jsonb
 );
-
 DO $$
 BEGIN
     INSERT INTO processes (
@@ -235,14 +217,12 @@ EXCEPTION
     WHEN SQLSTATE 'KNT02' THEN NULL;
 END;
 $$;
-
 -- 14. Очередь процесса: CONFIRMED_VIOLATION без инспектора невозможна.
 INSERT INTO processes (
     id, object_id, process_state, scenario, matrix_version, model_version
 ) VALUES (
     'prc-findings', 'obj-check', 'PARSING', 'SINGLE_ONLY', 'draft-0', 'm-0'
 );
-
 DO $$
 BEGIN
     INSERT INTO process_findings (
@@ -258,14 +238,12 @@ EXCEPTION
     WHEN check_violation THEN NULL;
 END;
 $$;
-
 -- 15. Повтор hash+stage в процессе запрещён.
 INSERT INTO process_files (
     process_id, file_id, file_hash, filename, doc_stage, size_bytes
 ) VALUES (
     'prc-findings', 'file-1', repeat('a', 64), 'pz.pdf', 'PD', 12
 );
-
 DO $$
 BEGIN
     INSERT INTO process_files (
@@ -278,7 +256,6 @@ EXCEPTION
     WHEN unique_violation THEN NULL;
 END;
 $$;
-
 -- 16. CANDIDATE без evidence_group_id не сохраняется.
 DO $$
 BEGIN
@@ -295,5 +272,87 @@ EXCEPTION
     WHEN check_violation THEN NULL;
 END;
 $$;
-
+-- 17. Финализированный internal_placeholder нельзя перевести в очередь выгрузки.
+INSERT INTO protocols (
+    id, object_id, version, matrix_version, dataset_version, model_version,
+    input_manifest_hash, status, payload, finalized_at
+) VALUES (
+    'proto-placeholder-check', 'obj-check', 3, 'draft-0', 'v1', 'm-0',
+    'hash-placeholder', 'PROTOCOL_FINALIZED',
+    '{"kind":"internal_placeholder","assembled":true}'::jsonb, now()
+);
+INSERT INTO processes (
+    id, object_id, process_state, scenario, matrix_version, model_version,
+    protocol_id, finalized_by, finalized_at, sync_state
+) VALUES (
+    'prc-placeholder-check', 'obj-check', 'FINALIZED', 'FULL', 'draft-0', 'm-0',
+    'proto-placeholder-check', 'inspector-7', now(), 'NOT_REQUESTED'
+);
+DO $$
+BEGIN
+    UPDATE processes
+       SET sync_state = 'PENDING_SYNC'
+     WHERE id = 'prc-placeholder-check';
+    RAISE EXCEPTION 'internal_placeholder был поставлен в очередь выгрузки'
+        USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN SQLSTATE 'KNT02' THEN NULL;
+END;
+$$;
+-- 18. Финализированный payload с JSON boolean assembled=false нельзя выгружать.
+INSERT INTO protocols (
+    id, object_id, version, matrix_version, dataset_version, model_version,
+    input_manifest_hash, status, payload, finalized_at
+) VALUES (
+    'proto-unassembled-check', 'obj-check', 4, 'draft-0', 'v1', 'm-0',
+    'hash-unassembled', 'PROTOCOL_FINALIZED',
+    '{"kind":"materialized","assembled":false}'::jsonb, now()
+);
+INSERT INTO processes (
+    id, object_id, process_state, scenario, matrix_version, model_version,
+    protocol_id, finalized_by, finalized_at, sync_state
+) VALUES (
+    'prc-unassembled-check', 'obj-check', 'FINALIZED', 'FULL', 'draft-0', 'm-0',
+    'proto-unassembled-check', 'inspector-7', now(), 'NOT_REQUESTED'
+);
+DO $$
+BEGIN
+    UPDATE processes
+       SET sync_state = 'PENDING_SYNC'
+     WHERE id = 'prc-unassembled-check';
+    RAISE EXCEPTION 'assembled=false был поставлен в очередь выгрузки'
+        USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN SQLSTATE 'KNT02' THEN NULL;
+END;
+$$;
+-- 19. Отсутствующий assembled не считается false и разрешает запрос выгрузки.
+INSERT INTO protocols (
+    id, object_id, version, matrix_version, dataset_version, model_version,
+    input_manifest_hash, status, payload, finalized_at
+) VALUES (
+    'proto-no-assembled-check', 'obj-check', 5, 'draft-0', 'v1', 'm-0',
+    'hash-no-assembled', 'PROTOCOL_FINALIZED',
+    '{"kind":"materialized"}'::jsonb, now()
+);
+INSERT INTO processes (
+    id, object_id, process_state, scenario, matrix_version, model_version,
+    protocol_id, finalized_by, finalized_at, sync_state
+) VALUES (
+    'prc-no-assembled-check', 'obj-check', 'FINALIZED', 'FULL', 'draft-0', 'm-0',
+    'proto-no-assembled-check', 'inspector-7', now(), 'NOT_REQUESTED'
+);
+DO $$
+BEGIN
+    UPDATE processes
+       SET sync_state = 'PENDING_SYNC'
+     WHERE id = 'prc-no-assembled-check';
+    IF (SELECT sync_state FROM processes WHERE id = 'prc-no-assembled-check')
+       <> 'PENDING_SYNC'
+    THEN
+        RAISE EXCEPTION 'payload без assembled не перешёл в очередь выгрузки'
+            USING ERRCODE = 'KNT99';
+    END IF;
+END;
+$$;
 ROLLBACK;

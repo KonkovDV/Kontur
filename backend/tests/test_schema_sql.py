@@ -55,7 +55,6 @@ def test_two_gold_labels_same_object_live_but_two_splits_do_not() -> None:
     conn.execute("INSERT INTO object_splits VALUES ('obj-10', 'v1', 'train')")
     conn.execute("INSERT INTO dataset_items VALUES ('row-1', 'eg-a', 'v1', 'obj-10')")
     conn.execute("INSERT INTO dataset_items VALUES ('row-2', 'eg-b', 'v1', 'obj-10')")
-
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute("INSERT INTO object_splits VALUES ('obj-10', 'v1', 'validation')")
     with pytest.raises(sqlite3.IntegrityError):
@@ -65,7 +64,6 @@ def test_two_gold_labels_same_object_live_but_two_splits_do_not() -> None:
 
 def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     """Postgres-ограничения нельзя выполнить в sqlite, но их исчезновение видно здесь."""
-
     sql = SCHEMA.read_text(encoding="utf-8")
     assert "CREATE TABLE processes" in sql
     assert "completeness_pd" in sql
@@ -101,7 +99,6 @@ def test_schema_sync_guard_rejects_placeholder_and_false_assembled() -> None:
 
 def test_checks_sql_asserts_instead_of_merely_running() -> None:
     """checks.sql обязан ловить отсутствие ограничения, а не любую ошибку подряд."""
-
     checks = CHECKS.read_text(encoding="utf-8")
     assert checks.count("DO $$") >= 15
     assert "process_findings" in checks
@@ -110,6 +107,7 @@ def test_checks_sql_asserts_instead_of_merely_running() -> None:
     assert "KNT99" in checks
     assert "KNT02" in checks
     assert "SQLSTATE 'KNT01'" in checks
+    assert "WHEN SQLSTATE 'KNT02' THEN NULL;" in checks
     assert "отмена финализации изменила содержимое" in checks
     assert "WHEN check_violation THEN NULL;" in checks
     assert checks.rstrip().endswith("ROLLBACK;")
@@ -117,7 +115,6 @@ def test_checks_sql_asserts_instead_of_merely_running() -> None:
 
 def test_machine_status_cannot_become_a_gold_label() -> None:
     """ТЗ п. 9.4: разметка — только человеческий вердикт, и только с экспертом."""
-
     conn = sqlite3.connect(":memory:")
     conn.executescript(
         """

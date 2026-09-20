@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import DocStage, Finding
@@ -171,8 +170,11 @@ def test_attach_file_is_idempotent_on_hash_and_stage() -> None:
         size_bytes=12,
     )
     assert workspace.attach_file(record, item) is True
+    assert record.has_file("a" * 64, DocStage.PD) is True
     assert workspace.attach_file(record, retry) is False
     assert workspace.attach_file(record, other_stage) is True
+    assert record.has_file("a" * 64, DocStage.RD) is True
+    assert record.has_file("b" * 64, DocStage.PD) is False
     assert len(record.files) == 2
 
 
