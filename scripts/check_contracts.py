@@ -38,6 +38,26 @@ from kontur.presentation.rbac import REQUIRED_ROLES  # noqa: E402
 
 #: HTTP-методы, которые в этой спецификации могут нести операцию.
 METHODS = frozenset({"get", "post", "put", "patch", "delete"})
+GLOBAL_SECURITY = [{"bearerAuth": []}]
+PUBLIC_OPERATIONS = frozenset({"healthz"})
+NON_OBJECT_PROTECTED_OPERATIONS = frozenset({"getSystemCapabilities"})
+OBJECT_BOUND_OPERATIONS = frozenset(
+    {
+        "uploadDocuments",
+        "getProcessStatus",
+        "getProtocol",
+        "getAuditLog",
+        "reviewFinding",
+        "startVerification",
+        "completeVerification",
+        "finalizeProtocol",
+        "unfinalizeProtocol",
+        "syncInspection",
+    }
+)
+UNAUTHORIZED_REF = {"$ref": "#/components/responses/Unauthorized"}
+FORBIDDEN_REF = {"$ref": "#/components/responses/Forbidden"}
+ERROR_RESPONSE_REF = "#/components/schemas/ErrorResponse"
 
 
 def main() -> int:
@@ -88,7 +108,9 @@ def main() -> int:
 
     actions = set(review_props["action"]["enum"])
     if actions != {"CONFIRM", "REJECT", "REQUEST_CLARIFICATION"}:
-        problems.append("ReviewDecision.action: SPLIT не должен быть атомарным действием")
+        problems.append(
+            "ReviewDecision.action: SPLIT не должен быть атомарным действием"
+        )
     if "comment" not in components["ReviewDecision"].get("required", []):
         problems.append("ReviewDecision.comment обязателен по п. 9.3")
     for path, label in (
@@ -115,10 +137,28 @@ def main() -> int:
 
     if not spec.get("security"):
         problems.append("нет глобального security: ТЗ п. 12 требует аутентификации")
-    if "bearerAuth" not in spec["components"].get("securitySchemes", {}):
-        problems.append("нет securitySchemes.bearerAuth: чем подписан запрос — не описано")
+    if spec.get("security") != GLOBAL_SECURITY:
+        problems.append("глобальный security должен быть ровно [{bearerAuth: []}]")
+
+    security_schemes = spec["components"].get("securitySchemes", {})
+    if "bearerAuth" not in security_schemes:
+        problems.append("нет securitySchemes.bearerAuth: подпись запроса не описана")
+    else:
+        bearer = security_schemes["bearerAuth"]
+        if bearer.get("type") != "http":
+            problems.append("bearerAuth.type должен быть http")
+        scheme = bearer.get("scheme")
+        if not isinstance(scheme, str) or scheme.casefold() != "bearer":
+            problems.append("bearerAuth.scheme должен быть bearer без учёта регистра")
+        if bearer.get("bearerFormat") != "JWT":
+            problems.append("bearerAuth.bearerFormat должен быть JWT")
+        description = bearer.get("description", "")
+        for token in ("RS256", "ES256", "object_id"):
+            if token not in description:
+                problems.append(f"bearerAuth.description не содержит {token}")
 
     operations: dict[str, dict[str, object]] = {}
+    public_by_security: set[str] = set()
     for path, item in spec["paths"].items():
         for method, operation in item.items():
             if method not in METHODS:
@@ -127,15 +167,32 @@ def main() -> int:
             if operation_id is None:
                 problems.append(f"{method.upper()} {path}: нет operationId")
                 continue
-            operations[operation_id] = operation
-            if operation.get("security") == []:
-                if operation.get("x-required-roles"):
-                    problems.append(f"{operation_id}: публичная операция не должна задавать роли")
+            if operation_id in operations:
+                problems.append(f"дубликат operationId: {operation_id}")
                 continue
+            operations[operation_id] = operation
+
+            if operation.get("security") == []:
+                public_by_security.add(operation_id)
+                if operation.get("x-required-roles"):
+                    problems.append(
+                        f"{operation_id}: публичная операция не должна задавать роли"
+                    )
+                responses = operation.get("responses", {})
+                if "401" in responses or "403" in responses:
+                    problems.append(f"{operation_id}: публичная операция не должна иметь 401/403")
+                continue
+
+            effective_security = operation.get("security", spec.get("security"))
+            if effective_security != GLOBAL_SECURITY:
+                problems.append(
+                    f"{operation_id}: effective security должен совпадать с глобальным"
+                )
             responses = operation.get("responses", {})
-            for code in ("401", "403"):
-                if code not in responses:
-                    problems.append(f"{operation_id}: нет ответа {code} (ТЗ п. 12)")
+            if responses.get("401") != UNAUTHORIZED_REF:
+                problems.append(f"{operation_id}: ответ 401 должен ссылаться на Unauthorized")
+            if responses.get("403") != FORBIDDEN_REF:
+                problems.append(f"{operation_id}: ответ 403 должен ссылаться на Forbidden")
             declared = operation.get("x-required-roles")
             if not declared:
                 problems.append(f"{operation_id}: не заданы x-required-roles")
@@ -145,9 +202,51 @@ def main() -> int:
                 problems.append(f"{operation_id}: операции нет в rbac.REQUIRED_ROLES")
             elif set(declared) != {role.value for role in expected}:
                 problems.append(f"{operation_id}: роли контракта и rbac расходятся")
+
+    if public_by_security != PUBLIC_OPERATIONS:
+        problems.append(
+            "security: [] должна иметь ровно операция healthz, получено "
+            f"{sorted(public_by_security)}"
+        )
+
+    expected_operations = (
+        PUBLIC_OPERATIONS | NON_OBJECT_PROTECTED_OPERATIONS | OBJECT_BOUND_OPERATIONS
+    )
+    if set(operations) != expected_operations:
+        missing = sorted(expected_operations - set(operations))
+        extra = sorted(set(operations) - expected_operations)
+        problems.append(f"operationId partition: отсутствуют {missing}, лишние {extra}")
+
+    protected = set(operations) - PUBLIC_OPERATIONS
+    if protected != set(REQUIRED_ROLES):
+        missing = sorted(set(REQUIRED_ROLES) - protected)
+        extra = sorted(protected - set(REQUIRED_ROLES))
+        problems.append(f"protected operationId: отсутствуют {missing}, лишние {extra}")
+
     orphans = sorted(set(REQUIRED_ROLES) - set(operations))
     if orphans:
-        problems.append(f"матрица прав описывает несуществующие операции: {', '.join(orphans)}")
+        problems.append(
+            "матрица прав описывает несуществующие операции: " + ", ".join(orphans)
+        )
+
+    responses = spec["components"].get("responses", {})
+    for name in ("Unauthorized", "Forbidden"):
+        schema = (
+            responses.get(name, {})
+            .get("content", {})
+            .get("application/json", {})
+            .get("schema")
+        )
+        if schema != {"$ref": ERROR_RESPONSE_REF}:
+            problems.append(f"components.responses.{name} должен ссылаться на ErrorResponse")
+
+    error_response = components.get("ErrorResponse", {})
+    if "detail" not in error_response.get("required", []):
+        problems.append("ErrorResponse должен требовать detail")
+    if error_response.get("properties", {}).get("detail") != {"type": "string"}:
+        problems.append("ErrorResponse.detail должен иметь type string")
+    if error_response.get("additionalProperties") is not False:
+        problems.append("ErrorResponse.additionalProperties должен быть false")
 
     title = spec["info"]["title"]
     if title != "Инспектор ИИ":
@@ -157,7 +256,7 @@ def main() -> int:
         print(problem)
     if problems:
         return 1
-    print("contracts: схемы валидны, два провода статусов согласованы")
+    print("contracts: схемы валидны, JWT/RBAC и два провода статусов согласованы")
     return 0
 
 
