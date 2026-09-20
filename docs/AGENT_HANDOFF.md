@@ -36,9 +36,8 @@ HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/RO
 Учебный рекордер Gate K в `web/` пишет JSON `kontur-usability-v1`; сессий нет,
 `closes_gate_k` false. `MISSING_EVIDENCE` нельзя подтвердить как нарушение.
 `main` по-прежнему без branch protection.
-
-На ветке PR #64 (ещё не `main`): PostgreSQL `save()` финализации fail-closed —
-без атомарной материализации INSERT placeholder запрещён. Payload собирается в
+PostgreSQL `save()` финализации fail-closed (PR #64): без атомарной
+материализации INSERT placeholder запрещён. Payload собирается в
 application-слое, JSON пишется в той же транзакции, что и процесс;
 `UNIQUE (object_id, version)`; повтор с тем же каноническим JSON идемпотентен,
 расхождение — конфликт. Без `connection.transaction()` финализация отклоняется.
@@ -67,13 +66,11 @@ application-слое, JSON пишется в той же транзакции, �
 ## Следующие слайсы
 
 1. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
-2. Слить PR #64 только при зелёном CI: fail-closed Postgres + атомарная
-   versioned materialization протокола. Не закрывает I/J/K.
-3. Рекордер кликов в `web/`; 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
-4. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
-5. Экстракторы точечно по списку `extractor_missing` в coverage snapshot.
-6. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.
-7. Если PAT когда-либо светился в issue/PR/логе — отозвать в GitHub Settings
+2. Рекордер кликов в `web/`; 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
+3. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
+4. Экстракторы точечно по списку `extractor_missing` в coverage snapshot.
+5. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.
+6. Если PAT когда-либо светился в issue/PR/логе — отозвать в GitHub Settings
    → Developer settings → Personal access tokens; не вставлять токен в чат.
 
 Гейты I и J кодом не закрыть: нет GOLD OCR и нет frozen val на 106 критических.
