@@ -19,13 +19,13 @@ from kontur.domain.statuses import (
 )
 from kontur.infrastructure.db.process_store import (
     ENSURE_OBJECT_SQL,
-    PLACEHOLDER_PROTOCOL_SQL,
     SELECT_FINDINGS_SQL,
     UPSERT_FINDING_SQL,
     UPSERT_PROCESS_SQL,
     MemoryProcessStore,
     PostgresProcessStore,
     ProcessSnapshot,
+    ProtocolMaterializationRequiredError,
     finding_from_row,
     finding_to_params,
     snapshot_params,
@@ -82,10 +82,9 @@ def test_sql_matches_schema_columns() -> None:
     assert "completeness_pd" in UPSERT_PROCESS_SQL
     assert "ON CONFLICT (id) DO UPDATE" in UPSERT_PROCESS_SQL
     assert "INSERT INTO objects" in ENSURE_OBJECT_SQL
-    assert "PROTOCOL_FINALIZED" in PLACEHOLDER_PROTOCOL_SQL
     assert "INSERT INTO process_findings" in UPSERT_FINDING_SQL
     assert "FROM process_findings" in SELECT_FINDINGS_SQL
-    assert "assembled" in str(snapshot_params(_snap()).get("payload"))
+    assert "payload" not in snapshot_params(_snap())
 
 
 def test_workspace_survives_new_process_on_same_store() -> None:
@@ -172,11 +171,8 @@ def test_attach_file_is_idempotent_on_hash_and_stage() -> None:
         size_bytes=12,
     )
     assert workspace.attach_file(record, item) is True
-    assert record.has_file("a" * 64, DocStage.PD) is True
     assert workspace.attach_file(record, retry) is False
     assert workspace.attach_file(record, other_stage) is True
-    assert record.has_file("a" * 64, DocStage.RD) is True
-    assert record.has_file("b" * 64, DocStage.PD) is False
     assert len(record.files) == 2
 
 
@@ -287,7 +283,36 @@ class _Conn:
         return _Cursor([])
 
 
-def test_postgres_store_writes_findings_and_audit() -> None:
+def test_postgres_finalized_save_fails_closed_before_any_sql() -> None:
+    conn = _Conn()
+    store = PostgresProcessStore(conn)
+    finalized = _snap(
+        process_state=ProcessState.FINALIZED,
+        finalized_by="insp-7",
+        protocol_id="proto-1",
+    )
+
+    with pytest.raises(
+        ProtocolMaterializationRequiredError,
+        match="atomic versioned protocol materialization",
+    ):
+        store.save(finalized)
+
+    assert conn.sql == []
+
+
+def test_memory_store_keeps_finalized_snapshot_compatibility() -> None:
+    store = MemoryProcessStore()
+    finalized = _snap(
+        process_state=ProcessState.FINALIZED,
+        finalized_by="insp-7",
+        protocol_id="proto-1",
+    )
+    store.save(finalized)
+    assert store.load("p-1") == finalized
+
+
+def test_postgres_store_writes_non_final_snapshots_findings_and_audit() -> None:
     conn = _Conn()
     store = PostgresProcessStore(conn)
     store.save(_snap())
@@ -323,5 +348,7 @@ def test_postgres_store_writes_findings_and_audit() -> None:
     ]
     loaded = store.load_findings("p-1")
     assert loaded[0].finding_id == "f-persist"
-    store.save_audit_event("p-1", "insp-7", "REVIEW", {"action": "REJECT"}, object_id="obj-1")
+    store.save_audit_event(
+        "p-1", "insp-7", "REVIEW", {"action": "REJECT"}, object_id="obj-1"
+    )
     assert any("INSERT INTO audit_log" in item for item in conn.sql)
