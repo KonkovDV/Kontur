@@ -60,7 +60,14 @@ SYNC_TRANSITIONS: dict[SyncState, frozenset[SyncState]] = {
     SyncState.NOT_REQUESTED: frozenset({SyncState.PENDING_SYNC}),
     SyncState.PENDING_SYNC: frozenset({SyncState.SYNCING}),
     SyncState.SYNCING: frozenset(
-        {SyncState.SYNCED, SyncState.RETRY_WAIT, SyncState.FAILED_TERMINAL}
+        {
+            SyncState.SYNCED,
+            SyncState.RETRY_WAIT,
+            SyncState.FAILED_TERMINAL,
+            # Transport exhaustion returns the process to a human retry. SYNCED
+            # remains reserved for a later Rin business ACK, not broker confirm.
+            SyncState.PENDING_SYNC,
+        }
     ),
     SyncState.RETRY_WAIT: frozenset({SyncState.SYNCING, SyncState.FAILED_TERMINAL}),
     SyncState.SYNCED: frozenset(),

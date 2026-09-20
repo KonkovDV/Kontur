@@ -64,6 +64,10 @@ jobs:
         env:
           KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
         run: python scripts/check_protocol_concurrency.py
+      - name: Live transactional inbox settlement
+        env:
+          KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
+        run: python scripts/check_inbox.py
 
   claims:
     runs-on: ubuntu-latest

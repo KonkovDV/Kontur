@@ -47,6 +47,7 @@
 | #64 | fail-closed Postgres finalize + атомарная versioned materialization (`protocol-{process_id}` / `-vN`, идемпотентный retry, конфликт при другом JSON). Не закрывает I/J/K |
 | #65 | три контура готовности, семейства экстракторов, advisory lock/`payload_sha256`/outbox, ADR-0009. JSON `kind=materialized` на провод ТЗ не добавляли |
 | #67 | отдельный `outbox-relay` UID 10001, quorum `kontur.rin.protocol`, compose `kontur` не guest; leftover classic publisher снят. Не inbox, не РиН ACK |
+| #68 | sync lifecycle: `SYNCING` / `RETRY_WAIT` / ручной retry; confirm брокера не `SYNCED`. Live PG gate `sync-lifecycle-db` |
 
 ## Что не брали
 

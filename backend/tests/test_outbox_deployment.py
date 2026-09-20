@@ -48,6 +48,10 @@ def test_broker_contract_is_confirmed_persistent_and_bounded() -> None:
     assert "DeliveryMode.PERSISTENT" in source
     assert "mandatory=True" in source
     assert "timeout=self._timeout_seconds" in source
+    assert "PREFETCH_COUNT = 1" in source
+    assert "DEAD_LETTER_EXCHANGE" in source
+    assert "x-delivery-limit" in source
+    assert "protocol_queue_arguments" in source
 
 
 def test_classic_amqp_publisher_and_guest_compose_identity_are_gone() -> None:

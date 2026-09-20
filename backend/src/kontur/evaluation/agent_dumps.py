@@ -169,6 +169,7 @@ def build_handoff(
             "Revive PR #61 import-time monkeypatch of ProcessRecord",
             "Revive PR #63 experimental materialization (stripped provenance)",
             "Require kind=materialized or assembled=true on TZ protocol JSON",
+            "Treat broker confirm or inbox RECEIVED as process SYNCED / Rin ACK",
         ],
         "commands": {
             "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
@@ -199,6 +200,8 @@ def build_handoff(
             "research_osint": "docs/RESEARCH_OSINT_2026.md",
             "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
             "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md",
+            "adr_0011": "docs/adr/0011-sync-lifecycle-and-manual-retry.md",
+            "adr_0012": "docs/adr/0012-transactional-inbox.md",
         },
         "leftover_refs_do_not_merge": [
             "feat/ocr-gate-i-crop3x-oem1",
@@ -293,7 +296,7 @@ def build_tz_scorecard(
         _scorecard_item(
             "async_rabbit_outbox_workers",
             "partial",
-            "outbox relay to broker; HTTP still inline L1-L7; not Rin",
+            "outbox relay + inbox unique event_id; ACK after commit; HTTP inline; not Rin",
         ),
         _scorecard_item("split_finding", "unmet", "GAP-SPLIT NotImplementedError"),
     ]
