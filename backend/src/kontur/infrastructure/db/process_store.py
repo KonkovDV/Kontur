@@ -2,8 +2,7 @@
 
 `processes` держит состояние, комплектность и манифест. Очередь инспектора —
 `process_findings`, файлы — `process_files`, журнал — `audit_log`.
-Протокол ТЗ по-прежнему не выдумывается: placeholder нужен только CHECK
-`finalized_needs_human` (protocol_id NOT NULL при FINALIZED).
+PostgreSQL-финализация требует отдельной атомарной материализации версионного протокола.
 """
 
 from __future__ import annotations
@@ -28,6 +27,10 @@ from kontur.infrastructure.db.audit_store import AuditEvent, PostgresAuditStore
 
 MAX_PARSE_ATTEMPTS = 3
 MAX_SYNC_ATTEMPTS = 4
+
+
+class ProtocolMaterializationRequiredError(RuntimeError):
+    """PostgreSQL requires atomic versioned protocol materialization before finalize."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -299,18 +302,6 @@ INSERT INTO objects (id, name) VALUES (%(id)s, %(name)s)
 ON CONFLICT (id) DO NOTHING
 """
 
-PLACEHOLDER_PROTOCOL_SQL = """
-INSERT INTO protocols (
-    id, object_id, version, matrix_version, dataset_version, model_version,
-    input_manifest_hash, status, payload, finalized_at
-) VALUES (
-    %(id)s, %(object_id)s, 1, %(matrix_version)s, %(dataset_version)s,
-    %(model_version)s, %(input_manifest_hash)s, 'PROTOCOL_FINALIZED',
-    %(payload)s::jsonb, %(finalized_at)s
-)
-ON CONFLICT (id) DO NOTHING
-"""
-
 UPSERT_FINDING_SQL = """
 INSERT INTO process_findings (
     process_id, store_key, finding_id, evidence_group_id, rule_code,
@@ -382,7 +373,6 @@ def snapshot_params(snapshot: ProcessSnapshot) -> dict[str, object]:
         finalized_at: datetime | None = datetime.now(tz=UTC)
     else:
         finalized_at = None
-    manifest = snapshot.input_manifest_hash
     return {
         "id": snapshot.process_id,
         "object_id": snapshot.object_id,
@@ -394,7 +384,7 @@ def snapshot_params(snapshot: ProcessSnapshot) -> dict[str, object]:
         "completeness_pd": snapshot.completeness_pd.value,
         "completeness_rd": snapshot.completeness_rd.value,
         "completeness_id": snapshot.completeness_id.value,
-        "input_manifest_hash": manifest,
+        "input_manifest_hash": snapshot.input_manifest_hash,
         "parse_attempts": snapshot.parse_attempts,
         "sync_attempts": snapshot.sync_attempts,
         "sync_state": snapshot.sync_state.value,
@@ -403,12 +393,11 @@ def snapshot_params(snapshot: ProcessSnapshot) -> dict[str, object]:
         "finalized_at": finalized_at,
         "protocol_id": snapshot.protocol_id,
         "name": snapshot.object_id,
-        "payload": '{"kind":"internal_placeholder","assembled":false}',
     }
 
 
 class PostgresProcessStore:
-    """Пишет в schema.sql. psycopg — extra `store`, не обязательная зависимость pytest."""
+    """Пишет в schema.sql. psycopg — extra `store`."""
 
     def __init__(self, connection: object) -> None:
         self._connection = connection
@@ -458,10 +447,12 @@ class PostgresProcessStore:
 
     def save(self, snapshot: ProcessSnapshot) -> None:
         validate_snapshot(snapshot)
+        if snapshot.process_state is ProcessState.FINALIZED and snapshot.protocol_id:
+            raise ProtocolMaterializationRequiredError(
+                "PostgreSQL FINALIZED save requires atomic versioned protocol materialization"
+            )
         params = snapshot_params(snapshot)
         self._connection.execute(ENSURE_OBJECT_SQL, params)  # type: ignore[attr-defined]
-        if snapshot.process_state is ProcessState.FINALIZED and snapshot.protocol_id:
-            self._connection.execute(PLACEHOLDER_PROTOCOL_SQL, params)  # type: ignore[attr-defined]
         self._connection.execute(UPSERT_PROCESS_SQL, params)  # type: ignore[attr-defined]
         self._connection.execute(DELETE_FILES_SQL, {"id": snapshot.process_id})  # type: ignore[attr-defined]
         for item in snapshot.files:
