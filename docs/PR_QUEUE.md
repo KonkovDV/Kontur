@@ -48,6 +48,7 @@
 | #65 | три контура готовности, семейства экстракторов, advisory lock/`payload_sha256`/outbox, ADR-0009. JSON `kind=materialized` на провод ТЗ не добавляли |
 | #67 | отдельный `outbox-relay` UID 10001, quorum `kontur.rin.protocol`, compose `kontur` не guest; leftover classic publisher снят. Не inbox, не РиН ACK |
 | #68 | sync lifecycle: `SYNCING` / `RETRY_WAIT` / ручной retry; confirm брокера не `SYNCED`. Live PG gate `sync-lifecycle-db` |
+| #69 | transactional inbox: unique `event_id`, ACK после commit, prefetch 1, poison/DLX. Не `SYNCED`, не Rin ACK |
 
 ## Что не брали
 

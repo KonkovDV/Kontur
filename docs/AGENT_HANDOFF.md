@@ -53,7 +53,7 @@ UID 10001, quorum queue, compose `kontur` не guest; classic
 `actor_id`, audit `SYNC_RETRY_EXHAUSTED` / `SYNC_MANUAL_RETRY`. Publisher
 confirm **не** ставит `SYNCED` (ADR-0011). Transactional inbox (ADR-0012):
 уникальный `event_id`, ACK только после commit, prefetch 1, poison/DLX;
-не бизнес-ACK РиН. Очередь PR пуста; на origin только `main`.
+не бизнес-ACK РиН (PR #69). Очередь PR пуста; на origin только `main`.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
