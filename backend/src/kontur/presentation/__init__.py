@@ -1,7 +1,7 @@
 """Presentation boundary wiring.
 
 The upload endpoint predates the workspace-level duplicate query and calls
-``reopen_for_upload`` before it constructs ``AcceptedFile`` objects.  Install a
+``reopen_for_upload`` before it constructs ``AcceptedFile`` objects. Install a
 small compatibility guard on the in-memory workspace so a hash+stage retry is
 classified before any durable process mutation or parser invocation.
 """
@@ -53,22 +53,21 @@ def _install_idempotent_upload_guard() -> None:
     def reopen_for_upload(
         workspace: ProcessWorkspace, record: ProcessRecord
     ) -> None:
+        del workspace
         # FINALIZED remains an unconditional conflict, including duplicate-only
-        # retries.  For every other state, defer reopen until a new file exists.
+        # retries. For every other state, defer reopen until a new file exists.
         if record.process_state is ProcessState.FINALIZED:
-            raise TransitionError(
-                "протокол финализирован, дозагрузка запрещена"
-            )
+            raise TransitionError("протокол финализирован, дозагрузка запрещена")
         setattr(record, _PENDING, True)
         setattr(record, _ADDED, False)
 
     def attach_file(
         workspace: ProcessWorkspace, record: ProcessRecord, item: AcceptedFile
     ) -> bool:
-        if workspace.has_file(record, item.file_hash, item.doc_stage):
+        if _workspace_has_file(workspace, record, item.file_hash, item.doc_stage):
             return False
         if getattr(record, _PENDING, False) and not getattr(record, _ADDED, False):
-            # The first genuinely new item is the mutation boundary.  Mixed
+            # The first genuinely new item is the mutation boundary. Mixed
             # batches therefore reopen and parse once, while duplicates vanish.
             original_reopen(workspace, record)
         attached = original_attach(workspace, record, item)
@@ -90,12 +89,12 @@ def _install_idempotent_upload_guard() -> None:
                 record.__dict__.pop(_PENDING, None)
                 record.__dict__.pop(_ADDED, None)
 
-    ProcessRecord.has_file = _record_has_file  # type: ignore[attr-defined]
-    ProcessWorkspace.has_file = _workspace_has_file  # type: ignore[attr-defined]
-    ProcessWorkspace.reopen_for_upload = reopen_for_upload
-    ProcessWorkspace.attach_file = attach_file
-    ProcessWorkspace.run_matrix_pipeline = run_matrix_pipeline
-    ProcessWorkspace._idempotent_upload_guard = True  # type: ignore[attr-defined]
+    setattr(ProcessRecord, "has_file", _record_has_file)
+    setattr(ProcessWorkspace, "has_file", _workspace_has_file)
+    setattr(ProcessWorkspace, "reopen_for_upload", reopen_for_upload)
+    setattr(ProcessWorkspace, "attach_file", attach_file)
+    setattr(ProcessWorkspace, "run_matrix_pipeline", run_matrix_pipeline)
+    setattr(ProcessWorkspace, "_idempotent_upload_guard", True)
 
 
 _install_idempotent_upload_guard()
