@@ -474,6 +474,39 @@ def test_ready_verify_complete_then_finalize(client: TestClient) -> None:
     )
     assert finalized.status_code == 200
     assert finalized.json()["process_state"] == "FINALIZED"
+    body = client.get(
+        f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR
+    ).json()
+    assert body["protocol_id"].startswith("protocol-")
+    assert not body["protocol_id"].startswith("placeholder-")
+    assert body["status"] == "PROTOCOL_FINALIZED"
+    assert body["version"] == 1
+    assert "preliminary_no_difference" not in body["sections"]
+    undone = client.post(
+        f"/api/v1/processes/{process_id}/unfinalize",
+        headers=SUPERVISOR,
+        json={"inspector_id": "sup-1", "reason": "ошибочная финализация"},
+    )
+    assert undone.status_code == 200
+    again = client.post(
+        f"/api/v1/processes/{process_id}/finalize",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert again.status_code == 200
+    v2 = client.get(
+        f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR
+    ).json()
+    assert v2["version"] == 2
+    assert v2["protocol_id"].endswith("-v2")
+    historic = client.get(
+        f"/api/v1/processes/{process_id}/protocol",
+        headers=INSPECTOR,
+        params={"version": 1},
+    )
+    assert historic.status_code == 200
+    assert historic.json()["version"] == 1
+    assert historic.json()["protocol_id"] == body["protocol_id"]
 
 
 def test_candidate_blocks_complete_and_finalize(client: TestClient) -> None:

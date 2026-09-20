@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import json
+from collections.abc import Mapping, Sequence
 from datetime import UTC
 
 from kontur.application.scenarios import CompletenessMap, detect_scenario
@@ -18,6 +19,46 @@ _SECTION: dict[FindingStatus, str] = {
     FindingStatus.MISSING_EVIDENCE: "missing_evidence",
     FindingStatus.AUTO_NO_DIFFERENCE: "preliminary_no_difference",
 }
+
+
+def protocol_identity(process_id: str, version: int) -> str:
+    """Стабильный id версии: v1 без суффикса, дальше `-vN`."""
+
+    if not process_id.strip():
+        raise ValueError("process_id обязателен")
+    if version < 1:
+        raise ValueError("version должен быть >= 1")
+    if version == 1:
+        return f"protocol-{process_id}"
+    return f"protocol-{process_id}-v{version}"
+
+
+def canonical_protocol_json(payload: object) -> str:
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def reject_placeholder_payload(payload: Mapping[str, object]) -> None:
+    """Запрет legacy placeholder до INSERT. Не путать с HTTP-схемой протокола."""
+
+    if payload.get("kind") == "internal_placeholder":
+        raise ValueError("internal_placeholder нельзя материализовать")
+    if payload.get("assembled") is False:
+        raise ValueError("assembled=false нельзя материализовать")
+    protocol_id = payload.get("protocol_id")
+    if not isinstance(protocol_id, str) or not protocol_id.strip():
+        raise ValueError("protocol_id обязателен")
+    if protocol_id.startswith("placeholder-"):
+        raise ValueError("placeholder protocol_id запрещён")
+
+
+def protocol_for_http(payload: Mapping[str, object]) -> dict[str, object]:
+    """Копия для провода ТЗ: карман AUTO_NO_DIFFERENCE не сериализуется."""
+
+    clone: dict[str, object] = json.loads(canonical_protocol_json(payload))
+    sections = clone.get("sections")
+    if isinstance(sections, dict):
+        sections.pop("preliminary_no_difference", None)
+    return clone
 
 
 def finding_to_schema(finding: Finding) -> dict[str, object]:
@@ -79,6 +120,7 @@ def assemble_protocol(
     versions: dict[str, str],
     process_state: ProcessState = ProcessState.READY,
     input_manifest_hash: str,
+    version: int = 1,
 ) -> dict[str, object]:
     """Собрать протокол. Кандидаты не входят в violation_count.
 
@@ -114,7 +156,7 @@ def assemble_protocol(
     return {
         "protocol_id": protocol_id,
         "object_id": object_id,
-        "version": 1,
+        "version": version,
         "status": status,
         "scenario": detect_scenario(completeness).value,
         "upload_status": {

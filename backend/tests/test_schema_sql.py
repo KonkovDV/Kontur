@@ -88,6 +88,7 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "gold_label IN ('CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED')" in sql
     assert "gold_requires_expert" in sql
     assert "negative_gold_requires_reason" in sql
+    assert "UNIQUE (object_id, version)" in sql
 
 
 def test_schema_sync_guard_rejects_placeholder_and_false_assembled() -> None:

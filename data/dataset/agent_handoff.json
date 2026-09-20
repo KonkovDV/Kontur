@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-20",
-  "export_git_sha": "61c0275c62b95e50aa7e2d8d218195750d4f04fb",
+  "export_git_sha": "f014b3e1bf6b886c3574791635ccd3fd82a00bd8",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -69,7 +69,8 @@
     "Guess non-gold RD_ID_MIXED as RD+ID",
     "Treat GOST Согласовано/ГИП header as approved etalon",
     "Prefer annotated_documents overlays over source PDFs",
-    "Revive PR #61 import-time monkeypatch of ProcessRecord"
+    "Revive PR #61 import-time monkeypatch of ProcessRecord",
+    "Revive PR #63 experimental materialization (stripped provenance)"
   ],
   "commands": {
     "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
