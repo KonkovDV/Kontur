@@ -36,6 +36,12 @@ class InboxChannel(Protocol):
     def nack(self, delivery_tag: str, *, requeue: bool) -> None: ...
 
 
+class AsyncInboxMessage(Protocol):
+    async def ack(self) -> None: ...
+
+    async def nack(self, *, requeue: bool) -> None: ...
+
+
 @dataclass(frozen=True, slots=True)
 class BrokerDelivery:
     event_id: str
@@ -59,7 +65,7 @@ class InboxRow:
 
 
 class RecordingInboxChannel:
-    """Test double. Settlement order is the contract under test."""
+    """Synchronous test double for the compatibility settlement adapter."""
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, bool | None]] = []
@@ -73,6 +79,23 @@ class RecordingInboxChannel:
 
 def payload_digest(body: bytes) -> str:
     return protocol_payload_sha256(_protocol_cell(body.decode("utf-8")))
+
+
+def delivery_attempt(headers: Mapping[str, object]) -> int:
+    """Convert RabbitMQ's failed-delivery count into a 1-based attempt number.
+
+    The initial delivery has no x-delivery-count header. A redelivery with
+    x-delivery-count=1 is the second processing attempt, not the first.
+    """
+
+    raw = headers.get("x-delivery-count")
+    if raw is None:
+        return 1
+    try:
+        failed_deliveries = int(raw)
+    except (TypeError, ValueError):
+        return 1
+    return max(failed_deliveries, 0) + 1
 
 
 def classify_inbox_delivery(delivery: BrokerDelivery) -> tuple[str, InboxRow | None]:
@@ -133,35 +156,66 @@ def insert_inbox(connection: object, row: InboxRow) -> bool:
     return fetched is not None
 
 
-def settle_inbox_delivery(
-    connection: object,
-    delivery: BrokerDelivery,
-    channel: InboxChannel,
-) -> str:
-    """Persist then commit, then ACK. Does not close process synchronization."""
+def persist_inbox_delivery(connection: object, delivery: BrokerDelivery) -> str:
+    """Finish the database transaction and return the required broker action.
+
+    No broker method is called here. This separation prevents an async aio-pika
+    acknowledgement from being created but never awaited.
+    """
 
     action, row = classify_inbox_delivery(delivery)
-    first = False
     try:
         if row is not None:
-            first = insert_inbox(connection, row)
+            insert_inbox(connection, row)
         if action == "requeue":
             connection.rollback()  # type: ignore[attr-defined]
-            channel.nack(delivery.delivery_tag, requeue=True)
             return "NACK_REQUEUE"
         if action == "dead_letter" and row is None:
             connection.rollback()  # type: ignore[attr-defined]
-            channel.nack(delivery.delivery_tag, requeue=False)
             return "NACK_DEAD_LETTER"
         connection.commit()  # type: ignore[attr-defined]
     except Exception:
         connection.rollback()  # type: ignore[attr-defined]
         raise
-    if action == "dead_letter" and first:
-        channel.nack(delivery.delivery_tag, requeue=False)
+    if action == "dead_letter":
+        # A duplicate POISON row still needs the current delivery dead-lettered.
+        # ACKing it merely because ON CONFLICT returned no row can lose the DLQ copy.
         return "NACK_DEAD_LETTER"
-    channel.ack(delivery.delivery_tag)
     return "ACK"
+
+
+def settle_inbox_delivery(
+    connection: object,
+    delivery: BrokerDelivery,
+    channel: InboxChannel,
+) -> str:
+    """Synchronous adapter retained for deterministic unit/live DB tests."""
+
+    result = persist_inbox_delivery(connection, delivery)
+    if result == "ACK":
+        channel.ack(delivery.delivery_tag)
+    elif result == "NACK_REQUEUE":
+        channel.nack(delivery.delivery_tag, requeue=True)
+    else:
+        channel.nack(delivery.delivery_tag, requeue=False)
+    return result
+
+
+async def settle_async_inbox_delivery(
+    connection: object,
+    delivery: BrokerDelivery,
+    message: AsyncInboxMessage,
+) -> str:
+    """Commit PostgreSQL, then await the aio-pika settlement frame."""
+
+    result = persist_inbox_delivery(connection, delivery)
+    if result == "ACK":
+        await message.ack()
+    elif result == "NACK_REQUEUE":
+        await message.nack(requeue=True)
+    else:
+        await message.nack(requeue=False)
+    return result
 
 
 def _delivery_error(delivery: BrokerDelivery) -> str | None:

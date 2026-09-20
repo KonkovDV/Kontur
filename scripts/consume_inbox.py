@@ -21,8 +21,9 @@ from kontur.infrastructure.broker import (
 )
 from kontur.infrastructure.inbox import (
     BrokerDelivery,
+    delivery_attempt,
     header_str,
-    settle_inbox_delivery,
+    settle_async_inbox_delivery,
 )
 from kontur.infrastructure.outbox import ROUTING_KEY
 
@@ -34,14 +35,23 @@ def _require_env(name: str) -> str:
     return value
 
 
-def _redelivery_count(message: Any) -> int:
-    headers = message.headers or {}
-    raw = headers.get("x-delivery-count", 1)
-    try:
-        count = int(raw)
-    except (TypeError, ValueError):
-        count = 1
-    return count if count > 0 else 1
+def _broker_delivery(incoming: Any) -> BrokerDelivery:
+    headers = incoming.headers or {}
+    return BrokerDelivery(
+        event_id=str(incoming.message_id or header_str(headers, "event_id")),
+        process_id=header_str(headers, "process_id"),
+        protocol_id=header_str(headers, "protocol_id"),
+        payload_sha256=header_str(headers, "payload_sha256"),
+        body=bytes(incoming.body),
+        redelivery_count=delivery_attempt(headers),
+        delivery_tag=str(incoming.delivery_tag),
+    )
+
+
+async def _settle(incoming: Any, dsn: str) -> str:
+    delivery = _broker_delivery(incoming)
+    with psycopg.connect(dsn) as db:
+        return await settle_async_inbox_delivery(db, delivery, incoming)
 
 
 async def consume_once(dsn: str, amqp_url: str) -> str:
@@ -67,28 +77,7 @@ async def consume_once(dsn: str, amqp_url: str) -> str:
         incoming = await queue.get(fail=False, timeout=5)
         if incoming is None:
             return "empty"
-        headers = incoming.headers or {}
-        delivery = BrokerDelivery(
-            event_id=str(incoming.message_id or header_str(headers, "event_id")),
-            process_id=header_str(headers, "process_id"),
-            protocol_id=header_str(headers, "protocol_id"),
-            payload_sha256=header_str(headers, "payload_sha256"),
-            body=bytes(incoming.body),
-            redelivery_count=_redelivery_count(incoming),
-            delivery_tag=str(incoming.delivery_tag),
-        )
-
-        class _Channel:
-            def ack(self, delivery_tag: str) -> None:
-                del delivery_tag
-                incoming.ack()
-
-            def nack(self, delivery_tag: str, *, requeue: bool) -> None:
-                del delivery_tag
-                incoming.nack(requeue=requeue)
-
-        with psycopg.connect(dsn) as db:
-            return settle_inbox_delivery(db, delivery, _Channel())
+        return await _settle(incoming, dsn)
 
 
 def main() -> int:
