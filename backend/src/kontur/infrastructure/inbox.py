@@ -91,9 +91,11 @@ def delivery_attempt(headers: Mapping[str, object]) -> int:
     raw = headers.get("x-delivery-count")
     if raw is None:
         return 1
+    if not isinstance(raw, int | str):
+        return 1
     try:
         failed_deliveries = int(raw)
-    except (TypeError, ValueError):
+    except ValueError:
         return 1
     return max(failed_deliveries, 0) + 1
 
