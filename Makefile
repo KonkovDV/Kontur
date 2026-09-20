@@ -5,8 +5,6 @@
         offline-pull offline-up \
         test test-fast check lint types \
         ocr-pilot \
-        train-public \
-        agent-dumps \
         clean
 
 PYTHON   := python
@@ -42,6 +40,7 @@ ocr-pilot:     ## SILVER CA пилота в Docker (Tesseract). Не закры�
 	mkdir -p out
 	$(DC) build core
 	$(DC) run --rm --no-deps \
+		--user "$$(id -u):$$(id -g)" \
 		-v "$(CURDIR)/files:/app/files:ro" \
 		-v "$(CURDIR)/out:/app/out" \
 		-e KONTUR_ROOT=/app \
@@ -49,21 +48,7 @@ ocr-pilot:     ## SILVER CA пилота в Docker (Tesseract). Не закры�
 		-e KONTUR_OCR_PILOT_WORKERS=4 \
 		core python -m kontur.evaluation.ocr_pilot
 
-train-public:  ## TRAIN_PUBLIC JSONL в Docker. Не закрывает гейт J
-	mkdir -p out
-	$(DC) build core
-	$(DC) run --rm --no-deps \
-		-v "$(CURDIR)/files:/app/files:ro" \
-		-v "$(CURDIR)/out:/app/out" \
-		-v "$(CURDIR)/data/dataset:/app/data/dataset:ro" \
-		-e KONTUR_ROOT=/app \
-		-e KONTUR_TRAIN_PUBLIC_OUT=/app/out \
-		core python -m kontur.evaluation.train_public
-
-agent-dumps:   ## coverage + handoff JSON для следующего ИИ. Не закрывает гейты
-	$(PYTHON) scripts/export_agent_dumps.py
-
-# ── Тесты и качество ────────────────────────────────────────────────────────
+# ── Тесты и качество ─────────────────────────────────────────────────────────
 
 test:          ## Полный тест-сьют (включая slow)
 	$(PYTHON) -m pytest backend/tests -q --tb=short

@@ -49,8 +49,6 @@ jobs:
       - name: Схема разворачивается, ограничения срабатывают
         env:
           PGPASSWORD: postgres
-        # checks.sql выполняет запрещённые действия и ждёт отказа СУБД.
-        # Если ограничение исчезло, скрипт падает с ошибкой KNT99.
         run: |
           psql -h localhost -p 5432 -U postgres -d kontur -v ON_ERROR_STOP=1 \
             -f backend/src/kontur/infrastructure/db/schema.sql \
@@ -67,8 +65,6 @@ jobs:
         run: python scripts/check_claims.py
 
   frontend:
-    # RT-2609-18: проверка типов TypeScript в web/
-    # TODO: зафиксировать package-lock.json и заменить npm install на npm ci
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -80,5 +76,54 @@ jobs:
           node-version: "20"
       - name: Установить зависимости
         run: npm install
-      - name: Проверка типов TypeScript (noEmit в tsconfig.json)
+      - name: Проверка типов TypeScript
         run: npx tsc --noEmit
+
+  containers:
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate base and offline compose contracts
+        run: |
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.offline.yml config --quiet
+      - name: Build application images
+        run: docker compose build core gateway
+      - name: Verify fixed identity, read-only code, imports, and writable tmpfs
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh core -ec '
+            test "$(id -u)" = 10001
+            test "$(id -g)" = 10001
+            ! touch /app/.runtime-write-test
+            touch /tmp/runtime-write-test
+            python -c "import kontur.infrastructure.pdf_guard; import kontur.infrastructure.ocr_tesseract"
+          '
+          docker compose run --rm --no-deps --entrypoint sh gateway -ec '
+            test "$(id -u)" = 10001
+            test "$(id -g)" = 10001
+            ! touch /app/.runtime-write-test
+            touch /tmp/runtime-write-test
+            node -e "import(\"./src/server.js\").then(() => process.exit(0))"
+          '
+      - name: Smoke health endpoints
+        run: |
+          docker compose up -d core gateway
+          for attempt in $(seq 1 60); do
+            curl --fail --silent http://127.0.0.1:8000/api/v1/healthz >/dev/null && break
+            test "$attempt" -lt 60
+            sleep 2
+          done
+          for attempt in $(seq 1 60); do
+            curl --fail --silent http://127.0.0.1:3000/healthz >/dev/null && break
+            test "$attempt" -lt 60
+            sleep 2
+          done
+      - name: Cleanup containers
+        if: always()
+        run: docker compose down -v --remove-orphans
