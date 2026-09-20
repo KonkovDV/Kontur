@@ -46,6 +46,7 @@
 | #62 | учебный рекордер Gate K: JSON `kontur-usability-v1`, `MISSING_EVIDENCE` нельзя CONFIRM/REJECT; сессий нет, гейт открыт |
 | #64 | fail-closed Postgres finalize + атомарная versioned materialization (`protocol-{process_id}` / `-vN`, идемпотентный retry, конфликт при другом JSON). Не закрывает I/J/K |
 | #65 | три контура готовности, семейства экстракторов, advisory lock/`payload_sha256`/outbox, ADR-0009. JSON `kind=materialized` на провод ТЗ не добавляли |
+| #67 | отдельный `outbox-relay` UID 10001, quorum `kontur.rin.protocol`, compose `kontur` не guest; leftover classic publisher снят. Не inbox, не РиН ACK |
 
 ## Что не брали
 

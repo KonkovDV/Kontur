@@ -46,7 +46,10 @@ PR #65 влит: advisory lock объекта, `FOR UPDATE` процесса/н�
 идемпотентен, гонка version fail-closed, outbox `SKIP LOCKED`. Crash-before-commit
 нет. Outbox relay (ADR-0010) публикует в брокер с confirms и паузами 1/5/15 мин;
 это не РиН и не exactly-once. HTTP по-прежнему inline L1–L7. PR #66 закрыт красным
-(FK `objects.id`); правка на `main`. Очередь PR пуста.
+(FK `objects.id`); правка на `main`. PR #67 влит: отдельный `outbox-relay`
+UID 10001, quorum queue, compose `kontur` не guest; classic
+`AmqpConfirmedPublisher` снят. Не inbox и не ACK ИАИС. Очередь PR пуста;
+на origin только `main`.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
@@ -78,7 +81,8 @@ PR #65 влит: advisory lock объекта, `FOR UPDATE` процесса/н�
 1. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
 2. Рекордер кликов в `web/`; 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
 3. Crash-before-commit / timeout-after-commit для finalize.
-4. Inbox consumer + sandbox РиН. Outbox→брокер уже есть (ADR-0010), не РиН.
+4. Inbox consumer + sandbox РиН. Outbox→брокер и worker-контейнер уже есть
+   (ADR-0010), не РиН.
 5. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
 6. Экстракторы семействами по `extractor_families.json`, не по одному из 103.
 7. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.

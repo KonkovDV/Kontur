@@ -15,8 +15,9 @@
   в payload **нет** (ADR-0009): схема ТЗ `additionalProperties: false`.
 - `ENSURE_OBJECT` пишет `objects.id = object_id`, не process_id. CI `db`
   гоняет идемпотентный retry, гонку version и outbox `SKIP LOCKED`.
-- Outbox relay (ADR-0010): confirms в брокер, паузы 1/5/15 мин, стабильный
-  `event_id`. Не РиН, не inbox, HTTP всё ещё inline.
+- Outbox relay (ADR-0010 / PR #67): отдельный worker UID 10001, quorum
+  `kontur.rin.protocol`, confirms, паузы 1/5/15 мин, стабильный `event_id`.
+  Не РиН, не inbox, HTTP всё ещё inline.
 - OSINT-срез и bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
   Это не bake-off на GOLD и не закрытие I/J.
 
@@ -28,7 +29,7 @@
 | 132/132 executable | 29 executable, 103 `extractor_missing` |
 | GOLD OCR / frozen val | нет; SILVER и n=6 не закрывают I/J |
 | Пять инспекторов Gate K | рекордер есть; сессий нет |
-| RabbitMQ + MinIO + outbox workers | relay→брокер есть; HTTP inline; РиН нет |
+| RabbitMQ + MinIO + outbox workers | worker-контейнер и quorum есть; HTTP inline; inbox/РиН нет |
 | OIDC/JWKS, TLS 1.3, AV, backup | не production |
 | SOTA bake-off OCR/VLM | нужен собственный GOLD, не общий leaderboard |
 
