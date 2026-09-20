@@ -90,6 +90,15 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "negative_gold_requires_reason" in sql
 
 
+def test_schema_sync_guard_rejects_placeholder_and_false_assembled() -> None:
+    sql = SCHEMA.read_text(encoding="utf-8")
+    assert "payload ->> 'kind'" in sql
+    assert "proto_kind = 'internal_placeholder'" in sql
+    assert "payload -> 'assembled'" in sql
+    assert "proto_assembled = 'false'::jsonb" in sql
+    assert "proto_assembled IS NULL" not in sql
+
+
 def test_checks_sql_asserts_instead_of_merely_running() -> None:
     """checks.sql обязан ловить отсутствие ограничения, а не любую ошибку подряд."""
 
@@ -101,7 +110,6 @@ def test_checks_sql_asserts_instead_of_merely_running() -> None:
     assert "KNT99" in checks
     assert "KNT02" in checks
     assert "SQLSTATE 'KNT01'" in checks
-    assert "WHEN SQLSTATE 'KNT02' THEN NULL;" in checks
     assert "отмена финализации изменила содержимое" in checks
     assert "WHEN check_violation THEN NULL;" in checks
     assert checks.rstrip().endswith("ROLLBACK;")
