@@ -6,6 +6,7 @@ at-least-once; the stable event_id is the downstream inbox deduplication key.
 
 from __future__ import annotations
 
+import math
 import os
 import signal
 import sys
@@ -18,6 +19,7 @@ from kontur.infrastructure.outbox_worker import (
     OutboxRelayWorker,
     RelayWorkerSettings,
 )
+from kontur.infrastructure.sync_relay import relay_once_postgres_with_sync
 
 
 def _positive_float(name: str, default: float) -> float:
@@ -28,8 +30,8 @@ def _positive_float(name: str, default: float) -> float:
         value = float(raw)
     except ValueError as exc:
         raise ValueError(f"{name} must be a number") from exc
-    if value <= 0:
-        raise ValueError(f"{name} must be positive")
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError(f"{name} must be finite and positive")
     return value
 
 
@@ -57,11 +59,16 @@ def main() -> int:
         lambda: psycopg.connect(dsn),
         publisher,
         settings=settings,
+        relay_cycle=relay_once_postgres_with_sync,
         logger=lambda message: print(message, flush=True),
     )
 
     if os.environ.get("KONTUR_OUTBOX_ONCE", "").lower() in {"1", "true", "yes"}:
-        result = worker.run_once()
+        try:
+            result = worker.run_once()
+        except Exception as exc:
+            print(f"outbox relay error: {type(exc).__name__}", file=sys.stderr)
+            return 1
         print("outbox empty" if result is None else result)
         return 0
 
