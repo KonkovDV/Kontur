@@ -40,8 +40,8 @@ CREATE TABLE params (
     source_pd       TEXT,
     source_rd       TEXT,
     source_id       TEXT,
-    trigger_logic   TEXT,                -- справочно; исполняется compiled_rule
-    compiled_rule   JSONB NOT NULL,      -- rule.schema.json
+    trigger_logic   TEXT,
+    compiled_rule   JSONB NOT NULL,
     coverage        TEXT NOT NULL
                     CHECK (coverage IN ('executable', 'extractor_missing',
                                         'source_missing', 'advisory', 'not_applicable')),
@@ -70,7 +70,7 @@ CREATE TABLE evidence_fragments (
     stage               TEXT NOT NULL,
     sheet_page          TEXT NOT NULL,
     polygon_source      JSONB NOT NULL,
-    polygon_norm        JSONB NOT NULL,   -- [0;1] после CropBox, MediaBox, Rotate
+    polygon_norm        JSONB NOT NULL,
     extracted_value     TEXT,
     raw_token           TEXT NOT NULL,
     engine              TEXT NOT NULL,
@@ -153,11 +153,6 @@ CREATE TABLE protocols (
     )
 );
 
--- ТЗ п. 9.3: финализированный протокол не правится и не удаляется. Исправление —
--- только новая версия. Отмена финализации существует, но она обязана быть явной:
--- супервизор проставляет причину в параметр сессии kontur.unfinalize_reason,
--- и только тогда разрешён единственный переход PROTOCOL_FINALIZED →
--- VERIFICATION_COMPLETED. Без причины любое изменение падает с SQLSTATE KNT01.
 CREATE FUNCTION protocols_guard_finalized() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -171,8 +166,6 @@ BEGIN
        AND NEW.status = 'VERIFICATION_COMPLETED'
        AND coalesce(btrim(current_setting('kontur.unfinalize_reason', true)), '') <> ''
     THEN
-        -- Дверь узкая: только статус и метка времени. payload, версии и хеш
-        -- в том же UPDATE подменить нельзя (иначе stop-ship № 8 обходится).
         IF (NEW.id, NEW.object_id, NEW.version, NEW.matrix_version,
             NEW.dataset_version, NEW.model_version, NEW.input_manifest_hash,
             NEW.payload, NEW.created_at, NEW.supersedes_version)
@@ -204,9 +197,6 @@ CREATE TRIGGER protocols_finalized_is_immutable
     BEFORE UPDATE OR DELETE ON protocols
     FOR EACH ROW EXECUTE FUNCTION protocols_guard_finalized();
 
--- Процесс проверки (ТЗ п. 9.1). Раньше состояние процесса жило только в памяти
--- приложения: счётчики повторов, сценарий и состояние выгрузки в РиН негде было
--- восстановить после перезапуска.
 CREATE TABLE processes (
     id                  TEXT PRIMARY KEY,
     object_id           TEXT NOT NULL REFERENCES objects (id),
@@ -231,10 +221,8 @@ CREATE TABLE processes (
                         CHECK (completeness_id IN ('UPLOADED', 'PARTIAL', 'MISSING')),
     input_manifest_hash TEXT NOT NULL DEFAULT 'pending',
     protocol_id         TEXT REFERENCES protocols (id),
-    -- ТЗ п. 9.1: таймаут разбора повторяется не более двух раз (всего 3 попытки).
     parse_attempts      SMALLINT NOT NULL DEFAULT 0
                         CHECK (parse_attempts BETWEEN 0 AND 3),
-    -- ТЗ п. 9.6: три повтора передачи 1, 5, 15 минут (всего 4 попытки).
     sync_attempts       SMALLINT NOT NULL DEFAULT 0
                         CHECK (sync_attempts BETWEEN 0 AND 4),
     sync_state          TEXT NOT NULL DEFAULT 'NOT_REQUESTED'
@@ -253,18 +241,17 @@ CREATE TABLE processes (
             AND finalized_at IS NOT NULL
             AND protocol_id IS NOT NULL)
     ),
-    -- ТЗ п. 9.6: во внешнюю ИС уходит только финализированный протокол.
     CONSTRAINT sync_only_after_finalize CHECK (
         sync_state = 'NOT_REQUESTED' OR process_state = 'FINALIZED'
     )
 );
 
--- ТЗ п. 9.6: выгрузка смотрит на статус протокола, а не только на process_state.
--- Иначе после отмены финализации процесс остаётся FINALIZED и РиН уходит снова.
 CREATE FUNCTION processes_guard_sync() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE
     proto_status TEXT;
+    proto_kind TEXT;
+    proto_assembled JSONB;
 BEGIN
     IF NEW.sync_state = 'NOT_REQUESTED' THEN
         RETURN NEW;
@@ -273,10 +260,19 @@ BEGIN
         RAISE EXCEPTION 'выгрузка процесса % без протокола запрещена (ТЗ п. 9.6)', NEW.id
             USING ERRCODE = 'KNT02';
     END IF;
-    SELECT status INTO proto_status FROM protocols WHERE id = NEW.protocol_id;
+    SELECT status, payload ->> 'kind', payload -> 'assembled'
+      INTO proto_status, proto_kind, proto_assembled
+      FROM protocols
+     WHERE id = NEW.protocol_id;
     IF proto_status IS DISTINCT FROM 'PROTOCOL_FINALIZED' THEN
         RAISE EXCEPTION
             'выгрузка процесса % до финализации протокола %', NEW.id, NEW.protocol_id
+            USING ERRCODE = 'KNT02';
+    END IF;
+    IF proto_kind = 'internal_placeholder' OR proto_assembled = 'false'::jsonb THEN
+        RAISE EXCEPTION
+            'выгрузка процесса % по нематериализованному протоколу % запрещена',
+            NEW.id, NEW.protocol_id
             USING ERRCODE = 'KNT02';
     END IF;
     RETURN NEW;
@@ -289,9 +285,6 @@ CREATE TRIGGER processes_sync_requires_finalized_protocol
 
 CREATE INDEX processes_object_state ON processes (object_id, process_state);
 
--- Очередь инспектора: находки процесса. Таблица checks — предметный чек с
--- param_id; здесь живут CANDIDATE после рестарта, без молчаливого JSON в
--- processes. Ключ store_key = evidence_group_id либо finding_id (RT-G).
 CREATE TABLE process_findings (
     process_id          TEXT NOT NULL REFERENCES processes (id),
     store_key           TEXT NOT NULL,
@@ -349,8 +342,6 @@ CREATE TABLE process_findings (
 
 CREATE INDEX process_findings_status ON process_findings (process_id, finding_status);
 
--- Файлы процесса. UNIQUE как files(object_id, file_hash, doc_stage), но в
--- границах процесса: повтор hash+stage не плодит accepted.
 CREATE TABLE process_files (
     process_id  TEXT NOT NULL REFERENCES processes (id),
     file_id     TEXT NOT NULL,
@@ -372,8 +363,6 @@ CREATE TABLE object_splits (
 CREATE TABLE dataset_items (
     id                  TEXT PRIMARY KEY,
     evidence_group_id   TEXT NOT NULL REFERENCES evidence_groups (id),
-    -- ТЗ п. 9.4: в GOLD попадает только человеческий вердикт. AUTO_NO_DIFFERENCE
-    -- и остальные машинные статусы разметкой не являются.
     gold_label          TEXT CHECK (gold_label IN ('CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED')),
     expert_id           TEXT,
     reason_code         TEXT,
@@ -408,6 +397,4 @@ CREATE TABLE audit_log (
 CREATE INDEX audit_log_object_ts ON audit_log (object_id, timestamp);
 CREATE INDEX audit_log_process_ts ON audit_log (process_id, timestamp);
 
--- Остальные таблицы сводки ТЗ п. 10 (Rejection_Log, Dispute_Log, Suspicions,
--- Logical_Rules, Normative_Base, ML_Retraining_Log, Monitoring_Metrics,
--- Model_Versions) добавляются миграциями по мере реализации модулей.
+-- Остальные таблицы сводки ТЗ п. 10 добавляются миграциями по мере реализации модулей.
