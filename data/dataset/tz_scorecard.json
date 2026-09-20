@@ -36,7 +36,7 @@
       {
         "id": "protocol_atomic_materialization",
         "state": "partial",
-        "detail": "PR #64 plus lock/sha/outbox"
+        "detail": "PR #64 plus lock/sha/outbox; no kind=materialized on TZ JSON"
       },
       {
         "id": "rin_sandbox",

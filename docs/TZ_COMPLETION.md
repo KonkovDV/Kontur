@@ -12,10 +12,10 @@
 - PR #64 влит в `main`: fail-closed Postgres `save(FINALIZED)`, атомарная
   versioned materialization, `protocol-{process_id}` / `-vN`, идемпотентный
   retry канонического JSON.
-- На этой ветке поверх #64: `pg_advisory_xact_lock` + `FOR UPDATE` процесса,
-  находок и протоколов объекта; `payload_sha256`; `integration_outbox`
-  `PENDING` в той же транзакции. Это **не** живой PostgreSQL concurrency-тест
-  и не sandbox РиН.
+- На этой ветке: advisory lock, `FOR UPDATE`, `payload_sha256`, outbox PENDING.
+  JSON `kind=materialized` в payload **не** добавляем (ADR-0009): схема ТЗ
+  `additionalProperties: false`, `assemble_protocol()` без `kind`/`assembled`.
+- OSINT-срез и bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
 
 ## Что план аудита верно требует — и что кодом не закрыть
 
@@ -44,7 +44,7 @@
 
 ## Конкурсный RC (реалистично)
 
-1. Безопасный PostgreSQL finalize (начат в #64, lock/sha/outbox — этот срез).
+1. Безопасный PostgreSQL finalize (ADR-0009: колонки, не `kind=materialized`).
 2. Gate K: пять сессий человеком; код рекордера не закрывает гейт.
 3. Честный coverage 29 executable / 103 extractor_missing; без заявления,
    что вся матрица executable.

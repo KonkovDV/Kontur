@@ -254,6 +254,7 @@ DECLARE
     proto_status TEXT;
     proto_kind TEXT;
     proto_assembled JSONB;
+    proto_sha TEXT;
 BEGIN
     IF NEW.sync_state = 'NOT_REQUESTED' THEN
         RETURN NEW;
@@ -262,8 +263,8 @@ BEGIN
         RAISE EXCEPTION 'выгрузка процесса % без протокола запрещена (ТЗ п. 9.6)', NEW.id
             USING ERRCODE = 'KNT02';
     END IF;
-    SELECT status, payload ->> 'kind', payload -> 'assembled'
-      INTO proto_status, proto_kind, proto_assembled
+    SELECT status, payload ->> 'kind', payload -> 'assembled', payload_sha256
+      INTO proto_status, proto_kind, proto_assembled, proto_sha
       FROM protocols
      WHERE id = NEW.protocol_id;
     IF proto_status IS DISTINCT FROM 'PROTOCOL_FINALIZED' THEN
@@ -274,6 +275,12 @@ BEGIN
     IF proto_kind = 'internal_placeholder' OR proto_assembled = 'false'::jsonb THEN
         RAISE EXCEPTION
             'выгрузка процесса % по нематериализованному протоколу % запрещена',
+            NEW.id, NEW.protocol_id
+            USING ERRCODE = 'KNT02';
+    END IF;
+    IF proto_sha IS NULL OR btrim(proto_sha) !~ '^[a-f0-9]{64}$' THEN
+        RAISE EXCEPTION
+            'выгрузка процесса % без payload_sha256 протокола % запрещена',
             NEW.id, NEW.protocol_id
             USING ERRCODE = 'KNT02';
     END IF;

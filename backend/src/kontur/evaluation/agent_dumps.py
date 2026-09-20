@@ -168,6 +168,7 @@ def build_handoff(
             "Prefer annotated_documents overlays over source PDFs",
             "Revive PR #61 import-time monkeypatch of ProcessRecord",
             "Revive PR #63 experimental materialization (stripped provenance)",
+            "Require kind=materialized or assembled=true on TZ protocol JSON",
         ],
         "commands": {
             "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
@@ -195,6 +196,8 @@ def build_handoff(
             "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py",
             "tz_scorecard": "data/dataset/tz_scorecard.json",
             "extractor_families": "data/matrix/extractor_families.json",
+            "research_osint": "docs/RESEARCH_OSINT_2026.md",
+            "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
         },
         "leftover_refs_do_not_merge": [
             "feat/ocr-gate-i-crop3x-oem1",
@@ -283,7 +286,7 @@ def build_tz_scorecard(
         _scorecard_item(
             "protocol_atomic_materialization",
             "partial",
-            "PR #64 plus lock/sha/outbox",
+            "PR #64 plus lock/sha/outbox; no kind=materialized on TZ JSON",
         ),
         _scorecard_item("rin_sandbox", "unmet", "retry policy only; no sandbox contract"),
         _scorecard_item("async_rabbit_outbox_workers", "unmet", "HTTP still runs pipeline inline"),

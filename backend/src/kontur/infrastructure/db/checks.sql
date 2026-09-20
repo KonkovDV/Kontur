@@ -363,7 +363,7 @@ INSERT INTO protocols (
 ) VALUES (
     'proto-no-assembled-check', 'obj-check', 5, 'draft-0', 'v1', 'm-0',
     'hash-no-assembled', 'PROTOCOL_FINALIZED',
-    '{"kind":"materialized"}'::jsonb,
+    '{"protocol_id":"proto-no-assembled-check","object_id":"obj-check","version":5}'::jsonb,
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', now()
 );
 INSERT INTO processes (

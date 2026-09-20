@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-20",
-  "export_git_sha": "4bc41a28278e6dd1e06b3a0beb67d05b7b0ccdc7",
+  "export_git_sha": "a6765f4939ca5c1955e61351841bd638a2340ab7",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -70,7 +70,8 @@
     "Treat GOST Согласовано/ГИП header as approved etalon",
     "Prefer annotated_documents overlays over source PDFs",
     "Revive PR #61 import-time monkeypatch of ProcessRecord",
-    "Revive PR #63 experimental materialization (stripped provenance)"
+    "Revive PR #63 experimental materialization (stripped provenance)",
+    "Require kind=materialized or assembled=true on TZ protocol JSON"
   ],
   "commands": {
     "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
@@ -97,7 +98,9 @@
     "train_public_module": "backend/src/kontur/evaluation/train_public.py",
     "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py",
     "tz_scorecard": "data/dataset/tz_scorecard.json",
-    "extractor_families": "data/matrix/extractor_families.json"
+    "extractor_families": "data/matrix/extractor_families.json",
+    "research_osint": "docs/RESEARCH_OSINT_2026.md",
+    "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md"
   },
   "leftover_refs_do_not_merge": [
     "feat/ocr-gate-i-crop3x-oem1",

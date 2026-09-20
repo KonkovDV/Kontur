@@ -23,5 +23,6 @@ Gate K, измеренный Gate L **без** production SLA. Полные 100%
 frozen val и пяти инспекторов **недостижимы**.
 
 Программа работ: [`TZ_COMPLETION.md`](TZ_COMPLETION.md).
+OSINT Document AI (срез 20.09.2026, не bake-off GOLD): [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
 Кластеры правил: [`extractor_families.json`](../data/matrix/extractor_families.json)
 (группировка по `extractor.type`, не 132/132 executable).

@@ -13,7 +13,7 @@
 5. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
 6. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
 7. [`data/dataset/train_public_engineering.json`](../data/dataset/train_public_engineering.json) и `train_public_pred.jsonl` — gold-evidence прогон: 0 попаданий из 6. PD+RD загружены; L4: у ПД нет заполненной графы «Утвердил». Порог recall ТЗ не берётся и не публикуется.
-8. [`docs/WORK_PLAN.md`](WORK_PLAN.md), [`docs/KNOWN_GAPS.md`](KNOWN_GAPS.md), [`docs/PR_QUEUE.md`](PR_QUEUE.md), [`docs/TZ_SCORECARD.md`](TZ_SCORECARD.md).
+8. [`docs/WORK_PLAN.md`](WORK_PLAN.md), [`docs/KNOWN_GAPS.md`](KNOWN_GAPS.md), [`docs/PR_QUEUE.md`](PR_QUEUE.md), [`docs/TZ_SCORECARD.md`](TZ_SCORECARD.md), [`docs/RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
 
 Пересборка: `python scripts/export_agent_dumps.py` или `make agent-dumps`.
 Локальный скоринг: `python -m kontur.evaluation.train_public` (на Windows нет `make`).
@@ -65,6 +65,9 @@ application-слое, JSON пишется в той же транзакции, �
 - Возвращать import-time monkeypatch `ProcessRecord` из закрытого PR #61.
 - Возвращать экспериментальный PR #63: provenance в `finding_to_schema` не
   вырезать, infrastructure не импортирует `assemble_protocol`.
+- Требовать `payload.kind = materialized` или `assembled=true` в JSON ТЗ:
+  `protocol.schema.json` с `additionalProperties: false` такие поля не содержит
+  (ADR-0009). Guard выгрузки — `PROTOCOL_FINALIZED` + hex `payload_sha256`.
 
 ## Следующие слайсы
 

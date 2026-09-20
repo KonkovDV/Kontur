@@ -46,6 +46,12 @@
 | #62 | учебный рекордер Gate K: JSON `kontur-usability-v1`, `MISSING_EVIDENCE` нельзя CONFIRM/REJECT; сессий нет, гейт открыт |
 | #64 | fail-closed Postgres finalize + атомарная versioned materialization (`protocol-{process_id}` / `-vN`, идемпотентный retry, конфликт при другом JSON). Не закрывает I/J/K |
 
+## Открыто
+
+| PR | Содержание |
+|---|---|
+| #65 | три контура + advisory lock/`payload_sha256`/outbox + ADR-0009. JSON `kind=materialized` на провод ТЗ не добавлять. Не мержить красным |
+
 ## Что не брали
 
 | PR | Почему |

@@ -67,6 +67,7 @@ def test_handoff_refuses_to_close_gates() -> None:
     assert "CONFIRMED_VIOLATION" in do_not
     assert "OIDC/JWKS" in do_not
     assert "ЗАКРЫТЫЙ" in do_not or "frozen val" in do_not
+    assert "kind=materialized" in do_not
     echo = payload["verdict_echo"]
     assert isinstance(echo, dict)
     assert echo["closes_gate_j"] is False
@@ -88,6 +89,11 @@ def test_tz_scorecard_does_not_close_gates_or_claim_percent() -> None:
         item for item in code_items if item["id"] == "matrix_executable_132"
     )
     assert executable_item["state"] == "unmet"
+    protocol_item = next(
+        item for item in code_items if item["id"] == "protocol_atomic_materialization"
+    )
+    assert protocol_item["state"] == "partial"
+    assert "kind=materialized" in str(protocol_item["detail"])
 
 
 def test_extractor_families_sum_to_declared_and_do_not_close_j() -> None:

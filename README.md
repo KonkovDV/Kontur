@@ -77,6 +77,7 @@ docker compose up -d                 # postgres, redis, rabbitmq, minio
 | План 15–29.09 с гейтами | [`docs/PLAN_2026_09.md`](docs/PLAN_2026_09.md) |
 | Трассируемость ТЗ → артефакт → тест | [`docs/TZ_TRACEABILITY.md`](docs/TZ_TRACEABILITY.md) |
 | Три контура готовности (не порог ТЗ) | [`docs/TZ_SCORECARD.md`](docs/TZ_SCORECARD.md) |
+| OSINT Document AI, срез 20.09.2026 | [`docs/RESEARCH_OSINT_2026.md`](docs/RESEARCH_OSINT_2026.md) |
 | Архитектурные решения | [`docs/adr/`](docs/adr/) |
 | Состав переданного пакета данных | [`docs/DATASET_PACKAGE.md`](docs/DATASET_PACKAGE.md) |
 | Публичный gold ≠ frozen val | [`docs/ORGANIZER_GOLD.md`](docs/ORGANIZER_GOLD.md) |
