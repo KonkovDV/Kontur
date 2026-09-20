@@ -17,6 +17,7 @@ from kontur.application.process_pipeline import (
     PipelineReport,
     run_process_pipeline,
 )
+from kontur.application.protocol import protocol_id_for_process
 from kontur.application.retry_policy import next_sync_attempt
 from kontur.application.scenarios import CompletenessMap, detect_scenario
 from kontur.domain.models import DocStage, Finding
@@ -392,7 +393,7 @@ class ProcessWorkspace:
             audit=record.audit,
         )
         record.finalized_by = actor.actor_id
-        record.protocol_id = record.protocol_id or f"placeholder-{record.process_id}"
+        record.protocol_id = protocol_id_for_process(record.process_id)
         self._persist(record)
         return record
 
