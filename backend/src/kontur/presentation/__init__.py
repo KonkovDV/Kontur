@@ -58,8 +58,8 @@ def _install_idempotent_upload_guard() -> None:
         # retries. For every other state, defer reopen until a new file exists.
         if record.process_state is ProcessState.FINALIZED:
             raise TransitionError("протокол финализирован, дозагрузка запрещена")
-        setattr(record, _PENDING, True)
-        setattr(record, _ADDED, False)
+        record.__dict__[_PENDING] = True
+        record.__dict__[_ADDED] = False
 
     def attach_file(
         workspace: ProcessWorkspace, record: ProcessRecord, item: AcceptedFile
@@ -72,7 +72,7 @@ def _install_idempotent_upload_guard() -> None:
             original_reopen(workspace, record)
         attached = original_attach(workspace, record, item)
         if attached:
-            setattr(record, _ADDED, True)
+            record.__dict__[_ADDED] = True
         return attached
 
     def run_matrix_pipeline(
@@ -89,12 +89,12 @@ def _install_idempotent_upload_guard() -> None:
                 record.__dict__.pop(_PENDING, None)
                 record.__dict__.pop(_ADDED, None)
 
-    setattr(ProcessRecord, "has_file", _record_has_file)
-    setattr(ProcessWorkspace, "has_file", _workspace_has_file)
-    setattr(ProcessWorkspace, "reopen_for_upload", reopen_for_upload)
-    setattr(ProcessWorkspace, "attach_file", attach_file)
-    setattr(ProcessWorkspace, "run_matrix_pipeline", run_matrix_pipeline)
-    setattr(ProcessWorkspace, "_idempotent_upload_guard", True)
+    ProcessRecord.has_file = _record_has_file  # type: ignore[attr-defined]
+    ProcessWorkspace.has_file = _workspace_has_file  # type: ignore[attr-defined]
+    ProcessWorkspace.reopen_for_upload = reopen_for_upload  # type: ignore[method-assign]
+    ProcessWorkspace.attach_file = attach_file  # type: ignore[method-assign]
+    ProcessWorkspace.run_matrix_pipeline = run_matrix_pipeline  # type: ignore[method-assign]
+    ProcessWorkspace._idempotent_upload_guard = True  # type: ignore[attr-defined]
 
 
 _install_idempotent_upload_guard()
