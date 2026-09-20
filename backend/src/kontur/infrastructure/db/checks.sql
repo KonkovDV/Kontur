@@ -387,4 +387,75 @@ BEGIN
 END;
 $$;
 
+-- 20. Inbox event_id уникален: повторная доставка не создаёт вторую строку.
+INSERT INTO integration_inbox (
+    event_id, process_id, protocol_id, payload_sha256, status, delivery_attempts
+) VALUES (
+    'rin-proto-check', 'prc-ok', 'proto-check',
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    'RECEIVED', 1
+);
+DO $$
+BEGIN
+    INSERT INTO integration_inbox (
+        event_id, process_id, protocol_id, payload_sha256, status, delivery_attempts
+    ) VALUES (
+        'rin-proto-check', 'prc-ok', 'proto-check',
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        'RECEIVED', 2
+    );
+    RAISE EXCEPTION 'дубль inbox event_id прошёл' USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN unique_violation THEN NULL;
+END;
+$$;
+
+-- 21. SYNCED не является статусом inbox и не подменяет бизнес-ACK РиН.
+DO $$
+BEGIN
+    INSERT INTO integration_inbox (
+        event_id, process_id, protocol_id, payload_sha256, status, delivery_attempts
+    ) VALUES (
+        'rin-proto-synced', 'prc-ok', 'proto-check',
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        'SYNCED', 1
+    );
+    RAISE EXCEPTION 'inbox принял SYNCED как свой статус' USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN check_violation THEN NULL;
+END;
+$$;
+
+-- 22. POISON без ошибки не записывается.
+DO $$
+BEGIN
+    INSERT INTO integration_inbox (
+        event_id, process_id, protocol_id, payload_sha256, status, delivery_attempts
+    ) VALUES (
+        'rin-proto-poison', 'prc-ok', 'proto-check',
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        'POISON', 4
+    );
+    RAISE EXCEPTION 'POISON без last_error прошёл' USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN check_violation THEN NULL;
+END;
+$$;
+
+-- 23. Невалидный payload_sha256 inbox не принимает.
+DO $$
+BEGIN
+    INSERT INTO integration_inbox (
+        event_id, process_id, protocol_id, payload_sha256, status, delivery_attempts
+    ) VALUES (
+        'rin-proto-bad-sha', 'prc-ok', 'proto-check',
+        'not-a-sha',
+        'RECEIVED', 1
+    );
+    RAISE EXCEPTION 'inbox принял невалидный sha' USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN check_violation THEN NULL;
+END;
+$$;
+
 ROLLBACK;

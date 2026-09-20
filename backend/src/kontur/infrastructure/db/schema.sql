@@ -431,4 +431,24 @@ CREATE INDEX integration_outbox_claim
     ON integration_outbox (available_at)
     WHERE status IN ('PENDING', 'DELIVERING');
 
+-- Inbox: exactly-once *effect* for at-least-once broker redelivery.
+-- RECEIVED is not process.sync_state = SYNCED and not a Rin business ACK.
+CREATE TABLE integration_inbox (
+    event_id            TEXT PRIMARY KEY,
+    process_id          TEXT NOT NULL REFERENCES processes (id),
+    protocol_id         TEXT NOT NULL REFERENCES protocols (id),
+    payload_sha256      CHAR(64) NOT NULL
+                        CHECK (payload_sha256 ~ '^[a-f0-9]{64}$'),
+    status              TEXT NOT NULL DEFAULT 'RECEIVED'
+                        CHECK (status IN ('RECEIVED', 'POISON')),
+    delivery_attempts   SMALLINT NOT NULL DEFAULT 1
+                        CHECK (delivery_attempts BETWEEN 1 AND 4),
+    last_error          TEXT,
+    received_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT inbox_poison_has_error CHECK (
+        status <> 'POISON'
+        OR (last_error IS NOT NULL AND btrim(last_error) <> '')
+    )
+);
+
 -- Остальные таблицы сводки ТЗ п. 10 добавляются миграциями по мере реализации модулей.

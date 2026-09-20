@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-20",
-  "export_git_sha": "6f38cfc93f6f5a89643cf63dab24a9f3ed1882a2",
+  "export_git_sha": "f31824cd816ce9916595431c5892b6dd1b52902a",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -71,7 +71,8 @@
     "Prefer annotated_documents overlays over source PDFs",
     "Revive PR #61 import-time monkeypatch of ProcessRecord",
     "Revive PR #63 experimental materialization (stripped provenance)",
-    "Require kind=materialized or assembled=true on TZ protocol JSON"
+    "Require kind=materialized or assembled=true on TZ protocol JSON",
+    "Treat broker confirm or inbox RECEIVED as process SYNCED / Rin ACK"
   ],
   "commands": {
     "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
@@ -101,7 +102,9 @@
     "extractor_families": "data/matrix/extractor_families.json",
     "research_osint": "docs/RESEARCH_OSINT_2026.md",
     "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
-    "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md"
+    "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md",
+    "adr_0011": "docs/adr/0011-sync-lifecycle-and-manual-retry.md",
+    "adr_0012": "docs/adr/0012-transactional-inbox.md"
   },
   "leftover_refs_do_not_merge": [
     "feat/ocr-gate-i-crop3x-oem1",

@@ -12,6 +12,24 @@ from collections.abc import Mapping
 from kontur.infrastructure.outbox import ROUTING_KEY, PublishError
 
 DEFAULT_TIMEOUT_SECONDS = 10.0
+PREFETCH_COUNT = 1
+DELIVERY_LIMIT = 4
+DEAD_LETTER_EXCHANGE = "kontur.rin.dlx"
+DEAD_LETTER_QUEUE = "kontur.rin.protocol.poison"
+
+
+def protocol_queue_arguments() -> dict[str, object]:
+    """Quorum queue with a bounded redelivery limit and DLX.
+
+    Existing classic/quorum queues without these arguments must be deleted
+    before declare, otherwise RabbitMQ raises PRECONDITION_FAILED.
+    """
+
+    return {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": DEAD_LETTER_EXCHANGE,
+        "x-delivery-limit": DELIVERY_LIMIT,
+    }
 
 
 class RabbitMqConfirmedPublisher:
@@ -62,7 +80,7 @@ class RabbitMqConfirmedPublisher:
                 await channel.declare_queue(
                     ROUTING_KEY,
                     durable=True,
-                    arguments={"x-queue-type": "quorum"},
+                    arguments=protocol_queue_arguments(),
                     timeout=self._timeout_seconds,
                 )
                 confirmation = await channel.default_exchange.publish(

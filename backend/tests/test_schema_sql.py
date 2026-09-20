@@ -90,6 +90,7 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "negative_gold_requires_reason" in sql
     assert "UNIQUE (object_id, version)" in sql
     assert "payload_sha256" in sql
+    assert "CREATE TABLE integration_inbox" in sql
     assert "CREATE TABLE integration_outbox" in sql
     assert "event_id" in sql
     assert "available_at" in sql
@@ -112,6 +113,8 @@ def test_checks_sql_allows_tz_payload_without_kind_or_assembled() -> None:
     checks = CHECKS.read_text(encoding="utf-8")
     assert "proto-no-assembled-check" in checks
     assert '"protocol_id":"proto-no-assembled-check"' in checks
+    assert "rin-proto-check" in checks
+    assert "inbox принял SYNCED" in checks
     assert '\'{"kind":"materialized"}\'::jsonb' not in checks
     assert "IS DISTINCT FROM 'materialized'" not in checks
 
