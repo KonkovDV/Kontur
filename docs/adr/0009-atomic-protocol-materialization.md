@@ -7,7 +7,7 @@
 Финализация без неизменяемого снимка оставляла `FINALIZED` с placeholder
 `protocol_id` или с JSON `kind=internal_placeholder`. Выгрузка в РиН тогда
 могла опереться на несуществующий протокол ТЗ. PR #64 закрыл `save(FINALIZED)`
-в PostgreSQL. Последующий срез пишет protocol + process + `integration_outbox`
+в PostgreSQL. PR #65 пишет protocol + process + `integration_outbox`
 в одной транзакции и считает SHA-256 канонического JSON.
 
 `protocol.schema.json` имеет `additionalProperties: false`. Поля `kind` и

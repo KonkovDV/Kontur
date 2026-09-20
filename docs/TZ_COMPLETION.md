@@ -9,13 +9,12 @@
 
 ## Что уже не в бэклоге P0
 
-- PR #64 влит в `main`: fail-closed Postgres `save(FINALIZED)`, атомарная
-  versioned materialization, `protocol-{process_id}` / `-vN`, идемпотентный
-  retry канонического JSON.
-- На этой ветке: advisory lock, `FOR UPDATE`, `payload_sha256`, outbox PENDING.
-  JSON `kind=materialized` в payload **не** добавляем (ADR-0009): схема ТЗ
-  `additionalProperties: false`, `assemble_protocol()` без `kind`/`assembled`.
+- PR #64 и #65 влиты в `main`: fail-closed Postgres `save(FINALIZED)`,
+  versioned materialization, advisory lock, `FOR UPDATE`, `payload_sha256`,
+  outbox PENDING, `protocol-{process_id}` / `-vN`. JSON `kind=materialized`
+  в payload **нет** (ADR-0009): схема ТЗ `additionalProperties: false`.
 - OSINT-срез и bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
+  Это не bake-off на GOLD и не закрытие I/J.
 
 ## Что план аудита верно требует — и что кодом не закрыть
 

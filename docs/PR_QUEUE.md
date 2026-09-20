@@ -45,12 +45,7 @@
 | upload retry | повтор hash+stage не `reopen_for_upload` и не pipeline; FINALIZED → 409; правка `runtime.py`/`api.py`, без monkeypatch |
 | #62 | учебный рекордер Gate K: JSON `kontur-usability-v1`, `MISSING_EVIDENCE` нельзя CONFIRM/REJECT; сессий нет, гейт открыт |
 | #64 | fail-closed Postgres finalize + атомарная versioned materialization (`protocol-{process_id}` / `-vN`, идемпотентный retry, конфликт при другом JSON). Не закрывает I/J/K |
-
-## Открыто
-
-| PR | Содержание |
-|---|---|
-| #65 | три контура + advisory lock/`payload_sha256`/outbox + ADR-0009. JSON `kind=materialized` на провод ТЗ не добавлять. Не мержить красным |
+| #65 | три контура готовности, семейства экстракторов, advisory lock/`payload_sha256`/outbox, ADR-0009. JSON `kind=materialized` на провод ТЗ не добавляли |
 
 ## Что не брали
 
@@ -96,3 +91,7 @@
 Dry-run 132 — прогон движка на пустой комплектности, без заявления, что
 вся матрица executable. Tesseract на PATH и `wilson(290, 300)` **не**
 закрывают гейт I. JWT на HTTP — containment, не OIDC/JWKS.
+
+Рабочая линия — только зелёный `main`. Хвосты влитых/закрытых веток с origin
+снимаются. SHA `16f3a06` (`feat/ocr-gate-i-crop3x-oem1`) и `2ddc2b3`
+(`feat/ocr-300dpi-step2-verifying`) не мержить, даже если ref уже нет.
