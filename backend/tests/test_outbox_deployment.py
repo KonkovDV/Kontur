@@ -48,3 +48,16 @@ def test_broker_contract_is_confirmed_persistent_and_bounded() -> None:
     assert "DeliveryMode.PERSISTENT" in source
     assert "mandatory=True" in source
     assert "timeout=self._timeout_seconds" in source
+
+
+def test_classic_amqp_publisher_and_guest_compose_identity_are_gone() -> None:
+    outbox = (
+        ROOT / "backend" / "src" / "kontur" / "infrastructure" / "outbox.py"
+    ).read_text(encoding="utf-8")
+    env = (ROOT / ".env.example").read_text(encoding="utf-8")
+    dockerfile = (ROOT / "backend" / "Dockerfile.relay").read_text(encoding="utf-8")
+    assert "class AmqpConfirmedPublisher" not in outbox
+    assert "declare_queue" not in outbox
+    assert "amqp://guest:guest@" not in env
+    assert "amqp://kontur:kontur@localhost:5672/" in env
+    assert "PYTHONDONTWRITEBYTECODE=1" in dockerfile

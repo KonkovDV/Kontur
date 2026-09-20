@@ -27,5 +27,11 @@ jobs:
           docker compose run --rm --no-deps --entrypoint sh outbox-relay -ec '
             test "$(id -u)" = 10001
             test "$(id -g)" = 10001
+            if touch /app/.container-relay-write-test; then
+              echo "expected /app to reject writes" >&2
+              exit 1
+            fi
+            touch /tmp/container-relay-write-test
+            rm /tmp/container-relay-write-test
             python -c "import aio_pika, psycopg; from kontur.infrastructure.broker import RabbitMqConfirmedPublisher"
           '
