@@ -80,6 +80,26 @@ services:
     depends_on: [postgres, rabbitmq]
     restart: unless-stopped
 
+  inbox-consumer:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.relay
+    command: ["python", "/app/consume_inbox.py"]
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
+      KONTUR_AMQP_URL: amqp://kontur:kontur@rabbitmq:5672/
+      KONTUR_INBOX_EMPTY_SECONDS: ${KONTUR_INBOX_EMPTY_SECONDS:-1}
+      KONTUR_INBOX_ERROR_SECONDS: ${KONTUR_INBOX_ERROR_SECONDS:-5}
+    depends_on: [postgres, rabbitmq]
+    restart: unless-stopped
+
   gateway:
     build: ./gateway
     user: "10001:10001"

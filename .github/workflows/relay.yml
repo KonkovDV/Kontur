@@ -20,8 +20,8 @@ jobs:
         run: |
           docker compose config --quiet
           docker compose -f docker-compose.yml -f docker-compose.offline.yml config --quiet
-      - name: Build relay image
-        run: docker compose build outbox-relay
+      - name: Build worker image
+        run: docker compose build outbox-relay inbox-consumer
       - name: Verify relay runtime and dependencies
         run: |
           docker compose run --rm --no-deps --entrypoint sh outbox-relay -ec '
@@ -33,5 +33,21 @@ jobs:
             fi
             touch /tmp/container-relay-write-test
             rm /tmp/container-relay-write-test
-            python -c "import aio_pika, psycopg; from kontur.infrastructure.broker import RabbitMqConfirmedPublisher"
+            python -c "import aio_pika, psycopg; from kontur.infrastructure.broker import RabbitMqConfirmedPublisher; from kontur.infrastructure.inbox import settle_async_inbox_delivery, delivery_attempt; from kontur.infrastructure.inbox_worker import InboxConsumerWorker"
+            test -f /app/relay_outbox.py
+            test -f /app/consume_inbox.py
+          '
+      - name: Verify inbox consumer runtime contract
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh inbox-consumer -ec '
+            test "$(id -u)" = 10001
+            test "$(id -g)" = 10001
+            if touch /app/.container-inbox-write-test; then
+              echo "expected /app to reject writes" >&2
+              exit 1
+            fi
+            touch /tmp/container-inbox-write-test
+            rm /tmp/container-inbox-write-test
+            test -f /app/consume_inbox.py
+            python -c "from kontur.infrastructure.inbox import settle_async_inbox_delivery"
           '

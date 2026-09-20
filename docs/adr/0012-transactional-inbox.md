@@ -41,9 +41,10 @@ header означает попытку 1, значение 1 — попытку 
 
 ## Граница
 
-Это не sandbox ИАИС, не УКЭП и не exactly-once на брокере. Если локальный
-volume RabbitMQ уже держит `kontur.rin.protocol` без DLX-аргументов,
-очередь нельзя молча удалять: нужен контролируемый drain/migration или policy.
-Текущий consumer остаётся one-shot и ещё не является развёрнутым сервисом.
-RabbitMQ 4.3 меняет учёт explicit nack; перед обновлением с закреплённой 3.13
-нужен delayed-retry design и отдельный compatibility gate.
+Текущий consumer — long-running Compose-сервис `inbox-consumer` (UID 10001,
+read-only). `KONTUR_INBOX_ONCE=1` оставляет one-shot для отладки. Это не
+sandbox ИАИС, не УКЭП и не exactly-once на брокере. Если локальный volume
+RabbitMQ уже держит `kontur.rin.protocol` без DLX-аргументов, очередь нельзя
+молча удалять: нужен контролируемый drain/migration или policy. RabbitMQ 4.3
+меняет учёт explicit nack; перед обновлением с закреплённой 3.13 нужен
+delayed-retry design и отдельный compatibility gate.

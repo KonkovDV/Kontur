@@ -51,9 +51,11 @@ UID 10001, quorum queue, compose `kontur` не guest; classic
 `AmqpConfirmedPublisher` снят. PR #68 влит: claim→`SYNCING`, nack→`RETRY_WAIT`,
 исчерпание outbox `FAILED_TERMINAL` / процесс `PENDING_SYNC`, ручной retry с
 `actor_id`, audit `SYNC_RETRY_EXHAUSTED` / `SYNC_MANUAL_RETRY`. Publisher
-confirm **не** ставит `SYNCED` (ADR-0011). Transactional inbox (ADR-0012):
-уникальный `event_id`, ACK только после commit, prefetch 1, poison/DLX;
-не бизнес-ACK РиН (PR #69). Очередь PR пуста; на origin только `main`.
+confirm **не** ставит `SYNCED` (ADR-0011). Transactional inbox (ADR-0012 / PR #69,
+#71): уникальный `event_id`, persist затем `await ack/nack`, prefetch 1,
+poison/DLX; `x-delivery-count` — число прошлых неуспехов. PR #70 уточняет
+контракт JWT/object-scope без смены runtime. Inbox consumer — Compose-сервис
+UID 10001, не бизнес-ACK РиН. Очередь PR пуста; на origin только `main`.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
@@ -85,9 +87,8 @@ confirm **не** ставит `SYNCED` (ADR-0011). Transactional inbox (ADR-0012
 1. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
 2. Рекордер кликов в `web/`; 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
 3. Crash-before-commit / timeout-after-commit для finalize.
-4. Inbox consumer CLI есть (`scripts/consume_inbox.py`), unique `event_id` и
-   ACK после commit — да. Sandbox РиН, HTTP `submitted/confirmed/ambiguous` и
-   бизнес-ACK → `SYNCED` — нет.
+4. Inbox consumer — Compose-сервис `inbox-consumer` (ADR-0012). Sandbox РиН,
+   HTTP `submitted/confirmed/ambiguous` и бизнес-ACK → `SYNCED` — нет.
 5. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
 6. Экстракторы семействами по `extractor_families.json`, не по одному из 103.
 7. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.
