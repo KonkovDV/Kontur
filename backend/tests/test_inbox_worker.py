@@ -1,4 +1,4 @@
-"""Inbox consumer loop owns backoff and never leaks secret text."""
+"""Inbox session supervisor reconnects safely without leaking secrets."""
 
 from __future__ import annotations
 
@@ -12,37 +12,36 @@ from kontur.infrastructure.inbox_worker import (
 )
 
 
-def test_successful_message_is_logged_without_empty_backoff() -> None:
+def test_clean_stop_after_session_has_no_reconnect_delay() -> None:
     delays: list[float] = []
     messages: list[str] = []
     stopped = False
 
-    async def consume() -> str:
+    async def session() -> None:
         nonlocal stopped
         stopped = True
-        return "ACK"
 
     async def sleeper(delay: float) -> None:
         delays.append(delay)
 
     worker = InboxConsumerWorker(
-        consume,
+        session,
         settings=InboxWorkerSettings(empty_seconds=0.25, error_seconds=3.0),
         sleeper=sleeper,
         logger=messages.append,
     )
     asyncio.run(worker.run_forever(lambda: stopped))
-    assert messages == ["inbox consume: ACK"]
+    assert messages == []
     assert delays == []
 
 
-def test_empty_queue_backs_off_without_success_log() -> None:
+def test_unexpected_clean_session_end_reconnects_with_backoff() -> None:
     delays: list[float] = []
     messages: list[str] = []
     stopped = False
 
-    async def consume() -> str:
-        return "empty"
+    async def session() -> None:
+        return None
 
     async def sleeper(delay: float) -> None:
         nonlocal stopped
@@ -50,22 +49,22 @@ def test_empty_queue_backs_off_without_success_log() -> None:
         stopped = True
 
     worker = InboxConsumerWorker(
-        consume,
+        session,
         settings=InboxWorkerSettings(empty_seconds=0.5, error_seconds=3.0),
         sleeper=sleeper,
         logger=messages.append,
     )
     asyncio.run(worker.run_forever(lambda: stopped))
     assert delays == [0.5]
-    assert messages == []
+    assert messages == ["inbox session ended; reconnecting"]
 
 
-def test_error_backs_off_and_logs_type_without_secret() -> None:
+def test_session_error_reconnects_and_logs_type_without_secret() -> None:
     delays: list[float] = []
     messages: list[str] = []
     stopped = False
 
-    async def consume() -> str:
+    async def session() -> None:
         raise RuntimeError("postgresql://user:secret@example.invalid/db")
 
     async def sleeper(delay: float) -> None:
@@ -74,7 +73,7 @@ def test_error_backs_off_and_logs_type_without_secret() -> None:
         stopped = True
 
     worker = InboxConsumerWorker(
-        consume,
+        session,
         settings=InboxWorkerSettings(empty_seconds=0.25, error_seconds=4.0),
         sleeper=sleeper,
         logger=messages.append,
@@ -83,6 +82,15 @@ def test_error_backs_off_and_logs_type_without_secret() -> None:
     assert delays == [4.0]
     assert messages == ["inbox consume error: RuntimeError"]
     assert "secret" not in messages[0]
+
+
+def test_cancelled_session_is_not_swallowed() -> None:
+    async def session() -> None:
+        raise asyncio.CancelledError
+
+    worker = InboxConsumerWorker(session)
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(worker.run_forever(lambda: False))
 
 
 def test_worker_settings_reject_busy_loops_and_non_finite() -> None:

@@ -1,7 +1,7 @@
 """Consume the protocol queue into the transactional inbox.
 
 Manual consumer ACK is awaited only after the PostgreSQL commit. Default mode is
-a long-running worker. This is not a Rin business acknowledgement.
+a long-running push consumer. This is not a Rin business acknowledgement.
 """
 
 from __future__ import annotations
@@ -104,6 +104,42 @@ async def consume_once(dsn: str, amqp_url: str, *, timeout_seconds: float = 5.0)
         await connection.close()
 
 
+async def _next_or_stop(iterator: Any, stop: asyncio.Event) -> Any | None:
+    delivery_task = asyncio.create_task(iterator.__anext__())
+    stop_task = asyncio.create_task(stop.wait())
+    done, _pending = await asyncio.wait(
+        {delivery_task, stop_task},
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+    if stop_task in done:
+        delivery_task.cancel()
+        await asyncio.gather(delivery_task, return_exceptions=True)
+        return None
+    stop_task.cancel()
+    await asyncio.gather(stop_task, return_exceptions=True)
+    return delivery_task.result()
+
+
+async def _consume_session(
+    dsn: str,
+    amqp_url: str,
+    stop: asyncio.Event,
+) -> None:
+    connection, queue = await _open_queue(amqp_url)
+    try:
+        async with queue.iterator() as iterator:
+            while not stop.is_set():
+                incoming = await _next_or_stop(iterator, stop)
+                if incoming is None:
+                    return
+                # Any DB or settlement exception escapes the session. Closing the
+                # connection below lets RabbitMQ requeue only if settlement was
+                # not accepted; inbox event_id makes a redelivery idempotent.
+                await _settle(incoming, dsn)
+    finally:
+        await connection.close()
+
+
 async def consume_forever(
     dsn: str,
     amqp_url: str,
@@ -111,31 +147,15 @@ async def consume_forever(
     settings: InboxWorkerSettings,
     logger: Callable[[str], None],
 ) -> None:
-    connection, queue = await _open_queue(amqp_url)
+    async def run_session() -> None:
+        await _consume_session(dsn, amqp_url, stop)
 
-    async def consume_one() -> str:
-        incoming = await queue.get(fail=False, timeout=settings.empty_seconds)
-        if incoming is None:
-            return "empty"
-        try:
-            return await _settle(incoming, dsn)
-        except Exception:
-            try:
-                await incoming.nack(requeue=True)
-            except Exception as nack_exc:
-                logger(f"inbox consume error: {type(nack_exc).__name__}")
-            raise
-
-    try:
-        worker = InboxConsumerWorker(
-            consume_one,
-            settings=settings,
-            logger=logger,
-            sleep_on_empty=False,
-        )
-        await worker.run_forever(stop.is_set)
-    finally:
-        await connection.close()
+    worker = InboxConsumerWorker(
+        run_session,
+        settings=settings,
+        logger=logger,
+    )
+    await worker.run_forever(stop.is_set)
 
 
 def main() -> int:
