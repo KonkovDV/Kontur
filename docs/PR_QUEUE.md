@@ -40,6 +40,7 @@
 | #56 | HTTP object scope обязателен (RT-H); unscoped → 403 на объектных операциях |
 | #57 | Live Gate L k6 после upload; p95 на GHA измерен, не production SLA |
 | #58 | JWT RS256/ES256 по умолчанию; legacy только с `KONTUR_ALLOW_INSECURE_DEV_AUTH` |
+| #59 | Фактические байты upload: middleware считает `http.request`, файл читается чанками; 413 с `BATCH_LIMIT_EXCEEDED` / `FILE_TOO_LARGE`; смешанный accept/reject сохранён |
 
 ## Что не брали
 
@@ -73,6 +74,7 @@
 | #52 as-is | `kontur.evaluation.recall` нет; `tests/gate_j` не собирается; нет `object_id` |
 | #53 as-is | CI `backend` FAILURE (ruff I001/F401); `ocr_text=AVAILABLE` по `shutil.which`; дубль CA/Wilson z=1.645; `wilson(290,300)` как PASS пилота; импорт несуществующего `pdf_fixtures`; полный кадр назван region-crop; domain→infrastructure |
 | #54 as-is | `ocr_tesseract.py` одной строкой (invalid-syntax), CI backend FAILURE; «гейт I закрыт» до замера; tessdata-best нет в образе; `MIN_WORD_CONF` 40→35. Docker-прогон crop×3+oem1+autocontrast+PSM 7→6→8 на SILVER PDF_TEXT_LAYER: mean_ca тот же, tz_low и gate_i_low ниже, чем у текущего `main`. В прод не брали |
+| #59 as-is | generic `{"detail":"request too large"}`, любой reject срывал mixed accept/reject, 429 admission, mypy `SpooledTemporaryFile`/`Any`; влит переписанный срез с кодами ТЗ |
 | `feat/ocr-300dpi-step2-verifying` (`2ddc2b3`) | PR не открывался. Тот же усечённый push: `ocr_tesseract.py` одной строкой, 3161 байт. Заявлены wilson≥0.95 / tessdata-best / `MIN_WORD_CONF` 35. Не мержить |
 
 Не публиковать F1/P/R и recall критических на frozen val. Поставка
