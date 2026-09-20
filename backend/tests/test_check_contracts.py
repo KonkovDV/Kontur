@@ -3,16 +3,29 @@
 from __future__ import annotations
 
 import copy
+import importlib.util
+from pathlib import Path
 
 import pytest
 import yaml
 
-from scripts.check_contracts import (
-    OPENAPI,
-    OPERATION_METHODS,
-    iter_operations,
-    validate_openapi,
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_CHECK_CONTRACTS_PATH = _REPO_ROOT / "scripts" / "check_contracts.py"
+_CHECK_CONTRACTS_SPEC = importlib.util.spec_from_file_location(
+    "check_contracts", _CHECK_CONTRACTS_PATH
 )
+if _CHECK_CONTRACTS_SPEC is None:
+    raise ImportError(f"Could not load module spec from {_CHECK_CONTRACTS_PATH}")
+if _CHECK_CONTRACTS_SPEC.loader is None:
+    raise ImportError(f"Module spec has no loader: {_CHECK_CONTRACTS_PATH}")
+
+_check_contracts = importlib.util.module_from_spec(_CHECK_CONTRACTS_SPEC)
+_CHECK_CONTRACTS_SPEC.loader.exec_module(_check_contracts)
+
+OPENAPI = _check_contracts.OPENAPI
+OPERATION_METHODS = _check_contracts.OPERATION_METHODS
+iter_operations = _check_contracts.iter_operations
+validate_openapi = _check_contracts.validate_openapi
 
 
 @pytest.fixture(scope="module")
