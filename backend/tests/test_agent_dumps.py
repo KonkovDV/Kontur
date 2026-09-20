@@ -53,6 +53,7 @@ def test_handoff_refuses_to_close_gates() -> None:
     assert "GAP-IOS4-VAL" in payload["open_gaps"]
     assert "GAP-CAP-OCR" in payload["open_gaps"]
     assert "GAP-K6-P95" not in payload["open_gaps"]
+    assert "GAP-ISOLATE" not in payload["open_gaps"]
     steps = payload["work_plan_steps"]
     assert isinstance(steps, dict)
     assert steps["5_gate_l_k6"] == "measured_on_gha_not_production_sla"

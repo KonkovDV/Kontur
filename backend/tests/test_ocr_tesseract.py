@@ -208,6 +208,14 @@ def test_pipeline_invokes_ocr_helper_when_tesseract_present(
         "kontur.application.process_pipeline.tesseract_available",
         lambda: True,
     )
+    def _inprocess(parser: object, data: bytes, **_kwargs: object) -> object:
+        assert callable(parser)
+        return parser(data)
+
+    monkeypatch.setattr(
+        "kontur.application.process_pipeline.run_pdf_parse_sync",
+        _inprocess,
+    )
     monkeypatch.setattr(
         "kontur.application.process_pipeline.fill_empty_raster_pages",
         _fake_fill,

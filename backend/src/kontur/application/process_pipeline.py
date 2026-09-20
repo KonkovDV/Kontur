@@ -151,17 +151,19 @@ def run_process_pipeline(
     return report
 
 
+def fill_raster_pages_isolated(data: bytes) -> PdfDocumentTokens:
+    """OCR-fill в дочернем процессе: pickle без замыкания на исходный документ."""
+
+    return fill_empty_raster_pages(extract_pdf_bytes(data), data)
+
+
 def _maybe_ocr(document: PdfDocumentTokens, raw: bytes) -> PdfDocumentTokens:
     """OCR вне векторного разбора. Таймаут оставляет исходные токены."""
 
     if not tesseract_available() or not raster_pages_need_ocr(document):
         return document
-
-    def _run(data: bytes) -> PdfDocumentTokens:
-        return fill_empty_raster_pages(document, data)
-
     try:
-        return run_pdf_parse_sync(_run, raw)
+        return run_pdf_parse_sync(fill_raster_pages_isolated, raw)
     except PdfParseTimeoutError:
         return document
 

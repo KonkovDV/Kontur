@@ -17,11 +17,12 @@ LLM/VLM — sidecar. Их `UNAVAILABLE` не делает `kit_blocked`. Ста�
 находки пишет компаратор; инспектор — единственный источник
 `CONFIRMED_VIOLATION`.
 
-## PDF: таймаут без SIGKILL
+## PDF: таймаут в дочернем процессе
 
-Разбор ограничивается `asyncio.wait_for` и `ThreadPoolExecutor.result`.
-Поток при этом не убивается — это не изоляция процесса (`GAP-ISOLATE`).
-По истечении — `PdfParseTimeoutError`, не пустой успех.
+Разбор PDF идёт в `spawn`-процессе (`pdf_guard.run_pdf_parse_sync`).
+По истечении лимита дочерний процесс `terminate`/`kill`, поток API
+не остаётся с живым pdfium. По истечении — `PdfParseTimeoutError`,
+не пустой успех. `process_id` в исключении нет: это идентификатор сверки.
 
 ## Provenance — в схеме, не в UserWarning
 

@@ -7,23 +7,14 @@
   "source_trigger_logic": "Уменьшение проектной толщины плиты в РД или по факту заливки (ИД).",
   "coverage": "executable",
   "applicability": {
-    "stages_required": [
-      "PD",
-      "RD"
-    ],
+    "stages_required": ["PD", "RD"],
     "object_types": [],
     "condition": null
   },
   "sources": {
-    "pd": {
-      "description": "Опалубочный чертеж фундамента (КР)"
-    },
-    "rd": {
-      "description": "Опалубочные чертежи плиты; Разрезы (КЖ)"
-    },
-    "id": {
-      "description": "Исполнительная геодезическая схема нивелировки верха/низа плиты"
-    }
+    "pd": { "description": "Опалубочный чертеж фундамента (КР)" },
+    "rd": { "description": "Опалубочные чертежи плиты; Разрезы (КЖ)" },
+    "id": { "description": "Исполнительная геодезическая схема нивелировки верха/низа плиты" }
   },
   "extractor": {
     "type": "number",
@@ -33,12 +24,7 @@
       "Толщина ростверка",
       "Толщина монолитной фундаментной плиты"
     ],
-    "normalization": [
-      "nfc",
-      "collapse_spaces",
-      "decimal_comma",
-      "strip_unit"
-    ],
+    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
     "dual_read_required": true
   },
   "comparator": {
@@ -48,10 +34,7 @@
     "rounding": "half_up",
     "unit_target": "мм"
   },
-  "required_evidence": [
-    "expected",
-    "actual"
-  ],
+  "required_evidence": ["expected", "actual"],
   "normative_refs": [],
   "failure_mapping": {
     "source_absent": "MISSING_EVIDENCE",
@@ -62,21 +45,9 @@
   },
   "review_priority": "HIGH",
   "tests": [
-    {
-      "name": "equal_or_compliant_gives_no_difference",
-      "expected_status": "AUTO_NO_DIFFERENCE"
-    },
-    {
-      "name": "triggering_difference_gives_candidate",
-      "expected_status": "CANDIDATE"
-    },
-    {
-      "name": "required_stage_absent_gives_missing_evidence",
-      "expected_status": "MISSING_EVIDENCE"
-    },
-    {
-      "name": "parameter_not_applicable_on_object",
-      "expected_status": "NOT_APPLICABLE"
-    }
+    { "name": "equal_or_compliant_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
+    { "name": "triggering_difference_gives_candidate", "expected_status": "CANDIDATE" },
+    { "name": "required_stage_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" },
+    { "name": "parameter_not_applicable_on_object", "expected_status": "NOT_APPLICABLE" }
   ]
 }

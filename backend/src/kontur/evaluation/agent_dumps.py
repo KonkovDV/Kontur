@@ -131,7 +131,6 @@ def build_handoff(
             "RT-2609-21",
             "GAP-FREE-SEARCH",
             "GAP-DWG",
-            "GAP-ISOLATE",
             "GAP-SPLIT",
         ],
         "coverage_counts": counts,
