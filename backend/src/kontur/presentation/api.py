@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from typing import Annotated
 from uuid import uuid4
 
@@ -32,8 +31,13 @@ from kontur.presentation.rbac import (
     Role,
     authorize,
 )
+from kontur.presentation.upload_limits import (
+    ActualUploadLimitMiddleware,
+    read_bounded_upload,
+)
 
 app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton")
+app.add_middleware(ActualUploadLimitMiddleware)
 app.state.workspace = ProcessWorkspace()
 
 
@@ -116,27 +120,27 @@ def _rejection_body(item: Rejection) -> dict[str, str]:
 
 
 @app.exception_handler(TransitionError)
-async def _transition_error(_request: Request, exc: TransitionError) -> JSONResponse:
+async def _transition_error(_request: object, exc: TransitionError) -> JSONResponse:
     return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
 @app.exception_handler(AuthenticationRequiredError)
-async def _auth_error(_request: Request, exc: AuthenticationRequiredError) -> JSONResponse:
+async def _auth_error(_request: object, exc: AuthenticationRequiredError) -> JSONResponse:
     return JSONResponse(status_code=401, content={"detail": str(exc)})
 
 
 @app.exception_handler(PermissionDeniedError)
-async def _forbid_error(_request: Request, exc: PermissionDeniedError) -> JSONResponse:
+async def _forbid_error(_request: object, exc: PermissionDeniedError) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
 @app.exception_handler(AccessDeniedError)
-async def _object_forbid_error(_request: Request, exc: AccessDeniedError) -> JSONResponse:
+async def _object_forbid_error(_request: object, exc: AccessDeniedError) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
 @app.exception_handler(EmptyPackageError)
-async def _empty_package(_request: Request, exc: EmptyPackageError) -> JSONResponse:
+async def _empty_package(_request: object, exc: EmptyPackageError) -> JSONResponse:
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
@@ -161,6 +165,32 @@ async def upload_documents(
     authorization: Annotated[str | None, Header()] = None,
     process_id: Annotated[str | None, Form()] = None,
     doc_stage: Annotated[DocStage | None, Form()] = None,
+) -> dict[str, object] | JSONResponse:
+    try:
+        return await _upload_documents(
+            request,
+            object_id=object_id,
+            files=files,
+            authorization=authorization,
+            process_id=process_id,
+            doc_stage=doc_stage,
+        )
+    finally:
+        for upload in files:
+            try:
+                await upload.close()
+            except OSError:
+                continue
+
+
+async def _upload_documents(
+    request: Request,
+    *,
+    object_id: str,
+    files: list[UploadFile],
+    authorization: str | None,
+    process_id: str | None,
+    doc_stage: DocStage | None,
 ) -> dict[str, object] | JSONResponse:
     _subject, _granted, caller_object_id = _require("uploadDocuments", authorization)
     normalized_object_id = object_id.strip()
@@ -201,15 +231,8 @@ async def upload_documents(
 
     payloads: list[tuple[UploadCandidate, bytes]] = []
     for upload in files:
-        name = upload.filename or "unnamed"
-        body = await upload.read()
-        candidate = UploadCandidate(
-            filename=name,
-            size_bytes=len(body),
-            header=body[:16],
-            content_hash=hashlib.sha256(body).hexdigest(),
-        )
-        payloads.append((candidate, body))
+        candidate, body = await read_bounded_upload(upload)
+        payloads.append((candidate, body if body is not None else b""))
     decision = evaluate_batch(item for item, _body in payloads)
     if decision.rejected and not decision.accepted:
         worst = max(decision.rejected, key=lambda item: item.http_status)
