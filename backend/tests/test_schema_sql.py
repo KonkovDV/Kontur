@@ -89,6 +89,8 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "gold_requires_expert" in sql
     assert "negative_gold_requires_reason" in sql
     assert "UNIQUE (object_id, version)" in sql
+    assert "payload_sha256" in sql
+    assert "CREATE TABLE integration_outbox" in sql
 
 
 def test_schema_sync_guard_rejects_placeholder_and_false_assembled() -> None:
@@ -98,6 +100,17 @@ def test_schema_sync_guard_rejects_placeholder_and_false_assembled() -> None:
     assert "payload -> 'assembled'" in sql
     assert "proto_assembled = 'false'::jsonb" in sql
     assert "proto_assembled IS NULL" not in sql
+    assert "payload_sha256" in sql
+    assert "btrim(proto_sha)" in sql
+    assert "IS DISTINCT FROM 'materialized'" not in sql
+
+
+def test_checks_sql_allows_tz_payload_without_kind_or_assembled() -> None:
+    checks = CHECKS.read_text(encoding="utf-8")
+    assert "proto-no-assembled-check" in checks
+    assert '"protocol_id":"proto-no-assembled-check"' in checks
+    assert '\'{"kind":"materialized"}\'::jsonb' not in checks
+    assert "IS DISTINCT FROM 'materialized'" not in checks
 
 
 def test_checks_sql_asserts_instead_of_merely_running() -> None:

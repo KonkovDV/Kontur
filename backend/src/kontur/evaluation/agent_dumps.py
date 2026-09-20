@@ -35,6 +35,14 @@ def handoff_path(root: Path | None = None) -> Path:
     return (root or repo_root()) / "data" / "dataset" / "agent_handoff.json"
 
 
+def scorecard_path(root: Path | None = None) -> Path:
+    return (root or repo_root()) / "data" / "dataset" / "tz_scorecard.json"
+
+
+def extractor_families_path(root: Path | None = None) -> Path:
+    return (root or repo_root()) / "data" / "matrix" / "extractor_families.json"
+
+
 def index_stats_path(root: Path | None = None) -> Path:
     return (root or repo_root()) / "data" / "dataset" / "train_public_index_stats.json"
 
@@ -160,6 +168,7 @@ def build_handoff(
             "Prefer annotated_documents overlays over source PDFs",
             "Revive PR #61 import-time monkeypatch of ProcessRecord",
             "Revive PR #63 experimental materialization (stripped provenance)",
+            "Require kind=materialized or assembled=true on TZ protocol JSON",
         ],
         "commands": {
             "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
@@ -185,6 +194,10 @@ def build_handoff(
             "questions_to_organizer": "docs/QUESTIONS_TO_ORGANIZER.md",
             "train_public_module": "backend/src/kontur/evaluation/train_public.py",
             "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py",
+            "tz_scorecard": "data/dataset/tz_scorecard.json",
+            "extractor_families": "data/matrix/extractor_families.json",
+            "research_osint": "docs/RESEARCH_OSINT_2026.md",
+            "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
         },
         "leftover_refs_do_not_merge": [
             "feat/ocr-gate-i-crop3x-oem1",
@@ -197,6 +210,134 @@ def build_handoff(
             ),
             "closes_gate_j": verdict.get("closes_gate_j"),
         },
+    }
+
+
+def _scorecard_item(item_id: str, state: str, detail: str) -> dict[str, str]:
+    if state not in {"met", "partial", "unmet"}:
+        raise ValueError(f"state {state}")
+    return {"id": item_id, "state": state, "detail": detail}
+
+
+def build_extractor_families(
+    registry: FileRuleRegistry | None = None,
+) -> dict[str, object]:
+    """Группировка 132 правил по extractor.type. Не делает extractor_missing executable."""
+
+    source = registry or FileRuleRegistry()
+    families: dict[str, dict[str, list[str]]] = {}
+    for code in source.all_codes():
+        rule = source.get(code)
+        extractor = rule.get("extractor")
+        family = "unknown"
+        if isinstance(extractor, dict) and extractor.get("type") is not None:
+            family = str(extractor["type"])
+        coverage = str(rule["coverage"])
+        bucket = families.setdefault(
+            family,
+            {name: [] for name in sorted(KNOWN_COVERAGE)},
+        )
+        bucket.setdefault(coverage, []).append(code)
+    codes_by_family = {
+        family: {key: sorted(values) for key, values in buckets.items()}
+        for family, buckets in sorted(families.items())
+    }
+    counts_by_family = {
+        family: {key: len(values) for key, values in buckets.items()}
+        for family, buckets in codes_by_family.items()
+    }
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "matrix_version": source.matrix_version,
+        "purpose": (
+            "Cluster compiled rules by extractor.type. Grouping is not executable coverage."
+        ),
+        "closes_gate_j": False,
+        "counts_by_family": counts_by_family,
+        "codes_by_family": codes_by_family,
+        "note": (
+            "103 extractor_missing remain missing until each family has a working extractor "
+            "and fixtures. Do not treat this file as 132/132."
+        ),
+    }
+
+
+def build_tz_scorecard(
+    *,
+    coverage: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    """Три контура готовности. Не порог ТЗ, не P/R/F1, не закрытие гейтов."""
+
+    cov = coverage if coverage is not None else build_coverage_snapshot()
+    counts = cov["counts"]
+    if not isinstance(counts, dict):
+        raise TypeError("coverage.counts")
+    executable = int(counts.get("executable", 0))
+    declared = int(counts.get("declared", 0))
+    missing = int(counts.get("extractor_missing", 0))
+    code_items = [
+        _scorecard_item("matrix_declared_132", "met", f"declared={declared}"),
+        _scorecard_item(
+            "matrix_executable_132",
+            "unmet",
+            f"executable={executable} extractor_missing={missing}",
+        ),
+        _scorecard_item("http_vector_pipeline", "partial", "L1-L7 upload; OCR UNAVAILABLE"),
+        _scorecard_item(
+            "protocol_atomic_materialization",
+            "partial",
+            "PR #64 plus lock/sha/outbox; no kind=materialized on TZ JSON",
+        ),
+        _scorecard_item("rin_sandbox", "unmet", "retry policy only; no sandbox contract"),
+        _scorecard_item("async_rabbit_outbox_workers", "unmet", "HTTP still runs pipeline inline"),
+        _scorecard_item("split_finding", "unmet", "GAP-SPLIT NotImplementedError"),
+    ]
+    acceptance_items = [
+        _scorecard_item("gold_ocr", "unmet", "ocr_text UNAVAILABLE; SILVER is not GOLD"),
+        _scorecard_item("frozen_val_132", "unmet", "no frozen val; 6 gold positives < n=16"),
+        _scorecard_item("gate_i", "unmet", "GAP-CAP-OCR / GAP-IOS4-VAL open"),
+        _scorecard_item("gate_j", "unmet", "closes_gate_j false"),
+        _scorecard_item("gate_k", "unmet", "recorder landed; no five sessions"),
+        _scorecard_item("gate_l_tz", "unmet", "GHA /status measured; not production SLA"),
+    ]
+    production_items = [
+        _scorecard_item("jwt_rs256", "partial", "static key containment; not OIDC/JWKS"),
+        _scorecard_item(
+            "container_hardening",
+            "partial",
+            "PR #60 non-root loopback; not TLS 1.3",
+        ),
+        _scorecard_item("oidc_jwks", "unmet", "no rotation"),
+        _scorecard_item("antivirus", "unmet", "intake MIME/zip-bomb only"),
+        _scorecard_item("branch_protection", "unmet", "main unprotected"),
+        _scorecard_item("observability_otel", "unmet", "no Prometheus/Grafana stack"),
+    ]
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "generated_on": date.today().isoformat(),
+        "purpose": (
+            "Engineering completeness tracks. Not TZ acceptance and not published P/R/F1/CA."
+        ),
+        "closes_gate_i": False,
+        "closes_gate_j": False,
+        "closes_gate_k": False,
+        "closes_gate_l": False,
+        "not_tz_percentage": True,
+        "coverage_counts": counts,
+        "tracks": {
+            "code": code_items,
+            "acceptance": acceptance_items,
+            "production": production_items,
+        },
+        "contest_rc": [
+            "safe postgres finalize",
+            "gate_k five inspectors",
+            "honest coverage report",
+            "no machine CONFIRMED_VIOLATION",
+            "measured gate L not SLA",
+        ],
+        "deadline": "2026-09-29T23:59:00+03:00",
+        "note": "100% TZ is unreachable without GOLD OCR, frozen val and five inspectors.",
     }
 
 
@@ -233,12 +374,18 @@ def export_all(root: Path | None = None) -> dict[str, Path]:
     coverage = build_coverage_snapshot()
     stats = maybe_index_stats(base)
     handoff = build_handoff(coverage=coverage, index_stats=stats, root=base)
+    families = build_extractor_families()
+    scorecard = build_tz_scorecard(coverage=coverage)
     written = {
         "coverage": coverage_path(base),
         "handoff": handoff_path(base),
+        "extractor_families": extractor_families_path(base),
+        "scorecard": scorecard_path(base),
     }
     write_json(written["coverage"], coverage)
     write_json(written["handoff"], handoff)
+    write_json(written["extractor_families"], families)
+    write_json(written["scorecard"], scorecard)
     if stats is not None:
         target = index_stats_path(base)
         write_json(target, stats)

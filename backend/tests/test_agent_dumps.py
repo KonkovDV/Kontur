@@ -6,11 +6,15 @@ import json
 
 from kontur.evaluation.agent_dumps import (
     build_coverage_snapshot,
+    build_extractor_families,
     build_handoff,
+    build_tz_scorecard,
     coverage_path,
     export_all,
+    extractor_families_path,
     handoff_path,
     repo_root,
+    scorecard_path,
 )
 from kontur.evaluation.dataset_package import LABELED_TRAIN_OBJECT_IDS
 from kontur.evaluation.frozen_val import critical_recall, load_frozen_val_jsonl, recall_meets_tz
@@ -63,10 +67,53 @@ def test_handoff_refuses_to_close_gates() -> None:
     assert "CONFIRMED_VIOLATION" in do_not
     assert "OIDC/JWKS" in do_not
     assert "ЗАКРЫТЫЙ" in do_not or "frozen val" in do_not
+    assert "kind=materialized" in do_not
     echo = payload["verdict_echo"]
     assert isinstance(echo, dict)
     assert echo["closes_gate_j"] is False
     assert echo["frozen_validation_corpus_for_132"] is False
+
+
+def test_tz_scorecard_does_not_close_gates_or_claim_percent() -> None:
+    payload = build_tz_scorecard()
+    assert payload["closes_gate_i"] is False
+    assert payload["closes_gate_j"] is False
+    assert payload["closes_gate_k"] is False
+    assert payload["closes_gate_l"] is False
+    assert payload["not_tz_percentage"] is True
+    tracks = payload["tracks"]
+    assert isinstance(tracks, dict)
+    code_items = tracks["code"]
+    assert isinstance(code_items, list)
+    executable_item = next(
+        item for item in code_items if item["id"] == "matrix_executable_132"
+    )
+    assert executable_item["state"] == "unmet"
+    protocol_item = next(
+        item for item in code_items if item["id"] == "protocol_atomic_materialization"
+    )
+    assert protocol_item["state"] == "partial"
+    assert "kind=materialized" in str(protocol_item["detail"])
+
+
+def test_extractor_families_sum_to_declared_and_do_not_close_j() -> None:
+    payload = build_extractor_families()
+    assert payload["closes_gate_j"] is False
+    counts = payload["counts_by_family"]
+    assert isinstance(counts, dict)
+    declared = 0
+    executable = 0
+    for family_counts in counts.values():
+        assert isinstance(family_counts, dict)
+        declared += int(family_counts.get("executable", 0))
+        declared += int(family_counts.get("extractor_missing", 0))
+        declared += int(family_counts.get("advisory", 0))
+        declared += int(family_counts.get("source_missing", 0))
+        declared += int(family_counts.get("not_applicable", 0))
+        executable += int(family_counts.get("executable", 0))
+    assert declared == EXPECTED_PARAM_COUNT
+    assert executable < EXPECTED_PARAM_COUNT
+    assert executable >= 20
 
 
 def test_committed_dumps_match_builder() -> None:
@@ -78,6 +125,13 @@ def test_committed_dumps_match_builder() -> None:
     assert coverage_file["codes"] == live_cov["codes"]
     assert handoff_file["closes_gate_j"] is False
     assert handoff_file["coverage_counts"] == live_cov["counts"]
+    families_file = json.loads(extractor_families_path(root).read_text(encoding="utf-8"))
+    scorecard_file = json.loads(scorecard_path(root).read_text(encoding="utf-8"))
+    live_families = build_extractor_families()
+    live_scorecard = build_tz_scorecard(coverage=live_cov)
+    assert families_file["counts_by_family"] == live_families["counts_by_family"]
+    assert scorecard_file["closes_gate_j"] is False
+    assert live_scorecard["not_tz_percentage"] is True
     doc = root / "docs" / "AGENT_HANDOFF.md"
     assert doc.is_file()
     text = doc.read_text(encoding="utf-8")

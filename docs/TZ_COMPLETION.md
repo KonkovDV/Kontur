@@ -1,0 +1,68 @@
+# Программа доведения до ТЗ (честные границы)
+
+Дедлайн подачи — 29.09.2026 23:59 МСК. Этот документ принимает трёхконтурную
+модель из аудита и **отвергает** публикацию одной цифры готовности как порога
+ТЗ. Scorecard: [`TZ_SCORECARD.md`](TZ_SCORECARD.md).
+
+Инварианты — [`AGENTS.md`](../AGENTS.md). Overlay нормы не источник скоринга.
+`CONFIRMED_VIOLATION` пишет только инспектор. TEST_HIDDEN не открывать.
+
+## Что уже не в бэклоге P0
+
+- PR #64 влит в `main`: fail-closed Postgres `save(FINALIZED)`, атомарная
+  versioned materialization, `protocol-{process_id}` / `-vN`, идемпотентный
+  retry канонического JSON.
+- На этой ветке: advisory lock, `FOR UPDATE`, `payload_sha256`, outbox PENDING.
+  JSON `kind=materialized` в payload **не** добавляем (ADR-0009): схема ТЗ
+  `additionalProperties: false`, `assemble_protocol()` без `kind`/`assembled`.
+- OSINT-срез и bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
+
+## Что план аудита верно требует — и что кодом не закрыть
+
+| Требование | Статус |
+|---|---|
+| Три независимых scorecard | ведётся JSON, без процента «по ТЗ» |
+| 132/132 executable | 29 executable, 103 `extractor_missing` |
+| GOLD OCR / frozen val | нет; SILVER и n=6 не закрывают I/J |
+| Пять инспекторов Gate K | рекордер есть; сессий нет |
+| RabbitMQ + MinIO + outbox workers | compose есть; HTTP гоняет pipeline inline |
+| OIDC/JWKS, TLS 1.3, AV, backup | не production |
+| SOTA bake-off OCR/VLM | нужен собственный GOLD, не общий leaderboard |
+
+Каскад «модель предлагает → движок сравнивает → инспектор решает» уже
+зафиксирован ADR-0001. VLM не автор вердикта.
+
+## Семейства экстракции
+
+Не реализовывать 103 правила по одному. Сначала кластер по уже
+скомпилированному `extractor.type` (`number` / `enum` / `exact_field` /
+`presence`). Файл [`extractor_families.json`](../data/matrix/extractor_families.json)
+только группирует коды. Пока нет рабочего экстрактора и фикстур, coverage
+остаётся `extractor_missing`.
+
+Критические 106 не объявлять закрытыми без frozen val.
+
+## Конкурсный RC (реалистично)
+
+1. Безопасный PostgreSQL finalize (ADR-0009: колонки, не `kind=materialized`).
+2. Gate K: пять сессий человеком; код рекордера не закрывает гейт.
+3. Честный coverage 29 executable / 103 extractor_missing; без заявления,
+   что вся матрица executable.
+4. E2E demo на векторном слое; `ocr_text=UNAVAILABLE`.
+5. Gate L измерен на GHA и **не** назван production SLA.
+6. Capabilities честно показывают пробелы.
+
+## Порядок следующих слайсов
+
+1. Живые Postgres-тесты finalize (два параллельных клиента, crash).
+2. Пять сессий Gate K → `USABILITY_RESULTS.md`.
+3. Независимый GOLD OCR и frozen val по `object_id` (поставка, не код).
+4. Outbox relay → RabbitMQ worker; `202` без inline L1–L7.
+5. Экстракторы семействами, сначала критические; каждое правило — fixtures.
+6. UI на реальной очереди и crop из сохранённых координат.
+7. РиН adapter + тестовый crypto provider, без заявления production УКЭП.
+8. OIDC/JWKS, TLS, AV, monitoring, backup — после acceptance, не вместо него.
+
+Полноценный обзор моделей 2025–2026 (лицензия, VRAM, кириллица, grounding)
+нужен только как **эксперимент на GOLD**, не как выбор «самой умной» модели
+в компаратор.

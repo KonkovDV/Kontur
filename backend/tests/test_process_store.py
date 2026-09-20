@@ -92,7 +92,7 @@ def test_sql_matches_schema_columns() -> None:
     assert "payload" not in snapshot_params(_snap())
     assert "INSERT INTO protocols" in INSERT_PROTOCOL_SQL
     assert "ON CONFLICT (id) DO NOTHING" in INSERT_PROTOCOL_SQL
-    assert "UNIQUE (object_id, version)" not in INSERT_PROTOCOL_SQL
+    assert "payload_sha256" in INSERT_PROTOCOL_SQL
 
 
 def test_workspace_survives_new_process_on_same_store() -> None:
@@ -458,6 +458,7 @@ def test_memory_materialize_is_idempotent_for_same_payload() -> None:
     assert stored is not None
     assert stored["version"] == 1
     assert store.next_protocol_version("obj-1") == 2
+    assert store._outbox["protocol-p-1"]["status"] == "PENDING"
 
 
 def test_memory_materialize_conflicts_on_different_payload() -> None:
@@ -504,6 +505,10 @@ def test_postgres_materialize_writes_protocol_and_process_in_transaction() -> No
     joined = "\n".join(conn.sql)
     assert "INSERT INTO protocols" in joined
     assert "INSERT INTO processes" in joined
+    assert "pg_advisory_xact_lock" in joined
+    assert "FOR UPDATE" in joined
+    assert "INSERT INTO integration_outbox" in joined
+    assert "payload_sha256" in joined
     assert conn.saw_transaction is True
     assert conn.sql.index(
         [item for item in conn.sql if "INSERT INTO protocols" in item][0]

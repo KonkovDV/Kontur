@@ -8,6 +8,9 @@
 
 Источник ошибок аудита: [`AUDITOR_ERRATA.md`](AUDITOR_ERRATA.md).
 Публичный gold ≠ frozen val: [`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md).
+Три контура готовности (не порог ТЗ): [`TZ_SCORECARD.md`](TZ_SCORECARD.md),
+[`TZ_COMPLETION.md`](TZ_COMPLETION.md).
+OSINT / bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
 Снимки для следующего ИИ: [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md),
 `python scripts/export_agent_dumps.py`.
 

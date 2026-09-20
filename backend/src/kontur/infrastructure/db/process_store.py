@@ -7,6 +7,7 @@ PostgreSQL-финализация требует отдельной атомар
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -247,6 +248,10 @@ def _canonical_json(payload: object) -> str:
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
+def protocol_payload_sha256(payload: object) -> str:
+    return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+
+
 def _clone_protocol_payload(payload: object) -> dict[str, object]:
     encoded = json.loads(_canonical_json(payload))
     if not isinstance(encoded, dict):
@@ -321,6 +326,7 @@ def _protocol_row_params(
         "input_manifest_hash": snapshot.input_manifest_hash,
         "status": payload["status"],
         "payload": _canonical_json(payload),
+        "payload_sha256": protocol_payload_sha256(payload),
         "finalized_at": datetime.now(tz=UTC),
         "supersedes_version": version - 1 if version > 1 else None,
     }
@@ -345,6 +351,7 @@ class MemoryProcessStore:
         self._findings: dict[str, dict[str, Finding]] = {}
         self._audit: dict[str, list[AuditEvent]] = {}
         self._protocols: dict[str, dict[str, object]] = {}
+        self._outbox: dict[str, dict[str, object]] = {}
 
     def load(self, process_id: str) -> ProcessSnapshot | None:
         return self._rows.get(process_id)
@@ -404,6 +411,14 @@ class MemoryProcessStore:
             )
         self.save(snapshot)
         self._protocols[protocol_id] = encoded
+        self._outbox[protocol_id] = {
+            "id": f"outbox-{protocol_id}",
+            "process_id": snapshot.process_id,
+            "protocol_id": protocol_id,
+            "destination": "RIN",
+            "payload_sha256": protocol_payload_sha256(encoded),
+            "status": "PENDING",
+        }
 
     def load_protocol(self, protocol_id: str) -> dict[str, object] | None:
         stored = self._protocols.get(protocol_id)
@@ -424,6 +439,7 @@ class MemoryProcessStore:
         self._findings.clear()
         self._audit.clear()
         self._protocols.clear()
+        self._outbox.clear()
 
 
 UPSERT_PROCESS_SQL = """
@@ -531,11 +547,12 @@ FROM processes WHERE id = %(id)s
 INSERT_PROTOCOL_SQL = """
 INSERT INTO protocols (
     id, object_id, version, matrix_version, dataset_version, model_version,
-    input_manifest_hash, status, payload, finalized_at, supersedes_version
+    input_manifest_hash, status, payload, payload_sha256, finalized_at,
+    supersedes_version
 ) VALUES (
     %(id)s, %(object_id)s, %(version)s, %(matrix_version)s, %(dataset_version)s,
     %(model_version)s, %(input_manifest_hash)s, %(status)s, %(payload)s::jsonb,
-    %(finalized_at)s, %(supersedes_version)s
+    %(payload_sha256)s, %(finalized_at)s, %(supersedes_version)s
 )
 ON CONFLICT (id) DO NOTHING
 RETURNING id
@@ -556,6 +573,29 @@ WHERE object_id = %(object_id)s AND version = %(version)s
 
 SELECT_MAX_PROTOCOL_VERSION_SQL = """
 SELECT COALESCE(MAX(version), 0) FROM protocols WHERE object_id = %(object_id)s
+"""
+
+ADVISORY_LOCK_OBJECT_SQL = "SELECT pg_advisory_xact_lock(hashtext(%(object_id)s))"
+
+SELECT_PROCESS_FOR_UPDATE_SQL = """
+SELECT id FROM processes WHERE id = %(id)s FOR UPDATE
+"""
+
+LOCK_FINDINGS_SQL = """
+SELECT store_key FROM process_findings WHERE process_id = %(process_id)s FOR UPDATE
+"""
+
+LOCK_OBJECT_PROTOCOLS_SQL = """
+SELECT id FROM protocols WHERE object_id = %(object_id)s FOR UPDATE
+"""
+
+INSERT_OUTBOX_SQL = """
+INSERT INTO integration_outbox (
+    id, process_id, protocol_id, destination, payload_sha256, status
+) VALUES (
+    %(id)s, %(process_id)s, %(protocol_id)s, 'RIN', %(payload_sha256)s, 'PENDING'
+)
+ON CONFLICT (protocol_id, destination) DO NOTHING
 """
 
 
@@ -688,6 +728,18 @@ class PostgresProcessStore:
         row_params = _protocol_row_params(snapshot, encoded)
         try:
             with transaction_fn():
+                self._connection.execute(  # type: ignore[attr-defined]
+                    ADVISORY_LOCK_OBJECT_SQL, {"object_id": snapshot.object_id}
+                )
+                self._connection.execute(  # type: ignore[attr-defined]
+                    SELECT_PROCESS_FOR_UPDATE_SQL, {"id": snapshot.process_id}
+                )
+                self._connection.execute(  # type: ignore[attr-defined]
+                    LOCK_FINDINGS_SQL, {"process_id": snapshot.process_id}
+                )
+                self._connection.execute(  # type: ignore[attr-defined]
+                    LOCK_OBJECT_PROTOCOLS_SQL, {"object_id": snapshot.object_id}
+                )
                 inserted = self._connection.execute(  # type: ignore[attr-defined]
                     INSERT_PROTOCOL_SQL, row_params
                 )
@@ -708,6 +760,15 @@ class PostgresProcessStore:
                             f"protocol {protocol_id} уже содержит другое содержимое"
                         )
                 self._write_process(snapshot)
+                self._connection.execute(  # type: ignore[attr-defined]
+                    INSERT_OUTBOX_SQL,
+                    {
+                        "id": f"outbox-{protocol_id}",
+                        "process_id": snapshot.process_id,
+                        "protocol_id": protocol_id,
+                        "payload_sha256": row_params["payload_sha256"],
+                    },
+                )
         except ProtocolConflictError:
             raise
         except Exception as exc:

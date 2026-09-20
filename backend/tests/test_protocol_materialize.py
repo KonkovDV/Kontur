@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from kontur.application.protocol import (
@@ -38,6 +41,11 @@ def test_canonical_json_is_order_independent() -> None:
     left = canonical_protocol_json({"b": 1, "a": {"z": 2, "y": 3}})
     right = canonical_protocol_json({"a": {"y": 3, "z": 2}, "b": 1})
     assert left == right
+    from kontur.infrastructure.db.process_store import protocol_payload_sha256
+
+    assert protocol_payload_sha256({"b": 1, "a": 2}) == protocol_payload_sha256(
+        {"a": 2, "b": 1}
+    )
 
 
 def test_reject_placeholder_payload() -> None:
@@ -77,6 +85,9 @@ def test_protocol_for_http_drops_auto_no_difference_pocket() -> None:
     assert "preliminary_no_difference" not in wire["sections"]
     assert "AUTO_NO_DIFFERENCE" not in canonical_protocol_json(wire)
     assert payload["sections"]["preliminary_no_difference"]
+    assert "kind" not in payload
+    assert "assembled" not in payload
+    assert payload["version"] == 1
 
 
 def test_workspace_finalize_assigns_protocol_prefix_and_stores_payload() -> None:
@@ -116,3 +127,14 @@ def test_workspace_re_finalize_after_unfinalize_uses_next_version() -> None:
     assert v1 is not None and v1["version"] == 1
     assert v2 is not None and v2["version"] == 2
     assert v1["protocol_id"] != v2["protocol_id"]
+
+
+def test_tz_protocol_schema_forbids_kind_and_assembled() -> None:
+    schema = json.loads(
+        (Path(__file__).resolve().parents[2] / "contracts" / "schemas" / "protocol.schema.json")
+        .read_text(encoding="utf-8")
+    )
+    assert schema.get("additionalProperties") is False
+    properties = schema["properties"]
+    assert "kind" not in properties
+    assert "assembled" not in properties
