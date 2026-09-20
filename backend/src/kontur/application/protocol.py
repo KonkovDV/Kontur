@@ -20,6 +20,14 @@ _SECTION: dict[FindingStatus, str] = {
 }
 
 
+def protocol_id_for_process(process_id: str) -> str:
+    """Return the one stable protocol identity derived from a process identity."""
+
+    if not process_id.strip():
+        raise ValueError("process_id обязателен")
+    return f"protocol-{process_id}"
+
+
 def finding_to_schema(finding: Finding) -> dict[str, object]:
     """Карточка по finding.schema.json. Лишних ключей нет: additionalProperties=false."""
 
@@ -46,12 +54,6 @@ def finding_to_schema(finding: Finding) -> dict[str, object]:
         payload["delta"] = finding.delta
     if finding.llm_draft is not None:
         payload["llm_draft"] = finding.llm_draft
-    if finding.source_id is not None:
-        payload["source_id"] = finding.source_id
-    if finding.evidence_refs:
-        payload["evidence_refs"] = list(finding.evidence_refs)
-    if finding.disagreement_kind is not None:
-        payload["disagreement_kind"] = finding.disagreement_kind.value
     decision = finding.inspector_decision
     if decision is not None:
         stamp = decision.timestamp
