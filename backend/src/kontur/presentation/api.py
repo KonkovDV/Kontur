@@ -15,7 +15,7 @@ from kontur.application.intake import (
     UploadCandidate,
     evaluate_batch,
 )
-from kontur.application.protocol import assemble_protocol
+from kontur.application.protocol import assemble_protocol, protocol_for_http
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.capabilities import capabilities_payload
@@ -24,6 +24,11 @@ from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError, protocol_status
 from kontur.domain.statuses import Completeness, ProcessState, ReasonCode
 from kontur.infrastructure.access_control import AccessDeniedError, check_object_access
+from kontur.infrastructure.db.process_store import (
+    ProtocolConflictError,
+    ProtocolMaterializationRequiredError,
+    TransactionUnavailableError,
+)
 from kontur.presentation.auth import actor_from_roles, parse_bearer
 from kontur.presentation.rbac import (
     AuthenticationRequiredError,
@@ -158,6 +163,25 @@ def _upload_receipt(
 
 @app.exception_handler(TransitionError)
 async def _transition_error(_request: object, exc: TransitionError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(ProtocolConflictError)
+async def _protocol_conflict(_request: object, exc: ProtocolConflictError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(TransactionUnavailableError)
+async def _protocol_tx_missing(
+    _request: object, exc: TransactionUnavailableError
+) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+@app.exception_handler(ProtocolMaterializationRequiredError)
+async def _protocol_materialize_required(
+    _request: object, exc: ProtocolMaterializationRequiredError
+) -> JSONResponse:
     return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
@@ -327,12 +351,35 @@ def get_protocol(
     record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
-    del version
+    if version is not None:
+        if version < 1:
+            return JSONResponse(
+                status_code=400, content={"detail": "version должен быть >= 1"}
+            )
+        stored = _workspace().load_protocol_version(record.object_id, version)
+        if stored is None:
+            return JSONResponse(
+                status_code=404, content={"detail": "версия протокола не найдена"}
+            )
+        return protocol_for_http(stored)
     if protocol_status(record.process_state) is None:
         return JSONResponse(
             status_code=404,
             content={"detail": "протокол не собран: PENDING/PARSING"},
         )
+    if record.process_state is ProcessState.FINALIZED:
+        protocol_id = record.protocol_id
+        if protocol_id is None:
+            return JSONResponse(
+                status_code=409,
+                content={"detail": "финализированный процесс без protocol_id"},
+            )
+        stored = _workspace().load_protocol(protocol_id)
+        if stored is None:
+            return JSONResponse(
+                status_code=409, content={"detail": "протокол не материализован"}
+            )
+        return protocol_for_http(stored)
     payload = assemble_protocol(
         protocol_id=record.protocol_id or record.process_id,
         object_id=record.object_id,
@@ -348,13 +395,7 @@ def get_protocol(
         process_state=record.process_state,
         input_manifest_hash=record.input_manifest_hash,
     )
-    raw_sections = payload["sections"]
-    if not isinstance(raw_sections, dict):
-        raise TypeError("assemble_protocol: sections")
-    sections = {str(key): value for key, value in raw_sections.items()}
-    sections.pop("preliminary_no_difference", None)
-    payload["sections"] = sections
-    return payload
+    return protocol_for_http(payload)
 
 
 @app.get("/api/v1/processes/{process_id}/audit", response_model=None)

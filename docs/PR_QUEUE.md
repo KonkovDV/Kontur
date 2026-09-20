@@ -45,6 +45,11 @@
 | upload retry | повтор hash+stage не `reopen_for_upload` и не pipeline; FINALIZED → 409; правка `runtime.py`/`api.py`, без monkeypatch |
 | #62 | учебный рекордер Gate K: JSON `kontur-usability-v1`, `MISSING_EVIDENCE` нельзя CONFIRM/REJECT; сессий нет, гейт открыт |
 
+Открыт: [#64](https://github.com/KonkovDV/Kontur/pull/64) — fail-closed Postgres
+finalize + атомарная versioned materialization (`protocol-{process_id}` / `-vN`,
+идемпотентный retry, конфликт при другом JSON). Не слит, пока CI на новом
+коммите не зелёный. Не закрывает I/J/K.
+
 ## Что не брали
 
 | PR | Почему |
@@ -79,6 +84,7 @@
 | #54 as-is | `ocr_tesseract.py` одной строкой (invalid-syntax), CI backend FAILURE; «гейт I закрыт» до замера; tessdata-best нет в образе; `MIN_WORD_CONF` 40→35. Docker-прогон crop×3+oem1+autocontrast+PSM 7→6→8 на SILVER PDF_TEXT_LAYER: mean_ca тот же, tz_low и gate_i_low ниже, чем у текущего `main`. В прод не брали |
 | #59 as-is | generic `{"detail":"request too large"}`, любой reject срывал mixed accept/reject, 429 admission, mypy `SpooledTemporaryFile`/`Any`; влит переписанный срез с кодами ТЗ |
 | #61 as-is | import-time monkeypatch `ProcessRecord` из `presentation/__init__.py`; динамические флаги; Red Team BLOCK; backend CI FAILURE. Закрыт 20.09.2026. Идемпотентность влита прямой правкой `runtime.py`/`api.py` |
+| #63 as-is | экспериментальная материализация: вырезан provenance, infrastructure импортировал `assemble_protocol`, version=1. Закрыт без merge 20.09.2026 |
 | `feat/ocr-300dpi-step2-verifying` (`2ddc2b3`) | PR не открывался. Тот же усечённый push: `ocr_tesseract.py` одной строкой, 3161 байт. Заявлены wilson≥0.95 / tessdata-best / `MIN_WORD_CONF` 35. Не мержить |
 
 Не публиковать F1/P/R и recall критических на frozen val. Поставка

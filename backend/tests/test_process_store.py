@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 import pytest
 
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
@@ -19,13 +21,16 @@ from kontur.domain.statuses import (
 )
 from kontur.infrastructure.db.process_store import (
     ENSURE_OBJECT_SQL,
-    PLACEHOLDER_PROTOCOL_SQL,
+    INSERT_PROTOCOL_SQL,
     SELECT_FINDINGS_SQL,
     UPSERT_FINDING_SQL,
     UPSERT_PROCESS_SQL,
     MemoryProcessStore,
     PostgresProcessStore,
     ProcessSnapshot,
+    ProtocolConflictError,
+    ProtocolMaterializationRequiredError,
+    TransactionUnavailableError,
     finding_from_row,
     finding_to_params,
     snapshot_params,
@@ -82,10 +87,12 @@ def test_sql_matches_schema_columns() -> None:
     assert "completeness_pd" in UPSERT_PROCESS_SQL
     assert "ON CONFLICT (id) DO UPDATE" in UPSERT_PROCESS_SQL
     assert "INSERT INTO objects" in ENSURE_OBJECT_SQL
-    assert "PROTOCOL_FINALIZED" in PLACEHOLDER_PROTOCOL_SQL
     assert "INSERT INTO process_findings" in UPSERT_FINDING_SQL
     assert "FROM process_findings" in SELECT_FINDINGS_SQL
-    assert "assembled" in str(snapshot_params(_snap()).get("payload"))
+    assert "payload" not in snapshot_params(_snap())
+    assert "INSERT INTO protocols" in INSERT_PROTOCOL_SQL
+    assert "ON CONFLICT (id) DO NOTHING" in INSERT_PROTOCOL_SQL
+    assert "UNIQUE (object_id, version)" not in INSERT_PROTOCOL_SQL
 
 
 def test_workspace_survives_new_process_on_same_store() -> None:
@@ -264,6 +271,10 @@ class _Cursor:
         return list(self._rows)
 
 
+class _UniqueViolation(Exception):
+    sqlstate = "23505"
+
+
 class _Conn:
     def __init__(self) -> None:
         self.sql: list[str] = []
@@ -271,11 +282,42 @@ class _Conn:
         self.files: list[object] = []
         self.process: object | None = None
         self.audit: list[object] = []
+        self.saw_transaction = False
+        self.in_transaction = False
+        self.protocol_insert_rows: list[object] | None = [("protocol-p-1",)]
+        self.existing_payload: object | None = None
+        self.max_version = 0
+        self.raise_unique = False
+
+    @contextmanager
+    def transaction(self):
+        self.saw_transaction = True
+        self.in_transaction = True
+        try:
+            yield
+        finally:
+            self.in_transaction = False
 
     def execute(self, sql: str, params: object = None) -> _Cursor:
         del params
         self.sql.append(sql)
         text = " ".join(sql.split()).lower()
+        if self.raise_unique and "insert into protocols" in text:
+            raise _UniqueViolation()
+        if "insert into protocols" in text:
+            if self.protocol_insert_rows is None:
+                return _Cursor([])
+            return _Cursor(list(self.protocol_insert_rows))
+        if "from protocols" in text and "for update" in text:
+            if self.existing_payload is None:
+                return _Cursor([])
+            return _Cursor([(self.existing_payload,)])
+        if "max(version)" in text:
+            return _Cursor([(self.max_version,)])
+        if "from protocols" in text:
+            if self.existing_payload is None:
+                return _Cursor([])
+            return _Cursor([(self.existing_payload,)])
         if text.startswith("select") and "from processes" in text:
             return _Cursor([] if self.process is None else [self.process])
         if "from process_files" in text:
@@ -287,7 +329,77 @@ class _Conn:
         return _Cursor([])
 
 
-def test_postgres_store_writes_findings_and_audit() -> None:
+class _NoTxConn:
+    def __init__(self) -> None:
+        self.sql: list[str] = []
+
+    def execute(self, sql: str, params: object = None) -> _Cursor:
+        del params
+        self.sql.append(sql)
+        return _Cursor([])
+
+
+def _final_payload(**overrides: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "protocol_id": "protocol-p-1",
+        "object_id": "obj-1",
+        "version": 1,
+        "status": "PROTOCOL_FINALIZED",
+        "scenario": "SINGLE_ONLY",
+        "upload_status": {
+            "pd": "PD_UPLOADED",
+            "rd": "RD_MISSING",
+            "id": "ID_MISSING",
+        },
+        "sections": {
+            "completeness": [],
+            "candidates": [],
+            "confirmed": [],
+            "negative_verified": [],
+            "suspicions": [],
+        },
+        "violation_count": 0,
+        "versions": {
+            "matrix_version": "draft-0",
+            "model_version": "none",
+            "dataset_version": "unspecified",
+        },
+        "input_manifest": {"manifest_hash": "pending", "files": []},
+    }
+    body.update(overrides)
+    return body
+
+
+def test_postgres_finalized_save_fails_closed_before_any_sql() -> None:
+    conn = _Conn()
+    store = PostgresProcessStore(conn)
+    finalized = _snap(
+        process_state=ProcessState.FINALIZED,
+        finalized_by="insp-7",
+        protocol_id="proto-1",
+    )
+
+    with pytest.raises(
+        ProtocolMaterializationRequiredError,
+        match="atomic versioned protocol materialization",
+    ):
+        store.save(finalized)
+
+    assert conn.sql == []
+
+
+def test_memory_store_keeps_finalized_snapshot_compatibility() -> None:
+    store = MemoryProcessStore()
+    finalized = _snap(
+        process_state=ProcessState.FINALIZED,
+        finalized_by="insp-7",
+        protocol_id="proto-1",
+    )
+    store.save(finalized)
+    assert store.load("p-1") == finalized
+
+
+def test_postgres_store_writes_non_final_snapshots_findings_and_audit() -> None:
     conn = _Conn()
     store = PostgresProcessStore(conn)
     store.save(_snap())
@@ -323,5 +435,121 @@ def test_postgres_store_writes_findings_and_audit() -> None:
     ]
     loaded = store.load_findings("p-1")
     assert loaded[0].finding_id == "f-persist"
-    store.save_audit_event("p-1", "insp-7", "REVIEW", {"action": "REJECT"}, object_id="obj-1")
+    store.save_audit_event(
+        "p-1", "insp-7", "REVIEW", {"action": "REJECT"}, object_id="obj-1"
+    )
     assert any("INSERT INTO audit_log" in item for item in conn.sql)
+
+
+def _finalized_snap() -> ProcessSnapshot:
+    return _snap(
+        process_state=ProcessState.FINALIZED,
+        finalized_by="insp-7",
+        protocol_id="protocol-p-1",
+    )
+
+
+def test_memory_materialize_is_idempotent_for_same_payload() -> None:
+    store = MemoryProcessStore()
+    payload = _final_payload()
+    store.materialize_finalized(_finalized_snap(), payload)
+    store.materialize_finalized(_finalized_snap(), payload)
+    stored = store.load_protocol("protocol-p-1")
+    assert stored is not None
+    assert stored["version"] == 1
+    assert store.next_protocol_version("obj-1") == 2
+
+
+def test_memory_materialize_conflicts_on_different_payload() -> None:
+    store = MemoryProcessStore()
+    store.materialize_finalized(_finalized_snap(), _final_payload())
+    with pytest.raises(ProtocolConflictError, match="другое содержимое"):
+        store.materialize_finalized(
+            _finalized_snap(), _final_payload(violation_count=1)
+        )
+
+
+def test_memory_materialize_conflicts_on_object_version() -> None:
+    store = MemoryProcessStore()
+    store.materialize_finalized(_finalized_snap(), _final_payload())
+    other = _snap(
+        process_id="p-2",
+        process_state=ProcessState.FINALIZED,
+        finalized_by="insp-7",
+        protocol_id="protocol-p-2",
+    )
+    with pytest.raises(ProtocolConflictError, match="уже занята"):
+        store.materialize_finalized(
+            other, _final_payload(protocol_id="protocol-p-2")
+        )
+
+
+def test_memory_rejects_placeholder_payload() -> None:
+    store = MemoryProcessStore()
+    with pytest.raises(ProtocolMaterializationRequiredError, match="placeholder"):
+        store.materialize_finalized(
+            _snap(
+                process_state=ProcessState.FINALIZED,
+                finalized_by="insp-7",
+                protocol_id="placeholder-p-1",
+            ),
+            _final_payload(protocol_id="placeholder-p-1"),
+        )
+
+
+def test_postgres_materialize_writes_protocol_and_process_in_transaction() -> None:
+    conn = _Conn()
+    store = PostgresProcessStore(conn)
+    store.materialize_finalized(_finalized_snap(), _final_payload())
+    joined = "\n".join(conn.sql)
+    assert "INSERT INTO protocols" in joined
+    assert "INSERT INTO processes" in joined
+    assert conn.saw_transaction is True
+    assert conn.sql.index(
+        [item for item in conn.sql if "INSERT INTO protocols" in item][0]
+    ) < conn.sql.index(
+        [item for item in conn.sql if "INSERT INTO processes" in item][0]
+    )
+
+
+def test_postgres_materialize_is_idempotent_for_same_canonical_json() -> None:
+    conn = _Conn()
+    conn.protocol_insert_rows = None
+    payload = _final_payload()
+    conn.existing_payload = payload
+    store = PostgresProcessStore(conn)
+    store.materialize_finalized(_finalized_snap(), payload)
+    assert any("FOR UPDATE" in item for item in conn.sql)
+    assert any("INSERT INTO processes" in item for item in conn.sql)
+
+
+def test_postgres_materialize_conflicts_on_different_payload() -> None:
+    conn = _Conn()
+    conn.protocol_insert_rows = None
+    conn.existing_payload = _final_payload(violation_count=3)
+    store = PostgresProcessStore(conn)
+    with pytest.raises(ProtocolConflictError, match="другое содержимое"):
+        store.materialize_finalized(_finalized_snap(), _final_payload())
+
+
+def test_postgres_materialize_maps_unique_violation() -> None:
+    conn = _Conn()
+    conn.raise_unique = True
+    store = PostgresProcessStore(conn)
+    with pytest.raises(ProtocolConflictError, match="UNIQUE"):
+        store.materialize_finalized(_finalized_snap(), _final_payload())
+
+
+def test_postgres_materialize_fails_closed_without_transaction() -> None:
+    conn = _NoTxConn()
+    store = PostgresProcessStore(conn)
+    with pytest.raises(TransactionUnavailableError, match="transaction"):
+        store.materialize_finalized(_finalized_snap(), _final_payload())
+    assert conn.sql == []
+
+
+def test_postgres_next_protocol_version_increments() -> None:
+    conn = _Conn()
+    conn.max_version = 4
+    store = PostgresProcessStore(conn)
+    assert store.next_protocol_version("obj-1") == 5

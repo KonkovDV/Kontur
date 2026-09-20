@@ -88,6 +88,16 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "gold_label IN ('CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED')" in sql
     assert "gold_requires_expert" in sql
     assert "negative_gold_requires_reason" in sql
+    assert "UNIQUE (object_id, version)" in sql
+
+
+def test_schema_sync_guard_rejects_placeholder_and_false_assembled() -> None:
+    sql = SCHEMA.read_text(encoding="utf-8")
+    assert "payload ->> 'kind'" in sql
+    assert "proto_kind = 'internal_placeholder'" in sql
+    assert "payload -> 'assembled'" in sql
+    assert "proto_assembled = 'false'::jsonb" in sql
+    assert "proto_assembled IS NULL" not in sql
 
 
 def test_checks_sql_asserts_instead_of_merely_running() -> None:

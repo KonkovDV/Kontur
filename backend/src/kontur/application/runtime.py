@@ -17,6 +17,11 @@ from kontur.application.process_pipeline import (
     PipelineReport,
     run_process_pipeline,
 )
+from kontur.application.protocol import (
+    assemble_protocol,
+    protocol_identity,
+    reject_placeholder_payload,
+)
 from kontur.application.retry_policy import next_sync_attempt
 from kontur.application.scenarios import CompletenessMap, detect_scenario
 from kontur.domain.models import DocStage, Finding
@@ -226,6 +231,37 @@ class ProcessWorkspace:
             ],
         )
 
+    def load_protocol(self, protocol_id: str) -> dict[str, object] | None:
+        return self._store.load_protocol(protocol_id)
+
+    def load_protocol_version(
+        self, object_id: str, version: int
+    ) -> dict[str, object] | None:
+        return self._store.load_protocol_version(object_id, version)
+
+    def _assemble_protocol_payload(
+        self, record: ProcessRecord, *, protocol_id: str, version: int
+    ) -> dict[str, object]:
+        return assemble_protocol(
+            protocol_id=protocol_id,
+            object_id=record.object_id,
+            findings=tuple(record.findings.values()),
+            completeness=record.completeness,
+            files=[
+                {"file_id": item.file_id, "file_hash": item.file_hash}
+                for item in record.files
+            ],
+            versions={
+                "matrix_version": record.matrix_version,
+                "model_version": record.model_version,
+                "dataset_version": record.dataset_version,
+                "git_sha": record.git_sha,
+            },
+            process_state=record.process_state,
+            input_manifest_hash=record.input_manifest_hash,
+            version=version,
+        )
+
     def get(self, process_id: str) -> ProcessRecord | None:
         current = self._items.get(process_id)
         if current is not None:
@@ -385,15 +421,32 @@ class ProcessWorkspace:
 
     def finalize(self, process_id: str, actor: Actor) -> ProcessRecord:
         record = self._items[process_id]
-        record.process_state = review_actions.finalize_process(
-            record.process_state,
-            actor=actor,
-            findings=list(record.findings.values()),
-            audit=record.audit,
-        )
-        record.finalized_by = actor.actor_id
-        record.protocol_id = record.protocol_id or f"placeholder-{record.process_id}"
-        self._persist(record)
+        previous_state = record.process_state
+        previous_finalized_by = record.finalized_by
+        previous_protocol_id = record.protocol_id
+        audit_mark = len(record.audit.records)
+        try:
+            record.process_state = review_actions.finalize_process(
+                record.process_state,
+                actor=actor,
+                findings=list(record.findings.values()),
+                audit=record.audit,
+            )
+            record.finalized_by = actor.actor_id
+            version = self._store.next_protocol_version(record.object_id)
+            protocol_id = protocol_identity(record.process_id, version)
+            payload = self._assemble_protocol_payload(
+                record, protocol_id=protocol_id, version=version
+            )
+            reject_placeholder_payload(payload)
+            record.protocol_id = protocol_id
+            self._store.materialize_finalized(self._snapshot(record), payload)
+        except Exception:
+            record.process_state = previous_state
+            record.finalized_by = previous_finalized_by
+            record.protocol_id = previous_protocol_id
+            del record.audit.records[audit_mark:]
+            raise
         return record
 
     def unfinalize(self, process_id: str, actor: Actor, reason: str) -> ProcessRecord:

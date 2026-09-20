@@ -159,6 +159,7 @@ def build_handoff(
             "Treat GOST Согласовано/ГИП header as approved etalon",
             "Prefer annotated_documents overlays over source PDFs",
             "Revive PR #61 import-time monkeypatch of ProcessRecord",
+            "Revive PR #63 experimental materialization (stripped provenance)",
         ],
         "commands": {
             "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",

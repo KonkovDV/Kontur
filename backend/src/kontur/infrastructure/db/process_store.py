@@ -2,13 +2,13 @@
 
 `processes` держит состояние, комплектность и манифест. Очередь инспектора —
 `process_findings`, файлы — `process_files`, журнал — `audit_log`.
-Протокол ТЗ по-прежнему не выдумывается: placeholder нужен только CHECK
-`finalized_needs_human` (protocol_id NOT NULL при FINALIZED).
+PostgreSQL-финализация требует отдельной атомарной материализации версионного протокола.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
@@ -28,6 +28,18 @@ from kontur.infrastructure.db.audit_store import AuditEvent, PostgresAuditStore
 
 MAX_PARSE_ATTEMPTS = 3
 MAX_SYNC_ATTEMPTS = 4
+
+
+class ProtocolMaterializationRequiredError(RuntimeError):
+    """PostgreSQL requires atomic versioned protocol materialization before finalize."""
+
+
+class ProtocolConflictError(RuntimeError):
+    """Канонический id протокола уже занят другим неизменяемым содержимым."""
+
+
+class TransactionUnavailableError(RuntimeError):
+    """Финализация отклонена: нет гарантированной границы транзакции."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,6 +93,18 @@ class ProcessStore(Protocol):
     ) -> None: ...
 
     def load_audit(self, process_id: str) -> list[AuditEvent]: ...
+
+    def next_protocol_version(self, object_id: str) -> int: ...
+
+    def materialize_finalized(
+        self, snapshot: ProcessSnapshot, payload: dict[str, object]
+    ) -> None: ...
+
+    def load_protocol(self, protocol_id: str) -> dict[str, object] | None: ...
+
+    def load_protocol_version(
+        self, object_id: str, version: int
+    ) -> dict[str, object] | None: ...
 
 
 def validate_snapshot(snapshot: ProcessSnapshot) -> None:
@@ -219,6 +243,100 @@ def finding_from_row(row: object) -> Finding:
     )
 
 
+def _canonical_json(payload: object) -> str:
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _clone_protocol_payload(payload: object) -> dict[str, object]:
+    encoded = json.loads(_canonical_json(payload))
+    if not isinstance(encoded, dict):
+        raise TypeError("protocol payload")
+    return encoded
+
+
+def _protocol_cell(raw: object) -> dict[str, object]:
+    if isinstance(raw, dict):
+        return _clone_protocol_payload(raw)
+    if isinstance(raw, str):
+        return _clone_protocol_payload(json.loads(raw))
+    raise TypeError("protocol payload")
+
+
+def _is_unique_violation(exc: BaseException) -> bool:
+    for attr in ("sqlstate", "pgcode"):
+        if getattr(exc, attr, None) == "23505":
+            return True
+    cause = exc.__cause__
+    if cause is not None and cause is not exc:
+        return _is_unique_violation(cause)
+    return False
+
+
+def _reject_unsafe_protocol_payload(
+    payload: Mapping[str, object], snapshot: ProcessSnapshot
+) -> None:
+    if snapshot.process_state is not ProcessState.FINALIZED:
+        raise ProtocolMaterializationRequiredError(
+            "materialize_finalized только для FINALIZED"
+        )
+    if snapshot.protocol_id is None or not snapshot.protocol_id.strip():
+        raise ProtocolMaterializationRequiredError("FINALIZED требует protocol_id")
+    if payload.get("kind") == "internal_placeholder":
+        raise ProtocolMaterializationRequiredError(
+            "internal_placeholder нельзя материализовать"
+        )
+    if payload.get("assembled") is False:
+        raise ProtocolMaterializationRequiredError("assembled=false нельзя материализовать")
+    protocol_id = payload.get("protocol_id")
+    if protocol_id != snapshot.protocol_id:
+        raise ProtocolMaterializationRequiredError(
+            "protocol_id снимка и payload должны совпадать"
+        )
+    if not isinstance(protocol_id, str) or protocol_id.startswith("placeholder-"):
+        raise ProtocolMaterializationRequiredError("placeholder protocol_id запрещён")
+    if payload.get("object_id") != snapshot.object_id:
+        raise ProtocolMaterializationRequiredError("object_id payload и процесса расходятся")
+    version = payload.get("version")
+    if not isinstance(version, int) or isinstance(version, bool) or version < 1:
+        raise ProtocolMaterializationRequiredError("version протокола должен быть целым >= 1")
+    if payload.get("status") != "PROTOCOL_FINALIZED":
+        raise ProtocolMaterializationRequiredError(
+            "материализация только для PROTOCOL_FINALIZED"
+        )
+
+
+def _protocol_row_params(
+    snapshot: ProcessSnapshot, payload: Mapping[str, object]
+) -> dict[str, object]:
+    version = payload["version"]
+    if not isinstance(version, int) or isinstance(version, bool):
+        raise ProtocolMaterializationRequiredError("version протокола должен быть целым >= 1")
+    return {
+        "id": snapshot.protocol_id,
+        "object_id": snapshot.object_id,
+        "version": version,
+        "matrix_version": snapshot.matrix_version,
+        "dataset_version": snapshot.dataset_version or "unspecified",
+        "model_version": snapshot.model_version,
+        "input_manifest_hash": snapshot.input_manifest_hash,
+        "status": payload["status"],
+        "payload": _canonical_json(payload),
+        "finalized_at": datetime.now(tz=UTC),
+        "supersedes_version": version - 1 if version > 1 else None,
+    }
+
+
+def _max_protocol_version(payloads: Mapping[str, Mapping[str, object]], object_id: str) -> int:
+    highest = 0
+    for item in payloads.values():
+        if item.get("object_id") != object_id:
+            continue
+        version = item.get("version")
+        if isinstance(version, int) and not isinstance(version, bool):
+            highest = max(highest, version)
+    return highest
+
+
 class MemoryProcessStore:
     """Исполняемый DAO без Postgres: те же инварианты, что в schema.sql."""
 
@@ -226,6 +344,7 @@ class MemoryProcessStore:
         self._rows: dict[str, ProcessSnapshot] = {}
         self._findings: dict[str, dict[str, Finding]] = {}
         self._audit: dict[str, list[AuditEvent]] = {}
+        self._protocols: dict[str, dict[str, object]] = {}
 
     def load(self, process_id: str) -> ProcessSnapshot | None:
         return self._rows.get(process_id)
@@ -256,10 +375,55 @@ class MemoryProcessStore:
     def load_audit(self, process_id: str) -> list[AuditEvent]:
         return list(self._audit.get(process_id, ()))
 
+    def next_protocol_version(self, object_id: str) -> int:
+        return _max_protocol_version(self._protocols, object_id) + 1
+
+    def materialize_finalized(
+        self, snapshot: ProcessSnapshot, payload: dict[str, object]
+    ) -> None:
+        validate_snapshot(snapshot)
+        _reject_unsafe_protocol_payload(payload, snapshot)
+        protocol_id = snapshot.protocol_id
+        if protocol_id is None:
+            raise ProtocolMaterializationRequiredError("FINALIZED требует protocol_id")
+        encoded = _clone_protocol_payload(payload)
+        existing = self._protocols.get(protocol_id)
+        if existing is not None and _canonical_json(existing) != _canonical_json(encoded):
+            raise ProtocolConflictError(
+                f"protocol {protocol_id} уже содержит другое содержимое"
+            )
+        for stored in self._protocols.values():
+            if stored.get("object_id") != snapshot.object_id:
+                continue
+            if stored.get("version") != encoded.get("version"):
+                continue
+            if stored.get("protocol_id") == protocol_id:
+                continue
+            raise ProtocolConflictError(
+                f"object {snapshot.object_id} version {encoded.get('version')} уже занята"
+            )
+        self.save(snapshot)
+        self._protocols[protocol_id] = encoded
+
+    def load_protocol(self, protocol_id: str) -> dict[str, object] | None:
+        stored = self._protocols.get(protocol_id)
+        if stored is None:
+            return None
+        return _clone_protocol_payload(stored)
+
+    def load_protocol_version(
+        self, object_id: str, version: int
+    ) -> dict[str, object] | None:
+        for stored in self._protocols.values():
+            if stored.get("object_id") == object_id and stored.get("version") == version:
+                return _clone_protocol_payload(stored)
+        return None
+
     def clear(self) -> None:
         self._rows.clear()
         self._findings.clear()
         self._audit.clear()
+        self._protocols.clear()
 
 
 UPSERT_PROCESS_SQL = """
@@ -296,18 +460,6 @@ ON CONFLICT (id) DO UPDATE SET
 
 ENSURE_OBJECT_SQL = """
 INSERT INTO objects (id, name) VALUES (%(id)s, %(name)s)
-ON CONFLICT (id) DO NOTHING
-"""
-
-PLACEHOLDER_PROTOCOL_SQL = """
-INSERT INTO protocols (
-    id, object_id, version, matrix_version, dataset_version, model_version,
-    input_manifest_hash, status, payload, finalized_at
-) VALUES (
-    %(id)s, %(object_id)s, 1, %(matrix_version)s, %(dataset_version)s,
-    %(model_version)s, %(input_manifest_hash)s, 'PROTOCOL_FINALIZED',
-    %(payload)s::jsonb, %(finalized_at)s
-)
 ON CONFLICT (id) DO NOTHING
 """
 
@@ -376,13 +528,42 @@ SELECT id, object_id, process_state, scenario, matrix_version,
 FROM processes WHERE id = %(id)s
 """
 
+INSERT_PROTOCOL_SQL = """
+INSERT INTO protocols (
+    id, object_id, version, matrix_version, dataset_version, model_version,
+    input_manifest_hash, status, payload, finalized_at, supersedes_version
+) VALUES (
+    %(id)s, %(object_id)s, %(version)s, %(matrix_version)s, %(dataset_version)s,
+    %(model_version)s, %(input_manifest_hash)s, %(status)s, %(payload)s::jsonb,
+    %(finalized_at)s, %(supersedes_version)s
+)
+ON CONFLICT (id) DO NOTHING
+RETURNING id
+"""
+
+SELECT_PROTOCOL_SQL = """
+SELECT payload FROM protocols WHERE id = %(protocol_id)s
+"""
+
+SELECT_PROTOCOL_FOR_UPDATE_SQL = """
+SELECT payload FROM protocols WHERE id = %(protocol_id)s FOR UPDATE
+"""
+
+SELECT_PROTOCOL_VERSION_SQL = """
+SELECT payload FROM protocols
+WHERE object_id = %(object_id)s AND version = %(version)s
+"""
+
+SELECT_MAX_PROTOCOL_VERSION_SQL = """
+SELECT COALESCE(MAX(version), 0) FROM protocols WHERE object_id = %(object_id)s
+"""
+
 
 def snapshot_params(snapshot: ProcessSnapshot) -> dict[str, object]:
     if snapshot.process_state is ProcessState.FINALIZED:
         finalized_at: datetime | None = datetime.now(tz=UTC)
     else:
         finalized_at = None
-    manifest = snapshot.input_manifest_hash
     return {
         "id": snapshot.process_id,
         "object_id": snapshot.object_id,
@@ -394,7 +575,7 @@ def snapshot_params(snapshot: ProcessSnapshot) -> dict[str, object]:
         "completeness_pd": snapshot.completeness_pd.value,
         "completeness_rd": snapshot.completeness_rd.value,
         "completeness_id": snapshot.completeness_id.value,
-        "input_manifest_hash": manifest,
+        "input_manifest_hash": snapshot.input_manifest_hash,
         "parse_attempts": snapshot.parse_attempts,
         "sync_attempts": snapshot.sync_attempts,
         "sync_state": snapshot.sync_state.value,
@@ -403,12 +584,11 @@ def snapshot_params(snapshot: ProcessSnapshot) -> dict[str, object]:
         "finalized_at": finalized_at,
         "protocol_id": snapshot.protocol_id,
         "name": snapshot.object_id,
-        "payload": '{"kind":"internal_placeholder","assembled":false}',
     }
 
 
 class PostgresProcessStore:
-    """Пишет в schema.sql. psycopg — extra `store`, не обязательная зависимость pytest."""
+    """Пишет в schema.sql. psycopg — extra `store`."""
 
     def __init__(self, connection: object) -> None:
         self._connection = connection
@@ -458,10 +638,15 @@ class PostgresProcessStore:
 
     def save(self, snapshot: ProcessSnapshot) -> None:
         validate_snapshot(snapshot)
+        if snapshot.process_state is ProcessState.FINALIZED and snapshot.protocol_id:
+            raise ProtocolMaterializationRequiredError(
+                "PostgreSQL FINALIZED save requires atomic versioned protocol materialization"
+            )
+        self._write_process(snapshot)
+
+    def _write_process(self, snapshot: ProcessSnapshot) -> None:
         params = snapshot_params(snapshot)
         self._connection.execute(ENSURE_OBJECT_SQL, params)  # type: ignore[attr-defined]
-        if snapshot.process_state is ProcessState.FINALIZED and snapshot.protocol_id:
-            self._connection.execute(PLACEHOLDER_PROTOCOL_SQL, params)  # type: ignore[attr-defined]
         self._connection.execute(UPSERT_PROCESS_SQL, params)  # type: ignore[attr-defined]
         self._connection.execute(DELETE_FILES_SQL, {"id": snapshot.process_id})  # type: ignore[attr-defined]
         for item in snapshot.files:
@@ -476,6 +661,82 @@ class PostgresProcessStore:
                     "size_bytes": item.size_bytes,
                 },
             )
+
+    def next_protocol_version(self, object_id: str) -> int:
+        cursor = self._connection.execute(  # type: ignore[attr-defined]
+            SELECT_MAX_PROTOCOL_VERSION_SQL, {"object_id": object_id}
+        )
+        row = cursor.fetchone()
+        if row is None or row[0] is None:
+            return 1
+        return int(row[0]) + 1
+
+    def materialize_finalized(
+        self, snapshot: ProcessSnapshot, payload: dict[str, object]
+    ) -> None:
+        validate_snapshot(snapshot)
+        _reject_unsafe_protocol_payload(payload, snapshot)
+        encoded = _clone_protocol_payload(payload)
+        transaction_fn = getattr(self._connection, "transaction", None)
+        if not callable(transaction_fn):
+            raise TransactionUnavailableError(
+                "нет connection.transaction(); финализация отклонена"
+            )
+        protocol_id = snapshot.protocol_id
+        if protocol_id is None:
+            raise ProtocolMaterializationRequiredError("FINALIZED требует protocol_id")
+        row_params = _protocol_row_params(snapshot, encoded)
+        try:
+            with transaction_fn():
+                inserted = self._connection.execute(  # type: ignore[attr-defined]
+                    INSERT_PROTOCOL_SQL, row_params
+                )
+                inserted_row = inserted.fetchone()
+                if inserted_row is None:
+                    locked = self._connection.execute(  # type: ignore[attr-defined]
+                        SELECT_PROTOCOL_FOR_UPDATE_SQL,
+                        {"protocol_id": protocol_id},
+                    )
+                    existing = locked.fetchone()
+                    if existing is None:
+                        raise ProtocolConflictError(
+                            f"конфликт уникальности протокола {protocol_id} без строки"
+                        )
+                    stored = _protocol_cell(existing[0])
+                    if _canonical_json(stored) != _canonical_json(encoded):
+                        raise ProtocolConflictError(
+                            f"protocol {protocol_id} уже содержит другое содержимое"
+                        )
+                self._write_process(snapshot)
+        except ProtocolConflictError:
+            raise
+        except Exception as exc:
+            if _is_unique_violation(exc):
+                raise ProtocolConflictError(
+                    f"UNIQUE(object_id, version) для {snapshot.object_id}"
+                ) from exc
+            raise
+
+    def load_protocol(self, protocol_id: str) -> dict[str, object] | None:
+        cursor = self._connection.execute(  # type: ignore[attr-defined]
+            SELECT_PROTOCOL_SQL, {"protocol_id": protocol_id}
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return _protocol_cell(row[0])
+
+    def load_protocol_version(
+        self, object_id: str, version: int
+    ) -> dict[str, object] | None:
+        cursor = self._connection.execute(  # type: ignore[attr-defined]
+            SELECT_PROTOCOL_VERSION_SQL,
+            {"object_id": object_id, "version": version},
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return _protocol_cell(row[0])
 
     def save_finding(self, process_id: str, finding: Finding) -> None:
         params = finding_to_params(process_id, finding)

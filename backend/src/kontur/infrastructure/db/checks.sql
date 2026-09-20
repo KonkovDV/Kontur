@@ -296,4 +296,90 @@ EXCEPTION
 END;
 $$;
 
+-- 17. Финализированный internal_placeholder нельзя перевести в очередь выгрузки.
+INSERT INTO protocols (
+    id, object_id, version, matrix_version, dataset_version, model_version,
+    input_manifest_hash, status, payload, finalized_at
+) VALUES (
+    'proto-placeholder-check', 'obj-check', 3, 'draft-0', 'v1', 'm-0',
+    'hash-placeholder', 'PROTOCOL_FINALIZED',
+    '{"kind":"internal_placeholder","assembled":true}'::jsonb, now()
+);
+INSERT INTO processes (
+    id, object_id, process_state, scenario, matrix_version, model_version,
+    protocol_id, finalized_by, finalized_at, sync_state
+) VALUES (
+    'prc-placeholder-check', 'obj-check', 'FINALIZED', 'FULL', 'draft-0', 'm-0',
+    'proto-placeholder-check', 'inspector-7', now(), 'NOT_REQUESTED'
+);
+DO $$
+BEGIN
+    UPDATE processes
+       SET sync_state = 'PENDING_SYNC'
+     WHERE id = 'prc-placeholder-check';
+    RAISE EXCEPTION 'internal_placeholder был поставлен в очередь выгрузки'
+        USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN SQLSTATE 'KNT02' THEN NULL;
+END;
+$$;
+
+-- 18. Финализированный payload с JSON boolean assembled=false нельзя выгружать.
+INSERT INTO protocols (
+    id, object_id, version, matrix_version, dataset_version, model_version,
+    input_manifest_hash, status, payload, finalized_at
+) VALUES (
+    'proto-unassembled-check', 'obj-check', 4, 'draft-0', 'v1', 'm-0',
+    'hash-unassembled', 'PROTOCOL_FINALIZED',
+    '{"kind":"materialized","assembled":false}'::jsonb, now()
+);
+INSERT INTO processes (
+    id, object_id, process_state, scenario, matrix_version, model_version,
+    protocol_id, finalized_by, finalized_at, sync_state
+) VALUES (
+    'prc-unassembled-check', 'obj-check', 'FINALIZED', 'FULL', 'draft-0', 'm-0',
+    'proto-unassembled-check', 'inspector-7', now(), 'NOT_REQUESTED'
+);
+DO $$
+BEGIN
+    UPDATE processes
+       SET sync_state = 'PENDING_SYNC'
+     WHERE id = 'prc-unassembled-check';
+    RAISE EXCEPTION 'assembled=false был поставлен в очередь выгрузки'
+        USING ERRCODE = 'KNT99';
+EXCEPTION
+    WHEN SQLSTATE 'KNT02' THEN NULL;
+END;
+$$;
+
+-- 19. Отсутствующий assembled не считается false и разрешает запрос выгрузки.
+INSERT INTO protocols (
+    id, object_id, version, matrix_version, dataset_version, model_version,
+    input_manifest_hash, status, payload, finalized_at
+) VALUES (
+    'proto-no-assembled-check', 'obj-check', 5, 'draft-0', 'v1', 'm-0',
+    'hash-no-assembled', 'PROTOCOL_FINALIZED',
+    '{"kind":"materialized"}'::jsonb, now()
+);
+INSERT INTO processes (
+    id, object_id, process_state, scenario, matrix_version, model_version,
+    protocol_id, finalized_by, finalized_at, sync_state
+) VALUES (
+    'prc-no-assembled-check', 'obj-check', 'FINALIZED', 'FULL', 'draft-0', 'm-0',
+    'proto-no-assembled-check', 'inspector-7', now(), 'NOT_REQUESTED'
+);
+DO $$
+BEGIN
+    UPDATE processes
+       SET sync_state = 'PENDING_SYNC'
+     WHERE id = 'prc-no-assembled-check';
+    IF (SELECT sync_state FROM processes WHERE id = 'prc-no-assembled-check')
+       <> 'PENDING_SYNC'
+    THEN
+        RAISE EXCEPTION 'payload без assembled не перешёл в очередь выгрузки'
+            USING ERRCODE = 'KNT99';
+    END IF;
+END;
+$$;
+
 ROLLBACK;
