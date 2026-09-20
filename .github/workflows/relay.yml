@@ -1,0 +1,31 @@
+name: relay-container
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  relay-container:
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-compose-validation
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose contracts
+        run: |
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.offline.yml config --quiet
+      - name: Build relay image
+        run: docker compose build outbox-relay
+      - name: Verify relay runtime and dependencies
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh outbox-relay -ec '
+            test "$(id -u)" = 10001
+            test "$(id -g)" = 10001
+            python -c "import aio_pika, psycopg; from kontur.infrastructure.broker import RabbitMqConfirmedPublisher"
+          '

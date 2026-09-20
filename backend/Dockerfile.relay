@@ -1,0 +1,17 @@
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+COPY backend/pyproject.toml ./
+COPY backend/src ./src
+COPY scripts/relay_outbox.py ./relay_outbox.py
+RUN pip install --no-cache-dir -e ".[queue,store]"
+
+RUN groupadd --gid 10001 app \
+    && useradd --uid 10001 --gid 10001 --no-create-home \
+        --home-dir /nonexistent --shell /usr/sbin/nologin app
+
+USER 10001:10001
+
+CMD ["python", "/app/relay_outbox.py"]

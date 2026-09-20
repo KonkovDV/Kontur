@@ -17,7 +17,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    # Очередь по ТЗ п. 1.5. Доставка at-least-once, идемпотентность — на стороне ядра.
+    # Quorum-очередь relay: at-least-once; event_id — ключ будущего inbox/dedup.
     ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
 
   minio:
@@ -53,6 +53,26 @@ services:
       KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
     depends_on: [postgres, redis, rabbitmq, minio]
     ports: ["127.0.0.1:8000:8000"]
+
+  outbox-relay:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.relay
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
+      KONTUR_AMQP_URL: amqp://guest:guest@rabbitmq:5672/
+      KONTUR_OUTBOX_POLL_SECONDS: ${KONTUR_OUTBOX_POLL_SECONDS:-1}
+      KONTUR_OUTBOX_ERROR_SECONDS: ${KONTUR_OUTBOX_ERROR_SECONDS:-5}
+      KONTUR_AMQP_TIMEOUT_SECONDS: ${KONTUR_AMQP_TIMEOUT_SECONDS:-10}
+    depends_on: [postgres, rabbitmq]
+    restart: unless-stopped
 
   gateway:
     build: ./gateway

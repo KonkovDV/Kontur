@@ -27,5 +27,8 @@ services:
   core:
     pull_policy: never
 
+  outbox-relay:
+    pull_policy: never
+
   gateway:
     pull_policy: never
