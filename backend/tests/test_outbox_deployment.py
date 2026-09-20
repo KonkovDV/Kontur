@@ -20,11 +20,15 @@ def test_relay_has_a_separate_least_privilege_container() -> None:
     assert "USER 10001:10001" in dockerfile
     assert '".[queue,store]"' in dockerfile
     assert "relay_outbox.py" in dockerfile
+    assert "consume_inbox.py" in dockerfile
+    assert "inbox-consumer:" in compose
+    assert "/app/consume_inbox.py" in compose
 
 
 def test_relay_is_present_in_offline_override() -> None:
     offline = (ROOT / "docker-compose.offline.yml").read_text(encoding="utf-8")
     assert "outbox-relay:" in offline
+    assert "inbox-consumer:" in offline
     assert "pull_policy: never" in offline
 
 

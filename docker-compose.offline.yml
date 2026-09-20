@@ -30,5 +30,8 @@ services:
   outbox-relay:
     pull_policy: never
 
+  inbox-consumer:
+    pull_policy: never
+
   gateway:
     pull_policy: never

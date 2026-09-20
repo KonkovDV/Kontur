@@ -296,7 +296,7 @@ def build_tz_scorecard(
         _scorecard_item(
             "async_rabbit_outbox_workers",
             "partial",
-            "outbox relay + inbox unique event_id; ACK after commit; HTTP inline; not Rin",
+            "outbox+inbox workers in compose; ACK after commit; HTTP inline; not Rin",
         ),
         _scorecard_item("split_finding", "unmet", "GAP-SPLIT NotImplementedError"),
     ]

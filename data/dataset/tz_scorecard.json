@@ -46,7 +46,7 @@
       {
         "id": "async_rabbit_outbox_workers",
         "state": "partial",
-        "detail": "outbox relay + inbox unique event_id; ACK after commit; HTTP inline; not Rin"
+        "detail": "outbox+inbox workers in compose; ACK after commit; HTTP inline; not Rin"
       },
       {
         "id": "split_finding",

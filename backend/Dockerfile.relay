@@ -6,6 +6,7 @@ WORKDIR /app
 COPY backend/pyproject.toml ./
 COPY backend/src ./src
 COPY scripts/relay_outbox.py ./relay_outbox.py
+COPY scripts/consume_inbox.py ./consume_inbox.py
 RUN pip install --no-cache-dir -e ".[queue,store]"
 
 RUN groupadd --gid 10001 app \
