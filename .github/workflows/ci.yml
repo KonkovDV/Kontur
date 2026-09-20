@@ -46,6 +46,11 @@ jobs:
           --health-retries 20
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PostgreSQL adapter and Kontur core
+        run: pip install -e "backend[store]"
       - name: Схема разворачивается, ограничения срабатывают
         env:
           PGPASSWORD: postgres
@@ -55,6 +60,10 @@ jobs:
           psql -h localhost -p 5432 -U postgres -d kontur -v ON_ERROR_STOP=1 \
             -f backend/src/kontur/infrastructure/db/schema.sql \
             -f backend/src/kontur/infrastructure/db/checks.sql
+      - name: Live protocol materialization concurrency
+        env:
+          KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
+        run: python scripts/check_protocol_concurrency.py
 
   claims:
     runs-on: ubuntu-latest

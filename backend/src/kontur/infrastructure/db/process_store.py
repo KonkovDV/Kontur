@@ -475,7 +475,7 @@ ON CONFLICT (id) DO UPDATE SET
 """
 
 ENSURE_OBJECT_SQL = """
-INSERT INTO objects (id, name) VALUES (%(id)s, %(name)s)
+INSERT INTO objects (id, name) VALUES (%(object_id)s, %(name)s)
 ON CONFLICT (id) DO NOTHING
 """
 

@@ -13,6 +13,8 @@
   versioned materialization, advisory lock, `FOR UPDATE`, `payload_sha256`,
   outbox PENDING, `protocol-{process_id}` / `-vN`. JSON `kind=materialized`
   в payload **нет** (ADR-0009): схема ТЗ `additionalProperties: false`.
+- `ENSURE_OBJECT` пишет `objects.id = object_id`, не process_id. CI `db`
+  гоняет идемпотентный retry и гонку version; crash-before-commit ещё нет.
 - OSINT-срез и bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
   Это не bake-off на GOLD и не закрытие I/J.
 
@@ -53,7 +55,8 @@
 
 ## Порядок следующих слайсов
 
-1. Живые Postgres-тесты finalize (два параллельных клиента, crash).
+1. Crash-before-commit / timeout-after-commit для finalize (race retry и
+   гонка `(object_id, version)` уже в CI job `db`).
 2. Пять сессий Gate K → `USABILITY_RESULTS.md`.
 3. Независимый GOLD OCR и frozen val по `object_id` (поставка, не код).
 4. Outbox relay → RabbitMQ worker; `202` без inline L1–L7.

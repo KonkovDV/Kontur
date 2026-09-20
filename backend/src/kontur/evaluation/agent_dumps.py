@@ -286,7 +286,7 @@ def build_tz_scorecard(
         _scorecard_item(
             "protocol_atomic_materialization",
             "partial",
-            "PR #64 plus lock/sha/outbox; no kind=materialized on TZ JSON",
+            "PR #64 plus lock/sha/outbox; live PG race in CI; no kind=materialized",
         ),
         _scorecard_item("rin_sandbox", "unmet", "retry policy only; no sandbox contract"),
         _scorecard_item("async_rabbit_outbox_workers", "unmet", "HTTP still runs pipeline inline"),

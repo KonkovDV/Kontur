@@ -87,6 +87,8 @@ def test_sql_matches_schema_columns() -> None:
     assert "completeness_pd" in UPSERT_PROCESS_SQL
     assert "ON CONFLICT (id) DO UPDATE" in UPSERT_PROCESS_SQL
     assert "INSERT INTO objects" in ENSURE_OBJECT_SQL
+    assert "%(object_id)s" in ENSURE_OBJECT_SQL
+    assert "VALUES (%(id)s" not in ENSURE_OBJECT_SQL
     assert "INSERT INTO process_findings" in UPSERT_FINDING_SQL
     assert "FROM process_findings" in SELECT_FINDINGS_SQL
     assert "payload" not in snapshot_params(_snap())

@@ -82,6 +82,7 @@
 | #59 as-is | generic `{"detail":"request too large"}`, любой reject срывал mixed accept/reject, 429 admission, mypy `SpooledTemporaryFile`/`Any`; влит переписанный срез с кодами ТЗ |
 | #61 as-is | import-time monkeypatch `ProcessRecord` из `presentation/__init__.py`; динамические флаги; Red Team BLOCK; backend CI FAILURE. Закрыт 20.09.2026. Идемпотентность влита прямой правкой `runtime.py`/`api.py` |
 | #63 as-is | экспериментальная материализация: вырезан provenance, infrastructure импортировал `assemble_protocol`, version=1. Закрыт без merge 20.09.2026 |
+| #66 as-is | live Postgres race: CI `db` FAILURE — `ENSURE_OBJECT` писал `objects.id = process_id`. Закрыт без merge; правка и проверка на `main` |
 | `feat/ocr-300dpi-step2-verifying` (`2ddc2b3`) | PR не открывался. Тот же усечённый push: `ocr_tesseract.py` одной строкой, 3161 байт. Заявлены wilson≥0.95 / tessdata-best / `MIN_WORD_CONF` 35. Не мержить |
 
 Не публиковать F1/P/R и recall критических на frozen val. Поставка

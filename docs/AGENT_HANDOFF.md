@@ -75,7 +75,8 @@ concurrency-теста нет. Это не sandbox РиН. Очередь PR п�
 
 1. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
 2. Рекордер кликов в `web/`; 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
-3. Живые Postgres-тесты finalize (два клиента, crash) — см. [`TZ_COMPLETION.md`](TZ_COMPLETION.md).
+3. Живые Postgres-тесты finalize: идемпотентный retry и гонка version в CI
+   `db` (не crash-before-commit). См. [`TZ_COMPLETION.md`](TZ_COMPLETION.md).
 4. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
 5. Экстракторы семействами по `extractor_families.json`, не по одному из 103.
 6. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.
