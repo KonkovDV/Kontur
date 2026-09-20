@@ -30,7 +30,27 @@ WITH picked AS (
      WHERE status IN ('PENDING', 'DELIVERING')
        AND available_at <= %(now)s
        AND attempts < 4
-       AND (%(protocol_id)s IS NULL OR protocol_id = %(protocol_id)s)
+     ORDER BY created_at
+     FOR UPDATE SKIP LOCKED
+     LIMIT 1
+)
+UPDATE integration_outbox AS o
+   SET status = 'DELIVERING',
+       attempts = o.attempts + 1,
+       available_at = %(lease_until)s
+  FROM picked
+ WHERE o.id = picked.id
+RETURNING o.id, o.process_id, o.protocol_id, o.event_id, o.payload_sha256, o.attempts
+"""
+
+CLAIM_ONE_OUTBOX_SQL = """
+WITH picked AS (
+    SELECT id
+      FROM integration_outbox
+     WHERE protocol_id = %(protocol_id)s
+       AND status IN ('PENDING', 'DELIVERING')
+       AND available_at <= %(now)s
+       AND attempts < 4
      ORDER BY created_at
      FOR UPDATE SKIP LOCKED
      LIMIT 1
@@ -233,7 +253,7 @@ def relay_once_memory(
 
 def claim_postgres(connection: object, now: datetime) -> OutboxRow | None:
     cursor = connection.execute(  # type: ignore[attr-defined]
-        CLAIM_OUTBOX_SQL, {"now": now, "lease_until": _lease_until(now), "protocol_id": None}
+        CLAIM_OUTBOX_SQL, {"now": now, "lease_until": _lease_until(now)}
     )
     fetched = cursor.fetchone()
     if fetched is None:

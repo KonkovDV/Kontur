@@ -12,6 +12,7 @@ from kontur.infrastructure.db.process_store import (
     protocol_payload_sha256,
 )
 from kontur.infrastructure.outbox import (
+    CLAIM_ONE_OUTBOX_SQL,
     CLAIM_OUTBOX_SQL,
     MAX_ATTEMPTS,
     RETRY_SECONDS,
@@ -128,4 +129,5 @@ def test_hash_mismatch_is_terminal() -> None:
 def test_claim_sql_uses_skip_locked() -> None:
     assert "FOR UPDATE SKIP LOCKED" in CLAIM_OUTBOX_SQL
     assert "attempts < 4" in CLAIM_OUTBOX_SQL
-    assert "protocol_id = %(protocol_id)s" in CLAIM_OUTBOX_SQL
+    assert "FOR UPDATE SKIP LOCKED" in CLAIM_ONE_OUTBOX_SQL
+    assert "protocol_id = %(protocol_id)s" in CLAIM_ONE_OUTBOX_SQL

@@ -29,7 +29,7 @@ from kontur.infrastructure.db.process_store import (
     outbox_event_id,
     protocol_payload_sha256,
 )
-from kontur.infrastructure.outbox import CLAIM_OUTBOX_SQL
+from kontur.infrastructure.outbox import CLAIM_ONE_OUTBOX_SQL
 
 DSN = os.environ.get(
     "KONTUR_DB_URL",
@@ -236,9 +236,9 @@ def _assert_outbox_claim_skips_locked(prefix: str) -> None:
     conn2 = psycopg.connect(DSN, autocommit=False)
     try:
         conn1.execute("BEGIN")
-        row1 = conn1.execute(CLAIM_OUTBOX_SQL, params).fetchone()
+        row1 = conn1.execute(CLAIM_ONE_OUTBOX_SQL, params).fetchone()
         conn2.execute("BEGIN")
-        row2 = conn2.execute(CLAIM_OUTBOX_SQL, params).fetchone()
+        row2 = conn2.execute(CLAIM_ONE_OUTBOX_SQL, params).fetchone()
         if row1 is None:
             raise AssertionError("first outbox claim returned no row")
         if row2 is not None:
