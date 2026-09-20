@@ -13,7 +13,6 @@ DB_DIR = (
 SCHEMA = DB_DIR / "schema.sql"
 CHECKS = DB_DIR / "checks.sql"
 
-
 def test_schema_sql_separates_object_split_from_gold_rows() -> None:
     sql = SCHEMA.read_text(encoding="utf-8")
     assert "CREATE TABLE object_splits" in sql
@@ -23,7 +22,6 @@ def test_schema_sql_separates_object_split_from_gold_rows() -> None:
     assert "checks_object_status" in sql
     assert "files_object_stage" in sql
     assert "audit_log_object_ts" in sql
-
 
 def test_two_gold_labels_same_object_live_but_two_splits_do_not() -> None:
     conn = sqlite3.connect(":memory:")
@@ -55,7 +53,6 @@ def test_two_gold_labels_same_object_live_but_two_splits_do_not() -> None:
     conn.execute("INSERT INTO object_splits VALUES ('obj-10', 'v1', 'train')")
     conn.execute("INSERT INTO dataset_items VALUES ('row-1', 'eg-a', 'v1', 'obj-10')")
     conn.execute("INSERT INTO dataset_items VALUES ('row-2', 'eg-b', 'v1', 'obj-10')")
-
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute("INSERT INTO object_splits VALUES ('obj-10', 'v1', 'validation')")
     with pytest.raises(sqlite3.IntegrityError):
@@ -65,7 +62,6 @@ def test_two_gold_labels_same_object_live_but_two_splits_do_not() -> None:
 
 def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     """Postgres-ограничения нельзя выполнить в sqlite, но их исчезновение видно здесь."""
-
     sql = SCHEMA.read_text(encoding="utf-8")
     assert "CREATE TABLE processes" in sql
     assert "completeness_pd" in sql
@@ -84,15 +80,16 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "не может менять содержимое" in sql
     assert "KNT02" in sql
     assert "processes_sync_requires_finalized_protocol" in sql
+    assert "SELECT status, payload INTO proto_status, proto_payload" in sql
+    assert "proto_payload ->> 'kind' = 'internal_placeholder'" in sql
+    assert "proto_payload -> 'assembled' = 'false'::jsonb" in sql
     assert "AUTO_NO_DIFFERENCE', 'SUSPICION'" in sql
     assert "gold_label IN ('CONFIRMED_VIOLATION', 'NEGATIVE_VERIFIED')" in sql
     assert "gold_requires_expert" in sql
     assert "negative_gold_requires_reason" in sql
 
-
 def test_checks_sql_asserts_instead_of_merely_running() -> None:
     """checks.sql обязан ловить отсутствие ограничения, а не любую ошибку подряд."""
-
     checks = CHECKS.read_text(encoding="utf-8")
     assert checks.count("DO $$") >= 15
     assert "process_findings" in checks
@@ -106,10 +103,8 @@ def test_checks_sql_asserts_instead_of_merely_running() -> None:
     assert "WHEN check_violation THEN NULL;" in checks
     assert checks.rstrip().endswith("ROLLBACK;")
 
-
 def test_machine_status_cannot_become_a_gold_label() -> None:
     """ТЗ п. 9.4: разметка — только человеческий вердикт, и только с экспертом."""
-
     conn = sqlite3.connect(":memory:")
     conn.executescript(
         """
