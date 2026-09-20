@@ -17,8 +17,14 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
+    # guest ограничен loopback; отдельный пользователь доступен сервисам Compose.
+    environment:
+      RABBITMQ_DEFAULT_USER: kontur
+      RABBITMQ_DEFAULT_PASS: kontur
     # Quorum-очередь relay: at-least-once; event_id — ключ будущего inbox/dedup.
     ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
 
   minio:
     image: minio/minio:latest
@@ -45,7 +51,7 @@ services:
     environment:
       KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
       KONTUR_REDIS_URL: redis://redis:6379/0
-      KONTUR_AMQP_URL: amqp://guest:guest@rabbitmq:5672/
+      KONTUR_AMQP_URL: amqp://kontur:kontur@rabbitmq:5672/
       KONTUR_JWT_ISSUER: ${KONTUR_JWT_ISSUER}
       KONTUR_JWT_AUDIENCE: ${KONTUR_JWT_AUDIENCE}
       KONTUR_JWT_ALGORITHM: ${KONTUR_JWT_ALGORITHM:-RS256}
@@ -67,7 +73,7 @@ services:
       - no-new-privileges:true
     environment:
       KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
-      KONTUR_AMQP_URL: amqp://guest:guest@rabbitmq:5672/
+      KONTUR_AMQP_URL: amqp://kontur:kontur@rabbitmq:5672/
       KONTUR_OUTBOX_POLL_SECONDS: ${KONTUR_OUTBOX_POLL_SECONDS:-1}
       KONTUR_OUTBOX_ERROR_SECONDS: ${KONTUR_OUTBOX_ERROR_SECONDS:-5}
       KONTUR_AMQP_TIMEOUT_SECONDS: ${KONTUR_AMQP_TIMEOUT_SECONDS:-10}
@@ -90,4 +96,5 @@ services:
 
 volumes:
   pgdata:
+  rabbitmq:
   minio:
