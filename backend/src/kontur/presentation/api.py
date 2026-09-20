@@ -5,13 +5,12 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, Header, UploadFile
+from fastapi import FastAPI, File, Form, Header, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from kontur.application.intake import (
     MAX_BATCH_BYTES,
-    MAX_FILE_BYTES,
     Rejection,
     UploadCandidate,
     evaluate_batch,
@@ -34,9 +33,7 @@ from kontur.presentation.rbac import (
 )
 from kontur.presentation.upload_limits import (
     ActualUploadLimitMiddleware,
-    UploadLimitExceeded,
-    materialize_upload,
-    read_upload_payload,
+    read_bounded_upload,
 )
 
 app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton")
@@ -162,133 +159,120 @@ def system_capabilities(
 
 @app.post("/api/v1/documents/upload", status_code=202, response_model=None)
 async def upload_documents(
+    request: Request,
     object_id: Annotated[str, Form()],
     files: Annotated[list[UploadFile], File()],
     authorization: Annotated[str | None, Header()] = None,
     process_id: Annotated[str | None, Form()] = None,
     doc_stage: Annotated[DocStage | None, Form()] = None,
 ) -> dict[str, object] | JSONResponse:
-    payloads: list[tuple[UploadCandidate, UploadFile]] = []
     try:
-        _subject, _granted, caller_object_id = _require(
-            "uploadDocuments", authorization
+        return await _upload_documents(
+            request,
+            object_id=object_id,
+            files=files,
+            authorization=authorization,
+            process_id=process_id,
+            doc_stage=doc_stage,
         )
-        normalized_object_id = object_id.strip()
-        if not normalized_object_id:
-            raise EmptyPackageError("object_id пуст")
-        _check_scope(normalized_object_id, caller_object_id)
-
-        workspace = _workspace()
-        record = workspace.get(process_id) if process_id else None
-        if process_id and record is None:
-            return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
-        if record is not None:
-            _check_scope(record.object_id, caller_object_id)
-            if record.object_id != normalized_object_id:
-                return JSONResponse(
-                    status_code=409, content={"detail": "object_id не совпадает"}
-                )
-
-        if not files:
-            raise EmptyPackageError("empty package is not a TZ comparison scenario")
-        if doc_stage is None:
-            return JSONResponse(
-                status_code=422,
-                content={
-                    "file_name": "*",
-                    "reason_code": "UNSUPPORTED_FORMAT",
-                    "message": (
-                        "doc_stage обязателен: без стадии файл нельзя привязать к ПД/РД/ИД"
-                    ),
-                },
-            )
-
-        batch_size = 0
-        for upload in files:
-            name = upload.filename or "unnamed"
-            payload = await read_upload_payload(
-                upload,
-                max_file_bytes=MAX_FILE_BYTES,
-            )
-            batch_size += payload.size
-            if batch_size > MAX_BATCH_BYTES:
-                raise UploadLimitExceeded
-            candidate = UploadCandidate(
-                filename=name,
-                size_bytes=payload.size,
-                header=payload.header,
-                content_hash=payload.digest,
-            )
-            payloads.append((candidate, upload))
-
-        decision = evaluate_batch(item for item, _upload in payloads)
-        if decision.rejected:
-            worst = max(decision.rejected, key=lambda item: item.http_status)
-            return JSONResponse(
-                status_code=worst.http_status,
-                content=_rejection_body(worst),
-            )
-
-        verified_files: list[tuple[AcceptedFile, bytes]] = []
-        for item in decision.accepted:
-            digest = item.content_hash
-            if digest is None:
-                raise RuntimeError("принятый файл обязан иметь SHA-256")
-            upload = next(
-                upload
-                for candidate, upload in payloads
-                if candidate is item
-            )
-            body = await materialize_upload(
-                upload,
-                expected_size=item.size_bytes,
-                expected_digest=digest,
-                max_file_bytes=MAX_FILE_BYTES,
-            )
-            verified_files.append(
-                (
-                    AcceptedFile(
-                        file_id=str(uuid4()),
-                        file_hash=digest,
-                        filename=item.filename,
-                        doc_stage=doc_stage,
-                        size_bytes=item.size_bytes,
-                    ),
-                    body,
-                )
-            )
-
-        if record is None:
-            completeness = _empty_completeness()
-            completeness[doc_stage] = Completeness.UPLOADED
-            record = workspace.create(normalized_object_id, completeness)
-        else:
-            workspace.reopen_for_upload(record)
-
-        accepted: list[dict[str, str]] = []
-        for stored, body in verified_files:
-            try:
-                if workspace.attach_file(record, stored):
-                    workspace.keep_blob(record, stored.file_id, body)
-                    accepted.append(
-                        {"file_id": stored.file_id, "file_hash": stored.file_hash}
-                    )
-            finally:
-                del body
-
-        workspace.run_matrix_pipeline(record)
-        return {
-            "process_id": record.process_id,
-            "accepted": accepted,
-            "rejected": [],
-        }
     finally:
-        payloads.clear()
         for upload in files:
             try:
                 await upload.close()
-            except Exception:  # noqa: BLE001, S110 - close every upload best-effort
-                pass
+            except OSError:
+                continue
+
+
+async def _upload_documents(
+    request: Request,
+    *,
+    object_id: str,
+    files: list[UploadFile],
+    authorization: str | None,
+    process_id: str | None,
+    doc_stage: DocStage | None,
+) -> dict[str, object] | JSONResponse:
+    _subject, _granted, caller_object_id = _require("uploadDocuments", authorization)
+    normalized_object_id = object_id.strip()
+    if not normalized_object_id:
+        raise EmptyPackageError("object_id пуст")
+    _check_scope(normalized_object_id, caller_object_id)
+
+    workspace = _workspace()
+    record = workspace.get(process_id) if process_id else None
+    if process_id and record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    if record is not None:
+        _check_scope(record.object_id, caller_object_id)
+        if record.object_id != normalized_object_id:
+            return JSONResponse(status_code=409, content={"detail": "object_id не совпадает"})
+
+    length = request.headers.get("content-length")
+    if length is not None and int(length) > MAX_BATCH_BYTES:
+        return JSONResponse(
+            status_code=413,
+            content={
+                "file_name": "*",
+                "reason_code": "BATCH_LIMIT_EXCEEDED",
+                "message": f"Content-Length {length} больше лимита {MAX_BATCH_BYTES} Б",
+            },
+        )
+    if not files:
+        raise EmptyPackageError("empty package is not a TZ comparison scenario")
+    if doc_stage is None:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "file_name": "*",
+                "reason_code": "UNSUPPORTED_FORMAT",
+                "message": "doc_stage обязателен: без стадии файл нельзя привязать к ПД/РД/ИД",
+            },
+        )
+
+    payloads: list[tuple[UploadCandidate, bytes]] = []
+    for upload in files:
+        candidate, body = await read_bounded_upload(upload)
+        payloads.append((candidate, body if body is not None else b""))
+    decision = evaluate_batch(item for item, _body in payloads)
+    if decision.rejected and not decision.accepted:
+        worst = max(decision.rejected, key=lambda item: item.http_status)
+        return JSONResponse(status_code=worst.http_status, content=_rejection_body(worst))
+
+    bodies = {
+        item.content_hash: body
+        for item, body in payloads
+        if item.content_hash is not None
+    }
+
+    if record is None:
+        completeness = _empty_completeness()
+        completeness[doc_stage] = Completeness.UPLOADED
+        record = workspace.create(normalized_object_id, completeness)
+    else:
+        workspace.reopen_for_upload(record)
+
+    accepted: list[dict[str, str]] = []
+    for item in decision.accepted:
+        digest = item.content_hash
+        if digest is None:
+            raise RuntimeError("принятый файл обязан иметь SHA-256")
+        stored = AcceptedFile(
+            file_id=str(uuid4()),
+            file_hash=digest,
+            filename=item.filename,
+            doc_stage=doc_stage,
+            size_bytes=item.size_bytes,
+        )
+        if workspace.attach_file(record, stored):
+            workspace.keep_blob(record, stored.file_id, bodies[digest])
+            accepted.append({"file_id": stored.file_id, "file_hash": stored.file_hash})
+
+    workspace.run_matrix_pipeline(record)
+    return {
+        "process_id": record.process_id,
+        "accepted": accepted,
+        "rejected": [_rejection_body(item) for item in decision.rejected],
+    }
 
 
 @app.get("/api/v1/processes/{process_id}/status", response_model=None)

@@ -237,7 +237,7 @@ def test_content_length_limit_is_enforced_before_intake(
     monkeypatch.setattr("kontur.presentation.api.MAX_BATCH_BYTES", 10)
     response = _upload(client)
     assert response.status_code == 413
-    assert response.json() == {"detail": "request too large"}
+    assert response.json()["reason_code"] == "BATCH_LIMIT_EXCEEDED"
 
 
 def test_protocol_available_after_completed(client: TestClient) -> None:
