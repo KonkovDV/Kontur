@@ -1,6 +1,6 @@
 # ADR-0012: transactional inbox, ACK after commit
 
-**Статус:** предложено 20.09.2026.
+**Статус:** принято 20.09.2026; Red Team correction applied.
 
 ## Контекст
 
@@ -27,8 +27,23 @@ Outbox публикует в RabbitMQ at-least-once (ADR-0010). Publisher confir
    `submitted / confirmed / ambiguous` и reconciliation неизвестного
    результата РиН — следующий срез.
 
+## Red Team correction
+
+`aio_pika.IncomingMessage.ack()` и `nack()` являются coroutine methods. Их
+нельзя вызывать через синхронный adapter без `await`: это создаёт coroutine,
+но не отправляет settlement frame брокеру. PostgreSQL persistence теперь
+отделена от settlement; после commit consumer явно делает `await ack/nack`.
+
+`x-delivery-count` — число предыдущих неуспешных доставок. Отсутствующий
+header означает попытку 1, значение 1 — попытку 2. Дубликат уже записанного
+`POISON` всё равно получает `nack(requeue=false)`: конфликт inbox не является
+основанием ACK и не должен потерять DLQ copy.
+
 ## Граница
 
 Это не sandbox ИАИС, не УКЭП и не exactly-once на брокере. Если локальный
 volume RabbitMQ уже держит `kontur.rin.protocol` без DLX-аргументов,
-очередь нужно удалить, иначе `PRECONDITION_FAILED`.
+очередь нельзя молча удалять: нужен контролируемый drain/migration или policy.
+Текущий consumer остаётся one-shot и ещё не является развёрнутым сервисом.
+RabbitMQ 4.3 меняет учёт explicit nack; перед обновлением с закреплённой 3.13
+нужен delayed-retry design и отдельный compatibility gate.
