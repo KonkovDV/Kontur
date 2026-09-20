@@ -10,6 +10,7 @@ CREATE TABLE objects (
     contractor      TEXT,
     permit_number   TEXT
 );
+
 CREATE TABLE files (
     id                  TEXT PRIMARY KEY,
     object_id           TEXT NOT NULL REFERENCES objects (id),
@@ -28,6 +29,7 @@ CREATE TABLE files (
     -- Один content hash может быть и РД, и ИД. Дедуп — в пределах стадии.
     UNIQUE (object_id, file_hash, doc_stage)
 );
+
 CREATE TABLE params (
     id              SERIAL PRIMARY KEY,
     code            VARCHAR(20) NOT NULL,
@@ -53,12 +55,14 @@ CREATE TABLE params (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (code, matrix_version)
 );
+
 CREATE TABLE evidence_groups (
     id              TEXT PRIMARY KEY,
     object_id       TEXT NOT NULL REFERENCES objects (id),
     rule_code       VARCHAR(20) NOT NULL,
     matrix_version  TEXT NOT NULL
 );
+
 CREATE TABLE evidence_fragments (
     id                  TEXT PRIMARY KEY,
     evidence_group_id   TEXT NOT NULL REFERENCES evidence_groups (id),
@@ -75,6 +79,7 @@ CREATE TABLE evidence_fragments (
     confidence          DOUBLE PRECISION,
     role                TEXT NOT NULL CHECK (role IN ('expected', 'actual', 'context'))
 );
+
 CREATE TABLE checks (
     id                  TEXT PRIMARY KEY,
     param_id            INTEGER NOT NULL REFERENCES params (id),
@@ -120,8 +125,10 @@ CREATE TABLE checks (
         finding_status <> 'NEGATIVE_VERIFIED' OR reason_code IS NOT NULL
     )
 );
+
 CREATE INDEX checks_object_status ON checks (object_id, finding_status);
 CREATE INDEX files_object_stage ON files (object_id, doc_stage);
+
 CREATE TABLE protocols (
     id                  TEXT PRIMARY KEY,
     object_id           TEXT NOT NULL REFERENCES objects (id),
@@ -145,6 +152,7 @@ CREATE TABLE protocols (
         OR (status <> 'PROTOCOL_FINALIZED' AND finalized_at IS NULL)
     )
 );
+
 -- ТЗ п. 9.3: финализированный протокол не правится и не удаляется. Исправление —
 -- только новая версия. Отмена финализации существует, но она обязана быть явной:
 -- супервизор проставляет причину в параметр сессии kontur.unfinalize_reason,
@@ -191,9 +199,11 @@ BEGIN
         USING ERRCODE = 'KNT01';
 END;
 $$;
+
 CREATE TRIGGER protocols_finalized_is_immutable
     BEFORE UPDATE OR DELETE ON protocols
     FOR EACH ROW EXECUTE FUNCTION protocols_guard_finalized();
+
 -- Процесс проверки (ТЗ п. 9.1). Раньше состояние процесса жило только в памяти
 -- приложения: счётчики повторов, сценарий и состояние выгрузки в РиН негде было
 -- восстановить после перезапуска.
@@ -248,6 +258,7 @@ CREATE TABLE processes (
         sync_state = 'NOT_REQUESTED' OR process_state = 'FINALIZED'
     )
 );
+
 -- ТЗ п. 9.6: выгрузка смотрит на статус протокола, а не только на process_state.
 -- Иначе после отмены финализации процесс остаётся FINALIZED и РиН уходит снова.
 CREATE FUNCTION processes_guard_sync() RETURNS trigger
@@ -281,11 +292,13 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
 CREATE TRIGGER processes_sync_requires_finalized_protocol
     BEFORE INSERT OR UPDATE ON processes
     FOR EACH ROW EXECUTE FUNCTION processes_guard_sync();
 
 CREATE INDEX processes_object_state ON processes (object_id, process_state);
+
 -- Очередь инспектора: находки процесса. Таблица checks — предметный чек с
 -- param_id; здесь живут CANDIDATE после рестарта, без молчаливого JSON в
 -- processes. Ключ store_key = evidence_group_id либо finding_id (RT-G).
@@ -343,7 +356,9 @@ CREATE TABLE process_findings (
         OR evidence_group_id IS NOT NULL
     )
 );
+
 CREATE INDEX process_findings_status ON process_findings (process_id, finding_status);
+
 -- Файлы процесса. UNIQUE как files(object_id, file_hash, doc_stage), но в
 -- границах процесса: повтор hash+stage не плодит accepted.
 CREATE TABLE process_files (
@@ -356,12 +371,14 @@ CREATE TABLE process_files (
     PRIMARY KEY (process_id, file_id),
     UNIQUE (process_id, file_hash, doc_stage)
 );
+
 CREATE TABLE object_splits (
     object_id       TEXT NOT NULL REFERENCES objects (id),
     dataset_version TEXT NOT NULL,
     split           TEXT NOT NULL CHECK (split IN ('train', 'validation', 'test')),
     PRIMARY KEY (object_id, dataset_version)
 );
+
 CREATE TABLE dataset_items (
     id                  TEXT PRIMARY KEY,
     evidence_group_id   TEXT NOT NULL REFERENCES evidence_groups (id),
@@ -385,6 +402,7 @@ CREATE TABLE dataset_items (
         OR (reason_code IS NOT NULL AND btrim(reason_code) <> '')
     )
 );
+
 CREATE TABLE audit_log (
     id          TEXT PRIMARY KEY,
     user_id     TEXT NOT NULL,
@@ -399,6 +417,7 @@ CREATE TABLE audit_log (
 
 CREATE INDEX audit_log_object_ts ON audit_log (object_id, timestamp);
 CREATE INDEX audit_log_process_ts ON audit_log (process_id, timestamp);
+
 -- Остальные таблицы сводки ТЗ п. 10 (Rejection_Log, Dispute_Log, Suspicions,
 -- Logical_Rules, Normative_Base, ML_Retraining_Log, Monitoring_Metrics,
 -- Model_Versions) добавляются миграциями по мере реализации модулей.
