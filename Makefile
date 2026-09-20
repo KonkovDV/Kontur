@@ -64,7 +64,7 @@ train-public:  ## TRAIN_PUBLIC JSONL в Docker. Не закрывает гейт
 agent-dumps:   ## coverage + handoff JSON для следующего ИИ. Не закрывает гейты
 	$(PYTHON) scripts/export_agent_dumps.py
 
-# ── Тесты и качество ─────────────────────────────────────────────────────────
+# ── Тесты и качество ────────────────────────────────────────────────────────
 
 test:          ## Полный тест-сьют (включая slow)
 	$(PYTHON) -m pytest backend/tests -q --tb=short
