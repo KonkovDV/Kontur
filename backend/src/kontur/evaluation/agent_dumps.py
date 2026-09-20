@@ -198,6 +198,7 @@ def build_handoff(
             "extractor_families": "data/matrix/extractor_families.json",
             "research_osint": "docs/RESEARCH_OSINT_2026.md",
             "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
+            "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md",
         },
         "leftover_refs_do_not_merge": [
             "feat/ocr-gate-i-crop3x-oem1",
@@ -289,7 +290,11 @@ def build_tz_scorecard(
             "PR #64 plus lock/sha/outbox; live PG race in CI; no kind=materialized",
         ),
         _scorecard_item("rin_sandbox", "unmet", "retry policy only; no sandbox contract"),
-        _scorecard_item("async_rabbit_outbox_workers", "unmet", "HTTP still runs pipeline inline"),
+        _scorecard_item(
+            "async_rabbit_outbox_workers",
+            "partial",
+            "outbox relay to broker; HTTP still inline L1-L7; not Rin",
+        ),
         _scorecard_item("split_finding", "unmet", "GAP-SPLIT NotImplementedError"),
     ]
     acceptance_items = [

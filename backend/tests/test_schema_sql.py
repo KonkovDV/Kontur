@@ -91,6 +91,9 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "UNIQUE (object_id, version)" in sql
     assert "payload_sha256" in sql
     assert "CREATE TABLE integration_outbox" in sql
+    assert "event_id" in sql
+    assert "available_at" in sql
+    assert "FOR UPDATE SKIP LOCKED" not in sql
 
 
 def test_schema_sync_guard_rejects_placeholder_and_false_assembled() -> None:

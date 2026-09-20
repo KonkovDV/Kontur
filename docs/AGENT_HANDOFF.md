@@ -42,9 +42,11 @@ application-слое, JSON пишется в той же транзакции, �
 `UNIQUE (object_id, version)`; повтор с тем же каноническим JSON идемпотентен,
 расхождение — конфликт. Без `connection.transaction()` финализация отклоняется.
 PR #65 влит: advisory lock объекта, `FOR UPDATE` процесса/находок/протоколов,
-`payload_sha256`, `integration_outbox` PENDING, ADR-0009. Живого Postgres
-concurrency-теста нет. Это не sandbox РиН. Очередь PR пуста; работа только с
-зелёного `main`.
+`payload_sha256`, `integration_outbox` PENDING, ADR-0009. Live Postgres: retry
+идемпотентен, гонка version fail-closed, outbox `SKIP LOCKED`. Crash-before-commit
+нет. Outbox relay (ADR-0010) публикует в брокер с confirms и паузами 1/5/15 мин;
+это не РиН и не exactly-once. HTTP по-прежнему inline L1–L7. PR #66 закрыт красным
+(FK `objects.id`); правка на `main`. Очередь PR пуста.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
@@ -75,12 +77,12 @@ concurrency-теста нет. Это не sandbox РиН. Очередь PR п�
 
 1. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
 2. Рекордер кликов в `web/`; 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
-3. Живые Postgres-тесты finalize: идемпотентный retry и гонка version в CI
-   `db` (не crash-before-commit). См. [`TZ_COMPLETION.md`](TZ_COMPLETION.md).
-4. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
-5. Экстракторы семействами по `extractor_families.json`, не по одному из 103.
-6. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.
-7. Если PAT когда-либо светился в issue/PR/логе — отозвать в GitHub Settings
+3. Crash-before-commit / timeout-after-commit для finalize.
+4. Inbox consumer + sandbox РиН. Outbox→брокер уже есть (ADR-0010), не РиН.
+5. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
+6. Экстракторы семействами по `extractor_families.json`, не по одному из 103.
+7. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.
+8. Если PAT когда-либо светился в issue/PR/логе — отозвать в GitHub Settings
    → Developer settings → Personal access tokens; не вставлять токен в чат.
 
 Гейты I и J кодом не закрыть: нет GOLD OCR и нет frozen val на 106 критических.

@@ -510,6 +510,7 @@ def test_postgres_materialize_writes_protocol_and_process_in_transaction() -> No
     assert "pg_advisory_xact_lock" in joined
     assert "FOR UPDATE" in joined
     assert "INSERT INTO integration_outbox" in joined
+    assert "event_id" in joined
     assert "payload_sha256" in joined
     assert conn.saw_transaction is True
     assert conn.sql.index(

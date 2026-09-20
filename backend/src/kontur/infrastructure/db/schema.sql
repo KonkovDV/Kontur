@@ -414,14 +414,21 @@ CREATE TABLE integration_outbox (
                         CHECK (destination IN ('RIN')),
     payload_sha256      CHAR(64) NOT NULL
                         CHECK (payload_sha256 ~ '^[a-f0-9]{64}$'),
+    event_id            TEXT NOT NULL UNIQUE,
     status              TEXT NOT NULL DEFAULT 'PENDING'
                         CHECK (status IN (
                             'PENDING', 'DELIVERING', 'DELIVERED', 'FAILED_TERMINAL'
                         )),
     attempts            SMALLINT NOT NULL DEFAULT 0
                         CHECK (attempts BETWEEN 0 AND 4),
+    available_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_error          TEXT,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (protocol_id, destination)
 );
+
+CREATE INDEX integration_outbox_claim
+    ON integration_outbox (available_at)
+    WHERE status IN ('PENDING', 'DELIVERING');
 
 -- Остальные таблицы сводки ТЗ п. 10 добавляются миграциями по мере реализации модулей.

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from threading import Barrier
 from uuid import uuid4
 
@@ -25,8 +26,10 @@ from kontur.infrastructure.db.process_store import (
     PostgresProcessStore,
     ProcessSnapshot,
     ProtocolConflictError,
+    outbox_event_id,
     protocol_payload_sha256,
 )
+from kontur.infrastructure.outbox import CLAIM_OUTBOX_SQL
 
 DSN = os.environ.get(
     "KONTUR_DB_URL",
@@ -208,10 +211,48 @@ def _assert_object_version_race_fails_closed(prefix: str) -> None:
         )
 
 
+def _assert_outbox_claim_skips_locked(prefix: str) -> None:
+    object_id = f"{prefix}-outbox-object"
+    process_id = f"{prefix}-outbox-process"
+    protocol_id = protocol_identity(process_id, 1)
+    _prepare(process_id, object_id)
+    barrier = Barrier(1)
+    outcome = _finalize(
+        process_id=process_id,
+        object_id=object_id,
+        version=1,
+        barrier=barrier,
+    )
+    if outcome != "committed":
+        raise AssertionError(f"setup finalize failed: {outcome}")
+    now = datetime.now(tz=UTC)
+    lease = now + timedelta(seconds=30)
+    params = {"now": now, "lease_until": lease}
+    conn1 = psycopg.connect(DSN)
+    conn2 = psycopg.connect(DSN)
+    try:
+        conn1.execute("BEGIN")
+        row1 = conn1.execute(CLAIM_OUTBOX_SQL, params).fetchone()
+        conn2.execute("BEGIN")
+        row2 = conn2.execute(CLAIM_OUTBOX_SQL, params).fetchone()
+        if row1 is None:
+            raise AssertionError("first outbox claim returned no row")
+        if row2 is not None:
+            raise AssertionError("SKIP LOCKED allowed a second claim")
+        if str(row1[3]) != outbox_event_id(protocol_id):
+            raise AssertionError(f"unstable event_id: {row1[3]}")
+    finally:
+        conn1.rollback()
+        conn2.rollback()
+        conn1.close()
+        conn2.close()
+
+
 def main() -> None:
     prefix = f"ci-race-{uuid4().hex[:12]}"
     _assert_identical_redelivery_is_idempotent(prefix)
     _assert_object_version_race_fails_closed(prefix)
+    _assert_outbox_claim_skips_locked(prefix)
     print("live PostgreSQL protocol concurrency checks passed")
 
 

@@ -45,8 +45,8 @@
       },
       {
         "id": "async_rabbit_outbox_workers",
-        "state": "unmet",
-        "detail": "HTTP still runs pipeline inline"
+        "state": "partial",
+        "detail": "outbox relay to broker; HTTP still inline L1-L7; not Rin"
       },
       {
         "id": "split_finding",

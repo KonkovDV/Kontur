@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-20",
-  "export_git_sha": "6096577f71ccd207b3f377eee1ab551eee637f35",
+  "export_git_sha": "01132df0b6e6eff91cf0654c38e8fd55a8fb25f1",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -100,7 +100,8 @@
     "tz_scorecard": "data/dataset/tz_scorecard.json",
     "extractor_families": "data/matrix/extractor_families.json",
     "research_osint": "docs/RESEARCH_OSINT_2026.md",
-    "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md"
+    "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
+    "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md"
   },
   "leftover_refs_do_not_merge": [
     "feat/ocr-gate-i-crop3x-oem1",

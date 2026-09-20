@@ -252,6 +252,14 @@ def protocol_payload_sha256(payload: object) -> str:
     return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
 
 
+def outbox_event_id(protocol_id: str) -> str:
+    """Stable broker message_id for retries. Not a Rin receipt."""
+
+    if not protocol_id.strip():
+        raise ValueError("protocol_id обязателен")
+    return f"rin-{protocol_id}"
+
+
 def _clone_protocol_payload(payload: object) -> dict[str, object]:
     encoded = json.loads(_canonical_json(payload))
     if not isinstance(encoded, dict):
@@ -417,7 +425,11 @@ class MemoryProcessStore:
             "protocol_id": protocol_id,
             "destination": "RIN",
             "payload_sha256": protocol_payload_sha256(encoded),
+            "event_id": outbox_event_id(protocol_id),
             "status": "PENDING",
+            "attempts": 0,
+            "available_at": datetime.now(tz=UTC),
+            "last_error": None,
         }
 
     def load_protocol(self, protocol_id: str) -> dict[str, object] | None:
@@ -591,9 +603,10 @@ SELECT id FROM protocols WHERE object_id = %(object_id)s FOR UPDATE
 
 INSERT_OUTBOX_SQL = """
 INSERT INTO integration_outbox (
-    id, process_id, protocol_id, destination, payload_sha256, status
+    id, process_id, protocol_id, destination, payload_sha256, event_id, status
 ) VALUES (
-    %(id)s, %(process_id)s, %(protocol_id)s, 'RIN', %(payload_sha256)s, 'PENDING'
+    %(id)s, %(process_id)s, %(protocol_id)s, 'RIN', %(payload_sha256)s,
+    %(event_id)s, 'PENDING'
 )
 ON CONFLICT (protocol_id, destination) DO NOTHING
 """
@@ -766,6 +779,7 @@ class PostgresProcessStore:
                         "id": f"outbox-{protocol_id}",
                         "process_id": snapshot.process_id,
                         "protocol_id": protocol_id,
+                        "event_id": outbox_event_id(protocol_id),
                         "payload_sha256": row_params["payload_sha256"],
                     },
                 )

@@ -14,7 +14,9 @@
   outbox PENDING, `protocol-{process_id}` / `-vN`. JSON `kind=materialized`
   в payload **нет** (ADR-0009): схема ТЗ `additionalProperties: false`.
 - `ENSURE_OBJECT` пишет `objects.id = object_id`, не process_id. CI `db`
-  гоняет идемпотентный retry и гонку version; crash-before-commit ещё нет.
+  гоняет идемпотентный retry, гонку version и outbox `SKIP LOCKED`.
+- Outbox relay (ADR-0010): confirms в брокер, паузы 1/5/15 мин, стабильный
+  `event_id`. Не РиН, не inbox, HTTP всё ещё inline.
 - OSINT-срез и bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
   Это не bake-off на GOLD и не закрытие I/J.
 
@@ -26,7 +28,7 @@
 | 132/132 executable | 29 executable, 103 `extractor_missing` |
 | GOLD OCR / frozen val | нет; SILVER и n=6 не закрывают I/J |
 | Пять инспекторов Gate K | рекордер есть; сессий нет |
-| RabbitMQ + MinIO + outbox workers | compose есть; HTTP гоняет pipeline inline |
+| RabbitMQ + MinIO + outbox workers | relay→брокер есть; HTTP inline; РиН нет |
 | OIDC/JWKS, TLS 1.3, AV, backup | не production |
 | SOTA bake-off OCR/VLM | нужен собственный GOLD, не общий leaderboard |
 
@@ -55,11 +57,11 @@
 
 ## Порядок следующих слайсов
 
-1. Crash-before-commit / timeout-after-commit для finalize (race retry и
-   гонка `(object_id, version)` уже в CI job `db`).
+1. Crash-before-commit / timeout-after-commit для finalize (race retry,
+   гонка version и SKIP LOCKED outbox уже в CI job `db`).
 2. Пять сессий Gate K → `USABILITY_RESULTS.md`.
 3. Независимый GOLD OCR и frozen val по `object_id` (поставка, не код).
-4. Outbox relay → RabbitMQ worker; `202` без inline L1–L7.
+4. Inbox consumer + sandbox РиН. Outbox→брокер не равен доставке в РиН.
 5. Экстракторы семействами, сначала критические; каждое правило — fixtures.
 6. UI на реальной очереди и crop из сохранённых координат.
 7. РиН adapter + тестовый crypto provider, без заявления production УКЭП.
