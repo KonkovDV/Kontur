@@ -38,6 +38,11 @@ def test_canonical_json_is_order_independent() -> None:
     left = canonical_protocol_json({"b": 1, "a": {"z": 2, "y": 3}})
     right = canonical_protocol_json({"a": {"y": 3, "z": 2}, "b": 1})
     assert left == right
+    from kontur.infrastructure.db.process_store import protocol_payload_sha256
+
+    assert protocol_payload_sha256({"b": 1, "a": 2}) == protocol_payload_sha256(
+        {"a": 2, "b": 1}
+    )
 
 
 def test_reject_placeholder_payload() -> None:

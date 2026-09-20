@@ -15,10 +15,11 @@ INSERT INTO object_splits (object_id, dataset_version, split)
 VALUES ('obj-check', 'v1', 'train');
 INSERT INTO protocols (
     id, object_id, version, matrix_version, dataset_version, model_version,
-    input_manifest_hash, status, payload, finalized_at
+    input_manifest_hash, status, payload, payload_sha256, finalized_at
 ) VALUES (
     'proto-check', 'obj-check', 1, 'draft-0', 'v1', 'm-0',
-    'hash', 'PROTOCOL_FINALIZED', '{}'::jsonb, now()
+    'hash', 'PROTOCOL_FINALIZED', '{}'::jsonb,
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', now()
 );
 
 -- 1. Финализированный протокол неизменяем.
@@ -214,10 +215,11 @@ INSERT INTO dataset_items (
 -- 13. Выгрузка смотрит на статус протокола, не только на process_state.
 INSERT INTO protocols (
     id, object_id, version, matrix_version, dataset_version, model_version,
-    input_manifest_hash, status, payload
+    input_manifest_hash, status, payload, payload_sha256
 ) VALUES (
     'proto-open', 'obj-check', 2, 'draft-0', 'v1', 'm-0',
-    'hash-2', 'VERIFICATION_COMPLETED', '{}'::jsonb
+    'hash-2', 'VERIFICATION_COMPLETED', '{}'::jsonb,
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 );
 
 DO $$
@@ -299,11 +301,12 @@ $$;
 -- 17. Финализированный internal_placeholder нельзя перевести в очередь выгрузки.
 INSERT INTO protocols (
     id, object_id, version, matrix_version, dataset_version, model_version,
-    input_manifest_hash, status, payload, finalized_at
+    input_manifest_hash, status, payload, payload_sha256, finalized_at
 ) VALUES (
     'proto-placeholder-check', 'obj-check', 3, 'draft-0', 'v1', 'm-0',
     'hash-placeholder', 'PROTOCOL_FINALIZED',
-    '{"kind":"internal_placeholder","assembled":true}'::jsonb, now()
+    '{"kind":"internal_placeholder","assembled":true}'::jsonb,
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', now()
 );
 INSERT INTO processes (
     id, object_id, process_state, scenario, matrix_version, model_version,
@@ -327,11 +330,12 @@ $$;
 -- 18. Финализированный payload с JSON boolean assembled=false нельзя выгружать.
 INSERT INTO protocols (
     id, object_id, version, matrix_version, dataset_version, model_version,
-    input_manifest_hash, status, payload, finalized_at
+    input_manifest_hash, status, payload, payload_sha256, finalized_at
 ) VALUES (
     'proto-unassembled-check', 'obj-check', 4, 'draft-0', 'v1', 'm-0',
     'hash-unassembled', 'PROTOCOL_FINALIZED',
-    '{"kind":"materialized","assembled":false}'::jsonb, now()
+    '{"kind":"materialized","assembled":false}'::jsonb,
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', now()
 );
 INSERT INTO processes (
     id, object_id, process_state, scenario, matrix_version, model_version,
@@ -355,11 +359,12 @@ $$;
 -- 19. Отсутствующий assembled не считается false и разрешает запрос выгрузки.
 INSERT INTO protocols (
     id, object_id, version, matrix_version, dataset_version, model_version,
-    input_manifest_hash, status, payload, finalized_at
+    input_manifest_hash, status, payload, payload_sha256, finalized_at
 ) VALUES (
     'proto-no-assembled-check', 'obj-check', 5, 'draft-0', 'v1', 'm-0',
     'hash-no-assembled', 'PROTOCOL_FINALIZED',
-    '{"kind":"materialized"}'::jsonb, now()
+    '{"kind":"materialized"}'::jsonb,
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', now()
 );
 INSERT INTO processes (
     id, object_id, process_state, scenario, matrix_version, model_version,

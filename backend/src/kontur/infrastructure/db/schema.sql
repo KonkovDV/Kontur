@@ -143,6 +143,8 @@ CREATE TABLE protocols (
                             'VERIFICATION_COMPLETED', 'PROTOCOL_FINALIZED'
                         )),
     payload             JSONB NOT NULL,
+    payload_sha256      CHAR(64) NOT NULL
+                        CHECK (payload_sha256 ~ '^[a-f0-9]{64}$'),
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     finalized_at        TIMESTAMPTZ,
     supersedes_version  INTEGER,
@@ -168,11 +170,11 @@ BEGIN
     THEN
         IF (NEW.id, NEW.object_id, NEW.version, NEW.matrix_version,
             NEW.dataset_version, NEW.model_version, NEW.input_manifest_hash,
-            NEW.payload, NEW.created_at, NEW.supersedes_version)
+            NEW.payload, NEW.payload_sha256, NEW.created_at, NEW.supersedes_version)
            IS DISTINCT FROM
            (OLD.id, OLD.object_id, OLD.version, OLD.matrix_version,
             OLD.dataset_version, OLD.model_version, OLD.input_manifest_hash,
-            OLD.payload, OLD.created_at, OLD.supersedes_version)
+            OLD.payload, OLD.payload_sha256, OLD.created_at, OLD.supersedes_version)
         THEN
             RAISE EXCEPTION
                 'отмена финализации протокола % не может менять содержимое', OLD.id
@@ -396,5 +398,23 @@ CREATE TABLE audit_log (
 
 CREATE INDEX audit_log_object_ts ON audit_log (object_id, timestamp);
 CREATE INDEX audit_log_process_ts ON audit_log (process_id, timestamp);
+
+CREATE TABLE integration_outbox (
+    id                  TEXT PRIMARY KEY,
+    process_id          TEXT NOT NULL REFERENCES processes (id),
+    protocol_id         TEXT NOT NULL REFERENCES protocols (id),
+    destination         TEXT NOT NULL DEFAULT 'RIN'
+                        CHECK (destination IN ('RIN')),
+    payload_sha256      CHAR(64) NOT NULL
+                        CHECK (payload_sha256 ~ '^[a-f0-9]{64}$'),
+    status              TEXT NOT NULL DEFAULT 'PENDING'
+                        CHECK (status IN (
+                            'PENDING', 'DELIVERING', 'DELIVERED', 'FAILED_TERMINAL'
+                        )),
+    attempts            SMALLINT NOT NULL DEFAULT 0
+                        CHECK (attempts BETWEEN 0 AND 4),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (protocol_id, destination)
+);
 
 -- Остальные таблицы сводки ТЗ п. 10 добавляются миграциями по мере реализации модулей.

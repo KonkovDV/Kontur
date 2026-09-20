@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0.0",
+  "generated_on": "2026-09-20",
+  "purpose": "Engineering completeness tracks. Not TZ acceptance and not published P/R/F1/CA.",
+  "closes_gate_i": false,
+  "closes_gate_j": false,
+  "closes_gate_k": false,
+  "closes_gate_l": false,
+  "not_tz_percentage": true,
+  "coverage_counts": {
+    "advisory": 0,
+    "executable": 29,
+    "extractor_missing": 103,
+    "not_applicable": 0,
+    "source_missing": 0,
+    "declared": 132,
+    "expected_total": 132
+  },
+  "tracks": {
+    "code": [
+      {
+        "id": "matrix_declared_132",
+        "state": "met",
+        "detail": "declared=132"
+      },
+      {
+        "id": "matrix_executable_132",
+        "state": "unmet",
+        "detail": "executable=29 extractor_missing=103"
+      },
+      {
+        "id": "http_vector_pipeline",
+        "state": "partial",
+        "detail": "L1-L7 upload; OCR UNAVAILABLE"
+      },
+      {
+        "id": "protocol_atomic_materialization",
+        "state": "partial",
+        "detail": "PR #64 plus lock/sha/outbox"
+      },
+      {
+        "id": "rin_sandbox",
+        "state": "unmet",
+        "detail": "retry policy only; no sandbox contract"
+      },
+      {
+        "id": "async_rabbit_outbox_workers",
+        "state": "unmet",
+        "detail": "HTTP still runs pipeline inline"
+      },
+      {
+        "id": "split_finding",
+        "state": "unmet",
+        "detail": "GAP-SPLIT NotImplementedError"
+      }
+    ],
+    "acceptance": [
+      {
+        "id": "gold_ocr",
+        "state": "unmet",
+        "detail": "ocr_text UNAVAILABLE; SILVER is not GOLD"
+      },
+      {
+        "id": "frozen_val_132",
+        "state": "unmet",
+        "detail": "no frozen val; 6 gold positives < n=16"
+      },
+      {
+        "id": "gate_i",
+        "state": "unmet",
+        "detail": "GAP-CAP-OCR / GAP-IOS4-VAL open"
+      },
+      {
+        "id": "gate_j",
+        "state": "unmet",
+        "detail": "closes_gate_j false"
+      },
+      {
+        "id": "gate_k",
+        "state": "unmet",
+        "detail": "recorder landed; no five sessions"
+      },
+      {
+        "id": "gate_l_tz",
+        "state": "unmet",
+        "detail": "GHA /status measured; not production SLA"
+      }
+    ],
+    "production": [
+      {
+        "id": "jwt_rs256",
+        "state": "partial",
+        "detail": "static key containment; not OIDC/JWKS"
+      },
+      {
+        "id": "container_hardening",
+        "state": "partial",
+        "detail": "PR #60 non-root loopback; not TLS 1.3"
+      },
+      {
+        "id": "oidc_jwks",
+        "state": "unmet",
+        "detail": "no rotation"
+      },
+      {
+        "id": "antivirus",
+        "state": "unmet",
+        "detail": "intake MIME/zip-bomb only"
+      },
+      {
+        "id": "branch_protection",
+        "state": "unmet",
+        "detail": "main unprotected"
+      },
+      {
+        "id": "observability_otel",
+        "state": "unmet",
+        "detail": "no Prometheus/Grafana stack"
+      }
+    ]
+  },
+  "contest_rc": [
+    "safe postgres finalize",
+    "gate_k five inspectors",
+    "honest coverage report",
+    "no machine CONFIRMED_VIOLATION",
+    "measured gate L not SLA"
+  ],
+  "deadline": "2026-09-29T23:59:00+03:00",
+  "note": "100% TZ is unreachable without GOLD OCR, frozen val and five inspectors."
+}

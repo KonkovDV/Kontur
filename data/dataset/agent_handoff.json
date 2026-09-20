@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-20",
-  "export_git_sha": "14a21dffdd3d65b301f5f073e222ce4e7b08fd83",
+  "export_git_sha": "4bc41a28278e6dd1e06b3a0beb67d05b7b0ccdc7",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -95,7 +95,9 @@
     "dataset_package": "docs/DATASET_PACKAGE.md",
     "questions_to_organizer": "docs/QUESTIONS_TO_ORGANIZER.md",
     "train_public_module": "backend/src/kontur/evaluation/train_public.py",
-    "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py"
+    "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py",
+    "tz_scorecard": "data/dataset/tz_scorecard.json",
+    "extractor_families": "data/matrix/extractor_families.json"
   },
   "leftover_refs_do_not_merge": [
     "feat/ocr-gate-i-crop3x-oem1",
