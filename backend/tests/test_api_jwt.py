@@ -13,7 +13,6 @@ from fastapi.testclient import TestClient
 
 from kontur.application.runtime import ProcessWorkspace
 from kontur.presentation.api import app
-
 PDF = b"%PDF-1.7\n1 0 obj\n<<>>\nendobj\n"
 ISSUER = "https://issuer.test/"
 AUDIENCE = "kontur-api"
@@ -22,7 +21,6 @@ AUDIENCE = "kontur-api"
 @pytest.fixture
 def rsa_private() -> rsa.RSAPrivateKey:
     return rsa.generate_private_key(public_exponent=65537, key_size=2048)
-
 
 @pytest.fixture
 def client(
@@ -45,7 +43,6 @@ def client(
     finally:
         app.state.workspace = previous_workspace
 
-
 def _claims(**changes: object) -> dict[str, object]:
     now = datetime.now(UTC)
     claims: dict[str, object] = {
@@ -60,7 +57,6 @@ def _claims(**changes: object) -> dict[str, object]:
     claims.update(changes)
     return claims
 
-
 def _headers(
     private: object,
     algorithm: str = "RS256",
@@ -72,7 +68,6 @@ def _headers(
 
 def _status(client: TestClient, headers: dict[str, str]) -> object:
     return client.get("/api/v1/processes/not-created/status", headers=headers)
-
 
 @pytest.mark.parametrize(
     "changes",
@@ -94,7 +89,6 @@ def test_invalid_jwt_is_401_without_side_effects(
     assert response.json() == {"detail": "authentication required"}
     assert app.state.workspace._items == {}
 
-
 def test_forged_jwt_is_401_without_side_effects(
     client: TestClient,
     rsa_private: rsa.RSAPrivateKey,
@@ -103,7 +97,6 @@ def test_forged_jwt_is_401_without_side_effects(
     response = _status(client, _headers(attacker))
     assert response.status_code == 401
     assert app.state.workspace._items == {}
-
 
 def test_malformed_dotted_token_is_401_even_with_dev_flag(
     client: TestClient,
@@ -117,14 +110,12 @@ def test_malformed_dotted_token_is_401_even_with_dev_flag(
     assert response.status_code == 401
     assert app.state.workspace._items == {}
 
-
 def test_legacy_token_is_401_by_default(client: TestClient) -> None:
     response = _status(
         client,
         {"Authorization": "Bearer insp-7@OBJ-001/INSPECTOR"},
     )
     assert response.status_code == 401
-
 
 @pytest.mark.parametrize("roles", [["UNKNOWN"], ["ADMIN"]])
 def test_unknown_or_insufficient_role_is_403(
@@ -140,7 +131,6 @@ def test_unknown_or_insufficient_role_is_403(
     )
     assert response.status_code == 403
     assert app.state.workspace._items == {}
-
 
 def test_missing_object_scope_on_object_endpoint_is_403(
     client: TestClient,
@@ -158,6 +148,28 @@ def test_missing_object_scope_on_object_endpoint_is_403(
     assert response.status_code == 403
     assert app.state.workspace._items == {}
 
+def test_objectless_jwt_is_limited_to_non_object_bound_endpoints(
+    client: TestClient,
+    rsa_private: rsa.RSAPrivateKey,
+) -> None:
+    assert client.get("/api/v1/healthz").status_code == 200
+
+    claims = _claims()
+    del claims["object_id"]
+    token = jwt.encode(claims, rsa_private, algorithm="RS256")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    capabilities = client.get("/api/v1/system/capabilities", headers=headers)
+    assert capabilities.status_code == 200
+
+    denied = client.post(
+        "/api/v1/documents/upload",
+        headers=headers,
+        data={"object_id": "OBJ-001", "doc_stage": "PD"},
+        files=[("files", ("pz.pdf", PDF, "application/pdf"))],
+    )
+    assert denied.status_code == 403
+    assert app.state.workspace._items == {}
 
 def test_valid_es256_happy_path(
     client: TestClient,
@@ -178,7 +190,6 @@ def test_valid_es256_happy_path(
     )
     assert response.status_code == 202
 
-
 def test_valid_wrong_object_is_403_without_side_effects(
     client: TestClient,
     rsa_private: rsa.RSAPrivateKey,
@@ -196,7 +207,6 @@ def test_valid_wrong_object_is_403_without_side_effects(
     snapshot = record.to_status()
     files_before = tuple(record.files)
     audit_before = tuple(record.audit.records)
-
     denied = client.get(
         f"/api/v1/processes/{process_id}/status",
         headers=_headers(rsa_private, object_id="OBJ-OTHER"),
