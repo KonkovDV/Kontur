@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e "backend[dev]"
+      - run: pip install jsonschema pyyaml
       - name: Схемы и OpenAPI разбираются
         run: python scripts/check_contracts.py
 
@@ -82,3 +82,143 @@ jobs:
         run: npm install
       - name: Проверка типов TypeScript (noEmit в tsconfig.json)
         run: npx tsc --noEmit
+
+  container-config:
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate base and offline compose contracts
+        run: |
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.offline.yml config --quiet
+
+  container-core:
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build core image
+        run: docker compose build core
+      - name: Verify core runtime contract and multiprocessing spawn
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh core -ec '
+            test "$(id -u)" = 10001
+            test "$(id -g)" = 10001
+            if touch /app/.container-core-write-test; then
+              echo "expected /app to reject writes" >&2
+              exit 1
+            fi
+            touch /tmp/container-core-write-test
+            rm /tmp/container-core-write-test
+            touch /dev/shm/container-core-write-test
+            rm /dev/shm/container-core-write-test
+            tesseract --version >/dev/null
+            python -c '\''from kontur.infrastructure.pdf_guard import run_pdf_parse_sync; result = run_pdf_parse_sync(len, b"kontur", timeout_s=10); assert result == 6, result'\''
+          '
+
+  container-gateway:
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build gateway image
+        run: docker compose build gateway
+      - name: Verify gateway runtime contract
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh gateway -ec '
+            test "$(id -u)" = 10001
+            test "$(id -g)" = 10001
+            if touch /app/.container-gateway-write-test; then
+              echo "expected /app to reject writes" >&2
+              exit 1
+            fi
+            touch /tmp/container-gateway-write-test
+            rm /tmp/container-gateway-write-test
+          '
+
+  container-smoke:
+    needs: [container-config, container-core, container-gateway]
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start core and gateway
+        run: |
+          docker compose build core gateway
+          docker compose up -d --no-deps core gateway
+      - name: Verify health and hardened runtime configuration
+        run: |
+          set -euo pipefail
+
+          wait_for_health() {
+            local url="$1"
+            local attempt
+            for attempt in $(seq 1 30); do
+              if curl --fail --silent --show-error \
+                --connect-timeout 2 --max-time 5 "$url" >/dev/null; then
+                return 0
+              fi
+              if [ "$attempt" -eq 30 ]; then
+                echo "health check failed after $attempt attempts: $url" >&2
+                return 1
+              fi
+              sleep 2
+            done
+          }
+
+          assert_container() {
+            local service="$1"
+            local container_id
+            container_id="$(docker compose ps -q "$service")"
+            test -n "$container_id"
+            test "$(docker inspect --format '{{.Config.User}}' "$container_id")" = "10001:10001"
+            test "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$container_id")" = "true"
+            docker inspect --format '{{json .HostConfig.CapDrop}}' "$container_id" \
+              | jq -e 'map(ascii_upcase) | index("ALL") != null' >/dev/null
+            docker inspect --format '{{json .HostConfig.SecurityOpt}}' "$container_id" \
+              | jq -e 'any(. == "no-new-privileges:true")' >/dev/null
+            docker inspect --format '{{json .HostConfig.Tmpfs}}' "$container_id" \
+              | jq -e 'has("/tmp")' >/dev/null
+          }
+
+          wait_for_health http://127.0.0.1:8000/api/v1/healthz
+          wait_for_health http://127.0.0.1:3000/healthz
+
+          assert_container core
+          assert_container gateway
+
+          core_id="$(docker compose ps -q core)"
+          gateway_id="$(docker compose ps -q gateway)"
+          docker inspect --format '{{json .NetworkSettings.Ports}}' "$core_id" \
+            | jq -e '."8000/tcp" | length > 0 and all(.[]; .HostIp == "127.0.0.1")' >/dev/null
+          docker inspect --format '{{json .NetworkSettings.Ports}}' "$gateway_id" \
+            | jq -e '."3000/tcp" | length > 0 and all(.[]; .HostIp == "127.0.0.1")' >/dev/null
+      - name: Diagnose compose failure
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs core gateway
+      - name: Cleanup containers
+        if: always()
+        run: docker compose down -v --remove-orphans

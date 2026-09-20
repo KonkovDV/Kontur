@@ -5,7 +5,7 @@ services:
       POSTGRES_DB: kontur
       POSTGRES_USER: kontur
       POSTGRES_PASSWORD: kontur
-    ports: ["5432:5432"]
+    ports: ["127.0.0.1:5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/src/kontur/infrastructure/db/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
@@ -13,12 +13,12 @@ services:
   redis:
     image: redis:7-alpine
     # Кеш парсинга по хешу файла (ТЗ п. 9.1, шаг 5). Не durable queue.
-    ports: ["6379:6379"]
+    ports: ["127.0.0.1:6379:6379"]
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     # Очередь по ТЗ п. 1.5. Доставка at-least-once, идемпотентность — на стороне ядра.
-    ports: ["5672:5672", "15672:15672"]
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
 
   minio:
     image: minio/minio:latest
@@ -26,7 +26,7 @@ services:
     environment:
       MINIO_ROOT_USER: kontur
       MINIO_ROOT_PASSWORD: kontur-dev-secret
-    ports: ["9000:9000", "9001:9001"]
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
     volumes:
       - minio:/data
 
@@ -35,6 +35,13 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     command: uvicorn kontur.presentation.api:app --host 0.0.0.0 --port 8000
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     environment:
       KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
       KONTUR_REDIS_URL: redis://redis:6379/0
@@ -45,14 +52,21 @@ services:
       KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY}
       KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
     depends_on: [postgres, redis, rabbitmq, minio]
-    ports: ["8000:8000"]
+    ports: ["127.0.0.1:8000:8000"]
 
   gateway:
     build: ./gateway
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     environment:
       KONTUR_CORE_URL: http://core:8000
     depends_on: [core]
-    ports: ["3000:3000"]
+    ports: ["127.0.0.1:3000:3000"]
 
 volumes:
   pgdata:

@@ -42,6 +42,7 @@ ocr-pilot:     ## SILVER CA пилота в Docker (Tesseract). Не закры�
 	mkdir -p out
 	$(DC) build core
 	$(DC) run --rm --no-deps \
+		--user "$$(id -u):$$(id -g)" \
 		-v "$(CURDIR)/files:/app/files:ro" \
 		-v "$(CURDIR)/out:/app/out" \
 		-e KONTUR_ROOT=/app \
