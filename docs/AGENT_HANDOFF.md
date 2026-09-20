@@ -41,9 +41,10 @@ PostgreSQL `save()` финализации fail-closed (PR #64): без атом
 application-слое, JSON пишется в той же транзакции, что и процесс;
 `UNIQUE (object_id, version)`; повтор с тем же каноническим JSON идемпотентен,
 расхождение — конфликт. Без `connection.transaction()` финализация отклоняется.
-Поверх этого: advisory lock объекта, `FOR UPDATE` процесса/находок/протоколов,
-`payload_sha256`, `integration_outbox` PENDING. Живого Postgres concurrency-теста
-нет. Это не sandbox РиН.
+PR #65 влит: advisory lock объекта, `FOR UPDATE` процесса/находок/протоколов,
+`payload_sha256`, `integration_outbox` PENDING, ADR-0009. Живого Postgres
+concurrency-теста нет. Это не sandbox РиН. Очередь PR пуста; работа только с
+зелёного `main`.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
@@ -53,7 +54,8 @@ application-слое, JSON пишется в той же транзакции, �
 
 ## Что нельзя
 
-- Вливать `feat/ocr-gate-i-crop3x-oem1` и `feat/ocr-300dpi-step2-verifying` (усечённый `ocr_tesseract.py`).
+- Вливать `feat/ocr-gate-i-crop3x-oem1` (`16f3a06`) и
+  `feat/ocr-300dpi-step2-verifying` (`2ddc2b3`, усечённый `ocr_tesseract.py`).
 - Открывать TEST_HIDDEN / `РАЗМЕЧЕННЫЙ_TEST__213` / Речников для порогов.
 - Распаковывать `ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip` для порогов, prompt и regex.
 - Считать пакет без ответов v2.0 frozen val или закрытием гейта J.

@@ -9,7 +9,7 @@ Hidden test не открывался. Публичные SOTA-цифры на �
 
 ## Поправки к внешнему memo
 
-1. SHA `695d9c7` / «PR #64 открыт» — устарели. #64 влит; scorecard/lock — PR #65.
+1. SHA `695d9c7` / «PR #64 открыт» — устарели. #64 и #65 влиты в `main`.
 2. `assemble_protocol()` **намеренно** без `kind`/`assembled`: схема ТЗ
    `additionalProperties: false`. Predicate
    `kind IS DISTINCT FROM 'materialized'` **запрещён** — отклонит валидный протокол.
