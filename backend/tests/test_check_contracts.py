@@ -22,9 +22,7 @@ def current_spec() -> dict[str, object]:
     return spec
 
 
-def _operation(
-    spec: dict[str, object], operation_id: str
-) -> dict[str, object]:
+def _operation(spec: dict[str, object], operation_id: str) -> dict[str, object]:
     for _, _, operation in iter_operations(spec):
         if operation.get("operationId") == operation_id:
             return operation
@@ -64,9 +62,7 @@ def test_operation_methods_are_complete_and_ignore_path_parameters() -> None:
     assert discovered == expected
 
 
-def test_second_public_endpoint_is_rejected(
-    current_spec: dict[str, object],
-) -> None:
+def test_second_public_endpoint_is_rejected(current_spec: dict[str, object]) -> None:
     spec = copy.deepcopy(current_spec)
     _operation(spec, "getSystemCapabilities")["security"] = []
 
@@ -79,9 +75,7 @@ def test_second_public_endpoint_is_rejected(
     )
 
 
-def test_duplicate_operation_id_is_rejected(
-    current_spec: dict[str, object],
-) -> None:
+def test_duplicate_operation_id_is_rejected(current_spec: dict[str, object]) -> None:
     spec = copy.deepcopy(current_spec)
     _operation(spec, "getProcessStatus")["operationId"] = "uploadDocuments"
 
