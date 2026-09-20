@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-20",
-  "export_git_sha": "6501930112884eda3b83c54c5de09da8681c2243",
+  "export_git_sha": "61c0275c62b95e50aa7e2d8d218195750d4f04fb",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -23,7 +23,7 @@
     "1_ocr_in_request": "code_landed_gate_i_open",
     "2_inspector_queue": "landed",
     "3_train_public": "harness_landed_run_opt_in",
-    "4_gate_k_usability": "form_only_no_sessions",
+    "4_gate_k_usability": "recorder_landed_no_sessions",
     "5_gate_l_k6": "measured_on_gha_not_production_sla"
   },
   "open_gaps": [

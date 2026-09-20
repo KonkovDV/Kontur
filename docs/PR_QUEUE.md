@@ -43,6 +43,7 @@
 | #59 | Фактические байты upload: middleware считает `http.request`, файл читается чанками; 413 с `BATCH_LIMIT_EXCEEDED` / `FILE_TOO_LARGE`; смешанный accept/reject сохранён |
 | #60 | non-root UID/GID 10001, read-only rootfs, `cap_drop: ALL`, `no-new-privileges`, порты только loopback; smoke tests контейнеров |
 | upload retry | повтор hash+stage не `reopen_for_upload` и не pipeline; FINALIZED → 409; правка `runtime.py`/`api.py`, без monkeypatch |
+| #62 | учебный рекордер Gate K: JSON `kontur-usability-v1`, `MISSING_EVIDENCE` нельзя CONFIRM/REJECT; сессий нет, гейт открыт |
 
 ## Что не брали
 

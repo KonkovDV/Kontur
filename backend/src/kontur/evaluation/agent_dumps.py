@@ -120,7 +120,7 @@ def build_handoff(
             "1_ocr_in_request": "code_landed_gate_i_open",
             "2_inspector_queue": "landed",
             "3_train_public": "harness_landed_run_opt_in",
-            "4_gate_k_usability": "form_only_no_sessions",
+            "4_gate_k_usability": "recorder_landed_no_sessions",
             "5_gate_l_k6": "measured_on_gha_not_production_sla",
         },
         "open_gaps": [

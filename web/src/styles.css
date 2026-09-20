@@ -97,15 +97,24 @@ select {
 }
 
 .actions {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin: 1rem 0;
+}
+
+.actions button:last-child {
+  margin-left: auto;
 }
 
 .actions button,
 .summary button {
   min-height: 2.75rem;
+}
+
+.missing-hint {
+  margin: 0.75rem 0 0;
+  color: #62584c;
 }
 
 .summary dl {

@@ -33,6 +33,8 @@ HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/RO
 порты на loopback (PR #60). Повтор идентичной загрузки (hash+stage) не
 открывает процесс заново и не гоняет pipeline; `FINALIZED` → 409.
 `web/` и `gateway/` зафиксированы `package-lock.json`; CI frontend — `npm ci`.
+Учебный рекордер Gate K в `web/` пишет JSON `kontur-usability-v1`; сессий нет,
+`closes_gate_k` false. `MISSING_EVIDENCE` нельзя подтвердить как нарушение.
 `main` по-прежнему без branch protection.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
@@ -57,7 +59,7 @@ HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/RO
 ## Следующие слайсы
 
 1. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
-2. 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21`).
+2. Рекордер кликов в `web/`; 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
 3. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
 4. Экстракторы точечно по списку `extractor_missing` в coverage snapshot.
 5. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.
