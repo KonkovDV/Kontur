@@ -128,3 +128,4 @@ def test_hash_mismatch_is_terminal() -> None:
 def test_claim_sql_uses_skip_locked() -> None:
     assert "FOR UPDATE SKIP LOCKED" in CLAIM_OUTBOX_SQL
     assert "attempts < 4" in CLAIM_OUTBOX_SQL
+    assert "protocol_id = %(protocol_id)s" in CLAIM_OUTBOX_SQL

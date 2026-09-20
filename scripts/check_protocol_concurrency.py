@@ -227,9 +227,13 @@ def _assert_outbox_claim_skips_locked(prefix: str) -> None:
         raise AssertionError(f"setup finalize failed: {outcome}")
     now = datetime.now(tz=UTC)
     lease = now + timedelta(seconds=30)
-    params = {"now": now, "lease_until": lease}
-    conn1 = psycopg.connect(DSN)
-    conn2 = psycopg.connect(DSN)
+    params = {
+        "now": now,
+        "lease_until": lease,
+        "protocol_id": protocol_id,
+    }
+    conn1 = psycopg.connect(DSN, autocommit=False)
+    conn2 = psycopg.connect(DSN, autocommit=False)
     try:
         conn1.execute("BEGIN")
         row1 = conn1.execute(CLAIM_OUTBOX_SQL, params).fetchone()

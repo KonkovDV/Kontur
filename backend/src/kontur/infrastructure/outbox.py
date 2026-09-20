@@ -30,6 +30,7 @@ WITH picked AS (
      WHERE status IN ('PENDING', 'DELIVERING')
        AND available_at <= %(now)s
        AND attempts < 4
+       AND (%(protocol_id)s IS NULL OR protocol_id = %(protocol_id)s)
      ORDER BY created_at
      FOR UPDATE SKIP LOCKED
      LIMIT 1
@@ -232,7 +233,7 @@ def relay_once_memory(
 
 def claim_postgres(connection: object, now: datetime) -> OutboxRow | None:
     cursor = connection.execute(  # type: ignore[attr-defined]
-        CLAIM_OUTBOX_SQL, {"now": now, "lease_until": _lease_until(now)}
+        CLAIM_OUTBOX_SQL, {"now": now, "lease_until": _lease_until(now), "protocol_id": None}
     )
     fetched = cursor.fetchone()
     if fetched is None:
