@@ -86,7 +86,7 @@ JSONL с `object_id`. `closes_gate_j` всегда false.
 | artifact | `docs/USABILITY_RESULTS.md` |
 | test | форма `USABILITY_PROTOCOL.md` заполнена |
 | metric | клики и минуты, не F1 |
-| stop | «форма есть» вместо сессий |
+| stop | «рекордер есть» вместо пяти сессий |
 
 ## Шаг 5 — гейт L
 
