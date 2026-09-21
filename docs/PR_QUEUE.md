@@ -51,6 +51,8 @@
 | #69 | transactional inbox: unique `event_id`, ACK после commit, prefetch 1, poison/DLX. Не `SYNCED`, не Rin ACK |
 | #70 | OpenAPI/check_contracts: JWT RS256/ES256, object_id, ровно healthz публичен; runtime не менялся |
 | #71 | Red Team: `await` aio-pika ack/nack после commit; `x-delivery-count` как prior failures; duplicate POISON → nack DLX |
+| #72 | только тесты: негативные инварианты OpenAPI (второй public, дубль operationId, drift 401/security) |
+| #73 | long-running `inbox-consumer` UID 10001, `queue.iterator()`, reconnect после ambiguous settlement; не Rin ACK |
 
 ## Что не брали
 

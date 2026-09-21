@@ -54,8 +54,11 @@ UID 10001, quorum queue, compose `kontur` не guest; classic
 confirm **не** ставит `SYNCED` (ADR-0011). Transactional inbox (ADR-0012 / PR #69,
 #71): уникальный `event_id`, persist затем `await ack/nack`, prefetch 1,
 poison/DLX; `x-delivery-count` — число прошлых неуспехов. PR #70 уточняет
-контракт JWT/object-scope без смены runtime. Inbox consumer — Compose-сервис
-UID 10001, не бизнес-ACK РиН. Очередь PR пуста; на origin только `main`.
+контракт JWT/object-scope без смены runtime. PR #72 пинит негативные
+инварианты OpenAPI тестами. PR #73: `inbox-consumer` UID 10001, push
+`queue.iterator()`, reconnect сессии после ambiguous settlement без
+повторного nack той же доставки. Не бизнес-ACK РиН. Очередь PR пуста;
+на origin только `main`.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
