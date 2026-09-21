@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/evidence_card.schema.json",
+  "title": "EvidenceCard",
+  "description": "Экран инспектора: две панели фрагментов и карточка правила. Не протокол ТЗ и не закрытие Gate K.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "process_id",
+    "finding",
+    "evidence_group",
+    "rule",
+    "audit",
+    "closes_gate_k"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "kontur.evidence_card.v1"
+    },
+    "process_id": { "type": "string" },
+    "finding": {
+      "$ref": "https://kontur.local/schemas/finding.schema.json"
+    },
+    "evidence_group": {
+      "oneOf": [
+        { "$ref": "https://kontur.local/schemas/evidence_group.schema.json" },
+        { "type": "null" }
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "required": ["code"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "unit": { "type": ["string", "null"] },
+        "comparator": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "operator": { "type": "string" },
+            "tolerance_abs": { "type": ["number", "null"] },
+            "tolerance_rel": { "type": ["number", "null"] },
+            "rounding": { "type": "string" },
+            "unit_target": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "audit": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["actor_id", "action", "payload"],
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": { "type": "string" },
+          "action": { "type": "string" },
+          "payload": { "type": "object", "additionalProperties": true }
+        }
+      }
+    },
+    "closes_gate_k": { "type": "boolean", "const": false }
+  }
+}

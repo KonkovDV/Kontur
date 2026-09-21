@@ -10,7 +10,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 from kontur.application.runtime import ProcessWorkspace
-from kontur.domain.models import Finding
+from kontur.domain.models import (
+    ApprovalStatus,
+    DocStage,
+    DocumentRef,
+    EvidenceFragment,
+    EvidenceGroup,
+    EvidenceRole,
+    Extraction,
+    ExtractionEngine,
+    Finding,
+)
 from kontur.domain.statuses import FindingStatus, ProcessState, ReviewPriority
 from kontur.presentation.api import app
 
@@ -663,3 +673,94 @@ def _seed_completed(client: TestClient, *, with_candidate: bool = False) -> str:
             ),
         )
     return process_id
+
+
+def _attach_group(process_id: str) -> None:
+    polygon = ((0.1, 0.2), (0.3, 0.2), (0.3, 0.4), (0.1, 0.4))
+    digest = "a" * 64
+    document = DocumentRef(
+        file_id="file-pd",
+        file_hash=digest,
+        doc_stage=DocStage.PD,
+        document_code="ПЗ-001",
+        revision="1",
+        approval_status=ApprovalStatus.APPROVED,
+        sheet="ТЭП",
+    )
+    fragment = EvidenceFragment(
+        fragment_id="eg-1-PD",
+        role=EvidenceRole.EXPECTED,
+        document=document,
+        page=1,
+        polygon_source=((72.0, 400.0), (120.0, 400.0), (120.0, 430.0), (72.0, 430.0)),
+        polygon_norm=polygon,
+        extracted=Extraction(
+            raw_token="1250,5",  # noqa: S106
+            engine=ExtractionEngine.VECTOR,
+            engine_version="pdfium",
+            confidence=0.9,
+            normalized_value=1250.5,
+            unit="м²",
+            grounded_in_source_tokens=True,
+        ),
+    )
+    record = app.state.workspace.get(process_id)
+    assert record is not None
+    record.evidence_groups["eg-1"] = EvidenceGroup(
+        evidence_group_id="eg-1",
+        object_id=record.object_id,
+        rule_code="PZ-001",
+        matrix_version="draft-0",
+        fragments=(fragment,),
+    )
+    record.audit.record("insp-7", "REVIEW", {"finding_id": "f-1", "action": "CONFIRM"})
+
+
+def test_evidence_card_requires_token(client: TestClient) -> None:
+    process_id = _seed_completed(client, with_candidate=True)
+    response = client.get(
+        f"/api/v1/processes/{process_id}/findings/f-1/evidence-card"
+    )
+    assert response.status_code == 401
+
+
+def test_evidence_card_rejects_foreign_object(client: TestClient) -> None:
+    process_id = _seed_completed(client, with_candidate=True)
+    response = client.get(
+        f"/api/v1/processes/{process_id}/findings/f-1/evidence-card",
+        headers=OTHER_INSPECTOR,
+    )
+    assert response.status_code == 403
+
+
+def test_evidence_card_returns_fragments_and_does_not_close_gate_k(
+    client: TestClient,
+) -> None:
+    process_id = _seed_completed(client, with_candidate=True)
+    _attach_group(process_id)
+    response = client.get(
+        f"/api/v1/processes/{process_id}/findings/f-1/evidence-card",
+        headers=INSPECTOR,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["schema_version"] == "kontur.evidence_card.v1"
+    assert body["closes_gate_k"] is False
+    assert body["finding"]["finding_status"] == "CANDIDATE"
+    assert body["finding"]["counts_as_violation"] is False
+    fragment = body["evidence_group"]["fragments"][0]
+    assert fragment["extracted"]["raw_token"] == "1250,5"  # noqa: S105
+    assert fragment["page"] == 1
+    assert fragment["document"]["file_hash"] == "a" * 64
+    assert body["rule"]["code"] == "PZ-001"
+    assert body["rule"]["comparator"]["tolerance_abs"] == 0.0
+    assert body["audit"][0]["action"] == "REVIEW"
+
+
+def test_evidence_card_404_for_unknown_finding(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    response = client.get(
+        f"/api/v1/processes/{process_id}/findings/no-such/evidence-card",
+        headers=INSPECTOR,
+    )
+    assert response.status_code == 404

@@ -9,6 +9,7 @@ from fastapi import FastAPI, File, Form, Header, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from kontur.application.evidence_card import build_evidence_card
 from kontur.application.intake import (
     MAX_BATCH_BYTES,
     Rejection,
@@ -19,7 +20,7 @@ from kontur.application.protocol import assemble_protocol, protocol_for_http
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.capabilities import capabilities_payload
-from kontur.domain.models import DocStage
+from kontur.domain.models import DocStage, Finding
 from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError, protocol_status
 from kontur.domain.statuses import Completeness, ProcessState, ReasonCode
@@ -29,6 +30,7 @@ from kontur.infrastructure.db.process_store import (
     ProtocolMaterializationRequiredError,
     TransactionUnavailableError,
 )
+from kontur.infrastructure.matrix.registry import FileRuleRegistry
 from kontur.presentation.auth import actor_from_roles, parse_bearer
 from kontur.presentation.rbac import (
     AuthenticationRequiredError,
@@ -65,6 +67,21 @@ class ReviewRequest(BaseModel):
 class SelectRevisionRequest(BaseModel):
     inspector_id: str = Field(min_length=1)
     comment: str = Field(min_length=1)
+
+
+def _rules() -> FileRuleRegistry:
+    registry = getattr(app.state, "rules", None)
+    if not isinstance(registry, FileRuleRegistry):
+        registry = FileRuleRegistry()
+        app.state.rules = registry
+    return registry
+
+
+def _finding_on_record(record: ProcessRecord, finding_id: str) -> Finding | None:
+    for key, item in record.findings.items():
+        if item.finding_id == finding_id or key == finding_id:
+            return item
+    return None
 
 
 def _workspace() -> ProcessWorkspace:
@@ -419,6 +436,38 @@ def get_audit(
             for actor_id, action, payload in record.audit.records
         ],
     }
+
+
+@app.get(
+    "/api/v1/processes/{process_id}/findings/{finding_id}/evidence-card",
+    response_model=None,
+)
+def get_evidence_card(
+    process_id: str,
+    finding_id: str,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    _subject, _granted, object_id = _require("getEvidenceCard", authorization)
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    finding = _finding_on_record(record, finding_id)
+    if finding is None:
+        return JSONResponse(status_code=404, content={"detail": "находка не найдена"})
+    group = None
+    if finding.evidence_group_id is not None:
+        group = record.evidence_groups.get(finding.evidence_group_id)
+    try:
+        rule = _rules().get(finding.rule_code)
+    except KeyError:
+        rule = {"code": finding.rule_code}
+    return build_evidence_card(
+        process_id=record.process_id,
+        finding=finding,
+        group=group,
+        rule=rule,
+        audit_records=tuple(record.audit.records),
+    )
 
 
 @app.post("/api/v1/findings/{finding_id}/review", response_model=None)

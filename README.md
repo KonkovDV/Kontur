@@ -57,7 +57,7 @@ OCR `UNAVAILABLE`. Frozen val нет. РиН ACK нет. Freeze инфры до 
 contracts/      OpenAPI 3.0 и JSON-схемы обмена (source of truth)
 backend/        Python ≥3.11: домен, применение, инфраструктура, API
 gateway/        Node.js BFF по требованию п.1.5 ТЗ
-web/            React: двухпанельное рабочее место инспектора (каркас)
+web/            React: двухпанельная evidence-карточка инспектора (Gate K открыт)
 data/           Матрица 132, нормативный реестр, реестр поставки, карантин
 docs/           ADR, план, трассируемость ТЗ, Red Team, вопросы организатору
 ```
