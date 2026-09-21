@@ -18,9 +18,9 @@ from kontur.domain.statuses import FindingStatus
 @dataclass(frozen=True, slots=True)
 class Comparison:
     status: FindingStatus
-    expected: float
-    actual: float
-    delta: float
+    expected: str | float | bool
+    actual: str | float | bool
+    delta: str | float
     rationale: str
 
     def __post_init__(self) -> None:
@@ -242,20 +242,52 @@ def compare_class_not_lower(
     )
 
 
+# ── exact text field operator ─────────────────────────────────────────────────
+
+def compare_exact_field(
+    expected: str, actual: str, rule: dict[str, object]
+) -> Comparison:
+    """Сравнение строкового поля без приведения к числу."""
+
+    operator = str(_comparator_dict(rule).get("operator", "eq"))
+    if operator not in {"eq", "ne"}:
+        raise ValueError(f"exact_field: неизвестный operator {operator!r}")
+    equal = expected == actual
+    ok = equal if operator == "eq" else not equal
+    return Comparison(
+        status=FindingStatus.AUTO_NO_DIFFERENCE if ok else FindingStatus.CANDIDATE,
+        expected=expected,
+        actual=actual,
+        delta=0.0 if ok else 1.0,
+        rationale=(
+            f"текстовое поле {operator}: {expected!r} и {actual!r}: "
+            f"{('совпадает' if ok else 'расходится')}"
+        ),
+    )
+
+
 # ── presence operator ─────────────────────────────────────────────────────────
 
 def compare_presence(actual: object, rule: dict[str, object]) -> Comparison:
     """Оператор present: элемент обязан присутствовать.
 
-    actual — любое значение; отсутствие/пустота/None = нарушение.
+    actual — любое значение; отсутствие/пустота/None = отсутствие доказательства.
     """
     present = bool(actual) if actual is not None else False
     return Comparison(
-        status=FindingStatus.AUTO_NO_DIFFERENCE if present else FindingStatus.CANDIDATE,
+        status=(
+            FindingStatus.AUTO_NO_DIFFERENCE
+            if present
+            else FindingStatus.MISSING_EVIDENCE
+        ),
         expected=1.0,
         actual=1.0 if present else 0.0,
         delta=0.0 if present else -1.0,
-        rationale="элемент присутствует" if present else "элемент отсутствует: кандидат",
+        rationale=(
+            "элемент присутствует"
+            if present
+            else "элемент отсутствует: доказательство не сформировано"
+        ),
     )
 
 
@@ -288,6 +320,8 @@ def compare_values(expected: object, actual: object, rule: dict[str, object]) ->
             float(actual),  # type: ignore[arg-type]
             rule,
         )
+    if operator in {"eq", "ne"} and isinstance(expected, str) and isinstance(actual, str):
+        return compare_exact_field(expected, actual, rule)
     if operator in {"eq", "ne", "lt", "le", "gt", "ge"}:
         return compare_ordering(
             float(expected),  # type: ignore[arg-type]

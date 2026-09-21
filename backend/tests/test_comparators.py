@@ -284,15 +284,16 @@ class TestComparePresence:
         assert r.status == FindingStatus.AUTO_NO_DIFFERENCE
         assert r.actual == 1.0
 
-    def test_none_is_candidate(self) -> None:
+    def test_none_is_missing_evidence(self) -> None:
         rule = _rule("present")
         r = compare_presence(None, rule)
-        assert r.status == FindingStatus.CANDIDATE
+        assert r.status == FindingStatus.MISSING_EVIDENCE
+        assert r.status is not FindingStatus.CANDIDATE
         assert r.actual == 0.0
 
-    def test_empty_string_is_candidate(self) -> None:
+    def test_empty_string_is_missing_evidence(self) -> None:
         rule = _rule("present")
-        assert compare_presence("", rule).status == FindingStatus.CANDIDATE
+        assert compare_presence("", rule).status == FindingStatus.MISSING_EVIDENCE
 
     def test_nonzero_float_is_present(self) -> None:
         rule = _rule("present")
@@ -300,7 +301,7 @@ class TestComparePresence:
 
     def test_zero_float_is_absent(self) -> None:
         rule = _rule("present")
-        assert compare_presence(0.0, rule).status == FindingStatus.CANDIDATE
+        assert compare_presence(0.0, rule).status == FindingStatus.MISSING_EVIDENCE
 
 
 # ── compare_values роутер ────────────────────────────────────────────────────
@@ -349,7 +350,8 @@ class TestCompareValues:
     def test_routes_present(self) -> None:
         rule = _rule("present")
         r = compare_values("", None, rule)
-        assert r.status == FindingStatus.CANDIDATE
+        assert r.status == FindingStatus.MISSING_EVIDENCE
+        assert r.status is not FindingStatus.CANDIDATE
 
     def test_unknown_operator_raises(self) -> None:
         rule = _rule("fuzzy_match")

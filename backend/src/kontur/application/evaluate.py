@@ -27,7 +27,12 @@ from kontur.application.extractors.number import (
     extract_number,
     parse_number_from_text,
 )
-from kontur.application.extractors.text import TextHit, extract_text
+from kontur.application.extractors.text import (
+    TextHit,
+    extract_exact_field,
+    extract_presence,
+    extract_text,
+)
 from kontur.application.pipeline import Stage, StageResult, run
 from kontur.application.revision_resolver import (
     ResolveStatus,
@@ -67,7 +72,13 @@ _STAGE_ROLE: dict[DocStage, EvidenceRole] = {
 }
 
 #: Типы экстракторов, работающих с текстом / enum-значениями.
-_TEXT_EXTRACTOR_TYPES: frozenset[str] = frozenset({"enum", "text_regex"})
+_TEXT_EXTRACTOR_TYPES: frozenset[str] = frozenset({
+    "enum",
+    "text_regex",
+    "exact_field",
+    "presence",
+})
+_EXACT_FIELD_OPERATORS: frozenset[str] = frozenset({"eq", "ne"})
 _TEXT_OPERATORS: frozenset[str] = STRING_OPERATORS | SET_OPERATORS | PRESENCE_OPERATORS
 
 
@@ -290,14 +301,18 @@ def evaluate_rule(
     extractor_type = extractor.get("type") if isinstance(extractor, dict) else None
     operator = comparator.get("operator") if isinstance(comparator, dict) else None
     is_text = extractor_type in _TEXT_EXTRACTOR_TYPES
-    valid_operators = _TEXT_OPERATORS if is_text else NUMERIC_OPERATORS
+    if extractor_type == "exact_field":
+        valid_operators = _EXACT_FIELD_OPERATORS
+    else:
+        valid_operators = _TEXT_OPERATORS if is_text else NUMERIC_OPERATORS
 
     if extractor_type not in ("number", *_TEXT_EXTRACTOR_TYPES):
         return _halt(
             rule,
             Stage.L6_MATRIX,
             FindingStatus.CLARIFICATION_REQUIRED,
-            f"слайс исполняет extractor.type=number/enum/text_regex, получено {extractor_type!r}",
+                f"слайс исполняет extractor.type=number/enum/text_regex/exact_field/presence, "
+                f"получено {extractor_type!r}",
         )
     if not isinstance(comparator, dict) or operator not in valid_operators:
         return _halt(
@@ -412,7 +427,12 @@ def evaluate_rule(
                     prior=identity_ok,
                     missing_stage=stage,
                 )
-            hit = extract_text(stage_page.tokens, rule)
+            if extractor_type == "exact_field":
+                hit = extract_exact_field(stage_page.tokens, rule)
+            elif extractor_type == "presence":
+                hit = extract_presence(stage_page.tokens, rule)
+            else:
+                hit = extract_text(stage_page.tokens, rule)
             if hit is None:
                 return _halt(
                     rule,
@@ -630,3 +650,4 @@ def evaluate_rule(
         pages=pages,
     )
     return RuleEvaluation(finding=finding, evidence_group=group, stages=stages)
+
