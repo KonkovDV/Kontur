@@ -17,7 +17,6 @@ jobs:
       - run: ruff check backend scripts
       - run: mypy --strict backend/src
       - run: pytest backend/tests -q
-
   contracts:
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +27,6 @@ jobs:
       - run: pip install jsonschema pyyaml
       - name: Схемы и OpenAPI разбираются
         run: python scripts/check_contracts.py
-
   db:
     runs-on: ubuntu-latest
     services:
@@ -68,7 +66,6 @@ jobs:
         env:
           KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
         run: python scripts/check_inbox.py
-
   claims:
     runs-on: ubuntu-latest
     steps:
@@ -78,7 +75,6 @@ jobs:
           python-version: "3.12"
       - name: Честность публичных формулировок
         run: python scripts/check_claims.py
-
   frontend:
     # RT-2609-18: проверка типов TypeScript в web/
     runs-on: ubuntu-latest
@@ -96,7 +92,6 @@ jobs:
         run: npm ci
       - name: Проверка типов TypeScript (noEmit в tsconfig.json)
         run: npx tsc --noEmit
-
   container-config:
     runs-on: ubuntu-latest
     env:
@@ -109,9 +104,54 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate base and offline compose contracts
         run: |
+          set -euo pipefail
+
           docker compose config --quiet
           docker compose -f docker-compose.yml -f docker-compose.offline.yml config --quiet
+          docker compose config --format json > /tmp/compose-base.json
+          docker compose -f docker-compose.yml -f docker-compose.offline.yml \
+            config --format json > /tmp/compose-offline.json
 
+          cat > /tmp/expected-compose-limits.json <<'JSON'
+          {
+            "core": {"mem_limit": 2147483648, "cpus": 2.0, "pids_limit": 256},
+            "gateway": {"mem_limit": 268435456, "cpus": 0.5, "pids_limit": 128},
+            "outbox-relay": {"mem_limit": 402653184, "cpus": 0.5, "pids_limit": 128},
+            "inbox-consumer": {"mem_limit": 402653184, "cpus": 0.5, "pids_limit": 128},
+            "postgres": {"mem_limit": 1073741824, "cpus": 1.0, "pids_limit": 256},
+            "redis": {"mem_limit": 268435456, "cpus": 0.5, "pids_limit": 128},
+            "rabbitmq": {"mem_limit": 1073741824, "cpus": 1.0, "pids_limit": 256},
+            "minio": {"mem_limit": 536870912, "cpus": 1.0, "pids_limit": 256}
+          }
+          JSON
+
+          assert_limits() {
+            local config="$1"
+            jq -e --slurpfile expected /tmp/expected-compose-limits.json '
+              def limits:
+                with_entries(.value |= {
+                  mem_limit: .mem_limit,
+                  cpus: .cpus,
+                  pids_limit: .pids_limit
+                });
+              (.services | keys | sort) == ($expected[0] | keys | sort)
+              and all(.services[];
+                has("mem_limit") and has("cpus") and has("pids_limit"))
+              and all(.services[];
+                ((.deploy? // {}) | has("resources") | not))
+              and ((.services | limits) == $expected[0])
+            ' "$config" >/dev/null
+          }
+
+          assert_limits /tmp/compose-base.json
+          assert_limits /tmp/compose-offline.json
+          jq -S '.services | with_entries(
+            .value |= {mem_limit, cpus, pids_limit}
+          )' /tmp/compose-base.json > /tmp/compose-base-limits.json
+          jq -S '.services | with_entries(
+            .value |= {mem_limit, cpus, pids_limit}
+          )' /tmp/compose-offline.json > /tmp/compose-offline-limits.json
+          cmp /tmp/compose-base-limits.json /tmp/compose-offline-limits.json
   container-core:
     runs-on: ubuntu-latest
     env:
@@ -140,7 +180,6 @@ jobs:
             tesseract --version >/dev/null
             python -c '\''from kontur.infrastructure.pdf_guard import run_pdf_parse_sync; result = run_pdf_parse_sync(len, b"kontur", timeout_s=10); assert result == 6, result'\''
           '
-
   container-gateway:
     runs-on: ubuntu-latest
     env:
@@ -165,7 +204,6 @@ jobs:
             touch /tmp/container-gateway-write-test
             rm /tmp/container-gateway-write-test
           '
-
   container-smoke:
     needs: [container-config, container-core, container-gateway]
     runs-on: ubuntu-latest
@@ -184,7 +222,6 @@ jobs:
       - name: Verify health and hardened runtime configuration
         run: |
           set -euo pipefail
-
           wait_for_health() {
             local url="$1"
             local attempt
@@ -200,7 +237,6 @@ jobs:
               sleep 2
             done
           }
-
           assert_container() {
             local service="$1"
             local container_id
@@ -215,13 +251,11 @@ jobs:
             docker inspect --format '{{json .HostConfig.Tmpfs}}' "$container_id" \
               | jq -e 'has("/tmp")' >/dev/null
           }
-
           wait_for_health http://127.0.0.1:8000/api/v1/healthz
           wait_for_health http://127.0.0.1:3000/healthz
 
           assert_container core
           assert_container gateway
-
           core_id="$(docker compose ps -q core)"
           gateway_id="$(docker compose ps -q gateway)"
           docker inspect --format '{{json .NetworkSettings.Ports}}' "$core_id" \
