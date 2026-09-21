@@ -136,7 +136,10 @@ def test_exact_field_difference_is_candidate_with_provenance() -> None:
     assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
     assert result.finding.source_id == "family-pd"
     assert result.evidence_group is not None
-    assert all(fragment.document.file_hash == HASH for fragment in result.evidence_group.fragments)
+    assert all(
+        fragment.document.file_hash == HASH
+        for fragment in result.evidence_group.fragments
+    )
 
 
 def test_presence_requires_positive_anchor_and_never_guesses_absence() -> None:

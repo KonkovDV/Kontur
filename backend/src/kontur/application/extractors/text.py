@@ -137,7 +137,9 @@ def _normalize(value: str, steps: tuple[str, ...]) -> str:
 
 # ── семейные экстракторы ────────────────────────────────────────────────────────
 
-def _anchor_bounds(tokens: Sequence[PageToken], anchors: Sequence[str]) -> tuple[int, int] | None:
+def _anchor_bounds(
+    tokens: Sequence[PageToken], anchors: Sequence[str]
+) -> tuple[int, int] | None:
     """Вернуть границы якоря, не угадывая значение поля."""
 
     for start in range(len(tokens)):
@@ -167,13 +169,19 @@ def _hit(
     return TextHit(
         extraction=extraction,
         page=page,
-        polygon_source=union_rect_polygon(tuple(item.polygon_source for item in covering)),
-        polygon_norm=union_rect_polygon(tuple(item.polygon_norm for item in covering)),
+        polygon_source=union_rect_polygon(
+            tuple(item.polygon_source for item in covering)
+        ),
+        polygon_norm=union_rect_polygon(
+            tuple(item.polygon_norm for item in covering)
+        ),
         window_text=window_text,
     )
 
 
-def extract_exact_field(tokens: Sequence[PageToken], rule: dict[str, object]) -> TextHit | None:
+def extract_exact_field(
+    tokens: Sequence[PageToken], rule: dict[str, object]
+) -> TextHit | None:
     """Извлечь точное текстовое поле после якоря.
 
     Поле обязано иметь extractor.regex/value_regex. Без явного шаблона
@@ -228,7 +236,9 @@ def extract_exact_field(tokens: Sequence[PageToken], rule: dict[str, object]) ->
     )
 
 
-def extract_presence(tokens: Sequence[PageToken], rule: dict[str, object]) -> TextHit | None:
+def extract_presence(
+    tokens: Sequence[PageToken], rule: dict[str, object]
+) -> TextHit | None:
     """Подтвердить наличие якоря. Отсутствие возвращает None, не CANDIDATE."""
 
     if not tokens:
@@ -258,7 +268,9 @@ def extract_presence(tokens: Sequence[PageToken], rule: dict[str, object]) -> Te
 
 # ── публичное API ─────────────────────────────────────────────────────────────
 
-def extract_text(tokens: Sequence[PageToken], rule: dict[str, object]) -> TextHit | None:
+def extract_text(
+    tokens: Sequence[PageToken], rule: dict[str, object]
+) -> TextHit | None:
     """Найти текстовое/enum значение после якоря. None — не догадка.
 
     Двойное чтение: первый regex-матч в окне (primary) и последний (secondary).

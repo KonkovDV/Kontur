@@ -244,7 +244,9 @@ def compare_class_not_lower(
 
 # ── exact text field operator ─────────────────────────────────────────────────
 
-def compare_exact_field(expected: str, actual: str, rule: dict[str, object]) -> Comparison:
+def compare_exact_field(
+    expected: str, actual: str, rule: dict[str, object]
+) -> Comparison:
     """Сравнение строкового поля без приведения к числу."""
 
     operator = str(_comparator_dict(rule).get("operator", "eq"))
@@ -259,7 +261,7 @@ def compare_exact_field(expected: str, actual: str, rule: dict[str, object]) -> 
         delta=0.0 if ok else 1.0,
         rationale=(
             f"текстовое поле {operator}: {expected!r} и {actual!r}: "
-            f"{"совпадает" if ok else "расходится"}"
+            f"{('совпадает' if ok else 'расходится')}"
         ),
     )
 
@@ -269,15 +271,23 @@ def compare_exact_field(expected: str, actual: str, rule: dict[str, object]) -> 
 def compare_presence(actual: object, rule: dict[str, object]) -> Comparison:
     """Оператор present: элемент обязан присутствовать.
 
-    actual — любое значение; отсутствие/пустота/None = нарушение.
+    actual — любое значение; отсутствие/пустота/None = отсутствие доказательства.
     """
     present = bool(actual) if actual is not None else False
     return Comparison(
-        status=FindingStatus.AUTO_NO_DIFFERENCE if present else FindingStatus.MISSING_EVIDENCE,
+        status=(
+            FindingStatus.AUTO_NO_DIFFERENCE
+            if present
+            else FindingStatus.MISSING_EVIDENCE
+        ),
         expected=1.0,
         actual=1.0 if present else 0.0,
         delta=0.0 if present else -1.0,
-        rationale="элемент присутствует" if present else "элемент отсутствует: доказательство не сформировано",
+        rationale=(
+            "элемент присутствует"
+            if present
+            else "элемент отсутствует: доказательство не сформировано"
+        ),
     )
 
 
