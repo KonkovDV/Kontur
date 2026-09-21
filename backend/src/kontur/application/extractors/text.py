@@ -8,10 +8,10 @@
 Если extractor.regex = null, extract_text() возвращает None (не выбрасывает),
 что приводит к LOW_QUALITY в evaluate_rule — безопасное отказное преобразование.
 
-Поддерживаемые операторы:
-  string  : class_not_lower
-  set     : in_set, not_in_set
-  presence: present
+Поддерживаемые семейства:
+  enum/text_regex : значение по регулярному выражению
+  exact_field     : точное текстовое поле с обязательным value-regex
+  presence        : наличие якоря; отсутствие не является нарушением
 """
 from __future__ import annotations
 
@@ -135,7 +135,128 @@ def _normalize(value: str, steps: tuple[str, ...]) -> str:
     return result
 
 
-# ── публичный API ─────────────────────────────────────────────────────────────
+# ── семейные экстракторы ────────────────────────────────────────────────────────
+
+def _anchor_bounds(tokens: Sequence[PageToken], anchors: Sequence[str]) -> tuple[int, int] | None:
+    """Вернуть границы якоря, не угадывая значение поля."""
+
+    for start in range(len(tokens)):
+        chunk: list[str] = []
+        for end in range(start, min(len(tokens), start + _MAX_ANCHOR_TOKENS)):
+            if tokens[end].page != tokens[start].page:
+                break
+            chunk.append(tokens[end].text)
+            folded = fold_label(" ".join(chunk))
+            if any(anchor in folded for anchor in anchors):
+                return start, end
+    return None
+
+
+def _hit(
+    *,
+    tokens: Sequence[PageToken],
+    extraction: Extraction,
+    page: int,
+    window_text: str,
+) -> TextHit:
+    """Создать hit с polygon только по реально прочитанным токенам."""
+
+    covering = [item for item in tokens if item.text.strip()]
+    if not covering:
+        raise ValueError("evidence window is empty")
+    return TextHit(
+        extraction=extraction,
+        page=page,
+        polygon_source=union_rect_polygon(tuple(item.polygon_source for item in covering)),
+        polygon_norm=union_rect_polygon(tuple(item.polygon_norm for item in covering)),
+        window_text=window_text,
+    )
+
+
+def extract_exact_field(tokens: Sequence[PageToken], rule: dict[str, object]) -> TextHit | None:
+    """Извлечь точное текстовое поле после якоря.
+
+    Поле обязано иметь extractor.regex/value_regex. Без явного шаблона
+    экстрактор не угадывает границы многочастного значения и возвращает None;
+    evaluate_rule переводит это в LOW_QUALITY.
+    """
+
+    if not tokens:
+        return None
+    pattern = _regex_from_rule(rule)
+    if pattern is None:
+        extractor = rule.get("extractor")
+        if isinstance(extractor, dict):
+            raw = extractor.get("value_regex")
+            if isinstance(raw, str) and raw:
+                pattern = re.compile(raw, re.IGNORECASE | re.UNICODE)
+    if pattern is None:
+        return None
+    ordered = _sorted_tokens(tokens)
+    bounds = _anchor_bounds(ordered, _anchors_from_rule(rule))
+    if bounds is None:
+        return None
+    _start, end = bounds
+    window = _window(ordered, end)
+    if not window:
+        return None
+    text = _join(window)
+    matches = list(pattern.finditer(text))
+    if not matches:
+        return None
+    steps = _norm_steps(rule)
+    primary = _normalize(matches[0].group(0), steps)
+    secondary = _normalize(matches[-1].group(0), steps)
+    agrees = primary == secondary
+    return _hit(
+        tokens=window,
+        extraction=Extraction(
+            raw_token=matches[0].group(0),
+            engine=engine_of(window),
+            engine_version=ENGINE_VERSION,
+            confidence=0.99 if agrees else 0.40,
+            normalized_value=primary,
+            grounded_in_source_tokens=True,
+            second_read_agrees=agrees,
+            confidence_features={
+                "window_matches": float(len(matches)),
+                "second_read_match": 1.0 if agrees else 0.0,
+            },
+        ),
+        page=ordered[end].page,
+        window_text=text,
+    )
+
+
+def extract_presence(tokens: Sequence[PageToken], rule: dict[str, object]) -> TextHit | None:
+    """Подтвердить наличие якоря. Отсутствие возвращает None, не CANDIDATE."""
+
+    if not tokens:
+        return None
+    ordered = _sorted_tokens(tokens)
+    bounds = _anchor_bounds(ordered, _anchors_from_rule(rule))
+    if bounds is None:
+        return None
+    start, end = bounds
+    anchor_tokens = ordered[start : end + 1]
+    return _hit(
+        tokens=anchor_tokens,
+        extraction=Extraction(
+            raw_token=_join(anchor_tokens),
+            engine=engine_of(anchor_tokens),
+            engine_version=ENGINE_VERSION,
+            confidence=0.99,
+            normalized_value=True,
+            grounded_in_source_tokens=True,
+            second_read_agrees=True,
+            confidence_features={"presence": 1.0},
+        ),
+        page=ordered[end].page,
+        window_text=_join(anchor_tokens),
+    )
+
+
+# ── публичное API ─────────────────────────────────────────────────────────────
 
 def extract_text(tokens: Sequence[PageToken], rule: dict[str, object]) -> TextHit | None:
     """Найти текстовое/enum значение после якоря. None — не догадка.
@@ -189,3 +310,4 @@ def extract_text(tokens: Sequence[PageToken], rule: dict[str, object]) -> TextHi
         polygon_norm=norm,
         window_text=text,
     )
+
