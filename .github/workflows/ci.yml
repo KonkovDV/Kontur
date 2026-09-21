@@ -17,6 +17,7 @@ jobs:
       - run: ruff check backend scripts
       - run: mypy --strict backend/src
       - run: pytest backend/tests -q
+
   contracts:
     runs-on: ubuntu-latest
     steps:
@@ -27,6 +28,7 @@ jobs:
       - run: pip install jsonschema pyyaml
       - name: Схемы и OpenAPI разбираются
         run: python scripts/check_contracts.py
+
   db:
     runs-on: ubuntu-latest
     services:
@@ -66,6 +68,7 @@ jobs:
         env:
           KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
         run: python scripts/check_inbox.py
+
   claims:
     runs-on: ubuntu-latest
     steps:
@@ -75,6 +78,7 @@ jobs:
           python-version: "3.12"
       - name: Честность публичных формулировок
         run: python scripts/check_claims.py
+
   frontend:
     # RT-2609-18: проверка типов TypeScript в web/
     runs-on: ubuntu-latest
@@ -92,6 +96,7 @@ jobs:
         run: npm ci
       - name: Проверка типов TypeScript (noEmit в tsconfig.json)
         run: npx tsc --noEmit
+
   container-config:
     runs-on: ubuntu-latest
     env:
@@ -152,6 +157,7 @@ jobs:
             .value |= {mem_limit, cpus, pids_limit}
           )' /tmp/compose-offline.json > /tmp/compose-offline-limits.json
           cmp /tmp/compose-base-limits.json /tmp/compose-offline-limits.json
+
   container-core:
     runs-on: ubuntu-latest
     env:
@@ -180,6 +186,7 @@ jobs:
             tesseract --version >/dev/null
             python -c '\''from kontur.infrastructure.pdf_guard import run_pdf_parse_sync; result = run_pdf_parse_sync(len, b"kontur", timeout_s=10); assert result == 6, result'\''
           '
+
   container-gateway:
     runs-on: ubuntu-latest
     env:
@@ -204,6 +211,7 @@ jobs:
             touch /tmp/container-gateway-write-test
             rm /tmp/container-gateway-write-test
           '
+
   container-smoke:
     needs: [container-config, container-core, container-gateway]
     runs-on: ubuntu-latest
@@ -222,6 +230,7 @@ jobs:
       - name: Verify health and hardened runtime configuration
         run: |
           set -euo pipefail
+
           wait_for_health() {
             local url="$1"
             local attempt
@@ -237,6 +246,7 @@ jobs:
               sleep 2
             done
           }
+
           assert_container() {
             local service="$1"
             local container_id
@@ -251,11 +261,13 @@ jobs:
             docker inspect --format '{{json .HostConfig.Tmpfs}}' "$container_id" \
               | jq -e 'has("/tmp")' >/dev/null
           }
+
           wait_for_health http://127.0.0.1:8000/api/v1/healthz
           wait_for_health http://127.0.0.1:3000/healthz
 
           assert_container core
           assert_container gateway
+
           core_id="$(docker compose ps -q core)"
           gateway_id="$(docker compose ps -q gateway)"
           docker inspect --format '{{json .NetworkSettings.Ports}}' "$core_id" \

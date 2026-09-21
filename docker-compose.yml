@@ -20,6 +20,7 @@ services:
     pids_limit: 128
     # Кеш парсинга по хешу файла (ТЗ п. 9.1, шаг 5). Не durable queue.
     ports: ["127.0.0.1:6379:6379"]
+
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     mem_limit: 1g
@@ -33,6 +34,7 @@ services:
     ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
     volumes:
       - rabbitmq:/var/lib/rabbitmq
+
   minio:
     image: minio/minio:latest
     mem_limit: 512m
@@ -45,6 +47,7 @@ services:
     ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
     volumes:
       - minio:/data
+
   core:
     mem_limit: 2g
     cpus: 2.0
@@ -71,6 +74,7 @@ services:
       KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
     depends_on: [postgres, redis, rabbitmq, minio]
     ports: ["127.0.0.1:8000:8000"]
+
   outbox-relay:
     mem_limit: 384m
     cpus: 0.50
@@ -93,6 +97,7 @@ services:
       KONTUR_AMQP_TIMEOUT_SECONDS: ${KONTUR_AMQP_TIMEOUT_SECONDS:-10}
     depends_on: [postgres, rabbitmq]
     restart: unless-stopped
+
   inbox-consumer:
     mem_limit: 384m
     cpus: 0.50
@@ -115,6 +120,7 @@ services:
       KONTUR_INBOX_ERROR_SECONDS: ${KONTUR_INBOX_ERROR_SECONDS:-5}
     depends_on: [postgres, rabbitmq]
     restart: unless-stopped
+
   gateway:
     mem_limit: 256m
     cpus: 0.50
