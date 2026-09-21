@@ -16,7 +16,7 @@ from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.passport import read_passport
 from kontur.application.revision_resolver import overlay_inspector_approval
 from kontur.application.scenarios import CompletenessMap
-from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, Finding
+from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, EvidenceGroup, Finding
 from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus
 from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
 from kontur.infrastructure.ocr_tesseract import (
@@ -44,6 +44,7 @@ class PipelineReport:
     parse_errors: tuple[str, ...]
     pages_built: int
     stamp_by_file_id: Mapping[str, ApprovalStatus]
+    evidence_groups: tuple[EvidenceGroup, ...] = ()
 
 
 def _is_pdf(filename: str) -> bool:
@@ -145,6 +146,7 @@ def run_process_pipeline(
         inspector_approved_file_ids=inspector_approved_file_ids,
     )
     findings: list[Finding] = []
+    groups: list[EvidenceGroup] = []
     for code in codes:
         result = evaluate_rule(
             source.get(code),
@@ -156,12 +158,15 @@ def run_process_pipeline(
         if finding.finding_status in HUMAN_ONLY_STATUSES:
             raise RuntimeError(f"{code}: автомат записал {finding.finding_status.value}")
         findings.append(replace(finding, finding_id=f"pipe-{code}"))
+        if result.evidence_group is not None:
+            groups.append(result.evidence_group)
     report = PipelineReport(
         findings=tuple(findings),
         rules_evaluated=len(findings),
         parse_errors=parse_errors,
         pages_built=len(pages),
         stamp_by_file_id=stamps,
+        evidence_groups=tuple(groups),
     )
     assert_machine_only(report.findings)
     return report
