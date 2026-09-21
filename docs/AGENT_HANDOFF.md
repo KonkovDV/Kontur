@@ -1,8 +1,14 @@
 # Handoff для следующего ИИ
 
+Срез **21.09.2026 ~09:30 МСК**. HEAD `origin/main` после merge #74.
 Машиночитаемый пакет — не scorecard приёмки. Гейты I/J/K **открыты**.
 Инженерный замер Gate L на GitHub-hosted runner есть; production SLA нет.
 Порог ТЗ не публиковать без нижней границы Wilson на held-out validation.
+
+**Freeze инфры до 29.09:** не добавлять OIDC/TLS/RabbitMQ 4.x/observability/УКЭП/РиН
+без sandbox. Critical path — конкурсный вертикальный срез (evidence UI, Gate K,
+пять правил), не транспорт. Issues [#75](https://github.com/KonkovDV/Kontur/issues/75)–[#84](https://github.com/KonkovDV/Kontur/issues/84).
+Открытых PR нет. На origin только `main`. OCR-хвосты `16f3a06` / `2ddc2b3` не мержить.
 
 ## Читать в этом порядке
 
@@ -61,7 +67,12 @@ poison/DLX; `x-delivery-count` — число прошлых неуспехов.
 повторного nack той же доставки. Не бизнес-ACK РиН. Инспектор может
 назначить загруженный файл эталоном (`POST .../revisions/{file_id}/select`):
 штамп не подменяется, `NOT_APPROVED` нельзя перекрыть, автомат не пишет
-`CONFIRMED_VIOLATION`. Очередь PR пуста; на origin только `main`.
+`CONFIRMED_VIOLATION`. PR #74 влит: mem/cpu/pids у всех восьми Compose-сервисов;
+CI сверяет точные байты и запрещает `deploy.resources`; это не production
+capacity. Очередь PR пуста; на origin только `main`. Backlog GitHub:
+#75 E2E пяти правил, #76 evidence UI, #77 Gate K, #78 demo, #79 submission,
+#80 adversarial PDF, #81 branch protection (GitHub Free private → 403),
+#82 family extractors, #83 split, #84 VLM isolation.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,

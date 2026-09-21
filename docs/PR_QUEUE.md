@@ -53,6 +53,8 @@
 | #71 | Red Team: `await` aio-pika ack/nack после commit; `x-delivery-count` как prior failures; duplicate POISON → nack DLX |
 | #72 | только тесты: негативные инварианты OpenAPI (второй public, дубль operationId, drift 401/security) |
 | #73 | long-running `inbox-consumer` UID 10001, `queue.iterator()`, reconnect после ambiguous settlement; не Rin ACK |
+| inspector etalon | `POST .../revisions/{file_id}/select`: человек назначает UNKNOWN эталоном; `NOT_APPROVED` нельзя; гейт J открыт |
+| #74 | Compose mem/cpu/pids на 8 сервисах; CI `container-config` сверяет байты; не `deploy.resources`; не production capacity |
 
 ## Что не брали
 
