@@ -6,6 +6,7 @@ alwaysApply: true
 # Handoff
 
 Перед планом работ прочитай `data/dataset/agent_handoff.json` и `docs/AGENT_HANDOFF.md`.
+Несколько ИИ: `docs/GH_AGENT_BUS.md` — claim issue до правок, не брать `needs-local-files` облаком.
 Инварианты — `AGENTS.md`. Coverage — `data/matrix/coverage_snapshot.json` (разбивка, не вся матрица executable).
 
 Гейты I/J/K/L открыты. Не закрывай `GAP-IOS4-VAL` / `GAP-CAP-OCR` по SILVER, n=6 или n=15.

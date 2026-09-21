@@ -13,16 +13,18 @@
 Машиночитаемый twin: [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json).
 Операционный handoff: [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md).
 Инварианты: [`../AGENTS.md`](../AGENTS.md).
+Шина нескольких ИИ: [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md) (Issues + `gh`, не Discussions).
 
 ## Как читать (порядок)
 
 1. Этот файл.
 2. [`../AGENTS.md`](../AGENTS.md) — 14 инвариантов.
-3. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json).
-4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — **разбивка**, не «вся матрица executable».
-5. [`data/dataset/tz_scorecard.json`](../data/dataset/tz_scorecard.json) — три контура Code / Acceptance / Production, без процента «по ТЗ».
-6. [`WORK_PLAN.md`](WORK_PLAN.md), [`KNOWN_GAPS.md`](KNOWN_GAPS.md), [`PR_QUEUE.md`](PR_QUEUE.md), [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
-7. Issues [#75](https://github.com/KonkovDV/Kontur/issues/75)–[#84](https://github.com/KonkovDV/Kontur/issues/84).
+3. [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md) — claim / DAG / cloud vs local.
+4. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json).
+5. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — **разбивка**, не «вся матрица executable».
+6. [`data/dataset/tz_scorecard.json`](../data/dataset/tz_scorecard.json) — три контура Code / Acceptance / Production, без процента «по ТЗ».
+7. [`WORK_PLAN.md`](WORK_PLAN.md), [`KNOWN_GAPS.md`](KNOWN_GAPS.md), [`PR_QUEUE.md`](PR_QUEUE.md), [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
+8. Issues [#75](https://github.com/KonkovDV/Kontur/issues/75)–[#84](https://github.com/KonkovDV/Kontur/issues/84), срез [#86](https://github.com/KonkovDV/Kontur/issues/86).
 
 Пересборка снимков: `python scripts/export_agent_dumps.py`.
 `export_git_sha` в JSON может отставать на один docs-коммит — смотреть `git rev-parse HEAD`.

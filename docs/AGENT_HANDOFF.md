@@ -1,6 +1,7 @@
 # Handoff для следующего ИИ
 
 Срез **21.09.2026**. Бриф для ИИ с GitHub: [`GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md).
+Несколько ИИ на одном репо: [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md).
 HEAD смотреть `git rev-parse origin/main`.
 Машиночитаемый пакет — не scorecard приёмки. Гейты I/J/K **открыты**.
 Инженерный замер Gate L на GitHub-hosted runner есть; production SLA нет.
@@ -16,13 +17,14 @@ HEAD смотреть `git rev-parse origin/main`.
 ## Читать в этом порядке
 
 1. [`AGENTS.md`](../AGENTS.md) — инварианты 1–14.
-2. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json) — гейты, запреты, команды.
-3. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` (coverage, не вся матрица executable).
-4. [`data/dataset/gold_inventory.json`](../data/dataset/gold_inventory.json) — публичный gold ≠ frozen val.
-5. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
-6. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
-7. [`data/dataset/train_public_engineering.json`](../data/dataset/train_public_engineering.json) и `train_public_pred.jsonl` — gold-evidence прогон: 0 попаданий из 6. PD+RD загружены; L4: у ПД нет заполненной графы «Утвердил». Порог recall ТЗ не берётся и не публикуется.
-8. [`docs/WORK_PLAN.md`](WORK_PLAN.md), [`docs/KNOWN_GAPS.md`](KNOWN_GAPS.md), [`docs/PR_QUEUE.md`](PR_QUEUE.md), [`docs/TZ_SCORECARD.md`](TZ_SCORECARD.md), [`docs/RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md), [`docs/GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md).
+2. [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md) — claim на issue до правок.
+3. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json) — гейты, запреты, команды.
+4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` (coverage, не вся матрица executable).
+5. [`data/dataset/gold_inventory.json`](../data/dataset/gold_inventory.json) — публичный gold ≠ frozen val.
+6. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
+7. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
+8. [`data/dataset/train_public_engineering.json`](../data/dataset/train_public_engineering.json) и `train_public_pred.jsonl` — gold-evidence прогон: 0 попаданий из 6. PD+RD загружены; L4: у ПД нет заполненной графы «Утвердил». Порог recall ТЗ не берётся и не публикуется.
+9. [`docs/WORK_PLAN.md`](WORK_PLAN.md), [`docs/KNOWN_GAPS.md`](KNOWN_GAPS.md), [`docs/PR_QUEUE.md`](PR_QUEUE.md), [`docs/TZ_SCORECARD.md`](TZ_SCORECARD.md), [`docs/RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md), [`docs/GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md), [`docs/GH_AGENT_BUS.md`](GH_AGENT_BUS.md).
 
 Пересборка: `python scripts/export_agent_dumps.py` или `make agent-dumps`.
 Локальный скоринг: `python -m kontur.evaluation.train_public` (на Windows нет `make`).

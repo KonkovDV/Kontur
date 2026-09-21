@@ -202,6 +202,7 @@ def build_handoff(
             "extractor_families": "data/matrix/extractor_families.json",
             "research_osint": "docs/RESEARCH_OSINT_2026.md",
             "gh_situation": "docs/GH_SITUATION_2026_09_21.md",
+            "gh_agent_bus": "docs/GH_AGENT_BUS.md",
             "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
             "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md",
             "adr_0011": "docs/adr/0011-sync-lifecycle-and-manual-retry.md",

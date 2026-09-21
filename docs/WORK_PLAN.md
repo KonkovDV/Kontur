@@ -22,6 +22,7 @@ RabbitMQ 4.x, универсальный CV, VLM fine-tune) **не** на critic
 [`TZ_COMPLETION.md`](TZ_COMPLETION.md).
 OSINT / bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
 Снимки для следующего ИИ: [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md),
+шина агентов: [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md),
 `python scripts/export_agent_dumps.py`.
 
 ## Принцип

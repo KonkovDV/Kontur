@@ -45,6 +45,7 @@ Coverage: 29 executable / 103 extractor_missing из 132 объявленных.
 OCR `UNAVAILABLE`. Frozen val нет. РиН ACK нет. Freeze инфры до 29.09.
 
 Полный бриф для ИИ с GitHub: [`docs/GH_SITUATION_2026_09_21.md`](docs/GH_SITUATION_2026_09_21.md),
+шина нескольких агентов: [`docs/GH_AGENT_BUS.md`](docs/GH_AGENT_BUS.md),
 затем [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) и
 [`data/dataset/agent_handoff.json`](data/dataset/agent_handoff.json).
 Организатор прислал TRAIN_PUBLIC и gold-seed — это не held-out val
@@ -79,6 +80,7 @@ docker compose up -d                 # postgres, redis, rabbitmq, minio
 |---|---|
 | Правила для разработчика и ИИ-агента | [`AGENTS.md`](AGENTS.md) |
 | Срез 21.09 для ИИ с GitHub | [`docs/GH_SITUATION_2026_09_21.md`](docs/GH_SITUATION_2026_09_21.md) |
+| Шина нескольких ИИ (Issues + `gh`) | [`docs/GH_AGENT_BUS.md`](docs/GH_AGENT_BUS.md) |
 | Handoff следующего агента | [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) |
 | План 15–29.09 с гейтами | [`docs/PLAN_2026_09.md`](docs/PLAN_2026_09.md) |
 | Трассируемость ТЗ → артефакт → тест | [`docs/TZ_TRACEABILITY.md`](docs/TZ_TRACEABILITY.md) |

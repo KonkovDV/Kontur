@@ -1,0 +1,55 @@
+name: Задача агента
+description: Единица работы в шине до 29.09. Один issue — один агент.
+title: "[task]: "
+labels: ["enhancement", "agent-bus"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Сначала `docs/GH_AGENT_BUS.md` и issue #86. Не брать `frozen-infra`.
+        Автомат не пишет `CONFIRMED_VIOLATION`.
+  - type: dropdown
+    id: lane
+    attributes:
+      label: Полоса
+      options:
+        - contest-p0
+        - contest-p1
+        - не critical path
+    validations:
+      required: true
+  - type: dropdown
+    id: host
+    attributes:
+      label: Где выполнять
+      options:
+        - cloud-ok (нет PDF из files/)
+        - needs-local-files (только машина с files/)
+        - человек
+    validations:
+      required: true
+  - type: textarea
+    id: requirement
+    attributes:
+      label: requirement → artifact → test → metric → stop
+      description: Пять полей, иначе это не задача репозитория.
+      value: |
+        requirement:
+        artifact:
+        test:
+        metric:
+        stop_condition:
+    validations:
+      required: true
+  - type: textarea
+    id: do_not
+    attributes:
+      label: Не делать
+      value: |
+        Не закрывать гейты I/J по SILVER. Не открывать TEST_HIDDEN.
+        Не наращивать инфру вместо среза.
+  - type: input
+    id: blocked_by
+    attributes:
+      label: blocked-by (номера issue, если уже известны)
+      placeholder: "76, 78"

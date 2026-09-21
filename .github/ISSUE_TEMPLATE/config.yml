@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Срез ситуации (читать первым)
+    url: https://github.com/KonkovDV/Kontur/issues/86
+    about: Канон для ИИ с GitHub. Не дублировать новым issue.
+  - name: Шина агентов
+    url: https://github.com/KonkovDV/Kontur/blob/main/docs/GH_AGENT_BUS.md
+    about: Как claim/heartbeat/blocked и что облако не видит files/.
