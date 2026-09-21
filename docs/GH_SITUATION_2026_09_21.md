@@ -34,9 +34,11 @@
 | Поле | Значение |
 |---|---|
 | Coverage declared | 132 |
-| executable | **29** |
-| extractor_missing | **103** |
-| executable доля | 21,97% — это coverage, не порог ТЗ |
+| executable | **33** |
+| extractor_missing | **94** |
+| advisory | **1** |
+| source_missing | **4** |
+| executable доля | 25% — это coverage, не порог ТЗ |
 | Публичный gold-позитив матрицы | 6 (нужно n≥16 даже при 6/6 для Wilson recall) |
 | Gold-evidence прогон TRAIN_PUBLIC | 0/6: L4, у ПД F0171 нет заполненной графы «Утвердил» |
 | Гейты I / J / K / L | все **открыты** (`closes_gate_*`: false) |
@@ -44,7 +46,7 @@
 | HTTP пайплайн | L1–L7 inline после upload, векторный слой |
 | РиН | транспорт outbox/inbox есть; sandbox-контракта и бизнес-ACK нет; confirm брокера ≠ `SYNCED` |
 
-Семейства: number 24 executable / 64 missing; enum 5 / 11; exact_field 0 / 16; presence 0 / 12.
+Семейства: number 24 executable / 64 missing; enum 5 / 11; exact_field 4 executable / 8 missing / 4 source_missing; presence 1 advisory / 11 missing.
 Файл: [`data/matrix/extractor_families.json`](../data/matrix/extractor_families.json).
 
 ## Главный вывод на 21.09

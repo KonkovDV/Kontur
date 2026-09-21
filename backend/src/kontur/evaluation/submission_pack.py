@@ -15,7 +15,11 @@ from kontur.application.protocol import canonical_protocol_json, protocol_for_ht
 from kontur.domain.models import EvidenceGroup, Finding
 from kontur.evaluation.agent_dumps import build_handoff, git_sha, repo_root
 from kontur.evaluation.submission import findings_to_submission
-from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
+from kontur.infrastructure.matrix.registry import (
+    EXPECTED_PARAM_COUNT,
+    KNOWN_COVERAGE,
+    FileRuleRegistry,
+)
 
 PACK_SCHEMA = "kontur.submission_pack.v1"
 _HEX = frozenset("0123456789abcdef")
@@ -150,19 +154,17 @@ def _as_int(value: object, name: str) -> int:
 
 
 def _coverage_slice(counts: Mapping[str, object]) -> dict[str, int]:
-    executable = _as_int(counts["executable"], "executable")
-    missing = _as_int(counts["extractor_missing"], "extractor_missing")
+    buckets = {name: _as_int(counts[name], name) for name in sorted(KNOWN_COVERAGE)}
     declared = _as_int(counts["declared"], "declared")
     expected = _as_int(counts["expected_total"], "expected_total")
     if declared != EXPECTED_PARAM_COUNT or expected != EXPECTED_PARAM_COUNT:
         raise ValueError(f"матрица {declared}/{expected}, ожидалось {EXPECTED_PARAM_COUNT}")
-    if executable >= EXPECTED_PARAM_COUNT:
+    if buckets["executable"] >= EXPECTED_PARAM_COUNT:
         raise ValueError("нельзя заявить всю матрицу executable")
-    if executable + missing != EXPECTED_PARAM_COUNT:
+    if sum(buckets.values()) != EXPECTED_PARAM_COUNT:
         raise ValueError("разбивка coverage не сходится к 132")
     return {
-        "executable": executable,
-        "extractor_missing": missing,
+        **buckets,
         "declared": declared,
         "expected_total": expected,
     }

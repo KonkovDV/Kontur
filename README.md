@@ -41,7 +41,7 @@
 ## Состояние
 
 Срез 21.09.2026: только зелёный `main`. Гейты I/J/K **открыты**.
-Coverage: 29 executable / 103 extractor_missing из 132 объявленных.
+Coverage: 33 executable / 94 extractor_missing / 1 advisory / 4 source_missing из 132 объявленных.
 OCR `UNAVAILABLE`. Frozen val нет. РиН ACK нет. Freeze инфры до 29.09.
 
 Полный бриф для ИИ с GitHub: [`docs/GH_SITUATION_2026_09_21.md`](docs/GH_SITUATION_2026_09_21.md),
