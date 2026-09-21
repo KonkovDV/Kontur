@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/submission_pack.schema.json",
+  "title": "Пакет сдачи и evidence pack",
+  "description": "Провенанс конкурсной сдачи. Не scorecard ТЗ и не закрытие гейтов I/J/K. Протокол на проводе — без AUTO_NO_DIFFERENCE (ADR вопрос 8).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "generated_on",
+    "closes_gate_i",
+    "closes_gate_j",
+    "closes_gate_k",
+    "closes_gate_l",
+    "versions",
+    "coverage",
+    "input_manifest",
+    "containers",
+    "models",
+    "ci",
+    "limitations",
+    "open_gaps",
+    "gate_k",
+    "protocol",
+    "submission",
+    "protocol_payload_sha256"
+  ],
+  "properties": {
+    "schema": { "const": "kontur.submission_pack.v1" },
+    "generated_on": { "type": "string", "minLength": 10 },
+    "closes_gate_i": { "const": false },
+    "closes_gate_j": { "const": false },
+    "closes_gate_k": { "const": false },
+    "closes_gate_l": { "const": false },
+    "versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["git_sha", "matrix_version", "dataset_version", "model_version"],
+      "properties": {
+        "git_sha": { "type": "string" },
+        "matrix_version": { "type": "string" },
+        "dataset_version": { "type": "string" },
+        "model_version": { "type": "string" }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executable", "extractor_missing", "declared", "expected_total"],
+      "properties": {
+        "executable": { "type": "integer", "minimum": 0 },
+        "extractor_missing": { "type": "integer", "minimum": 0 },
+        "declared": { "type": "integer", "const": 132 },
+        "expected_total": { "type": "integer", "const": 132 }
+      }
+    },
+    "input_manifest": { "$ref": "./protocol.schema.json#/properties/input_manifest" },
+    "containers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digests_available", "digest_count", "service_count", "services"],
+      "properties": {
+        "digests_available": { "type": "boolean" },
+        "digest_count": { "type": "integer", "minimum": 0 },
+        "service_count": { "type": "integer", "minimum": 0 },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["service"],
+            "properties": {
+              "service": { "type": "string", "minLength": 1 },
+              "image": { "type": "string" },
+              "build": { "type": "string" },
+              "context": { "type": "string" },
+              "dockerfile": { "type": "string" },
+              "digest": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "sha256"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "run_url", "github_sha"],
+      "properties": {
+        "run_id": { "type": ["string", "null"] },
+        "run_url": { "type": ["string", "null"] },
+        "github_sha": { "type": ["string", "null"] }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "open_gaps": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "gate_k": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["closes_gate_k", "sessions_present", "session_count", "raw"],
+      "properties": {
+        "closes_gate_k": { "const": false },
+        "sessions_present": { "type": "boolean" },
+        "session_count": { "type": "integer", "minimum": 0 },
+        "raw": { "type": "array", "items": { "type": "object" } },
+        "note": { "type": "string" }
+      }
+    },
+    "protocol": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "./protocol.schema.json" }
+      ]
+    },
+    "submission": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "./submission.schema.json" }
+      ]
+    },
+    "protocol_payload_sha256": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      ]
+    }
+  }
+}

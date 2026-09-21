@@ -77,8 +77,9 @@ CI сверяет точные байты и запрещает `deploy.resource
 capacity. Продуктовая очередь PR пуста. #85 Dependabot — не P0. Репетиция #78:
 синтетические PDF, три CANDIDATE, confirm/reject, protocol v1, outbox PENDING
 (`test_demo_cold_start.py`, `docs/DEMO_COLD_START.md`). Не Polar, не видео,
-не гейт K. Backlog GitHub:
-#76 evidence UI, #77 Gate K, #79 submission,
+не гейт K. Пакет сдачи #79: `docs/SUBMISSION_PACK.md`,
+`python scripts/export_submission_pack.py`. Backlog GitHub:
+#76 evidence UI, #77 Gate K,
 #80 adversarial PDF, #81 branch protection (GitHub Free private → 403),
 #82 family extractors, #83 split, #84 VLM isolation.
 
@@ -110,8 +111,8 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
 ## Следующие слайсы
 
 1. Конкурсный вертикальный срез (не 132/132): эталон инспектором и репетиция
-   демо #78 (`docs/DEMO_COLD_START.md`, `test_demo_cold_start.py`) уже в коде;
-   evidence UI, Gate K, submission export. Видео — человек. Polar не gold.
+   демо #78 уже в коде; пакет сдачи #79 — `docs/SUBMISSION_PACK.md`;
+   evidence UI, Gate K. Видео — человек. Polar не gold.
 2. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
 3. Пять сессий → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
 4. Семейства `exact_field` / `presence` по `extractor_families.json`.

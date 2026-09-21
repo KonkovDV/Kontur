@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -440,3 +440,46 @@ def build_submission(
 
     wire.sort(key=lambda item: (str(item["parameter_code"]), str(item["location"])))
     return {"object_id": object_id, "checks": wire}
+
+
+def _missing_stage_from_rationale(rationale: str) -> DocStage | None:
+    for stage in DocStage:
+        if f"{stage.value} не представлен" in rationale:
+            return stage
+    return None
+
+
+def findings_to_submission(
+    object_id: str,
+    findings: Sequence[Finding],
+    groups: Sequence[EvidenceGroup] = (),
+    *,
+    known_codes: Sequence[str] | frozenset[str] | None = None,
+    rules: Mapping[str, dict[str, object]] | None = None,
+) -> dict[str, object]:
+    """Собрать JSON участника из находок. Единственная точка сборки, не руками."""
+
+    grouped = {group.evidence_group_id: group for group in groups}
+    checks: list[SubmissionCheck] = []
+    for finding in findings:
+        group = None
+        if finding.evidence_group_id is not None:
+            group = grouped.get(finding.evidence_group_id)
+        rule = None
+        if rules is not None:
+            rule = rules.get(canonicalize_rule_code(finding.rule_code))
+        location = None
+        if group is None or not group.fragments:
+            text = finding.rationale.strip()
+            location = text or None
+        checks.append(
+            build_check(
+                finding,
+                group,
+                missing_stage=_missing_stage_from_rationale(finding.rationale),
+                location=location,
+                rule=rule,
+                known_codes=known_codes,
+            )
+        )
+    return build_submission(object_id, checks, known_codes=known_codes)

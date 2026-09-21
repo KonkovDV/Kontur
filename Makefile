@@ -8,6 +8,7 @@
         train-public \
         agent-dumps \
         demo-rehearsal \
+        submission-pack \
         clean
 
 PYTHON   := python
@@ -68,6 +69,9 @@ agent-dumps:   ## coverage + handoff JSON для следующего ИИ. Не
 demo-rehearsal: ## Репетиция #78 in-process. Не Polar, не гейт K, не видео
 	$(PYTHON) -m pytest backend/tests/test_demo_cold_start.py -q --tb=short
 	$(PYTHON) scripts/demo_cold_start.py
+
+submission-pack: ## Пакет сдачи #79 в out/. Не закрывает гейты
+	$(PYTHON) scripts/export_submission_pack.py
 
 # ── Тесты и качество ────────────────────────────────────────────────────────
 
