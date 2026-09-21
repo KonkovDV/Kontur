@@ -46,10 +46,22 @@
     "coverage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["executable", "extractor_missing", "declared", "expected_total"],
+      "description": "Пять статусов покрытия в сумме дают declared. executable строго меньше 132.",
+      "required": [
+        "advisory",
+        "executable",
+        "extractor_missing",
+        "not_applicable",
+        "source_missing",
+        "declared",
+        "expected_total"
+      ],
       "properties": {
-        "executable": { "type": "integer", "minimum": 0 },
+        "advisory": { "type": "integer", "minimum": 0 },
+        "executable": { "type": "integer", "minimum": 0, "exclusiveMaximum": 132 },
         "extractor_missing": { "type": "integer", "minimum": 0 },
+        "not_applicable": { "type": "integer", "minimum": 0 },
+        "source_missing": { "type": "integer", "minimum": 0 },
         "declared": { "type": "integer", "const": 132 },
         "expected_total": { "type": "integer", "const": 132 }
       }

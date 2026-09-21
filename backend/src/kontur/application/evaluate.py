@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import uuid4
 
 from kontur.application.comparators import (
@@ -80,6 +80,15 @@ _TEXT_EXTRACTOR_TYPES: frozenset[str] = frozenset({
 })
 _EXACT_FIELD_OPERATORS: frozenset[str] = frozenset({"eq", "ne"})
 _TEXT_OPERATORS: frozenset[str] = STRING_OPERATORS | SET_OPERATORS | PRESENCE_OPERATORS
+
+#: Покрытия, при которых автомат не имеет права публиковать CANDIDATE.
+#: Экстрактор может работать, но заявленное покрытие говорит, что доказательство
+#: неполное (advisory / доказательство вне пакета / параметр неприменим).
+_NON_CANDIDATE_COVERAGE: frozenset[str] = frozenset({
+    "advisory",
+    "source_missing",
+    "not_applicable",
+})
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,6 +165,31 @@ def _quality_finding(
     )
 
 
+def _downgrade_for_coverage(
+    rule: dict[str, object], comparison: Comparison
+) -> Comparison:
+    """CANDIDATE запрещён для advisory / source_missing / not_applicable.
+
+    Правило с таким покрытием честно объявляет, что доказательство неполное:
+    сравнение остаётся в находке (expected/actual/delta/evidence_refs), но
+    статус понижается до low_quality и расхождение уходит инспектору.
+    """
+
+    if comparison.status is not FindingStatus.CANDIDATE:
+        return comparison
+    coverage = str(rule.get("coverage") or "")
+    if coverage not in _NON_CANDIDATE_COVERAGE:
+        return comparison
+    return replace(
+        comparison,
+        status=_mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+        rationale=(
+            f"{comparison.rationale}; coverage={coverage}: "
+            "расхождение не публикуется как кандидат, решает инспектор"
+        ),
+    )
+
+
 def _finding_from_comparison(
     rule: dict[str, object],
     comparison: Comparison,
@@ -164,6 +198,7 @@ def _finding_from_comparison(
     fragments: tuple[EvidenceFragment, ...],
     pages: dict[DocStage, StagePage],
 ) -> Finding:
+    comparison = _downgrade_for_coverage(rule, comparison)
     _assert_machine_status(comparison.status)
     pd = pages.get(DocStage.PD)
     source_id = pd.document.file_id if pd is not None else fragments[0].document.file_id

@@ -20,8 +20,13 @@ COMPOSE_DEMO_SERVICES: tuple[str, ...] = (
     "inbox-consumer",
     "gateway",
 )
-HONEST_EXECUTABLE = 29
-HONEST_EXTRACTOR_MISSING = 103
+HONEST_COVERAGE: dict[str, int] = {
+    "advisory": 1,
+    "executable": 33,
+    "extractor_missing": 94,
+    "not_applicable": 0,
+    "source_missing": 4,
+}
 CLOSES_GATE_K = False
 CLOSES_GATE_J = False
 
@@ -47,13 +52,11 @@ def assert_honest_coverage(report: Mapping[str, int]) -> None:
 
     declared = int(report.get("declared", -1))
     expected = int(report.get("expected_total", -1))
-    executable = int(report.get("executable", -1))
-    missing = int(report.get("extractor_missing", -1))
     if expected != EXPECTED_PARAM_COUNT or declared != EXPECTED_PARAM_COUNT:
         raise AssertionError(f"матрица {declared}/{expected}, ожидалось {EXPECTED_PARAM_COUNT}")
-    if executable != HONEST_EXECUTABLE:
-        raise AssertionError(f"executable={executable}, ожидалось {HONEST_EXECUTABLE}")
-    if missing != HONEST_EXTRACTOR_MISSING:
-        raise AssertionError(f"extractor_missing={missing}, ожидалось {HONEST_EXTRACTOR_MISSING}")
-    if executable + missing != EXPECTED_PARAM_COUNT:
+    if sum(HONEST_COVERAGE.values()) != EXPECTED_PARAM_COUNT:
         raise AssertionError("разбивка coverage не сходится к 132")
+    for name, pinned in HONEST_COVERAGE.items():
+        actual = int(report.get(name, -1))
+        if actual != pinned:
+            raise AssertionError(f"{name}={actual}, ожидалось {pinned}")

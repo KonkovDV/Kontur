@@ -29,7 +29,7 @@
 | Требование | Статус |
 |---|---|
 | Три независимых scorecard | ведётся JSON, без процента «по ТЗ» |
-| 132/132 executable | 29 executable, 103 `extractor_missing` |
+| 132/132 executable | 33 executable, 94 `extractor_missing`, 1 advisory, 4 source_missing |
 | GOLD OCR / frozen val | нет; SILVER и n=6 не закрывают I/J |
 | Пять инспекторов Gate K | рекордер есть; сессий нет |
 | RabbitMQ + MinIO + outbox workers | relay+inbox контейнеры; HTTP inline; РиН ACK нет |
@@ -41,7 +41,7 @@
 
 ## Семейства экстракции
 
-Не реализовывать 103 правила по одному. Сначала кластер по уже
+Не реализовывать оставшиеся `extractor_missing` по одному. Сначала кластер по уже
 скомпилированному `extractor.type` (`number` / `enum` / `exact_field` /
 `presence`). Файл [`extractor_families.json`](../data/matrix/extractor_families.json)
 только группирует коды. Пока нет рабочего экстрактора и фикстур, coverage
@@ -53,7 +53,7 @@
 
 1. Безопасный PostgreSQL finalize (ADR-0009: колонки, не `kind=materialized`).
 2. Gate K: пять сессий человеком; код рекордера не закрывает гейт.
-3. Честный coverage 29 executable / 103 extractor_missing; без заявления,
+3. Честный coverage 33 executable / 94 extractor_missing / 1 advisory / 4 source_missing; без заявления,
    что вся матрица executable.
 4. E2E demo на векторном слое; `ocr_text=UNAVAILABLE`.
 5. Gate L измерен на GHA и **не** назван production SLA.
@@ -64,7 +64,7 @@
 1. Вертикальный срез: эталон инспектором → evidence card → review → protocol
    на `PZ-001` / `KR-055` / `AR-041` / `IOS4-078` / `IOS4-079`.
 2. Пять сессий Gate K → `USABILITY_RESULTS.md`.
-3. Family-wise экстракторы (`exact_field` / `presence`) с fixtures, не 103 по одному.
+3. Family-wise экстракторы (`exact_field` / `presence`) с fixtures, не по одному коду.
 4. `split()` (GAP-SPLIT) до демо.
 5. Prompt-injection fixtures в PDF; VLM без write/tools.
 6. Независимый GOLD OCR и frozen val по `object_id` (поставка, не код).

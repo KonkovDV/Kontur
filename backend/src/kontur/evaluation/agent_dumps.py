@@ -201,7 +201,9 @@ def build_handoff(
             "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py",
             "tz_scorecard": "data/dataset/tz_scorecard.json",
             "extractor_families": "data/matrix/extractor_families.json",
+            "family_triage": "data/matrix/family_triage.json",
             "research_osint": "docs/RESEARCH_OSINT_2026.md",
+            "extractor_family_triage": "docs/EXTRACTOR_FAMILY_TRIAGE.md",
             "gh_situation": "docs/GH_SITUATION_2026_09_21.md",
             "gh_agent_bus": "docs/GH_AGENT_BUS.md",
             "submission_pack": "docs/SUBMISSION_PACK.md",
@@ -257,6 +259,9 @@ def build_extractor_families(
         family: {key: len(values) for key, values in buckets.items()}
         for family, buckets in codes_by_family.items()
     }
+    still_missing = sum(
+        buckets.get("extractor_missing", 0) for buckets in counts_by_family.values()
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "matrix_version": source.matrix_version,
@@ -267,8 +272,8 @@ def build_extractor_families(
         "counts_by_family": counts_by_family,
         "codes_by_family": codes_by_family,
         "note": (
-            "103 extractor_missing remain missing until each family has a working extractor "
-            "and fixtures. Do not treat this file as 132/132."
+            f"{still_missing} extractor_missing remain missing until each family has a working "
+            "extractor and fixtures. Do not treat this file as 132/132."
         ),
     }
 

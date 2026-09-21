@@ -22,8 +22,9 @@ def main() -> int:
     report = FileRuleRegistry().coverage_report()
     assert_honest_coverage(report)
     print(
-        "coverage executable={executable} extractor_missing={extractor_missing} "
-        "declared={declared}".format(**report)
+        "coverage advisory={advisory} executable={executable} "
+        "extractor_missing={extractor_missing} not_applicable={not_applicable} "
+        "source_missing={source_missing} declared={declared}".format(**report)
     )
     print(f"object_id={DEMO_OBJECT_ID}")
     print(f"codes={','.join(DEMO_CODES)}")

@@ -23,8 +23,9 @@ def main() -> int:
     coverage = pack["coverage"]
     print(target)
     print(
-        "coverage executable={executable} extractor_missing={extractor_missing} "
-        "declared={declared}".format(**coverage)
+        "coverage advisory={advisory} executable={executable} "
+        "extractor_missing={extractor_missing} not_applicable={not_applicable} "
+        "source_missing={source_missing} declared={declared}".format(**coverage)
     )
     print(
         "closes_gate_i={closes_gate_i} closes_gate_j={closes_gate_j} "

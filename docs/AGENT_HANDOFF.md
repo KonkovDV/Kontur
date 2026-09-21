@@ -19,7 +19,8 @@ HEAD смотреть `git rev-parse origin/main`.
 1. [`AGENTS.md`](../AGENTS.md) — инварианты 1–14.
 2. [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md) — claim на issue до правок.
 3. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json) — гейты, запреты, команды.
-4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` (coverage, не вся матрица executable).
+4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 33 / 94 / 1 / 4 из 132.
+4a. [`data/matrix/family_triage.json`](../data/matrix/family_triage.json) и [`docs/EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) — поштучное решение по 28 правилам семейств `exact_field` / `presence`: какой вид доказательства нужен и почему графика не стала текстом.
 5. [`data/dataset/gold_inventory.json`](../data/dataset/gold_inventory.json) — публичный gold ≠ frozen val.
 6. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
 7. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
@@ -44,6 +45,13 @@ HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/RO
 порты на loopback (PR #60). Повтор идентичной загрузки (hash+stage) не
 открывает процесс заново и не гоняет pipeline; `FINALIZED` → 409.
 `web/` и `gateway/` зафиксированы `package-lock.json`; CI frontend — `npm ci`.
+Триаж семейств `exact_field` / `presence`: AR-052, POS-087, POD-091, ZU-130
+переведены в `executable` (закрытые текстовые шаблоны, фикстуры на
+AUTO_NO_DIFFERENCE / CANDIDATE / MISSING_EVIDENCE / LOW_QUALITY / ABSTAIN),
+POD-095 — `advisory` (`presence` не способен выдать CANDIDATE), OOS-098…101 —
+`source_missing` (АИС «ОСИГ», РНИС, «Мобильный КПТС», ГРОО вне пакета ПД/РД/ИД).
+`_downgrade_for_coverage` в `evaluate.py` понижает CANDIDATE до `low_quality`
+для `advisory` / `source_missing` / `not_applicable`. Gate J не закрыт.
 Учебный рекордер Gate K в `web/` пишет JSON `kontur-usability-v1`; сессий нет,
 `closes_gate_k` false. `MISSING_EVIDENCE` нельзя подтвердить как нарушение.
 `main` без branch protection: GitHub Free private не даёт rulesets
@@ -81,7 +89,8 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
 `python scripts/export_submission_pack.py`. Backlog GitHub:
 #76 evidence UI, #77 Gate K,
 #80 adversarial PDF, #81 branch protection (GitHub Free private → 403),
-#82 family extractors, #83 split, #84 VLM isolation.
+#82 family extractors (триаж 28 правил сделан, геометрия открыта), #83 split,
+#84 VLM isolation.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
@@ -115,7 +124,12 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
    evidence UI, Gate K. Видео — человек. Polar не gold.
 2. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
 3. Пять сессий → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
-4. Семейства `exact_field` / `presence` по `extractor_families.json`.
+4. Семейства `exact_field` / `presence`: триаж всех 28 правил сделан
+   (`family_triage.json`, `EXTRACTOR_FAMILY_TRIAGE.md`), 4 правила стали
+   `executable`, 1 `advisory`, 4 `source_missing`. Осталось 19 правил, и им нужен
+   **не** текстовый экстрактор: 14 — `geometry` (вектор чертежа, подсчёт,
+   пересечение зон), 5 — разбор ячейки таблицы / `semantic_candidate`.
+   Не помечать их `executable` по совпадению подписи с названием параметра.
 5. `split()` (GAP-SPLIT) до демо.
 6. Sandbox РиН, HTTP `submitted/confirmed/ambiguous` и бизнес-ACK → `SYNCED` — нет.
 7. JWKS/OIDC, TLS 1.3, антивирус, observability — **freeze** до подачи.

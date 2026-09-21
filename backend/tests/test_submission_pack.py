@@ -23,6 +23,7 @@ from kontur.domain.models import (
     Finding,
 )
 from kontur.domain.statuses import Completeness, FindingStatus, ProcessState, ReviewPriority
+from kontur.evaluation.demo_cold_start import HONEST_COVERAGE
 from kontur.evaluation.submission_pack import (
     PACK_SCHEMA,
     build_input_manifest,
@@ -130,8 +131,9 @@ def test_empty_pack_validates_and_keeps_gates_open() -> None:
     assert pack["closes_gate_l"] is False
     coverage = pack["coverage"]
     assert coverage["declared"] == EXPECTED_PARAM_COUNT
-    assert coverage["executable"] == 29
-    assert coverage["extractor_missing"] == 103
+    assert sum(int(coverage[name]) for name in HONEST_COVERAGE) == EXPECTED_PARAM_COUNT
+    for name, pinned in HONEST_COVERAGE.items():
+        assert coverage[name] == pinned
     assert pack["protocol"] is None
     assert pack["submission"] is None
     assert pack["protocol_payload_sha256"] is None
