@@ -177,6 +177,7 @@ def build_handoff(
         "commands": {
             "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
             "dumps": "python scripts/export_agent_dumps.py",
+            "submission_pack": "python scripts/export_submission_pack.py",
             "train_public": "make train-public",
             "ocr_pilot": "make ocr-pilot",
             "dry_run_132": "python -m pytest backend/tests/test_dry_run.py -q",
@@ -203,6 +204,7 @@ def build_handoff(
             "research_osint": "docs/RESEARCH_OSINT_2026.md",
             "gh_situation": "docs/GH_SITUATION_2026_09_21.md",
             "gh_agent_bus": "docs/GH_AGENT_BUS.md",
+            "submission_pack": "docs/SUBMISSION_PACK.md",
             "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
             "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md",
             "adr_0011": "docs/adr/0011-sync-lifecycle-and-manual-retry.md",

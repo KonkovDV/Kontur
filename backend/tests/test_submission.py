@@ -30,6 +30,7 @@ from kontur.evaluation.submission import (
     contest_parameter_code,
     contest_protocol_status,
     contest_violation_label,
+    findings_to_submission,
 )
 
 SUBMISSION_SCHEMA = (
@@ -327,3 +328,23 @@ def test_submission_is_deterministic_and_deduplicated() -> None:
     assert len(checks) == 1
     with pytest.raises(ValueError, match="object_id"):
         build_submission("  ", [check])
+
+
+def test_findings_to_submission_is_the_only_assembly_path() -> None:
+    group = _group(_fragment(EvidenceRole.ACTUAL, DocStage.RD, second_read=True))
+    candidate = _finding()
+    equal = _finding(FindingStatus.AUTO_NO_DIFFERENCE, rule_code="KR-055", group_id="eg-eq")
+    equal_group = _group(
+        _fragment(EvidenceRole.ACTUAL, DocStage.RD, second_read=True),
+        rule_code="KR-055",
+        group_id="eg-eq",
+    )
+    payload = findings_to_submission(
+        "obj-1",
+        [candidate, equal],
+        [group, equal_group],
+    )
+    labels = [item["violation_label"] for item in payload["checks"]]
+    assert "VIOLATION_PRESENT" in labels
+    assert "NO_VIOLATION" in labels
+    assert "AUTO_NO_DIFFERENCE" not in json.dumps(payload)

@@ -92,6 +92,7 @@ docker compose up -d                 # postgres, redis, rabbitmq, minio
 | Errata аудита «46% ТЗ» | [`docs/AUDITOR_ERRATA.md`](docs/AUDITOR_ERRATA.md) |
 | План дальнейшей работы | [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md) |
 | Холодный запуск демо (#78) | [`docs/DEMO_COLD_START.md`](docs/DEMO_COLD_START.md) |
+| Пакет сдачи (#79) | [`docs/SUBMISSION_PACK.md`](docs/SUBMISSION_PACK.md) |
 | Карантин датасета | [`docs/DATA_QUARANTINE.md`](docs/DATA_QUARANTINE.md) |
 | Производительность и нагрузка | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
 | Вопросы организатору | [`docs/QUESTIONS_TO_ORGANIZER.md`](docs/QUESTIONS_TO_ORGANIZER.md) |
