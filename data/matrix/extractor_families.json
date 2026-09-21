@@ -13,10 +13,10 @@
     },
     "exact_field": {
       "advisory": 0,
-      "executable": 0,
-      "extractor_missing": 16,
+      "executable": 4,
+      "extractor_missing": 8,
       "not_applicable": 0,
-      "source_missing": 0
+      "source_missing": 4
     },
     "number": {
       "advisory": 0,
@@ -26,9 +26,9 @@
       "source_missing": 0
     },
     "presence": {
-      "advisory": 0,
+      "advisory": 1,
       "executable": 0,
-      "extractor_missing": 12,
+      "extractor_missing": 11,
       "not_applicable": 0,
       "source_missing": 0
     }
@@ -61,27 +61,29 @@
     },
     "exact_field": {
       "advisory": [],
-      "executable": [],
+      "executable": [
+        "AR-052",
+        "POD-091",
+        "POS-087",
+        "ZU-130"
+      ],
       "extractor_missing": [
         "AR-043",
-        "AR-052",
         "ODI-115",
-        "OOS-098",
-        "OOS-099",
-        "OOS-100",
-        "OOS-101",
-        "POD-091",
         "POS-085",
-        "POS-087",
         "PPM-102",
         "PPM-106",
         "SPZU-034",
         "SPZU-035",
-        "SPZU-039",
-        "ZU-130"
+        "SPZU-039"
       ],
       "not_applicable": [],
-      "source_missing": []
+      "source_missing": [
+        "OOS-098",
+        "OOS-099",
+        "OOS-100",
+        "OOS-101"
+      ]
     },
     "number": {
       "advisory": [],
@@ -181,7 +183,9 @@
       "source_missing": []
     },
     "presence": {
-      "advisory": [],
+      "advisory": [
+        "POD-095"
+      ],
       "executable": [],
       "extractor_missing": [
         "AR-053",
@@ -190,7 +194,6 @@
         "ODI-122",
         "ODI-123",
         "POD-092",
-        "POD-095",
         "POS-089",
         "PPM-110",
         "PPM-111",
@@ -201,5 +204,5 @@
       "source_missing": []
     }
   },
-  "note": "103 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
+  "note": "94 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
 }

@@ -38,11 +38,11 @@
     "GAP-SPLIT"
   ],
   "coverage_counts": {
-    "advisory": 0,
-    "executable": 29,
-    "extractor_missing": 103,
+    "advisory": 1,
+    "executable": 33,
+    "extractor_missing": 94,
     "not_applicable": 0,
-    "source_missing": 0,
+    "source_missing": 4,
     "declared": 132,
     "expected_total": 132
   },
