@@ -311,7 +311,8 @@ def evaluate_rule(
             rule,
             Stage.L6_MATRIX,
             FindingStatus.CLARIFICATION_REQUIRED,
-            f"слайс исполняет extractor.type=number/enum/text_regex, получено {extractor_type!r}",
+                f"слайс исполняет extractor.type=number/enum/text_regex/exact_field/presence, "
+                f"получено {extractor_type!r}",
         )
     if not isinstance(comparator, dict) or operator not in valid_operators:
         return _halt(
