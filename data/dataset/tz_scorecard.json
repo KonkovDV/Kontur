@@ -8,11 +8,11 @@
   "closes_gate_l": false,
   "not_tz_percentage": true,
   "coverage_counts": {
-    "advisory": 0,
+    "advisory": 1,
     "executable": 29,
-    "extractor_missing": 103,
+    "extractor_missing": 98,
     "not_applicable": 0,
-    "source_missing": 0,
+    "source_missing": 4,
     "declared": 132,
     "expected_total": 132
   },
@@ -26,7 +26,7 @@
       {
         "id": "matrix_executable_132",
         "state": "unmet",
-        "detail": "executable=29 extractor_missing=103"
+        "detail": "executable=29 extractor_missing=98"
       },
       {
         "id": "http_vector_pipeline",

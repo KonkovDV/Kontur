@@ -2,16 +2,18 @@
   "schema_version": "1.0.0",
   "matrix_version": "draft-0",
   "counts": {
-    "advisory": 0,
+    "advisory": 1,
     "executable": 29,
-    "extractor_missing": 103,
+    "extractor_missing": 98,
     "not_applicable": 0,
-    "source_missing": 0,
+    "source_missing": 4,
     "declared": 132,
     "expected_total": 132
   },
   "codes": {
-    "advisory": [],
+    "advisory": [
+      "POD-095"
+    ],
     "executable": [
       "AR-041",
       "IOS4-078",
@@ -89,16 +91,11 @@
       "ODI-121",
       "ODI-122",
       "ODI-123",
-      "OOS-098",
-      "OOS-099",
-      "OOS-100",
-      "OOS-101",
       "POD-090",
       "POD-091",
       "POD-092",
       "POD-093",
       "POD-094",
-      "POD-095",
       "POD-096",
       "POD-097",
       "POS-081",
@@ -149,7 +146,12 @@
       "ZU-131"
     ],
     "not_applicable": [],
-    "source_missing": []
+    "source_missing": [
+      "OOS-098",
+      "OOS-099",
+      "OOS-100",
+      "OOS-101"
+    ]
   },
   "gate_h_minimum_20_executable": true,
   "executable_equals_declared": false,
