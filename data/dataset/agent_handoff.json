@@ -38,11 +38,11 @@
     "GAP-SPLIT"
   ],
   "coverage_counts": {
-    "advisory": 0,
-    "executable": 29,
-    "extractor_missing": 103,
+    "advisory": 1,
+    "executable": 33,
+    "extractor_missing": 94,
     "not_applicable": 0,
-    "source_missing": 0,
+    "source_missing": 4,
     "declared": 132,
     "expected_total": 132
   },
@@ -104,7 +104,9 @@
     "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py",
     "tz_scorecard": "data/dataset/tz_scorecard.json",
     "extractor_families": "data/matrix/extractor_families.json",
+    "family_triage": "data/matrix/family_triage.json",
     "research_osint": "docs/RESEARCH_OSINT_2026.md",
+    "extractor_family_triage": "docs/EXTRACTOR_FAMILY_TRIAGE.md",
     "gh_situation": "docs/GH_SITUATION_2026_09_21.md",
     "gh_agent_bus": "docs/GH_AGENT_BUS.md",
     "submission_pack": "docs/SUBMISSION_PACK.md",

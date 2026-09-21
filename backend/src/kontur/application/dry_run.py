@@ -21,6 +21,12 @@ from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRule
 TZ_DRY_RUN_SECONDS = 30 * 60
 CI_DRY_RUN_SECONDS = 60
 
+#: Семейства, которые слайс умеет исполнять: executable с другим типом — рассинхрон
+#: между заявленным покрытием и кодом движка.
+EXECUTABLE_EXTRACTOR_TYPES: frozenset[str] = frozenset(
+    {"number", "enum", "text_regex", "exact_field", "presence"}
+)
+
 
 def _empty_completeness() -> CompletenessMap:
     return {
@@ -74,7 +80,7 @@ def dry_run_matrix(registry: FileRuleRegistry | None = None) -> DryRunReport:
         if coverage == "executable" and status is FindingStatus.CLARIFICATION_REQUIRED:
             extractor = rule.get("extractor")
             extractor_type = extractor.get("type") if isinstance(extractor, dict) else None
-            if extractor_type not in {"number", "enum", "text_regex"}:
+            if extractor_type not in EXECUTABLE_EXTRACTOR_TYPES:
                 mismatches.append(f"{code}:executable без экстрактора {extractor_type!r}")
     elapsed = perf_counter() - started
     return DryRunReport(

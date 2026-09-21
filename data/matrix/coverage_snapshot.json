@@ -2,22 +2,27 @@
   "schema_version": "1.0.0",
   "matrix_version": "draft-0",
   "counts": {
-    "advisory": 0,
-    "executable": 29,
-    "extractor_missing": 103,
+    "advisory": 1,
+    "executable": 33,
+    "extractor_missing": 94,
     "not_applicable": 0,
-    "source_missing": 0,
+    "source_missing": 4,
     "declared": 132,
     "expected_total": 132
   },
   "codes": {
-    "advisory": [],
+    "advisory": [
+      "POD-095"
+    ],
     "executable": [
       "AR-041",
+      "AR-052",
       "IOS4-078",
       "IOS4-079",
       "KR-055",
       "KR-058",
+      "POD-091",
+      "POS-087",
       "PZ-001",
       "PZ-002",
       "PZ-003",
@@ -41,7 +46,8 @@
       "PZ-021",
       "PZ-022",
       "PZ-023",
-      "SPZU-024"
+      "SPZU-024",
+      "ZU-130"
     ],
     "extractor_missing": [
       "AR-040",
@@ -55,7 +61,6 @@
       "AR-049",
       "AR-050",
       "AR-051",
-      "AR-052",
       "AR-053",
       "IOS1-068",
       "IOS1-069",
@@ -89,16 +94,10 @@
       "ODI-121",
       "ODI-122",
       "ODI-123",
-      "OOS-098",
-      "OOS-099",
-      "OOS-100",
-      "OOS-101",
       "POD-090",
-      "POD-091",
       "POD-092",
       "POD-093",
       "POD-094",
-      "POD-095",
       "POD-096",
       "POD-097",
       "POS-081",
@@ -107,7 +106,6 @@
       "POS-084",
       "POS-085",
       "POS-086",
-      "POS-087",
       "POS-088",
       "POS-089",
       "PPM-102",
@@ -145,11 +143,15 @@
       "ZU-127",
       "ZU-128",
       "ZU-129",
-      "ZU-130",
       "ZU-131"
     ],
     "not_applicable": [],
-    "source_missing": []
+    "source_missing": [
+      "OOS-098",
+      "OOS-099",
+      "OOS-100",
+      "OOS-101"
+    ]
   },
   "gate_h_minimum_20_executable": true,
   "executable_equals_declared": false,
