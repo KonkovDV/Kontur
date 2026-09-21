@@ -7,6 +7,7 @@
         ocr-pilot \
         train-public \
         agent-dumps \
+        demo-rehearsal \
         clean
 
 PYTHON   := python
@@ -63,6 +64,10 @@ train-public:  ## TRAIN_PUBLIC JSONL в Docker. Не закрывает гейт
 
 agent-dumps:   ## coverage + handoff JSON для следующего ИИ. Не закрывает гейты
 	$(PYTHON) scripts/export_agent_dumps.py
+
+demo-rehearsal: ## Репетиция #78 in-process. Не Polar, не гейт K, не видео
+	$(PYTHON) -m pytest backend/tests/test_demo_cold_start.py -q --tb=short
+	$(PYTHON) scripts/demo_cold_start.py
 
 # ── Тесты и качество ────────────────────────────────────────────────────────
 
