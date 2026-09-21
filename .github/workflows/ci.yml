@@ -135,7 +135,7 @@ jobs:
             jq -e --slurpfile expected /tmp/expected-compose-limits.json '
               def limits:
                 with_entries(.value |= {
-                  mem_limit: .mem_limit,
+                  mem_limit: (.mem_limit | tonumber),
                   cpus: .cpus,
                   pids_limit: .pids_limit
                 });
