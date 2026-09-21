@@ -40,11 +40,15 @@
 
 ## Состояние
 
-Контракты, домен, executable-слайсы матрицы (не 132/132), persist находок,
-GET `/protocol` и `/audit`. После загрузки PDF каскад L1–L7 **запускается**
-(векторный слой → `READY`). OCR в запросе нет. Пороги ТЗ на frozen validation
-**не измерены**. Организатор прислал TRAIN_PUBLIC и gold-seed из 15 проверок —
-это не held-out val ([`docs/ORGANIZER_GOLD.md`](docs/ORGANIZER_GOLD.md)).
+Срез 21.09.2026: только зелёный `main`. Гейты I/J/K **открыты**.
+Coverage: 29 executable / 103 extractor_missing из 132 объявленных.
+OCR `UNAVAILABLE`. Frozen val нет. РиН ACK нет. Freeze инфры до 29.09.
+
+Полный бриф для ИИ с GitHub: [`docs/GH_SITUATION_2026_09_21.md`](docs/GH_SITUATION_2026_09_21.md),
+затем [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) и
+[`data/dataset/agent_handoff.json`](data/dataset/agent_handoff.json).
+Организатор прислал TRAIN_PUBLIC и gold-seed — это не held-out val
+([`docs/ORGANIZER_GOLD.md`](docs/ORGANIZER_GOLD.md)).
 
 ## Карта репозитория
 
@@ -74,10 +78,12 @@ docker compose up -d                 # postgres, redis, rabbitmq, minio
 | Тема | Файл |
 |---|---|
 | Правила для разработчика и ИИ-агента | [`AGENTS.md`](AGENTS.md) |
+| Срез 21.09 для ИИ с GitHub | [`docs/GH_SITUATION_2026_09_21.md`](docs/GH_SITUATION_2026_09_21.md) |
+| Handoff следующего агента | [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) |
 | План 15–29.09 с гейтами | [`docs/PLAN_2026_09.md`](docs/PLAN_2026_09.md) |
 | Трассируемость ТЗ → артефакт → тест | [`docs/TZ_TRACEABILITY.md`](docs/TZ_TRACEABILITY.md) |
 | Три контура готовности (не порог ТЗ) | [`docs/TZ_SCORECARD.md`](docs/TZ_SCORECARD.md) |
-| OSINT Document AI, срез 20.09.2026 | [`docs/RESEARCH_OSINT_2026.md`](docs/RESEARCH_OSINT_2026.md) |
+| OSINT Document AI, срез 21.09.2026 | [`docs/RESEARCH_OSINT_2026.md`](docs/RESEARCH_OSINT_2026.md) |
 | Архитектурные решения | [`docs/adr/`](docs/adr/) |
 | Состав переданного пакета данных | [`docs/DATASET_PACKAGE.md`](docs/DATASET_PACKAGE.md) |
 | Публичный gold ≠ frozen val | [`docs/ORGANIZER_GOLD.md`](docs/ORGANIZER_GOLD.md) |

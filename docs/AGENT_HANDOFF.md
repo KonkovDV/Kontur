@@ -1,6 +1,7 @@
 # Handoff для следующего ИИ
 
-Срез **21.09.2026 ~09:30 МСК**. HEAD `origin/main` после merge #74.
+Срез **21.09.2026**. Бриф для ИИ с GitHub: [`GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md).
+HEAD смотреть `git rev-parse origin/main`.
 Машиночитаемый пакет — не scorecard приёмки. Гейты I/J/K **открыты**.
 Инженерный замер Gate L на GitHub-hosted runner есть; production SLA нет.
 Порог ТЗ не публиковать без нижней границы Wilson на held-out validation.
@@ -8,7 +9,9 @@
 **Freeze инфры до 29.09:** не добавлять OIDC/TLS/RabbitMQ 4.x/observability/УКЭП/РиН
 без sandbox. Critical path — конкурсный вертикальный срез (evidence UI, Gate K,
 пять правил), не транспорт. Issues [#75](https://github.com/KonkovDV/Kontur/issues/75)–[#84](https://github.com/KonkovDV/Kontur/issues/84).
-Открытых PR нет. На origin только `main`. OCR-хвосты `16f3a06` / `2ddc2b3` не мержить.
+Открытых продуктовых PR нет. Weekly Dependabot (#85) — не P0, не мержить ради
+«только main», пока не зелёный и пока не решено, нужны ли auto-update PR до подачи.
+На origin рабочая линия — `main`. OCR-хвосты `16f3a06` / `2ddc2b3` не мержить.
 
 ## Читать в этом порядке
 
@@ -19,7 +22,7 @@
 5. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
 6. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
 7. [`data/dataset/train_public_engineering.json`](../data/dataset/train_public_engineering.json) и `train_public_pred.jsonl` — gold-evidence прогон: 0 попаданий из 6. PD+RD загружены; L4: у ПД нет заполненной графы «Утвердил». Порог recall ТЗ не берётся и не публикуется.
-8. [`docs/WORK_PLAN.md`](WORK_PLAN.md), [`docs/KNOWN_GAPS.md`](KNOWN_GAPS.md), [`docs/PR_QUEUE.md`](PR_QUEUE.md), [`docs/TZ_SCORECARD.md`](TZ_SCORECARD.md), [`docs/RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
+8. [`docs/WORK_PLAN.md`](WORK_PLAN.md), [`docs/KNOWN_GAPS.md`](KNOWN_GAPS.md), [`docs/PR_QUEUE.md`](PR_QUEUE.md), [`docs/TZ_SCORECARD.md`](TZ_SCORECARD.md), [`docs/RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md), [`docs/GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md).
 
 Пересборка: `python scripts/export_agent_dumps.py` или `make agent-dumps`.
 Локальный скоринг: `python -m kontur.evaluation.train_public` (на Windows нет `make`).
@@ -69,7 +72,7 @@ poison/DLX; `x-delivery-count` — число прошлых неуспехов.
 штамп не подменяется, `NOT_APPROVED` нельзя перекрыть, автомат не пишет
 `CONFIRMED_VIOLATION`. PR #74 влит: mem/cpu/pids у всех восьми Compose-сервисов;
 CI сверяет точные байты и запрещает `deploy.resources`; это не production
-capacity. Очередь PR пуста; на origin только `main`. Backlog GitHub:
+capacity. Продуктовая очередь PR пуста. #85 Dependabot — не P0. Backlog GitHub:
 #75 E2E пяти правил, #76 evidence UI, #77 Gate K, #78 demo, #79 submission,
 #80 adversarial PDF, #81 branch protection (GitHub Free private → 403),
 #82 family extractors, #83 split, #84 VLM isolation.
