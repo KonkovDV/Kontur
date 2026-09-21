@@ -13,6 +13,7 @@
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | region-crop dual-read в коде; Docker SILVER-замер порог не берёт; нет GOLD | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
+| GAP-ETALON-UI | инспекторский выбор эталона есть в API, двухпанельного evidence UI нет | POST `.../revisions/{file_id}/select` не закрывает J | конкурсный срез |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
 `put_finding` по `evidence_group_id`. Очередь после рестарта — `process_findings`,

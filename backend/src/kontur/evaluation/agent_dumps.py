@@ -130,6 +130,7 @@ def build_handoff(
             "3_train_public": "harness_landed_run_opt_in",
             "4_gate_k_usability": "recorder_landed_no_sessions",
             "5_gate_l_k6": "measured_on_gha_not_production_sla",
+            "6_contest_vertical_slice": "inspector_etalon_landed_gates_open",
         },
         "open_gaps": [
             "GAP-CAP-OCR",
@@ -170,6 +171,8 @@ def build_handoff(
             "Revive PR #63 experimental materialization (stripped provenance)",
             "Require kind=materialized or assembled=true on TZ protocol JSON",
             "Treat broker confirm or inbox RECEIVED as process SYNCED / Rin ACK",
+            "Do not add OIDC/TLS/RabbitMQ 4.x/observability instead of contest slice",
+            "Treat inspector-selected etalon as stamp evidence or close gate J",
         ],
         "commands": {
             "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",

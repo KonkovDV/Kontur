@@ -11,11 +11,12 @@ from kontur.application.review import (
     complete_verification,
     finalize_process,
     review,
+    select_revision_as_etalon,
     split,
     start_verification,
     unfinalize_process,
 )
-from kontur.domain.models import Finding
+from kontur.domain.models import ApprovalStatus, Finding
 from kontur.domain.state_machines import Actor, TransitionError
 from kontur.domain.statuses import FindingStatus, ProcessState, ReasonCode, ReviewPriority
 
@@ -113,6 +114,43 @@ def test_split_is_not_an_atomic_review_action() -> None:
 def test_split_is_unimplemented_until_each_part_has_evidence() -> None:
     with pytest.raises(NotImplementedError, match="evidence_group"):
         split(candidate(), parts=2)
+
+
+def test_inspector_can_select_unknown_stamp_as_etalon() -> None:
+    status = select_revision_as_etalon(
+        actor=INSPECTOR,
+        stamp=ApprovalStatus.UNKNOWN,
+        comment="В комплекте организатора это утверждённый том ПД.",
+    )
+    assert status is ApprovalStatus.APPROVED
+
+
+def test_machine_cannot_select_revision() -> None:
+    with pytest.raises(TransitionError, match="инспектора"):
+        select_revision_as_etalon(
+            actor=Actor("worker", is_human=False),
+            stamp=ApprovalStatus.UNKNOWN,
+            comment="нельзя",
+        )
+
+
+def test_not_approved_stamp_cannot_be_selected() -> None:
+    with pytest.raises(TransitionError, match="отказ"):
+        select_revision_as_etalon(
+            actor=INSPECTOR,
+            stamp=ApprovalStatus.NOT_APPROVED,
+            comment="черновик",
+        )
+
+
+def test_select_revision_requires_comment() -> None:
+    with pytest.raises(TransitionError, match="comment"):
+        select_revision_as_etalon(
+            actor=INSPECTOR,
+            stamp=ApprovalStatus.UNKNOWN,
+            comment="   ",
+        )
+
 
 
 def test_missing_evidence_does_not_block_finalize() -> None:

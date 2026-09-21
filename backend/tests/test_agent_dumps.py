@@ -62,6 +62,7 @@ def test_handoff_refuses_to_close_gates() -> None:
     assert isinstance(steps, dict)
     assert steps["5_gate_l_k6"] == "measured_on_gha_not_production_sla"
     assert steps["4_gate_k_usability"] == "recorder_landed_no_sessions"
+    assert steps["6_contest_vertical_slice"] == "inspector_etalon_landed_gates_open"
     do_not = " ".join(str(item) for item in payload["do_not"])
     assert "TEST_HIDDEN" in do_not
     assert "CONFIRMED_VIOLATION" in do_not

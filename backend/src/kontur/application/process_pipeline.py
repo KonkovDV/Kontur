@@ -14,6 +14,7 @@ from dataclasses import dataclass, replace
 
 from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.passport import read_passport
+from kontur.application.revision_resolver import overlay_inspector_approval
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, Finding
 from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus
@@ -42,6 +43,7 @@ class PipelineReport:
     rules_evaluated: int
     parse_errors: tuple[str, ...]
     pages_built: int
+    stamp_by_file_id: Mapping[str, ApprovalStatus]
 
 
 def _is_pdf(filename: str) -> bool:
@@ -69,9 +71,12 @@ def _document_ref(
 def _pages_from_blobs(
     files: Sequence[PipelineFile],
     blobs: Mapping[str, bytes],
-) -> tuple[dict[DocStage, StagePage], tuple[str, ...]]:
+    *,
+    inspector_approved_file_ids: frozenset[str] = frozenset(),
+) -> tuple[dict[DocStage, StagePage], tuple[str, ...], dict[str, ApprovalStatus]]:
     pages: dict[DocStage, StagePage] = {}
     errors: list[str] = []
+    stamps: dict[str, ApprovalStatus] = {}
     for item in files:
         if not _is_pdf(item.filename):
             continue
@@ -96,11 +101,16 @@ def _pages_from_blobs(
             layer_kind=document.layer_kind,
             rotate=last.frame.rotate,
         )
+        stamp = passport.approval_status
+        stamps[item.file_id] = stamp
         ref = _document_ref(
             item,
             passport.document_code,
             passport.revision,
-            passport.approval_status,
+            overlay_inspector_approval(
+                stamp,
+                inspector_selected=item.file_id in inspector_approved_file_ids,
+            ),
             passport.sheet,
         )
         cache = PageImageCache(raw) if tesseract_available() else None
@@ -111,7 +121,7 @@ def _pages_from_blobs(
             frames=tuple(page.frame for page in document.pages),
             render_cache=cache,
         )
-    return pages, tuple(errors)
+    return pages, tuple(errors), stamps
 
 
 def run_process_pipeline(
@@ -121,6 +131,7 @@ def run_process_pipeline(
     files: Sequence[PipelineFile],
     blobs: Mapping[str, bytes],
     registry: FileRuleRegistry | None = None,
+    inspector_approved_file_ids: frozenset[str] = frozenset(),
 ) -> PipelineReport:
     """Исполнить все строки матрицы. Пустые страницы → статусы качества, не violation."""
 
@@ -128,7 +139,11 @@ def run_process_pipeline(
     codes = source.all_codes()
     if len(codes) != EXPECTED_PARAM_COUNT:
         raise ValueError(f"матрица {len(codes)} правил, ожидалось {EXPECTED_PARAM_COUNT}")
-    pages, parse_errors = _pages_from_blobs(files, blobs)
+    pages, parse_errors, stamps = _pages_from_blobs(
+        files,
+        blobs,
+        inspector_approved_file_ids=inspector_approved_file_ids,
+    )
     findings: list[Finding] = []
     for code in codes:
         result = evaluate_rule(
@@ -146,6 +161,7 @@ def run_process_pipeline(
         rules_evaluated=len(findings),
         parse_errors=parse_errors,
         pages_built=len(pages),
+        stamp_by_file_id=stamps,
     )
     assert_machine_only(report.findings)
     return report
@@ -166,6 +182,33 @@ def _maybe_ocr(document: PdfDocumentTokens, raw: bytes) -> PdfDocumentTokens:
         return run_pdf_parse_sync(fill_raster_pages_isolated, raw)
     except PdfParseTimeoutError:
         return document
+
+
+def stamp_approval_from_pdf(
+    data: bytes,
+    *,
+    file_id: str,
+    file_hash: str,
+    filename: str,
+) -> ApprovalStatus:
+    """Прочитать штамп без overlay инспектора. Таймаут → UNKNOWN, не APPROVED."""
+
+    try:
+        document = run_pdf_parse_sync(extract_pdf_bytes, data)
+    except (PdfParseTimeoutError, ValueError):
+        return ApprovalStatus.UNKNOWN
+    tokens = flatten_tokens(document)
+    last = document.pages[-1]
+    passport = read_passport(
+        tokens,
+        file_id=file_id,
+        file_hash=file_hash,
+        filename=filename,
+        pages=len(document.pages),
+        layer_kind=document.layer_kind,
+        rotate=last.frame.rotate,
+    )
+    return passport.approval_status
 
 
 def assert_machine_only(findings: Sequence[Finding]) -> None:

@@ -55,6 +55,7 @@ OBJECT_BOUND_OPERATIONS = frozenset(
         "completeVerification",
         "finalizeProtocol",
         "unfinalizeProtocol",
+        "selectRevision",
         "syncInspection",
     }
 )
@@ -122,6 +123,7 @@ def validate_openapi(spec: dict[str, object]) -> list[str]:
         ("/processes/{process_id}/verify", "verify"),
         ("/processes/{process_id}/complete", "complete"),
         ("/processes/{process_id}/finalize", "finalize"),
+        ("/processes/{process_id}/revisions/{file_id}/select", "select revision"),
     ):
         if path not in spec["paths"]:
             problems.append(f"нет POST {label}")

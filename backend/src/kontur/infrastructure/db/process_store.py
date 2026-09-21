@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
@@ -82,6 +82,8 @@ class ProcessStore(Protocol):
     def save_finding(self, process_id: str, finding: Finding) -> None: ...
 
     def load_findings(self, process_id: str) -> list[Finding]: ...
+
+    def replace_findings(self, process_id: str, findings: Sequence[Finding]) -> None: ...
 
     def save_audit_event(
         self,
@@ -375,6 +377,13 @@ class MemoryProcessStore:
     def load_findings(self, process_id: str) -> list[Finding]:
         return list(self._findings.get(process_id, {}).values())
 
+    def replace_findings(self, process_id: str, findings: Sequence[Finding]) -> None:
+        bucket: dict[str, Finding] = {}
+        for finding in findings:
+            key = finding.evidence_group_id or finding.finding_id
+            bucket[key] = finding
+        self._findings[process_id] = bucket
+
     def save_audit_event(
         self,
         process_id: str,
@@ -532,6 +541,7 @@ WHERE process_id = %(process_id)s
 """
 
 DELETE_FILES_SQL = "DELETE FROM process_files WHERE process_id = %(id)s"
+DELETE_FINDINGS_SQL = "DELETE FROM process_findings WHERE process_id = %(process_id)s"
 
 INSERT_FILE_SQL = """
 INSERT INTO process_files (
@@ -822,6 +832,13 @@ class PostgresProcessStore:
             SELECT_FINDINGS_SQL, {"process_id": process_id}
         )
         return [finding_from_row(row) for row in cursor.fetchall()]
+
+    def replace_findings(self, process_id: str, findings: Sequence[Finding]) -> None:
+        self._connection.execute(  # type: ignore[attr-defined]
+            DELETE_FINDINGS_SQL, {"process_id": process_id}
+        )
+        for finding in findings:
+            self.save_finding(process_id, finding)
 
     def save_audit_event(
         self,

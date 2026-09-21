@@ -68,6 +68,25 @@ def _is_approved(doc: DocumentRef) -> bool:
     return doc.approval_status is ApprovalStatus.APPROVED
 
 
+def overlay_inspector_approval(
+    stamp: ApprovalStatus,
+    *,
+    inspector_selected: bool,
+) -> ApprovalStatus:
+    """Инспектор может назначить эталоном документ со штампом UNKNOWN.
+
+    Явный `NOT_APPROVED` (черновик / «не утв.») нельзя перекрыть. Штамп с
+    заполненной графой «Утвердил»+ФИО остаётся APPROVED и без выбора.
+    Выбор инспектора не подменяет штамп и не закрывает гейт J.
+    """
+
+    if stamp is ApprovalStatus.NOT_APPROVED:
+        return ApprovalStatus.NOT_APPROVED
+    if inspector_selected:
+        return ApprovalStatus.APPROVED
+    return stamp
+
+
 def resolve_revision(
     documents: list[DocumentRef],
     stage: DocStage,

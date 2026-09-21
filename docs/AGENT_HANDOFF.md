@@ -35,7 +35,8 @@ HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/RO
 `web/` и `gateway/` зафиксированы `package-lock.json`; CI frontend — `npm ci`.
 Учебный рекордер Gate K в `web/` пишет JSON `kontur-usability-v1`; сессий нет,
 `closes_gate_k` false. `MISSING_EVIDENCE` нельзя подтвердить как нарушение.
-`main` по-прежнему без branch protection.
+`main` без branch protection: GitHub Free private не даёт rulesets
+(API 403, issue #81). Force-push не используем.
 PostgreSQL `save()` финализации fail-closed (PR #64): без атомарной
 материализации INSERT placeholder запрещён. Payload собирается в
 application-слое, JSON пишется в той же транзакции, что и процесс;
@@ -57,8 +58,10 @@ poison/DLX; `x-delivery-count` — число прошлых неуспехов.
 контракт JWT/object-scope без смены runtime. PR #72 пинит негативные
 инварианты OpenAPI тестами. PR #73: `inbox-consumer` UID 10001, push
 `queue.iterator()`, reconnect сессии после ambiguous settlement без
-повторного nack той же доставки. Не бизнес-ACK РиН. Очередь PR пуста;
-на origin только `main`.
+повторного nack той же доставки. Не бизнес-ACK РиН. Инспектор может
+назначить загруженный файл эталоном (`POST .../revisions/{file_id}/select`):
+штамп не подменяется, `NOT_APPROVED` нельзя перекрыть, автомат не пишет
+`CONFIRMED_VIOLATION`. Очередь PR пуста; на origin только `main`.
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
 (checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
@@ -87,14 +90,14 @@ poison/DLX; `x-delivery-count` — число прошлых неуспехов.
 
 ## Следующие слайсы
 
-1. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
-2. Рекордер кликов в `web/`; 5 инспекторов → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
-3. Crash-before-commit / timeout-after-commit для finalize.
-4. Inbox consumer — Compose-сервис `inbox-consumer` (ADR-0012). Sandbox РиН,
-   HTTP `submitted/confirmed/ambiguous` и бизнес-ACK → `SYNCED` — нет.
-5. Признак утверждения ПД без ослабления инварианта 5 (не «ГИП» и не пустая графа).
-6. Экстракторы семействами по `extractor_families.json`, не по одному из 103.
-7. JWKS/OIDC, TLS 1.3, антивирус, защита ветки `main` — не замена гейтов I/J/K.
+1. Конкурсный вертикальный срез (не 132/132): эталон инспектором уже в коде;
+   evidence UI, Gate K, demo fixture, submission export.
+2. GOLD OCR и frozen val: кодом гейты I и J не закрыть.
+3. Пять сессий → `USABILITY_RESULTS.md` (гейт K / `RT-2609-21` открыт).
+4. Семейства `exact_field` / `presence` по `extractor_families.json`.
+5. `split()` (GAP-SPLIT) до демо.
+6. Sandbox РиН, HTTP `submitted/confirmed/ambiguous` и бизнес-ACK → `SYNCED` — нет.
+7. JWKS/OIDC, TLS 1.3, антивирус, observability — **freeze** до подачи.
 8. Если PAT когда-либо светился в issue/PR/логе — отозвать в GitHub Settings
    → Developer settings → Personal access tokens; не вставлять токен в чат.
 

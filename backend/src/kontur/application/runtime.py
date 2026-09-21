@@ -16,6 +16,7 @@ from kontur.application.process_pipeline import (
     PipelineFile,
     PipelineReport,
     run_process_pipeline,
+    stamp_approval_from_pdf,
 )
 from kontur.application.protocol import (
     assemble_protocol,
@@ -24,7 +25,7 @@ from kontur.application.protocol import (
 )
 from kontur.application.retry_policy import next_sync_attempt
 from kontur.application.scenarios import CompletenessMap, detect_scenario
-from kontur.domain.models import DocStage, Finding
+from kontur.domain.models import ApprovalStatus, DocStage, Finding
 from kontur.domain.state_machines import Actor, TransitionError, advance_process
 from kontur.domain.status_map import protocol_status, tz_upload_status
 from kontur.domain.statuses import (
@@ -74,6 +75,7 @@ class AcceptedFile:
     filename: str
     doc_stage: DocStage
     size_bytes: int
+    stamp_approval: ApprovalStatus = ApprovalStatus.UNKNOWN
 
 
 @dataclass
@@ -98,6 +100,7 @@ class ProcessRecord:
     git_sha: str = field(default_factory=lambda: os.environ.get("GITHUB_SHA") or "unspecified")
     last_sync_notice: str | None = None
     protocol_id: str | None = None
+    inspector_approved_file_ids: set[str] = field(default_factory=set)
 
     def has_file(self, content_hash: str, stage: DocStage) -> bool:
         """True, если hash+stage уже прикреплены к процессу."""
@@ -275,6 +278,11 @@ class ProcessWorkspace:
             record.findings[key] = finding
         record.audit.records.extend(self._store.load_audit(process_id))
         record.audit.bind(self._store, process_id, record.object_id)
+        record.inspector_approved_file_ids = {
+            str(payload["file_id"])
+            for _actor, action, payload in record.audit.records
+            if action == "SELECT_REVISION" and isinstance(payload.get("file_id"), str)
+        }
         self._items[process_id] = record
         return record
 
@@ -330,7 +338,12 @@ class ProcessWorkspace:
                 for item in record.files
             ),
             blobs=record.blobs,
+            inspector_approved_file_ids=frozenset(record.inspector_approved_file_ids),
         )
+        for item in record.files:
+            stamp = report.stamp_by_file_id.get(item.file_id)
+            if stamp is not None:
+                item.stamp_approval = stamp
         for finding in report.findings:
             self.put_finding(record.process_id, finding)
         record.parse_attempts += 1
@@ -399,6 +412,97 @@ class ProcessWorkspace:
                 self._persist(record)
             return updated
         raise KeyError(finding_id)
+
+    def _replace_machine_findings(
+        self, record: ProcessRecord, findings: tuple[Finding, ...]
+    ) -> None:
+        record.findings.clear()
+        for finding in findings:
+            key = finding.evidence_group_id or finding.finding_id
+            record.findings[key] = finding
+        self._store.replace_findings(record.process_id, findings)
+
+    def _pipeline_files(self, record: ProcessRecord) -> tuple[PipelineFile, ...]:
+        return tuple(
+            PipelineFile(
+                file_id=item.file_id,
+                file_hash=item.file_hash,
+                filename=item.filename,
+                doc_stage=item.doc_stage,
+            )
+            for item in record.files
+        )
+
+    def select_revision(
+        self,
+        process_id: str,
+        file_id: str,
+        *,
+        actor: Actor,
+        comment: str,
+    ) -> ProcessRecord:
+        """Инспектор назначает файл эталоном и пересчитывает матрицу."""
+
+        record = self._items[process_id]
+        if record.process_state is ProcessState.FINALIZED:
+            raise TransitionError("протокол финализирован, выбор редакции запрещён")
+        if record.process_state is not ProcessState.READY:
+            raise TransitionError("выбор эталона только из READY")
+        if any(item.inspector_decision is not None for item in record.findings.values()):
+            raise TransitionError("очередь уже содержит решения инспектора")
+        match = next((item for item in record.files if item.file_id == file_id), None)
+        if match is None:
+            raise KeyError(file_id)
+        raw = record.blobs.get(file_id)
+        if raw is None:
+            raise TransitionError("нет содержимого файла; повторите загрузку")
+        stamp = stamp_approval_from_pdf(
+            raw,
+            file_id=match.file_id,
+            file_hash=match.file_hash,
+            filename=match.filename,
+        )
+        match.stamp_approval = stamp
+        review_actions.select_revision_as_etalon(
+            actor=actor, stamp=stamp, comment=comment
+        )
+        record.inspector_approved_file_ids.add(file_id)
+        record.audit.record(
+            actor.actor_id,
+            "SELECT_REVISION",
+            {
+                "file_id": file_id,
+                "file_hash": match.file_hash,
+                "doc_stage": match.doc_stage.value,
+                "stamp_approval": stamp.value,
+                "comment": comment.strip(),
+            },
+        )
+        report = run_process_pipeline(
+            object_id=record.object_id,
+            completeness=record.completeness,
+            files=self._pipeline_files(record),
+            blobs=record.blobs,
+            inspector_approved_file_ids=frozenset(record.inspector_approved_file_ids),
+        )
+        for item in record.files:
+            recorded = report.stamp_by_file_id.get(item.file_id)
+            if recorded is not None:
+                item.stamp_approval = recorded
+        self._replace_machine_findings(record, report.findings)
+        record.parse_attempts += 1
+        record.audit.record(
+            "system",
+            "PIPELINE",
+            {
+                "rules_evaluated": report.rules_evaluated,
+                "pages_built": report.pages_built,
+                "parse_errors": len(report.parse_errors),
+                "after": "SELECT_REVISION",
+            },
+        )
+        self._persist(record)
+        return record
 
     def start_verification(self, process_id: str, actor: Actor) -> ProcessRecord:
         record = self._items[process_id]

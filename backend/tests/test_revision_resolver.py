@@ -206,3 +206,25 @@ class TestStaleRevision:
     def test_solo_document_is_not_stale(self) -> None:
         doc = _doc("pd-v1", approval_date=date(2025, 1, 1))
         assert check_stale_revision(doc, [doc]) is False
+
+
+def test_inspector_overlay_does_not_override_not_approved() -> None:
+    from kontur.application.revision_resolver import overlay_inspector_approval
+
+    assert (
+        overlay_inspector_approval(ApprovalStatus.NOT_APPROVED, inspector_selected=True)
+        is ApprovalStatus.NOT_APPROVED
+    )
+    assert (
+        overlay_inspector_approval(ApprovalStatus.UNKNOWN, inspector_selected=True)
+        is ApprovalStatus.APPROVED
+    )
+    assert (
+        overlay_inspector_approval(ApprovalStatus.UNKNOWN, inspector_selected=False)
+        is ApprovalStatus.UNKNOWN
+    )
+    assert (
+        overlay_inspector_approval(ApprovalStatus.APPROVED, inspector_selected=False)
+        is ApprovalStatus.APPROVED
+    )
+

@@ -61,15 +61,15 @@
 
 ## Порядок следующих слайсов
 
-1. Crash-before-commit / timeout-after-commit для finalize (race retry,
-   гонка version и SKIP LOCKED outbox уже в CI job `db`).
+1. Вертикальный срез: эталон инспектором → evidence card → review → protocol
+   на `PZ-001` / `KR-055` / `AR-041` / `IOS4-078` / `IOS4-079`.
 2. Пять сессий Gate K → `USABILITY_RESULTS.md`.
-3. Независимый GOLD OCR и frozen val по `object_id` (поставка, не код).
-4. Inbox consumer + sandbox РиН. Outbox→брокер не равен доставке в РиН.
-5. Экстракторы семействами, сначала критические; каждое правило — fixtures.
-6. UI на реальной очереди и crop из сохранённых координат.
-7. РиН adapter + тестовый crypto provider, без заявления production УКЭП.
-8. OIDC/JWKS, TLS, AV, monitoring, backup — после acceptance, не вместо него.
+3. Family-wise экстракторы (`exact_field` / `presence`) с fixtures, не 103 по одному.
+4. `split()` (GAP-SPLIT) до демо.
+5. Prompt-injection fixtures в PDF; VLM без write/tools.
+6. Независимый GOLD OCR и frozen val по `object_id` (поставка, не код).
+7. Sandbox РиН / `submitted|confirmed|ambiguous` — после acceptance-среза.
+8. OIDC/JWKS, TLS, AV, monitoring, backup — после подачи, не вместо неё.
 
 Полноценный обзор моделей 2025–2026 (лицензия, VRAM, кириллица, grounding)
 нужен только как **эксперимент на GOLD**, не как выбор «самой умной» модели

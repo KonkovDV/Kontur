@@ -201,6 +201,50 @@ def test_cross_object_state_transitions_have_no_side_effect(client: TestClient) 
         assert record.process_state is before
     sync = client.post(f"/api/v1/inspection/{process_id}", headers=OTHER_SUPERVISOR)
     assert sync.status_code == 403
+    file_id = record.files[0].file_id
+    select = client.post(
+        f"/api/v1/processes/{process_id}/revisions/{file_id}/select",
+        headers=OTHER_INSPECTOR,
+        json={"inspector_id": "insp-8", "comment": "атака чужим object_id"},
+    )
+    assert select.status_code == 403
+
+
+def test_inspector_selects_revision_and_does_not_write_violation(
+    client: TestClient,
+) -> None:
+    uploaded = _upload(client)
+    body = uploaded.json()
+    process_id = body["process_id"]
+    file_id = body["accepted"][0]["file_id"]
+    response = client.post(
+        f"/api/v1/processes/{process_id}/revisions/{file_id}/select",
+        headers=INSPECTOR,
+        json={
+            "inspector_id": "insp-7",
+            "comment": "Том ПД из комплекта организатора — эталон сравнения.",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["process_state"] == "READY"
+    assert payload["counters"]["confirmed_violations"] == 0
+    record = app.state.workspace.get(process_id)
+    assert record is not None
+    assert file_id in record.inspector_approved_file_ids
+    assert any(action == "SELECT_REVISION" for _actor, action, _p in record.audit.records)
+    admin = client.post(
+        f"/api/v1/processes/{process_id}/revisions/{file_id}/select",
+        headers=ADMIN,
+        json={"inspector_id": "admin-1", "comment": "админ не выбирает эталон"},
+    )
+    assert admin.status_code == 403
+    missing = client.post(
+        f"/api/v1/processes/{process_id}/revisions/no-such-file/select",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7", "comment": "нет файла"},
+    )
+    assert missing.status_code == 404
 
 
 def test_protocol_after_upload_is_draft_without_violations(client: TestClient) -> None:

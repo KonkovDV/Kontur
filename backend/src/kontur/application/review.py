@@ -9,7 +9,8 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime
 
-from kontur.domain.models import Finding, InspectorDecision
+from kontur.application.revision_resolver import overlay_inspector_approval
+from kontur.domain.models import ApprovalStatus, Finding, InspectorDecision
 from kontur.domain.ports import AuditLog
 from kontur.domain.state_machines import (
     Actor,
@@ -159,6 +160,29 @@ def unfinalize_process(
         {"from": current.value, "to": target.value, "reason": reason.strip()},
     )
     return target
+
+
+def select_revision_as_etalon(
+    *,
+    actor: Actor,
+    stamp: ApprovalStatus,
+    comment: str,
+) -> ApprovalStatus:
+    """Инспектор назначает загруженный документ эталоном сравнения.
+
+    Это не CONFIRMED_VIOLATION и не эвристика «ГИП = утверждено». Автомат
+    не вызывает функцию. Явный отказ в штампе нельзя перекрыть.
+    """
+
+    if not actor.is_human:
+        raise TransitionError("выбор эталона требует инспектора")
+    if not comment.strip():
+        raise TransitionError("выбор эталона требует comment")
+    if stamp is ApprovalStatus.NOT_APPROVED:
+        raise TransitionError(
+            "явный отказ в утверждении нельзя перекрыть выбором инспектора"
+        )
+    return overlay_inspector_approval(stamp, inspector_selected=True)
 
 
 def split(finding: Finding, parts: int) -> list[Finding]:

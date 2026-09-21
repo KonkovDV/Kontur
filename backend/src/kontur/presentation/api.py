@@ -62,6 +62,11 @@ class ReviewRequest(BaseModel):
     reason_code: ReasonCode | None = None
 
 
+class SelectRevisionRequest(BaseModel):
+    inspector_id: str = Field(min_length=1)
+    comment: str = Field(min_length=1)
+
+
 def _workspace() -> ProcessWorkspace:
     store = getattr(app.state, "workspace", None)
     if store is None:
@@ -524,6 +529,31 @@ def unfinalize_protocol(
     updated = _workspace().unfinalize(
         process_id, actor_from_roles(subject, granted), body.reason
     )
+    return updated.to_status()
+
+
+@app.post("/api/v1/processes/{process_id}/revisions/{file_id}/select", response_model=None)
+def select_revision(
+    process_id: str,
+    file_id: str,
+    body: SelectRevisionRequest,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    subject, granted, object_id = _require("selectRevision", authorization)
+    if body.inspector_id != subject:
+        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    try:
+        updated = _workspace().select_revision(
+            process_id,
+            file_id,
+            actor=actor_from_roles(subject, granted),
+            comment=body.comment,
+        )
+    except KeyError:
+        return JSONResponse(status_code=404, content={"detail": "файл не найден"})
     return updated.to_status()
 
 

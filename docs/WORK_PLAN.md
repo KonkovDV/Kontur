@@ -1,7 +1,17 @@
-# План дальнейшей работы (с 19.09.2026)
+# План дальнейшей работы (с 21.09.2026)
 
-Дедлайн подачи — 29.09.2026 23:59 МСК. Бюджет: пайплайн на живых PDF,
-затем I → J-инженерия → K → L. Всё вне этого режется.
+Дедлайн подачи — 29.09.2026 23:59 МСК.
+
+**Freeze инфраструктуры до подачи.** Новые production-компоненты
+(Prometheus/Grafana/ELK, OIDC/JWKS, TLS, backup/DR, УКЭП, РиН без sandbox,
+RabbitMQ 4.x, универсальный CV, VLM fine-tune) **не** на critical path.
+Разрешены только исправления S0/S1. Следующая работа повышает шанс
+обнаружить и доказать расхождение на конкурсном комплекте, а не зрелость
+транспорта.
+
+Конкурсный вертикальный срез: `PZ-001`, `KR-055`, `AR-041`, `IOS4-078`,
+`IOS4-079`, один текстовый реквизит, missing stage, stale-revision.
+Семейства экстракторов — не 103 одиночных правила. Гейты I/J кодом не закрыть.
 
 Каждый шаг: `requirement` → `artifact` → `test` → `metric` → `stop_condition`.
 Порог ТЗ не публикуется без нижней границы Wilson на held-out validation.
@@ -107,10 +117,13 @@ JSONL с `object_id`. `closes_gate_j` всегда false.
 | metric | p95 < 200 мс на теге `status`; error rate < 1% |
 | stop | дешёвый прогон на пустом `PARSING` как «гейт закрыт»; GHA p95 как production SLA |
 
-## Вне critical path (не делать вместо шагов 0–5)
+## Вне critical path (не делать вместо вертикального среза)
 
 BERT/облачный LLM как вердикт; YAML-админка норм; Prometheus/ELK;
-weekly fine-tune report; DWG; 133-е правило; GitHub-merge красных PR.
+weekly fine-tune report; DWG; 133-е правило; GitHub-merge красных PR;
+OIDC/JWKS; TLS termination; production backup/DR; 132/132 экстрактора;
+УКЭП; реальный РиН без контракта; RabbitMQ 4.x; универсальный CV;
+отдельный VLM fine-tune.
 
 ## Stop-conditions продукта
 

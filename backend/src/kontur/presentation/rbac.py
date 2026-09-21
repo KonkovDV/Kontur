@@ -51,12 +51,13 @@ REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "completeVerification": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "finalizeProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "unfinalizeProtocol": frozenset({Role.SUPERVISOR}),
+    "selectRevision": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "syncInspection": frozenset({Role.SUPERVISOR, Role.ADMIN}),
 }
 
 #: Операции, создающие или отменяющие юридическое решение (ADR-0001).
 LEGAL_DECISION_OPERATIONS: frozenset[str] = frozenset(
-    {"reviewFinding", "finalizeProtocol", "unfinalizeProtocol"}
+    {"reviewFinding", "finalizeProtocol", "unfinalizeProtocol", "selectRevision"}
 )
 
 
