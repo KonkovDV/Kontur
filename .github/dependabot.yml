@@ -67,7 +67,7 @@ updates:
         patterns:
           - "*"
 
-  - package-ecosystem: "docker"
+  - package-ecosystem: "docker-compose"
     directory: "/"
     schedule:
       interval: "weekly"
