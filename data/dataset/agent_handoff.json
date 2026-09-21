@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-21",
-  "export_git_sha": "8f4974c9ee3d208bdf8b6aab4293b911dbdd905d",
+  "export_git_sha": "7a2f7f2e3bd554ba29854a11cc549a9c7e44a87f",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",

@@ -41,6 +41,7 @@ ignore = ["S101"]
 "tests/test_pz_enum_e2e.py" = ["E501"]
 "tests/test_comparators.py" = ["E501"]
 "tests/test_normative_db.py" = ["E501"]
+"tests/test_contest_slice_e2e.py" = ["E501"]
 
 [tool.mypy]
 strict = true
