@@ -138,6 +138,30 @@ paths:
               schema: { $ref: "#/components/schemas/AuditLog" }
         "404": { description: Процесс не найден }
 
+  /processes/{process_id}/findings/{finding_id}/evidence-card:
+    get:
+      summary: Карточка доказательства (две панели, не протокол ТЗ)
+      description: >
+        Экран инспектора: фрагменты expected/actual, документ и редакция,
+        страница, polygon (bbox производный), raw и normalized/unit,
+        rule+tolerance, disagreement, решение инспектора, audit.
+        Не сериализует AUTO_NO_DIFFERENCE отдельно от находки. Не закрывает
+        Gate K. Группы живут в памяти процесса; после рестарта Postgres без
+        тел фрагментов карточка вернёт evidence_group=null.
+      operationId: getEvidenceCard
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters:
+        - { $ref: "#/components/parameters/ProcessId" }
+        - { $ref: "#/components/parameters/FindingId" }
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "./schemas/evidence_card.schema.json" }
+        "404": { description: Процесс или находка не найдены }
+
   /findings/{finding_id}/review:
     post:
       summary: Решение инспектора по атомарной находке
@@ -355,6 +379,11 @@ components:
       schema: { type: string }
     FileId:
       name: file_id
+      in: path
+      required: true
+      schema: { type: string }
+    FindingId:
+      name: finding_id
       in: path
       required: true
       schema: { type: string }

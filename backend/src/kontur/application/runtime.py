@@ -25,7 +25,7 @@ from kontur.application.protocol import (
 )
 from kontur.application.retry_policy import next_sync_attempt
 from kontur.application.scenarios import CompletenessMap, detect_scenario
-from kontur.domain.models import ApprovalStatus, DocStage, Finding
+from kontur.domain.models import ApprovalStatus, DocStage, EvidenceGroup, Finding
 from kontur.domain.state_machines import Actor, TransitionError, advance_process
 from kontur.domain.status_map import protocol_status, tz_upload_status
 from kontur.domain.statuses import (
@@ -89,6 +89,7 @@ class ProcessRecord:
     sync_attempts: int = 0
     parse_attempts: int = 0
     findings: dict[str, Finding] = field(default_factory=dict)
+    evidence_groups: dict[str, EvidenceGroup] = field(default_factory=dict)
     files: list[AcceptedFile] = field(default_factory=list)
     blobs: dict[str, bytes] = field(default_factory=dict)
     audit: MemoryAudit = field(default_factory=MemoryAudit)
@@ -346,6 +347,9 @@ class ProcessWorkspace:
                 item.stamp_approval = stamp
         for finding in report.findings:
             self.put_finding(record.process_id, finding)
+        record.evidence_groups = {
+            group.evidence_group_id: group for group in report.evidence_groups
+        }
         record.parse_attempts += 1
         record.audit.record(
             "system",
@@ -490,6 +494,9 @@ class ProcessWorkspace:
             if recorded is not None:
                 item.stamp_approval = recorded
         self._replace_machine_findings(record, report.findings)
+        record.evidence_groups = {
+            group.evidence_group_id: group for group in report.evidence_groups
+        }
         record.parse_attempts += 1
         record.audit.record(
             "system",

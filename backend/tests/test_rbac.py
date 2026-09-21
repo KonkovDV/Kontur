@@ -53,6 +53,9 @@ def test_inspector_works_and_every_row_grants_someone() -> None:
     assert authorize("startVerification", [Role.INSPECTOR]) == frozenset({Role.INSPECTOR})
     assert authorize("completeVerification", [Role.INSPECTOR]) == frozenset({Role.INSPECTOR})
     assert authorize("getAuditLog", [Role.ADMIN]) == frozenset({Role.ADMIN})
+    assert authorize("getEvidenceCard", [Role.ADMIN]) == frozenset({Role.ADMIN})
+    assert authorize("getEvidenceCard", [Role.INSPECTOR]) == frozenset({Role.INSPECTOR})
+    assert "getEvidenceCard" not in LEGAL_DECISION_OPERATIONS
     assert authorize("uploadDocuments", ["INSPECTOR", "ADMIN"]) == frozenset({Role.INSPECTOR})
     with pytest.raises(PermissionDeniedError):
         authorize("startVerification", [Role.ADMIN])

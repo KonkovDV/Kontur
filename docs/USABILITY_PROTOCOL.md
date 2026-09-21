@@ -60,7 +60,8 @@
 ## Связанные артефакты
 
 - `web/src/usability.ts` — схема `kontur-usability-v1` и расчёт метрик;
-- `web/src/App.tsx` — учебная очередь и скачивание JSON;
+- `web/src/demo_cards.json` — пять учебных `kontur.evidence_card.v1`;
+- `web/src/App.tsx` / `EvidenceViewer.tsx` — две панели, bbox/polygon, JSON;
 - `docs/USABILITY_RESULTS.md` — сводка сессий (пока пустая);
 - Red Team: RT-2609-21 (открыта до пяти сессий);
 - Gate K (26.09): UI ≤ 3 кликов на находку; протокол по Приложению 2;

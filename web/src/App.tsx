@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 
+import { EvidenceViewer } from "./EvidenceViewer";
+import demoCards from "./demo_cards.json";
+import type { EvidenceCard } from "./evidence";
 import {
   EXPECTED_FINDINGS,
   buildUsabilityExport,
@@ -22,59 +25,16 @@ const REASON_CODES = [
 
 type ReasonCode = (typeof REASON_CODES)[number];
 
-type DemoFinding = {
-  id: string;
-  rule: string;
-  status: FindingQuality;
-  kind: string;
-  expected: string;
-  actual: string;
-};
+const DEMO_CARDS = demoCards as EvidenceCard[];
 
-const DEMO_FINDINGS: DemoFinding[] = [
-  {
-    id: "demo-number-1",
-    rule: "PZ-001",
-    status: "CANDIDATE",
-    kind: "Числовая проверка",
-    expected: "1 240 м²",
-    actual: "1 255 м²",
-  },
-  {
-    id: "demo-text-1",
-    rule: "KR-055",
-    status: "CANDIDATE",
-    kind: "Текстовая проверка",
-    expected: "C25/30",
-    actual: "B25",
-  },
-  {
-    id: "demo-missing-1",
-    rule: "IOS4-078",
-    status: "MISSING_EVIDENCE",
-    kind: "Неполный комплект",
-    expected: "Акт испытаний",
-    actual: "ИД отсутствует",
-  },
-  {
-    id: "demo-number-2",
-    rule: "AR-041",
-    status: "CANDIDATE",
-    kind: "Числовая проверка",
-    expected: "900 мм",
-    actual: "850 мм",
-  },
-  {
-    id: "demo-text-2",
-    rule: "PZ-015",
-    status: "CANDIDATE",
-    kind: "Текстовая проверка",
-    expected: "жилое",
-    actual: "апартаменты",
-  },
-];
+function qualityOf(status: string): FindingQuality | null {
+  if (status === "CANDIDATE" || status === "MISSING_EVIDENCE") {
+    return status;
+  }
+  return null;
+}
 
-if (DEMO_FINDINGS.length !== EXPECTED_FINDINGS) {
+if (DEMO_CARDS.length !== EXPECTED_FINDINGS) {
   throw new Error("учебная очередь должна содержать ровно пять находок");
 }
 
@@ -103,24 +63,25 @@ export function App() {
     () => ({ pd: "PD_UPLOADED", rd: "RD_PARTIAL", id: "ID_MISSING" }),
     [],
   );
-  const finding = DEMO_FINDINGS[activeIndex];
+  const findingCard = DEMO_CARDS[activeIndex];
   const inSession = startedAt !== null && finishedAt === null;
   const completed = finishedAt !== null;
-  const isMissing = finding?.status === "MISSING_EVIDENCE";
-  const canReject = reason !== "" && inSession && !isMissing;
+  const quality = qualityOf(findingCard?.finding.finding_status ?? "");
+  const isMissing = quality === "MISSING_EVIDENCE";
+  const canReject = reason !== "" && inSession && quality === "CANDIDATE";
 
   function recordAuxiliaryClick() {
     if (inSession) setClicks((current) => current + 1);
   }
 
   function decide(action: DecisionAction) {
-    if (!inSession || finding === undefined || startedAt === null) return;
-    if (!isActionAllowed(finding.status, action)) return;
+    if (!inSession || findingCard === undefined || startedAt === null) return;
+    if (quality === null || !isActionAllowed(quality, action)) return;
     if (action === "REJECT" && reason === "") return;
     const now = new Date();
     const next: UsabilityDecision = {
-      finding_id: finding.id,
-      finding_status: finding.status,
+      finding_id: findingCard.finding.finding_id,
+      finding_status: quality,
       action,
       clicks_to_decision: clicks + 1,
       elapsed_ms: now.getTime() - startedAt.getTime(),
@@ -148,9 +109,10 @@ export function App() {
         <div>
           <h1>Инспектор ИИ</h1>
           <p>
-            Учебный рекордер Gate K: пять карточек, счётчик кликов, JSON. Не
-            закрывает гейт. «Подтвердить» не в фокусе.{" "}
-            <code>MISSING_EVIDENCE</code> нельзя подтвердить как нарушение.
+            Учебный рекордер Gate K: пять evidence-карточек (две панели,
+            bbox/polygon, raw/normalized, audit). Не закрывает гейт.
+            «Подтвердить» не в фокусе. <code>MISSING_EVIDENCE</code> нельзя
+            подтвердить как нарушение.
           </p>
         </div>
         <label className="participant">
@@ -186,17 +148,8 @@ export function App() {
         </section>
       ) : null}
 
-      {finding && inSession ? (
-        <div className="panes">
-          <section className="pane" aria-label="expected">
-            <h2>Ожидаемое</h2>
-            <p className="evidence">{finding.expected}</p>
-          </section>
-          <section className="card" aria-label="Карточка правила">
-            <p className="eyebrow">{finding.kind}</p>
-            <h2>{finding.rule}</h2>
-            <p>Статус: {finding.status}</p>
-            <p>Доказательство: {finding.id}</p>
+      {findingCard && quality && inSession ? (
+        <EvidenceViewer card={findingCard}>
             {isMissing ? (
               <p className="missing-hint">
                 Нет документа стадии — это не нарушение. Подтвердить и отклонить
@@ -253,12 +206,7 @@ export function App() {
             <small>
               Вспомогательных кликов: {clicks}. Кнопка решения добавит 1.
             </small>
-          </section>
-          <section className="pane" aria-label="actual">
-            <h2>Фактическое</h2>
-            <p className="evidence">{finding.actual}</p>
-          </section>
-        </div>
+        </EvidenceViewer>
       ) : null}
 
       {session ? (
