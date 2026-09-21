@@ -24,7 +24,7 @@
 5. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — **разбивка**, не «вся матрица executable».
 6. [`data/dataset/tz_scorecard.json`](../data/dataset/tz_scorecard.json) — три контура Code / Acceptance / Production, без процента «по ТЗ».
 7. [`WORK_PLAN.md`](WORK_PLAN.md), [`KNOWN_GAPS.md`](KNOWN_GAPS.md), [`PR_QUEUE.md`](PR_QUEUE.md), [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
-8. Issues [#75](https://github.com/KonkovDV/Kontur/issues/75)–[#84](https://github.com/KonkovDV/Kontur/issues/84), срез [#86](https://github.com/KonkovDV/Kontur/issues/86).
+8. Issues [#75](https://github.com/KonkovDV/Kontur/issues/75)–[#84](https://github.com/KonkovDV/Kontur/issues/84), срез [#86](https://github.com/KonkovDV/Kontur/issues/86), эпик [#87](https://github.com/KonkovDV/Kontur/issues/87). Шина: [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md).
 
 Пересборка снимков: `python scripts/export_agent_dumps.py`.
 `export_git_sha` в JSON может отставать на один docs-коммит — смотреть `git rev-parse HEAD`.
@@ -104,6 +104,8 @@ RabbitMQ 4.x, универсальный CV, VLM fine-tune, 132/132 экстра
 | [#82](https://github.com/KonkovDV/Kontur/issues/82) | Family extractors exact_field / presence |
 | [#83](https://github.com/KonkovDV/Kontur/issues/83) | GAP-SPLIT |
 | [#84](https://github.com/KonkovDV/Kontur/issues/84) | Изоляция VLM от write/tools |
+| [#86](https://github.com/KonkovDV/Kontur/issues/86) | Срез ситуации (читать первым) |
+| [#87](https://github.com/KonkovDV/Kontur/issues/87) | Эпик вертикального среза; дети 75–80 |
 
 ## Запреты (коротко)
 

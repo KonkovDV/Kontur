@@ -128,7 +128,7 @@ Free private не даёт нескольких assignees — метки зам�
 
 ## DAG до подачи
 
-Эпик (parent) создаётся issue «Вертикальный срез к 29.09». Дети:
+Эпик (parent): [#87](https://github.com/KonkovDV/Kontur/issues/87). Дети:
 
 | Issue | Полоса | Где | blocked-by |
 |---|---|---|---|
@@ -204,8 +204,8 @@ SKILL.md: риск промпт-инъекции в агента.
 ## Команды оркестратора
 
 ```text
-gh issue create --title "…" --label "contest-p0,cloud-ok,agent-bus" --parent EPIC
-gh issue edit EPIC --add-sub-issue 75,76,78
+gh issue create --title "…" --label "contest-p0,cloud-ok,agent-bus" --parent 87
+gh issue edit 87 --add-sub-issue 75,76,78
 gh issue edit 77 --add-blocked-by 76 --add-blocked-by 78
 gh issue edit 79 --add-blocked-by 75
 gh issue list --search "label:claimed is:open"
