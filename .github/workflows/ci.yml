@@ -109,8 +109,54 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate base and offline compose contracts
         run: |
+          set -euo pipefail
+
           docker compose config --quiet
           docker compose -f docker-compose.yml -f docker-compose.offline.yml config --quiet
+          docker compose config --format json > /tmp/compose-base.json
+          docker compose -f docker-compose.yml -f docker-compose.offline.yml \
+            config --format json > /tmp/compose-offline.json
+
+          cat > /tmp/expected-compose-limits.json <<'JSON'
+          {
+            "core": {"mem_limit": 2147483648, "cpus": 2.0, "pids_limit": 256},
+            "gateway": {"mem_limit": 268435456, "cpus": 0.5, "pids_limit": 128},
+            "outbox-relay": {"mem_limit": 402653184, "cpus": 0.5, "pids_limit": 128},
+            "inbox-consumer": {"mem_limit": 402653184, "cpus": 0.5, "pids_limit": 128},
+            "postgres": {"mem_limit": 1073741824, "cpus": 1.0, "pids_limit": 256},
+            "redis": {"mem_limit": 268435456, "cpus": 0.5, "pids_limit": 128},
+            "rabbitmq": {"mem_limit": 1073741824, "cpus": 1.0, "pids_limit": 256},
+            "minio": {"mem_limit": 536870912, "cpus": 1.0, "pids_limit": 256}
+          }
+          JSON
+
+          assert_limits() {
+            local config="$1"
+            jq -e --slurpfile expected /tmp/expected-compose-limits.json '
+              def limits:
+                with_entries(.value |= {
+                  mem_limit: (.mem_limit | tonumber),
+                  cpus: .cpus,
+                  pids_limit: .pids_limit
+                });
+              (.services | keys | sort) == ($expected[0] | keys | sort)
+              and all(.services[];
+                has("mem_limit") and has("cpus") and has("pids_limit"))
+              and all(.services[];
+                ((.deploy? // {}) | has("resources") | not))
+              and ((.services | limits) == $expected[0])
+            ' "$config" >/dev/null
+          }
+
+          assert_limits /tmp/compose-base.json
+          assert_limits /tmp/compose-offline.json
+          jq -S '.services | with_entries(
+            .value |= {mem_limit, cpus, pids_limit}
+          )' /tmp/compose-base.json > /tmp/compose-base-limits.json
+          jq -S '.services | with_entries(
+            .value |= {mem_limit, cpus, pids_limit}
+          )' /tmp/compose-offline.json > /tmp/compose-offline-limits.json
+          cmp /tmp/compose-base-limits.json /tmp/compose-offline-limits.json
 
   container-core:
     runs-on: ubuntu-latest

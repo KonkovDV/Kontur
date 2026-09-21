@@ -1,6 +1,9 @@
 services:
   postgres:
     image: postgres:16-alpine
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
     environment:
       POSTGRES_DB: kontur
       POSTGRES_USER: kontur
@@ -12,11 +15,17 @@ services:
 
   redis:
     image: redis:7-alpine
+    mem_limit: 256m
+    cpus: 0.50
+    pids_limit: 128
     # Кеш парсинга по хешу файла (ТЗ п. 9.1, шаг 5). Не durable queue.
     ports: ["127.0.0.1:6379:6379"]
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
     # guest ограничен loopback; отдельный пользователь доступен сервисам Compose.
     environment:
       RABBITMQ_DEFAULT_USER: kontur
@@ -28,6 +37,9 @@ services:
 
   minio:
     image: minio/minio:latest
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 256
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: kontur
@@ -37,6 +49,9 @@ services:
       - minio:/data
 
   core:
+    mem_limit: 2g
+    cpus: 2.0
+    pids_limit: 256
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -61,6 +76,9 @@ services:
     ports: ["127.0.0.1:8000:8000"]
 
   outbox-relay:
+    mem_limit: 384m
+    cpus: 0.50
+    pids_limit: 128
     build:
       context: .
       dockerfile: backend/Dockerfile.relay
@@ -81,6 +99,9 @@ services:
     restart: unless-stopped
 
   inbox-consumer:
+    mem_limit: 384m
+    cpus: 0.50
+    pids_limit: 128
     build:
       context: .
       dockerfile: backend/Dockerfile.relay
@@ -101,6 +122,9 @@ services:
     restart: unless-stopped
 
   gateway:
+    mem_limit: 256m
+    cpus: 0.50
+    pids_limit: 128
     build: ./gateway
     user: "10001:10001"
     read_only: true
