@@ -257,6 +257,10 @@ def build_extractor_families(
         family: {key: len(values) for key, values in buckets.items()}
         for family, buckets in codes_by_family.items()
     }
+    still_missing = sum(
+        family_counts.get("extractor_missing", 0)
+        for family_counts in counts_by_family.values()
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "matrix_version": source.matrix_version,
@@ -267,8 +271,8 @@ def build_extractor_families(
         "counts_by_family": counts_by_family,
         "codes_by_family": codes_by_family,
         "note": (
-            "103 extractor_missing remain missing until each family has a working extractor "
-            "and fixtures. Do not treat this file as 132/132."
+            f"{still_missing} extractor_missing remain missing until each family has a working "
+            "extractor and fixtures. Do not treat this file as 132/132."
         ),
     }
 
