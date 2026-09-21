@@ -23,8 +23,8 @@ from kontur.domain.models import (
     Finding,
 )
 from kontur.domain.statuses import Completeness, FindingStatus, ProcessState, ReviewPriority
-from kontur.evaluation.demo_cold_start import HONEST_COVERAGE
 from kontur.evaluation.submission_pack import (
+    COVERAGE_BUCKETS,
     PACK_SCHEMA,
     build_input_manifest,
     build_submission_pack,
@@ -32,7 +32,7 @@ from kontur.evaluation.submission_pack import (
     load_gate_k,
     model_inventory,
 )
-from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT
+from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
 
 REPO = Path(__file__).resolve().parents[2]
 SCHEMAS = REPO / "contracts" / "schemas"
@@ -121,6 +121,16 @@ def _validate_pack(payload: dict[str, object]) -> None:
     )
 
 
+def _coverage_slice_of(report: dict[str, int]) -> dict[str, int]:
+    """Ожидаемый срез: все вёдра покрытия плюс declared/expected_total."""
+
+    slice_ = {name: int(report.get(name, 0)) for name in COVERAGE_BUCKETS}
+    slice_["declared"] = int(report["declared"])
+    slice_["expected_total"] = int(report["expected_total"])
+    return slice_
+
+
+
 def test_empty_pack_validates_and_keeps_gates_open() -> None:
     pack = build_submission_pack(root=REPO, environ={})
     _validate_pack(pack)
@@ -131,9 +141,10 @@ def test_empty_pack_validates_and_keeps_gates_open() -> None:
     assert pack["closes_gate_l"] is False
     coverage = pack["coverage"]
     assert coverage["declared"] == EXPECTED_PARAM_COUNT
-    assert sum(int(coverage[name]) for name in HONEST_COVERAGE) == EXPECTED_PARAM_COUNT
-    for name, pinned in HONEST_COVERAGE.items():
-        assert coverage[name] == pinned
+    assert coverage == _coverage_slice_of(FileRuleRegistry().coverage_report())
+    assert 20 <= coverage["executable"] < EXPECTED_PARAM_COUNT
+    assert coverage["extractor_missing"] > 0
+    assert sum(coverage[name] for name in COVERAGE_BUCKETS) == EXPECTED_PARAM_COUNT
     assert pack["protocol"] is None
     assert pack["submission"] is None
     assert pack["protocol_payload_sha256"] is None

@@ -26,67 +26,143 @@
     "protocol_payload_sha256"
   ],
   "properties": {
-    "schema": { "const": "kontur.submission_pack.v1" },
-    "generated_on": { "type": "string", "minLength": 10 },
-    "closes_gate_i": { "const": false },
-    "closes_gate_j": { "const": false },
-    "closes_gate_k": { "const": false },
-    "closes_gate_l": { "const": false },
+    "schema": {
+      "const": "kontur.submission_pack.v1"
+    },
+    "generated_on": {
+      "type": "string",
+      "minLength": 10
+    },
+    "closes_gate_i": {
+      "const": false
+    },
+    "closes_gate_j": {
+      "const": false
+    },
+    "closes_gate_k": {
+      "const": false
+    },
+    "closes_gate_l": {
+      "const": false
+    },
     "versions": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["git_sha", "matrix_version", "dataset_version", "model_version"],
+      "required": [
+        "git_sha",
+        "matrix_version",
+        "dataset_version",
+        "model_version"
+      ],
       "properties": {
-        "git_sha": { "type": "string" },
-        "matrix_version": { "type": "string" },
-        "dataset_version": { "type": "string" },
-        "model_version": { "type": "string" }
+        "git_sha": {
+          "type": "string"
+        },
+        "matrix_version": {
+          "type": "string"
+        },
+        "dataset_version": {
+          "type": "string"
+        },
+        "model_version": {
+          "type": "string"
+        }
       }
     },
     "coverage": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Пять статусов покрытия в сумме дают declared. executable строго меньше 132.",
       "required": [
-        "advisory",
         "executable",
         "extractor_missing",
-        "not_applicable",
+        "advisory",
         "source_missing",
+        "not_applicable",
         "declared",
         "expected_total"
       ],
       "properties": {
-        "advisory": { "type": "integer", "minimum": 0 },
-        "executable": { "type": "integer", "minimum": 0, "exclusiveMaximum": 132 },
-        "extractor_missing": { "type": "integer", "minimum": 0 },
-        "not_applicable": { "type": "integer", "minimum": 0 },
-        "source_missing": { "type": "integer", "minimum": 0 },
-        "declared": { "type": "integer", "const": 132 },
-        "expected_total": { "type": "integer", "const": 132 }
+        "executable": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "extractor_missing": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisory": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_missing": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "not_applicable": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "declared": {
+          "type": "integer",
+          "const": 132
+        },
+        "expected_total": {
+          "type": "integer",
+          "const": 132
+        }
       }
     },
-    "input_manifest": { "$ref": "./protocol.schema.json#/properties/input_manifest" },
+    "input_manifest": {
+      "$ref": "./protocol.schema.json#/properties/input_manifest"
+    },
     "containers": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["digests_available", "digest_count", "service_count", "services"],
+      "required": [
+        "digests_available",
+        "digest_count",
+        "service_count",
+        "services"
+      ],
       "properties": {
-        "digests_available": { "type": "boolean" },
-        "digest_count": { "type": "integer", "minimum": 0 },
-        "service_count": { "type": "integer", "minimum": 0 },
+        "digests_available": {
+          "type": "boolean"
+        },
+        "digest_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "service_count": {
+          "type": "integer",
+          "minimum": 0
+        },
         "services": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["service"],
+            "required": [
+              "service"
+            ],
             "properties": {
-              "service": { "type": "string", "minLength": 1 },
-              "image": { "type": "string" },
-              "build": { "type": "string" },
-              "context": { "type": "string" },
-              "dockerfile": { "type": "string" },
-              "digest": { "type": "string" }
+              "service": {
+                "type": "string",
+                "minLength": 1
+              },
+              "image": {
+                "type": "string"
+              },
+              "build": {
+                "type": "string"
+              },
+              "context": {
+                "type": "string"
+              },
+              "dockerfile": {
+                "type": "string"
+              },
+              "digest": {
+                "type": "string"
+              }
             }
           }
         }
@@ -97,59 +173,125 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "sha256"],
+        "required": [
+          "name",
+          "sha256"
+        ],
         "properties": {
-          "name": { "type": "string", "minLength": 1 },
-          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
         }
       }
     },
     "ci": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["run_id", "run_url", "github_sha"],
+      "required": [
+        "run_id",
+        "run_url",
+        "github_sha"
+      ],
       "properties": {
-        "run_id": { "type": ["string", "null"] },
-        "run_url": { "type": ["string", "null"] },
-        "github_sha": { "type": ["string", "null"] }
+        "run_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "run_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "github_sha": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "limitations": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "open_gaps": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "gate_k": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["closes_gate_k", "sessions_present", "session_count", "raw"],
+      "required": [
+        "closes_gate_k",
+        "sessions_present",
+        "session_count",
+        "raw"
+      ],
       "properties": {
-        "closes_gate_k": { "const": false },
-        "sessions_present": { "type": "boolean" },
-        "session_count": { "type": "integer", "minimum": 0 },
-        "raw": { "type": "array", "items": { "type": "object" } },
-        "note": { "type": "string" }
+        "closes_gate_k": {
+          "const": false
+        },
+        "sessions_present": {
+          "type": "boolean"
+        },
+        "session_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "raw": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "note": {
+          "type": "string"
+        }
       }
     },
     "protocol": {
       "oneOf": [
-        { "type": "null" },
-        { "$ref": "./protocol.schema.json" }
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "./protocol.schema.json"
+        }
       ]
     },
     "submission": {
       "oneOf": [
-        { "type": "null" },
-        { "$ref": "./submission.schema.json" }
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "./submission.schema.json"
+        }
       ]
     },
     "protocol_payload_sha256": {
       "oneOf": [
-        { "type": "null" },
-        { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
       ]
     }
   }

@@ -15,11 +15,7 @@ from kontur.application.protocol import canonical_protocol_json, protocol_for_ht
 from kontur.domain.models import EvidenceGroup, Finding
 from kontur.evaluation.agent_dumps import build_handoff, git_sha, repo_root
 from kontur.evaluation.submission import findings_to_submission
-from kontur.infrastructure.matrix.registry import (
-    EXPECTED_PARAM_COUNT,
-    KNOWN_COVERAGE,
-    FileRuleRegistry,
-)
+from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
 
 PACK_SCHEMA = "kontur.submission_pack.v1"
 _HEX = frozenset("0123456789abcdef")
@@ -147,6 +143,17 @@ def load_gate_k(root: Path) -> dict[str, object]:
     }
 
 
+# Разбивка покрытия шире пары executable/extractor_missing: правило может быть
+# advisory, source_missing или not_applicable. Сумма всех вёдер обязана дать 132.
+COVERAGE_BUCKETS: tuple[str, ...] = (
+    "executable",
+    "extractor_missing",
+    "advisory",
+    "source_missing",
+    "not_applicable",
+)
+
+
 def _as_int(value: object, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(name)
@@ -154,7 +161,7 @@ def _as_int(value: object, name: str) -> int:
 
 
 def _coverage_slice(counts: Mapping[str, object]) -> dict[str, int]:
-    buckets = {name: _as_int(counts[name], name) for name in sorted(KNOWN_COVERAGE)}
+    buckets = {name: _as_int(counts.get(name, 0), name) for name in COVERAGE_BUCKETS}
     declared = _as_int(counts["declared"], "declared")
     expected = _as_int(counts["expected_total"], "expected_total")
     if declared != EXPECTED_PARAM_COUNT or expected != EXPECTED_PARAM_COUNT:
@@ -163,11 +170,7 @@ def _coverage_slice(counts: Mapping[str, object]) -> dict[str, int]:
         raise ValueError("нельзя заявить всю матрицу executable")
     if sum(buckets.values()) != EXPECTED_PARAM_COUNT:
         raise ValueError("разбивка coverage не сходится к 132")
-    return {
-        **buckets,
-        "declared": declared,
-        "expected_total": expected,
-    }
+    return {**buckets, "declared": declared, "expected_total": expected}
 
 
 def build_submission_pack(

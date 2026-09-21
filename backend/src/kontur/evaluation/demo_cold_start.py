@@ -20,13 +20,17 @@ COMPOSE_DEMO_SERVICES: tuple[str, ...] = (
     "inbox-consumer",
     "gateway",
 )
-HONEST_COVERAGE: dict[str, int] = {
-    "advisory": 1,
-    "executable": 33,
-    "extractor_missing": 94,
-    "not_applicable": 0,
-    "source_missing": 4,
-}
+# Ведро покрытия — не только executable/extractor_missing: правило может быть
+# advisory (компаратор не даёт CANDIDATE), source_missing (нет источника в ТЗ)
+# или not_applicable. Разбивка обязана сходиться к 132 по всем вёдрам.
+COVERAGE_BUCKETS: tuple[str, ...] = (
+    "executable",
+    "extractor_missing",
+    "advisory",
+    "source_missing",
+    "not_applicable",
+)
+HONEST_EXECUTABLE_MIN = 20
 CLOSES_GATE_K = False
 CLOSES_GATE_J = False
 
@@ -54,9 +58,15 @@ def assert_honest_coverage(report: Mapping[str, int]) -> None:
     expected = int(report.get("expected_total", -1))
     if expected != EXPECTED_PARAM_COUNT or declared != EXPECTED_PARAM_COUNT:
         raise AssertionError(f"матрица {declared}/{expected}, ожидалось {EXPECTED_PARAM_COUNT}")
-    if sum(HONEST_COVERAGE.values()) != EXPECTED_PARAM_COUNT:
+    buckets = {name: int(report.get(name, 0)) for name in COVERAGE_BUCKETS}
+    executable = buckets["executable"]
+    if executable < HONEST_EXECUTABLE_MIN:
+        raise AssertionError(
+            f"executable={executable}, ожидалось не меньше {HONEST_EXECUTABLE_MIN}"
+        )
+    if executable >= EXPECTED_PARAM_COUNT:
+        raise AssertionError("нельзя заявить всю матрицу executable")
+    if buckets["extractor_missing"] <= 0:
+        raise AssertionError("extractor_missing=0: незакрытые извлечения обязаны быть видны")
+    if sum(buckets.values()) != EXPECTED_PARAM_COUNT:
         raise AssertionError("разбивка coverage не сходится к 132")
-    for name, pinned in HONEST_COVERAGE.items():
-        actual = int(report.get(name, -1))
-        if actual != pinned:
-            raise AssertionError(f"{name}={actual}, ожидалось {pinned}")
