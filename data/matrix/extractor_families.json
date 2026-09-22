@@ -20,8 +20,8 @@
     },
     "number": {
       "advisory": 0,
-      "executable": 24,
-      "extractor_missing": 61,
+      "executable": 30,
+      "extractor_missing": 55,
       "not_applicable": 0,
       "source_missing": 0
     },
@@ -95,6 +95,7 @@
         "IOS4-078",
         "IOS4-079",
         "KR-058",
+        "PPM-114",
         "PZ-001",
         "PZ-002",
         "PZ-003",
@@ -114,7 +115,12 @@
         "PZ-018",
         "PZ-019",
         "PZ-020",
-        "SPZU-024"
+        "SM-132",
+        "SPZU-024",
+        "ZU-125",
+        "ZU-127",
+        "ZU-128",
+        "ZU-131"
       ],
       "extractor_missing": [
         "AR-040",
@@ -161,8 +167,6 @@
         "PPM-108",
         "PPM-109",
         "PPM-113",
-        "PPM-114",
-        "SM-132",
         "SPZU-025",
         "SPZU-026",
         "SPZU-027",
@@ -173,11 +177,7 @@
         "SPZU-032",
         "SPZU-033",
         "SPZU-037",
-        "ZU-125",
-        "ZU-126",
-        "ZU-127",
-        "ZU-128",
-        "ZU-131"
+        "ZU-126"
       ],
       "not_applicable": [],
       "source_missing": []
@@ -204,5 +204,5 @@
       "source_missing": []
     }
   },
-  "note": "89 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
+  "note": "83 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
 }
