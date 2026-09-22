@@ -3,8 +3,8 @@
   "matrix_version": "draft-0",
   "counts": {
     "advisory": 1,
-    "executable": 38,
-    "extractor_missing": 89,
+    "executable": 44,
+    "extractor_missing": 83,
     "not_applicable": 0,
     "source_missing": 4,
     "declared": 132,
@@ -27,6 +27,7 @@
       "POS-087",
       "PPM-103",
       "PPM-107",
+      "PPM-114",
       "PZ-001",
       "PZ-002",
       "PZ-003",
@@ -50,9 +51,14 @@
       "PZ-021",
       "PZ-022",
       "PZ-023",
+      "SM-132",
       "SPZU-024",
       "ZU-124",
-      "ZU-130"
+      "ZU-125",
+      "ZU-127",
+      "ZU-128",
+      "ZU-130",
+      "ZU-131"
     ],
     "extractor_missing": [
       "AR-040",
@@ -121,8 +127,6 @@
       "PPM-111",
       "PPM-112",
       "PPM-113",
-      "PPM-114",
-      "SM-132",
       "SPZU-025",
       "SPZU-026",
       "SPZU-027",
@@ -138,12 +142,8 @@
       "SPZU-037",
       "SPZU-038",
       "SPZU-039",
-      "ZU-125",
       "ZU-126",
-      "ZU-127",
-      "ZU-128",
-      "ZU-129",
-      "ZU-131"
+      "ZU-129"
     ],
     "not_applicable": [],
     "source_missing": [

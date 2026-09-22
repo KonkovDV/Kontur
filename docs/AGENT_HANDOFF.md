@@ -19,9 +19,10 @@ HEAD смотреть `git rev-parse origin/main`.
 1. [`AGENTS.md`](../AGENTS.md) — инварианты 1–14.
 2. [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md) — claim на issue до правок.
 3. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json) — гейты, запреты, команды.
-4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 38 / 89 / 1 / 4 из 132.
+4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 44 / 83 / 1 / 4 из 132.
 4a. [`data/matrix/family_triage.json`](../data/matrix/family_triage.json) и [`docs/EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) — поштучное решение по 28 правилам семейств `exact_field` / `presence`: какой вид доказательства нужен и почему графика не стала текстом.
 4b. [`data/matrix/class_ladder_triage.json`](../data/matrix/class_ladder_triage.json) и [`docs/CLASS_LADDER_TRIAGE.md`](CLASS_LADDER_TRIAGE.md) — разбор 23 «классоподобных» правил: 5 переведены в `executable` через `enum` + `class_not_lower`, 13 осознанно оставлены `extractor_missing` с указанием причины (инвертированная лестница, набор признаков, таблица, допуск в обе стороны).
+4c. [`data/matrix/number_family_triage.json`](../data/matrix/number_family_triage.json) и [`docs/NUMBER_FAMILY_TRIAGE.md`](NUMBER_FAMILY_TRIAGE.md) — разбор 57 числовых правил: 6 переведены в `executable`, 51 оставлено `extractor_missing` с кодом причины (обмер по чертежу, подсчёт объектов, площадь по контуру, таблица по элементам).
 5. [`data/dataset/gold_inventory.json`](../data/dataset/gold_inventory.json) — публичный gold ≠ frozen val.
 6. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
 7. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
@@ -139,6 +140,13 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
    сворачиваются (`comparators.fold_homoglyphs`), латинская `I` не тронута, чтобы
    не сломать римские цифры PZ-022. Остальные 13 требуют другого экстрактора —
    причины в `class_ladder_triage.json`.
+4b. Числовое семейство: разобраны все 57 правил с `extractor.type = number`,
+   остававшихся `extractor_missing`. Шесть стали `executable` (ZU-125, ZU-127,
+   ZU-128, ZU-131 — теплотехника и энергопаспорт; SM-132 — итог ССР; PPM-114 —
+   расход НПВ). Операторы и допуски не менялись, менялся только экстрактор.
+   Остальные 51 требуют обмера по чертежу, подсчёта объектов, площади по контуру
+   или таблицы по элементам — коды причин в `number_family_triage.json`.
+   Из 83 `extractor_missing` теперь разобрано 89 правил суммарно по трём триажам.
 5. `split()` (GAP-SPLIT) до демо.
 6. Sandbox РиН, HTTP `submitted/confirmed/ambiguous` и бизнес-ACK → `SYNCED` — нет.
 7. JWKS/OIDC, TLS 1.3, антивирус, observability — **freeze** до подачи.

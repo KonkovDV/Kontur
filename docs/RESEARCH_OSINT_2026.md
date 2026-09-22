@@ -139,8 +139,8 @@ error**, не Markdown. n=50–100 разрешённых страниц, не T
 
 ## Дисбаланс на 21.09.2026
 
-Транспорт и протокол сильнее, чем обнаружение расхождений: 38 executable /
-89 extractor_missing, плюс 1 advisory и 4 source_missing. Critical path до
+Транспорт и протокол сильнее, чем обнаружение расхождений: 44 executable /
+83 extractor_missing, плюс 1 advisory и 4 source_missing. Critical path до
 29.09 — вертикальный срез PDF → evidence → инспектор → протокол, не новые
 брокерные компоненты.
 

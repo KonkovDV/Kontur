@@ -1,0 +1,681 @@
+{
+  "matrix_version": "draft-0",
+  "survey_rule": "В выборку попадают правила с coverage == 'extractor_missing' и extractor.type == 'number', ещё не разобранные в family_triage.json и class_ladder_triage.json.",
+  "method": "Правило переводится в executable только если: (1) параметр по нормативу объявляется единственным числом с устойчивой подписью в текстовом документе; (2) не требует обмера по чертежу, подсчёта объектов или разбора таблицы по строкам; (3) единица измерения одна. Операторы и допуски из матрицы не менялись — менялся только экстрактор.",
+  "reason_codes": {
+    "drawing_measurement": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа.",
+    "per_element_table": "Число своё у каждого элемента (стояк, участок, плита, колонна). Нужен табличный экстрактор с привязкой к элементу, а не одно значение у якоря.",
+    "per_material_table": "Число своё у каждого материала или прибора; единственного значения в документе нет.",
+    "object_counting": "Требуется подсчёт однотипных объектов на плане. Подсчёт — самая слабая способность существующих моделей, обещать её нельзя.",
+    "area_from_polygon": "Площадь вычисляется по замкнутому контуру на чертеже; подписанного числа может не быть вовсе.",
+    "layered_composite": "«Пирог» из слоёв: значение — упорядоченный список толщин, а не одно число.",
+    "multi_field_number": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей.",
+    "zone_geometry": "Опасная зона или радиус задаются геометрией на стройгенплане, а не подписанным числом у якоря.",
+    "slope_from_geometry": "Уклон читается с профиля и отметок, а не как одно число у подписи.",
+    "schedule_chart": "Значение лежит в календарном графике или графике движения рабочих — это диаграмма, не текст.",
+    "daylight_calculation": "КЕО — результат светотехнического расчёта по геометрии помещения, а не извлекаемое число."
+  },
+  "decision_counts": {
+    "kept_extractor_missing": 51,
+    "promoted_executable": 6
+  },
+  "total_surveyed": 57,
+  "closes_gate_j": false,
+  "note": "Разбор не закрывает Gate J и не заявляет 132/132. Числа проверены на синтетических фикстурах, а не на контрольной выборке: это заявка на исполнимость, не измеренная точность.",
+  "entries": [
+    {
+      "code": "AR-040",
+      "section": "АР",
+      "name": "Ширина магистральных эвакуационных коридоров",
+      "unit": "м",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "AR-042",
+      "section": "АР",
+      "name": "Высота путей эвакуации и проемов",
+      "unit": "м",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "AR-044",
+      "section": "АР",
+      "name": "Послойный состав пирога кровли",
+      "unit": "мм (слои)",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "layered_composite",
+      "rationale": "«Пирог» из слоёв: значение — упорядоченный список толщин, а не одно число."
+    },
+    {
+      "code": "AR-045",
+      "section": "АР",
+      "name": "Уклоны кровли и система водостока",
+      "unit": "% / °",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "multi_field_number",
+      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
+    },
+    {
+      "code": "AR-046",
+      "section": "АР",
+      "name": "Общее количество и габариты оконных блоков",
+      "unit": "шт. / м²",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "object_counting",
+      "rationale": "Требуется подсчёт однотипных объектов на плане. Подсчёт — самая слабая способность существующих моделей, обещать её нельзя."
+    },
+    {
+      "code": "AR-047",
+      "section": "АР",
+      "name": "Габариты и глубина тамбуров входных групп",
+      "unit": "м",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "AR-048",
+      "section": "АР",
+      "name": "Количество и параметры лестничных маршей и ступеней",
+      "unit": "шт. / мм",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "object_counting",
+      "rationale": "Требуется подсчёт однотипных объектов на плане. Подсчёт — самая слабая способность существующих моделей, обещать её нельзя."
+    },
+    {
+      "code": "AR-049",
+      "section": "АР",
+      "name": "Высота и тип ограждений лестниц, балкона, кровли",
+      "unit": "м",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "AR-051",
+      "section": "АР",
+      "name": "Параметры естественного освещения (КЕО)",
+      "unit": "%",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "daylight_calculation",
+      "rationale": "КЕО — результат светотехнического расчёта по геометрии помещения, а не извлекаемое число."
+    },
+    {
+      "code": "IOS1-070",
+      "section": "ИОС1",
+      "name": "Параметры и контуры заземления и молниезащиты",
+      "unit": "Ом / мм²",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "multi_field_number",
+      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
+    },
+    {
+      "code": "IOS2-071",
+      "section": "ИОС2",
+      "name": "Диаметры стояков и разводящих трубопроводов В1/Т3",
+      "unit": "мм",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_element_table",
+      "rationale": "Число своё у каждого элемента (стояк, участок, плита, колонна). Нужен табличный экстрактор с привязкой к элементу, а не одно значение у якоря."
+    },
+    {
+      "code": "IOS3-074",
+      "section": "ИОС3",
+      "name": "Диаметры выпусков и магистралей К1/К2",
+      "unit": "мм",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_element_table",
+      "rationale": "Число своё у каждого элемента (стояк, участок, плита, колонна). Нужен табличный экстрактор с привязкой к элементу, а не одно значение у якоря."
+    },
+    {
+      "code": "IOS4-076",
+      "section": "ИОС4",
+      "name": "Диаметры магистралей и стояков отопления (Т1, Т2)",
+      "unit": "мм",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_element_table",
+      "rationale": "Число своё у каждого элемента (стояк, участок, плита, колонна). Нужен табличный экстрактор с привязкой к элементу, а не одно значение у якоря."
+    },
+    {
+      "code": "IOS4-077",
+      "section": "ИОС4",
+      "name": "Технические параметры отопительных приборов (радиаторов)",
+      "unit": "Вт / шт.",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_material_table",
+      "rationale": "Число своё у каждого материала или прибора; единственного значения в документе нет."
+    },
+    {
+      "code": "IOS5-080",
+      "section": "ИОС5",
+      "name": "Состав и емкость систем пожарной сигнализации (АПС)",
+      "unit": "шт. / зоны",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "object_counting",
+      "rationale": "Требуется подсчёт однотипных объектов на плане. Подсчёт — самая слабая способность существующих моделей, обещать её нельзя."
+    },
+    {
+      "code": "KR-054",
+      "section": "КР",
+      "name": "Шаг и привязка координационных осей несущего каркаса",
+      "unit": "мм",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "KR-059",
+      "section": "КР",
+      "name": "Толщина монолитных плит перекрытий и покрытия",
+      "unit": "мм",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_element_table",
+      "rationale": "Число своё у каждого элемента (стояк, участок, плита, колонна). Нужен табличный экстрактор с привязкой к элементу, а не одно значение у якоря."
+    },
+    {
+      "code": "KR-060",
+      "section": "КР",
+      "name": "Геометрические сечения несущих колонн и пилонов",
+      "unit": "мм²",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_element_table",
+      "rationale": "Число своё у каждого элемента (стояк, участок, плита, колонна). Нужен табличный экстрактор с привязкой к элементу, а не одно значение у якоря."
+    },
+    {
+      "code": "KR-061",
+      "section": "КР",
+      "name": "Толщина несущих монолитных стен (ядра жесткости)",
+      "unit": "мм",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_element_table",
+      "rationale": "Число своё у каждого элемента (стояк, участок, плита, колонна). Нужен табличный экстрактор с привязкой к элементу, а не одно значение у якоря."
+    },
+    {
+      "code": "KR-064",
+      "section": "КР",
+      "name": "Привязки и габариты лифтовых шахт",
+      "unit": "мм",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "KR-065",
+      "section": "КР",
+      "name": "Схемы расположения и площади технологических проемов",
+      "unit": "м²",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "area_from_polygon",
+      "rationale": "Площадь вычисляется по замкнутому контуру на чертеже; подписанного числа может не быть вовсе."
+    },
+    {
+      "code": "KR-067",
+      "section": "КР",
+      "name": "Ведомости расхода материалов (бетон, сталь)",
+      "unit": "м³ / т",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "multi_field_number",
+      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
+    },
+    {
+      "code": "ODI-116",
+      "section": "ОДИ",
+      "name": "Ширина коридоров на путях движения МГН",
+      "unit": "м",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "ODI-117",
+      "section": "ОДИ",
+      "name": "Ширина дверных проемов на путях движения МГН",
+      "unit": "м",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "ODI-118",
+      "section": "ОДИ",
+      "name": "Высота порогов в дверных проемах на путях МГН",
+      "unit": "м",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "ODI-119",
+      "section": "ОДИ",
+      "name": "Габариты и планировка санузлов для инвалидов (универсальные кабины)",
+      "unit": "м² / м",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "multi_field_number",
+      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
+    },
+    {
+      "code": "ODI-121",
+      "section": "ОДИ",
+      "name": "Количество и габариты парковочных мест для инвалидов",
+      "unit": "шт. / м",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "object_counting",
+      "rationale": "Требуется подсчёт однотипных объектов на плане. Подсчёт — самая слабая способность существующих моделей, обещать её нельзя."
+    },
+    {
+      "code": "POD-090",
+      "section": "ПОД",
+      "name": "Границы опасных зон развала и обрушения конструкций",
+      "unit": "м",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "zone_geometry",
+      "rationale": "Опасная зона или радиус задаются геометрией на стройгенплане, а не подписанным числом у якоря."
+    },
+    {
+      "code": "POD-093",
+      "section": "ПОД",
+      "name": "Общие объемы демонтируемых конструкций (по типам)",
+      "unit": "м³",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_element_table",
+      "rationale": "Число своё у каждого элемента (стояк, участок, плита, колонна). Нужен табличный экстрактор с привязкой к элементу, а не одно значение у якоря."
+    },
+    {
+      "code": "POD-097",
+      "section": "ПОД",
+      "name": "Места и габариты площадок временного складирования лома",
+      "unit": "м²",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "area_from_polygon",
+      "rationale": "Площадь вычисляется по замкнутому контуру на чертеже; подписанного числа может не быть вовсе."
+    },
+    {
+      "code": "POS-081",
+      "section": "ПОС",
+      "name": "Границы опасных зон работы грузоподъемных кранов",
+      "unit": "м",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "zone_geometry",
+      "rationale": "Опасная зона или радиус задаются геометрией на стройгенплане, а не подписанным числом у якоря."
+    },
+    {
+      "code": "POS-082",
+      "section": "ПОС",
+      "name": "Продолжительность этапов строительства (Календарный график)",
+      "unit": "дни",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "schedule_chart",
+      "rationale": "Значение лежит в календарном графике или графике движения рабочих — это диаграмма, не текст."
+    },
+    {
+      "code": "POS-083",
+      "section": "ПОС",
+      "name": "Посадка и габариты временных зданий и сооружений",
+      "unit": "м",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "POS-084",
+      "section": "ПОС",
+      "name": "Схемы движения и ширина временных автодорог",
+      "unit": "м",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "POS-086",
+      "section": "ПОС",
+      "name": "Потребность в кадрах (Максимальная численность)",
+      "unit": "чел.",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "schedule_chart",
+      "rationale": "Значение лежит в календарном графике или графике движения рабочих — это диаграмма, не текст."
+    },
+    {
+      "code": "POS-088",
+      "section": "ПОС",
+      "name": "Точки подключения и мощности временных ресурсов",
+      "unit": "кВт / м³",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "multi_field_number",
+      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
+    },
+    {
+      "code": "PPM-104",
+      "section": "ППМ",
+      "name": "Ширина и высота эвакуационных проходов",
+      "unit": "м",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "PPM-105",
+      "section": "ППМ",
+      "name": "Ширина эвакуационных дверей наружных выходов",
+      "unit": "м",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "PPM-108",
+      "section": "ППМ",
+      "name": "Количество и расстановка извещателей АПС",
+      "unit": "шт. / м",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "object_counting",
+      "rationale": "Требуется подсчёт однотипных объектов на плане. Подсчёт — самая слабая способность существующих моделей, обещать её нельзя."
+    },
+    {
+      "code": "PPM-113",
+      "section": "ППМ",
+      "name": "Расход воды и количество струй внутреннего пожаротушения (ВПВ)",
+      "unit": "л/с / шт.",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "multi_field_number",
+      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
+    },
+    {
+      "code": "PPM-114",
+      "section": "ППМ",
+      "name": "Расход воды на наружное пожаротушение (НПВ)",
+      "unit": "л/с",
+      "operator": "delta",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "anchors": [
+        "Расход воды на наружное пожаротушение (НПВ)",
+        "Расход воды на наружное пожаротушение",
+        "Расход на наружное пожаротушение"
+      ],
+      "rationale": "Расчётный расход НПВ в л/с приводится одним числом в тексте ППМ и на листе общих данных НВК."
+    },
+    {
+      "code": "SM-132",
+      "section": "СМ",
+      "name": "Итоговая стоимость по Сводному сметному расчету (ССР)",
+      "unit": "тыс. руб.",
+      "operator": "delta",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "anchors": [
+        "Итоговая стоимость по Сводному сметному расчету (ССР)",
+        "Всего по сводному сметному расчету",
+        "Итого по сводному сметному расчету"
+      ],
+      "rationale": "Итог ССР — одна строка «Всего по сводному сметному расчёту»; допуск уже задан относительным (5 %), поэтому уточнения в РД не шумят."
+    },
+    {
+      "code": "SPZU-025",
+      "section": "СПЗУ",
+      "name": "Площадь асфальтобетонного покрытия",
+      "unit": "м²",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "area_from_polygon",
+      "rationale": "Площадь вычисляется по замкнутому контуру на чертеже; подписанного числа может не быть вовсе."
+    },
+    {
+      "code": "SPZU-026",
+      "section": "СПЗУ",
+      "name": "Площадь тротуарного плиточного покрытия",
+      "unit": "м²",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "area_from_polygon",
+      "rationale": "Площадь вычисляется по замкнутому контуру на чертеже; подписанного числа может не быть вовсе."
+    },
+    {
+      "code": "SPZU-027",
+      "section": "СПЗУ",
+      "name": "Площадь озеленения и газонов",
+      "unit": "м²",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "area_from_polygon",
+      "rationale": "Площадь вычисляется по замкнутому контуру на чертеже; подписанного числа может не быть вовсе."
+    },
+    {
+      "code": "SPZU-028",
+      "section": "СПЗУ",
+      "name": "Площадь детских и спортивных площадок",
+      "unit": "м²",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "area_from_polygon",
+      "rationale": "Площадь вычисляется по замкнутому контуру на чертеже; подписанного числа может не быть вовсе."
+    },
+    {
+      "code": "SPZU-029",
+      "section": "СПЗУ",
+      "name": "Спецификация МАФ",
+      "unit": "шт. / компл.",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "object_counting",
+      "rationale": "Требуется подсчёт однотипных объектов на плане. Подсчёт — самая слабая способность существующих моделей, обещать её нельзя."
+    },
+    {
+      "code": "SPZU-030",
+      "section": "СПЗУ",
+      "name": "Ширина внутриплощадочных дорог и проездов",
+      "unit": "м",
+      "operator": "ge",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "drawing_measurement",
+      "rationale": "Значение получается обмером по чертежу (ширина, высота, габарит, привязка), а не чтением подписанного числа."
+    },
+    {
+      "code": "SPZU-031",
+      "section": "СПЗУ",
+      "name": "Радиусы поворота дорог и пожарных проездов",
+      "unit": "м",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "zone_geometry",
+      "rationale": "Опасная зона или радиус задаются геометрией на стройгенплане, а не подписанным числом у якоря."
+    },
+    {
+      "code": "SPZU-032",
+      "section": "СПЗУ",
+      "name": "Конструкция дорожной одежды",
+      "unit": "мм (слои)",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "layered_composite",
+      "rationale": "«Пирог» из слоёв: значение — упорядоченный список толщин, а не одно число."
+    },
+    {
+      "code": "SPZU-033",
+      "section": "СПЗУ",
+      "name": "Уклоны дорог и проездов",
+      "unit": "‰",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "slope_from_geometry",
+      "rationale": "Уклон читается с профиля и отметок, а не как одно число у подписи."
+    },
+    {
+      "code": "SPZU-037",
+      "section": "СПЗУ",
+      "name": "Количество и разметка парковочных мест на участке",
+      "unit": "шт.",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "object_counting",
+      "rationale": "Требуется подсчёт однотипных объектов на плане. Подсчёт — самая слабая способность существующих моделей, обещать её нельзя."
+    },
+    {
+      "code": "ZU-125",
+      "section": "ЗУ",
+      "name": "Толщина теплоизоляционного слоя наружных стен",
+      "unit": "мм",
+      "operator": "delta",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "anchors": [
+        "Толщина теплоизоляционного слоя наружных стен",
+        "Толщина теплоизоляционного слоя",
+        "Толщина утеплителя наружных стен",
+        "Толщина утеплителя стен"
+      ],
+      "rationale": "Толщина утеплителя стен объявляется одним числом в теплотехническом расчёте и в спецификации фасадной системы."
+    },
+    {
+      "code": "ZU-126",
+      "section": "ЗУ",
+      "name": "Коэффициент теплопроводности (λ) утеплителя стен",
+      "unit": "Вт/(м·С)",
+      "operator": "delta",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_material_table",
+      "rationale": "Число своё у каждого материала или прибора; единственного значения в документе нет."
+    },
+    {
+      "code": "ZU-127",
+      "section": "ЗУ",
+      "name": "Коэффициент сопротивления теплопередаче окон (Ro)",
+      "unit": "м²·С/Вт",
+      "operator": "delta",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "anchors": [
+        "Коэффициент сопротивления теплопередаче окон (Ro)",
+        "Приведенное сопротивление теплопередаче",
+        "Сопротивление теплопередаче окон",
+        "Сопротивление теплопередаче заполнений световых проемов"
+      ],
+      "rationale": "Приведённое сопротивление теплопередаче окон — обязательное числовое поле требований к светопрозрачным конструкциям и паспорта окна."
+    },
+    {
+      "code": "ZU-128",
+      "section": "ЗУ",
+      "name": "Толщина утеплителя чердачных перекрытий / кровли",
+      "unit": "мм",
+      "operator": "delta",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "anchors": [
+        "Толщина утеплителя чердачных перекрытий / кровли",
+        "Толщина утеплителя покрытия",
+        "Толщина утеплителя чердачного перекрытия",
+        "Толщина утеплителя кровли"
+      ],
+      "rationale": "Толщина утеплителя покрытия объявляется одним числом в теплотехническом расчёте; в РД она же стоит в подписи узла."
+    },
+    {
+      "code": "ZU-131",
+      "section": "ЗУ",
+      "name": "Удельный годовой расход тепловой энергии на отопление",
+      "unit": "кВт·ч/м²",
+      "operator": "delta",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "anchors": [
+        "Удельный годовой расход тепловой энергии на отопление",
+        "Удельный расход тепловой энергии на отопление и вентиляцию",
+        "Удельный расход тепловой энергии на отопление"
+      ],
+      "rationale": "Удельный годовой расход тепловой энергии — итоговая строка энергетического паспорта, единственное число с устойчивой подписью."
+    }
+  ]
+}
