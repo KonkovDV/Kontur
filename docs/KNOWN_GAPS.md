@@ -14,10 +14,12 @@
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | region-crop dual-read в коде; Docker SILVER-замер порог не берёт; нет GOLD | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
 | GAP-ETALON-UI | инспекторский SELECT_REVISION есть в API, в UI кнопки назначения эталона нет | двухпанельный viewer (#76) не закрывает J; POST `.../revisions/{file_id}/select` | конкурсный срез |
+| GAP-EMB | Embedded-file вложения в PDF (`/EmbeddedFile`) | Пайплайн не вызывает `FPDFDoc_GetAttachmentCount`; вложения не видны и не проверяются | #80 / гейт I |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
 `put_finding` по `evidence_group_id`. Очередь после рестарта — `process_findings`,
 комплектность на `processes`, журнал — `audit_log`.
+GAP-EMB: вложения `/EmbeddedFile` пайплайн не видит (см. таблицу выше).
 
 Поставка организатора, публичный gold-seed и пакет без ответов v2.0 **не**
 закрывают `GAP-IOS4-VAL`: см. [`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md) и
