@@ -185,11 +185,40 @@ def compare_set_membership(actual_raw: object, rule: dict[str, object]) -> Compa
 
 # ── ordered-class operator ────────────────────────────────────────────────────
 
+# Кириллические буквы, визуально неотличимые от латинских в верхнем регистре.
+# Латинская I намеренно отсутствует: римские цифры (PZ-022) должны остаться как есть.
+_HOMOGLYPH_FOLD = {
+    "А": "A",
+    "В": "B",
+    "Е": "E",
+    "К": "K",
+    "М": "M",
+    "Н": "H",
+    "О": "O",
+    "Р": "P",
+    "С": "C",
+    "Т": "T",
+    "У": "Y",
+    "Х": "X",
+}
+
+
+def fold_homoglyphs(value: str) -> str:
+    """Свести кириллические омоглифы к латинским: «С345» и «C345» — одно значение.
+
+    В чертежах марка стали набирается то кириллицей, то латиницей, иногда в одном
+    листе. Без фолдинга лестница классов падала бы в ValueError на валидном чтении.
+    Регистр не меняем: вызывающий код уже привёл значение к upper().
+    """
+
+    return "".join(_HOMOGLYPH_FOLD.get(char, char) for char in value)
+
+
 def _class_rank(value: str, ordered: list[str]) -> int:
-    """Позиция значения в упорядоченном списке. Нечувствительно к пробелам."""
-    normalized = value.strip().upper()
+    """Позиция значения в списке. Нечувствительно к пробелам и к омоглифам."""
+    normalized = fold_homoglyphs(value.strip().upper())
     for idx, item in enumerate(ordered):
-        if str(item).strip().upper() == normalized:
+        if fold_homoglyphs(str(item).strip().upper()) == normalized:
             return idx
     raise ValueError(
         f"значение {value!r} не найдено в упорядоченном списке {ordered!r}"

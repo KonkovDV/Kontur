@@ -1,0 +1,299 @@
+{
+  "matrix_version": "draft-0",
+  "survey_rule": "Правило попадает в выборку, если comparator.operator == 'class_not_lower' либо unit содержит «Класс» или «Марка».",
+  "method": "По каждому правилу проверяли три условия: (1) домен значений конечен и упорядочен; (2) значение встречается в тексте как единый токен рядом с устойчивым якорем; (3) отличие «в лучшую сторону» не является нарушением. Только при всех трёх условиях правило переводится в executable через extractor.type=enum и comparator.operator=class_not_lower.",
+  "ladder_kinds": [
+    "energy_efficiency_class",
+    "fire_hazard_class",
+    "fire_resistance_minutes",
+    "rebar_class",
+    "steel_grade"
+  ],
+  "homoglyph_fold": "Кириллические омоглифы латиницы (А, В, Е, К, М, Н, О, Р, С, Т, У, Х) сворачиваются к латинице в comparators.fold_homoglyphs перед ранжированием. Латинская I исключена намеренно, чтобы не сломать римские цифры (PZ-022).",
+  "decision_counts": {
+    "already_executable": 5,
+    "kept_extractor_missing": 13,
+    "promoted_executable": 5
+  },
+  "total_surveyed": 23,
+  "closes_gate_j": false,
+  "note": "Разбор не закрывает Gate J и не заявляет 132/132. 13 правил осознанно оставлены extractor_missing — для них нужен другой тип экстрактора.",
+  "entries": [
+    {
+      "code": "AR-050",
+      "section": "АР",
+      "name": "Спецификация и типы внутренней отделки помещений",
+      "unit": "Класс (КМ)",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "table_composite",
+      "rationale": "Ведомость отделки: значение распределено по таблице «помещение → материал», требуется табличный экстрактор и привязка к помещению, а не одиночный класс."
+    },
+    {
+      "code": "IOS1-068",
+      "section": "ИОС1",
+      "name": "Номинальная аппаратная защита ВРУ/ГРЩ",
+      "unit": "А (Ампер)",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "two_sided_tolerance",
+      "rationale": "Отклонение допустимо в обе стороны от проектного значения; «не ниже» неприменимо, нужен допуск-диапазон."
+    },
+    {
+      "code": "IOS1-069",
+      "section": "ИОС1",
+      "name": "Сечение жил и маркировка распределительных кабелей",
+      "unit": "мм²",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "composite_value",
+      "rationale": "Значение складывается из нескольких полей паспорта оборудования; одиночного класса в тексте нет."
+    },
+    {
+      "code": "IOS2-072",
+      "section": "ИОС2",
+      "name": "Материал и класс давления напорных труб В1/Т3",
+      "unit": "Марка",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "unordered_category",
+      "rationale": "Категория без естественного порядка: сравнение «лучше/хуже» не определено."
+    },
+    {
+      "code": "IOS2-073",
+      "section": "ИОС2",
+      "name": "Характеристики насосных станций хоз-питьевого водоснабжения",
+      "unit": "м³/ч / м / кВт",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "multi_field_number",
+      "rationale": "Требуется числовое сопоставление нескольких полей, а не выбор из конечной лестницы."
+    },
+    {
+      "code": "IOS3-075",
+      "section": "ИОС3",
+      "name": "Материал и тип канализационных труб и фасонных частей",
+      "unit": "Марка",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "unordered_category",
+      "rationale": "Тип исполнения — номинальная категория, лестницы нет."
+    },
+    {
+      "code": "KR-055",
+      "section": "КР",
+      "name": "Класс прочности бетона монолитных конструкций",
+      "unit": "Марка (B)",
+      "coverage_status": "executable",
+      "decision": "already_executable",
+      "rationale": "Оператор class_not_lower уже был подкреплён экстрактором до этого разбора."
+    },
+    {
+      "code": "KR-056",
+      "section": "КР",
+      "name": "Марка стали и класс прочности металлопроката",
+      "unit": "Марка (С)",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "ladder_kind": "steel_grade",
+      "ladder": [
+        "С235",
+        "С245",
+        "С255",
+        "С275",
+        "С285",
+        "С345",
+        "С355",
+        "С375",
+        "С390",
+        "С440",
+        "С550",
+        "С590"
+      ],
+      "rationale": "С235…С590 — марка стали по возрастанию расчётного сопротивления"
+    },
+    {
+      "code": "KR-057",
+      "section": "КР",
+      "name": "Марка и класс прочности рабочей арматуры",
+      "unit": "Класс (А)",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "ladder_kind": "rebar_class",
+      "ladder": [
+        "А240",
+        "А400",
+        "А500",
+        "А600",
+        "А800",
+        "А1000"
+      ],
+      "rationale": "А240…А1000 — класс арматуры по возрастанию предела текучести"
+    },
+    {
+      "code": "KR-062",
+      "section": "КР",
+      "name": "Диаметр продольной (рабочей) арматуры в колоннах/пилонах",
+      "unit": "мм",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "multi_field_number",
+      "rationale": "Сравнение числовых характеристик по нескольким полям спецификации."
+    },
+    {
+      "code": "KR-066",
+      "section": "КР",
+      "name": "Антикоррозионная и огнезащитная обработка конструкций",
+      "unit": "Марка / Толщина",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "composite_value",
+      "rationale": "Значение собирается из марки и дополнительных индексов; единый упорядоченный домен не выделяется."
+    },
+    {
+      "code": "POD-094",
+      "section": "ПОД",
+      "name": "Масса и класс опасности образующихся отходов",
+      "unit": "т / Класс",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "inverted_ladder",
+      "rationale": "Лестница инвертирована (I класс — самый опасный). Пока не вводим инверсию оператора, чтобы не плодить два смысла у class_not_lower."
+    },
+    {
+      "code": "POD-096",
+      "section": "ПОД",
+      "name": "Узлы временного расчленения сохраняемых конструкций",
+      "unit": "—",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "no_ladder",
+      "rationale": "Домен значений не упорядочен: любое отклонение — это просто «другое», а не «хуже»."
+    },
+    {
+      "code": "PPM-103",
+      "section": "ППМ",
+      "name": "Пределы огнестойкости противопожарных дверей и ворот (EI)",
+      "unit": "мин",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "ladder_kind": "fire_resistance_minutes",
+      "ladder": [
+        "15",
+        "30",
+        "45",
+        "60",
+        "90",
+        "120",
+        "150",
+        "180"
+      ],
+      "rationale": "EI 15…EI 180 — предел огнестойкости в минутах"
+    },
+    {
+      "code": "PPM-107",
+      "section": "ППМ",
+      "name": "Класс пожарной опасности отделочных материалов",
+      "unit": "Класс (КМ)",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "ladder_kind": "fire_hazard_class",
+      "ladder": [
+        "КМ5",
+        "КМ4",
+        "КМ3",
+        "КМ2",
+        "КМ1",
+        "КМ0"
+      ],
+      "rationale": "КМ5…КМ0 — класс пожарной опасности, КМ0 лучший"
+    },
+    {
+      "code": "PPM-109",
+      "section": "ППМ",
+      "name": "Пожарная маркировка кабелей систем ПЗ (СПЗ)",
+      "unit": "Марка",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "feature_set",
+      "rationale": "Значение — набор признаков (FR/LS/HF), сравнение множеств, а не рангов."
+    },
+    {
+      "code": "PPM-112",
+      "section": "ППМ",
+      "name": "Производительность вентиляторов ДУ и подпора воздуха",
+      "unit": "м³/ч / Па",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "multi_field_number",
+      "rationale": "Требуется числовой расчёт по нескольким полям, лестницы классов нет."
+    },
+    {
+      "code": "PZ-015",
+      "section": "ПЗ",
+      "name": "Категория надежности электроснабжения",
+      "unit": "Кат.",
+      "coverage_status": "executable",
+      "decision": "already_executable",
+      "rationale": "Оператор class_not_lower уже был подкреплён экстрактором до этого разбора."
+    },
+    {
+      "code": "PZ-021",
+      "section": "ПЗ",
+      "name": "Класс энергетической эффективности",
+      "unit": "Буква",
+      "coverage_status": "executable",
+      "decision": "already_executable",
+      "rationale": "Оператор class_not_lower уже был подкреплён экстрактором до этого разбора."
+    },
+    {
+      "code": "PZ-022",
+      "section": "ПЗ",
+      "name": "Степень огнестойкости здания",
+      "unit": "Степень",
+      "coverage_status": "executable",
+      "decision": "already_executable",
+      "rationale": "Оператор class_not_lower уже был подкреплён экстрактором до этого разбора."
+    },
+    {
+      "code": "PZ-023",
+      "section": "ПЗ",
+      "name": "Класс конструктивной пожарной опасности",
+      "unit": "Класс (С0, С1)",
+      "coverage_status": "executable",
+      "decision": "already_executable",
+      "rationale": "Оператор class_not_lower уже был подкреплён экстрактором до этого разбора."
+    },
+    {
+      "code": "SPZU-036",
+      "section": "СПЗУ",
+      "name": "Тип и высотные параметры ограждения территории",
+      "unit": "м",
+      "coverage_status": "extractor_missing",
+      "decision": "kept_extractor_missing",
+      "reason_code": "composite_value",
+      "rationale": "Значение собирается из нескольких реквизитов ГПЗУ; одиночного класса нет."
+    },
+    {
+      "code": "ZU-124",
+      "section": "ЗУ",
+      "name": "Класс энергетической эффективности здания",
+      "unit": "Буква",
+      "coverage_status": "executable",
+      "decision": "promoted_executable",
+      "ladder_kind": "energy_efficiency_class",
+      "ladder": [
+        "G",
+        "F",
+        "E",
+        "D",
+        "C",
+        "B",
+        "A",
+        "A+",
+        "A++"
+      ],
+      "rationale": "G…A++ — класс энергетической эффективности"
+    }
+  ]
+}

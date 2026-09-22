@@ -37,7 +37,7 @@ set KONTUR_MODEL_SHA256=<64 hex>
 
 | Поле | Смысл |
 |---|---|
-| `coverage` | 33 executable, 94 extractor_missing, 1 advisory, 4 source_missing; не вся матрица executable |
+| `coverage` | 38 executable, 89 extractor_missing, 1 advisory, 4 source_missing; не вся матрица executable |
 | `closes_gate_k=false` | даже при сырых JSON рекордера |
 | `models=[]` | моделей нет, пока нет `KONTUR_MODEL_SHA256` |
 | `digests_available=false` | digest не снят с Docker |

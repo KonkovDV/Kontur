@@ -6,8 +6,8 @@
   "counts_by_family": {
     "enum": {
       "advisory": 0,
-      "executable": 5,
-      "extractor_missing": 11,
+      "executable": 10,
+      "extractor_missing": 9,
       "not_applicable": 0,
       "source_missing": 0
     },
@@ -21,7 +21,7 @@
     "number": {
       "advisory": 0,
       "executable": 24,
-      "extractor_missing": 64,
+      "extractor_missing": 61,
       "not_applicable": 0,
       "source_missing": 0
     },
@@ -38,10 +38,15 @@
       "advisory": [],
       "executable": [
         "KR-055",
+        "KR-056",
+        "KR-057",
+        "PPM-103",
+        "PPM-107",
         "PZ-015",
         "PZ-021",
         "PZ-022",
-        "PZ-023"
+        "PZ-023",
+        "ZU-124"
       ],
       "extractor_missing": [
         "IOS1-068",
@@ -51,10 +56,8 @@
         "KR-066",
         "POD-094",
         "POD-096",
-        "PPM-103",
         "PPM-112",
-        "SPZU-036",
-        "ZU-124"
+        "SPZU-036"
       ],
       "not_applicable": [],
       "source_missing": []
@@ -133,8 +136,6 @@
         "IOS4-077",
         "IOS5-080",
         "KR-054",
-        "KR-056",
-        "KR-057",
         "KR-059",
         "KR-060",
         "KR-061",
@@ -157,7 +158,6 @@
         "POS-088",
         "PPM-104",
         "PPM-105",
-        "PPM-107",
         "PPM-108",
         "PPM-109",
         "PPM-113",
@@ -204,5 +204,5 @@
       "source_missing": []
     }
   },
-  "note": "94 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
+  "note": "89 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
 }
