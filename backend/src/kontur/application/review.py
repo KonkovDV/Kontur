@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime
+from uuid import uuid4
 
 from kontur.application.revision_resolver import overlay_inspector_approval
 from kontur.domain.models import ApprovalStatus, Finding, InspectorDecision
@@ -185,11 +186,79 @@ def select_revision_as_etalon(
     return overlay_inspector_approval(stamp, inspector_selected=True)
 
 
-def split(finding: Finding, parts: int) -> list[Finding]:
-    """Разделение составного кандидата на атомарные (ТЗ п. 9.3).
+# ---------------------------------------------------------------------------
+# GAP-SPLIT (#83)
+# ---------------------------------------------------------------------------
 
-    Общего статуса PARTIALLY_CONFIRMED не существует: каждая часть получает
-    собственное доказательство и собственное решение.
+_SPLITTABLE_STATUSES: frozenset[FindingStatus] = frozenset(
+    {
+        FindingStatus.CANDIDATE,
+        FindingStatus.CLARIFICATION_REQUIRED,
+    }
+)
+
+
+def split(
+    finding: Finding,
+    parts: int,
+    *,
+    actor: Actor,
+    audit: AuditLog,
+    process_state: ProcessState | None = None,
+) -> list[Finding]:
+    """Атомарный split составного кандидата (ТЗ п. 9.3, #83 GAP-SPLIT).
+
+    Каждая из N частей получает:
+    - новый finding_id = ``<parent>__split_NN_<hex8>``;
+    - новый evidence_group_id-заглушку — инспектор заполняет через API;
+    - source_id = родительский finding_id (цепочка провенанса, ADR-0002);
+    - evidence_refs = () — провенанс не дублируется;
+    - finding_status = CANDIDATE;
+    - inspector_decision = None.
+
+    Инварианты (fail-closed, SOTA 2026):
+    - только человек (actor.is_human);
+    - только CANDIDATE или CLARIFICATION_REQUIRED;
+    - запрещён после FINALIZED;
+    - parts >= 2.
+
+    SPLIT не является атомарным action в ReviewDecision:
+    review() отклоняет SPLIT через TransitionError.
     """
+    if not actor.is_human:
+        raise TransitionError("split requires a human inspector")
+    if parts < 2:  # noqa: PLR2004
+        raise TransitionError(f"split requires parts >= 2, got {parts}")
+    if finding.finding_status not in _SPLITTABLE_STATUSES:
+        raise TransitionError(
+            f"split: нельзя разделить finding в статусе {finding.finding_status}; "
+            "ожидается CANDIDATE или CLARIFICATION_REQUIRED"
+        )
+    if process_state is ProcessState.FINALIZED:
+        raise TransitionError("split: запрещён после FINALIZED")
 
-    raise NotImplementedError("L8: каждая часть требует собственной evidence_group")
+    result: list[Finding] = []
+    for i in range(parts):
+        suffix = f"split_{i + 1:02d}_{uuid4().hex[:8]}"
+        part = replace(
+            finding,
+            finding_id=f"{finding.finding_id}__{suffix}",
+            # Placeholder: инспектор добавит реальную evidence_group через API
+            evidence_group_id=f"eg_{suffix}",
+            source_id=finding.finding_id,
+            evidence_refs=(),
+            inspector_decision=None,
+            finding_status=FindingStatus.CANDIDATE,
+        )
+        result.append(part)
+
+    audit.record(
+        actor.actor_id,
+        "SPLIT",
+        {
+            "parent_finding_id": finding.finding_id,
+            "parts": parts,
+            "child_ids": [f.finding_id for f in result],
+        },
+    )
+    return result
