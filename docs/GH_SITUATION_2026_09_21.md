@@ -34,8 +34,8 @@
 | Поле | Значение |
 |---|---|
 | Coverage declared | 132 |
-| executable | **33** |
-| extractor_missing | **94** |
+| executable | **38** |
+| extractor_missing | **89** |
 | advisory | **1** |
 | source_missing | **4** |
 | executable доля | 25% — это coverage, не порог ТЗ |

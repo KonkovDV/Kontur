@@ -19,8 +19,9 @@ HEAD смотреть `git rev-parse origin/main`.
 1. [`AGENTS.md`](../AGENTS.md) — инварианты 1–14.
 2. [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md) — claim на issue до правок.
 3. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json) — гейты, запреты, команды.
-4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 33 / 94 / 1 / 4 из 132.
+4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 38 / 89 / 1 / 4 из 132.
 4a. [`data/matrix/family_triage.json`](../data/matrix/family_triage.json) и [`docs/EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) — поштучное решение по 28 правилам семейств `exact_field` / `presence`: какой вид доказательства нужен и почему графика не стала текстом.
+4b. [`data/matrix/class_ladder_triage.json`](../data/matrix/class_ladder_triage.json) и [`docs/CLASS_LADDER_TRIAGE.md`](CLASS_LADDER_TRIAGE.md) — разбор 23 «классоподобных» правил: 5 переведены в `executable` через `enum` + `class_not_lower`, 13 осознанно оставлены `extractor_missing` с указанием причины (инвертированная лестница, набор признаков, таблица, допуск в обе стороны).
 5. [`data/dataset/gold_inventory.json`](../data/dataset/gold_inventory.json) — публичный gold ≠ frozen val.
 6. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
 7. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
@@ -130,6 +131,14 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
    **не** текстовый экстрактор: 14 — `geometry` (вектор чертежа, подсчёт,
    пересечение зон), 5 — разбор ячейки таблицы / `semantic_candidate`.
    Не помечать их `executable` по совпадению подписи с названием параметра.
+4a. Лестницы классов «не ниже»: разобраны все 23 правила, у которых оператор
+   `class_not_lower` или в `unit` стоит «Класс»/«Марка». Пять стали `executable`
+   (KR-056 марка стали, KR-057 класс арматуры, PPM-103 предел огнестойкости,
+   PPM-107 класс КМ, ZU-124 класс энергоэффективности); улучшение класса в РД —
+   не нарушение, понижение — `CANDIDATE`. Кириллические омоглифы в марках
+   сворачиваются (`comparators.fold_homoglyphs`), латинская `I` не тронута, чтобы
+   не сломать римские цифры PZ-022. Остальные 13 требуют другого экстрактора —
+   причины в `class_ladder_triage.json`.
 5. `split()` (GAP-SPLIT) до демо.
 6. Sandbox РиН, HTTP `submitted/confirmed/ambiguous` и бизнес-ACK → `SYNCED` — нет.
 7. JWKS/OIDC, TLS 1.3, антивирус, observability — **freeze** до подачи.

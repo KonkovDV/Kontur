@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "generated_on": "2026-09-21",
-  "export_git_sha": "cbce58738b660046c0cbe754c3c63e57e3f40851",
+  "generated_on": "2026-09-22",
+  "export_git_sha": "",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -39,8 +39,8 @@
   ],
   "coverage_counts": {
     "advisory": 1,
-    "executable": 33,
-    "extractor_missing": 94,
+    "executable": 38,
+    "extractor_missing": 89,
     "not_applicable": 0,
     "source_missing": 4,
     "declared": 132,
@@ -105,8 +105,10 @@
     "tz_scorecard": "data/dataset/tz_scorecard.json",
     "extractor_families": "data/matrix/extractor_families.json",
     "family_triage": "data/matrix/family_triage.json",
+    "class_ladder_triage": "data/matrix/class_ladder_triage.json",
     "research_osint": "docs/RESEARCH_OSINT_2026.md",
     "extractor_family_triage": "docs/EXTRACTOR_FAMILY_TRIAGE.md",
+    "class_ladder_triage_doc": "docs/CLASS_LADDER_TRIAGE.md",
     "gh_situation": "docs/GH_SITUATION_2026_09_21.md",
     "gh_agent_bus": "docs/GH_AGENT_BUS.md",
     "submission_pack": "docs/SUBMISSION_PACK.md",
@@ -119,7 +121,7 @@
     "feat/ocr-gate-i-crop3x-oem1",
     "feat/ocr-300dpi-step2-verifying"
   ],
-  "index_stats_present": true,
+  "index_stats_present": false,
   "verdict_echo": {
     "frozen_validation_corpus_for_132": false,
     "closes_gate_j": false
