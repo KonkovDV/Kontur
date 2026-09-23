@@ -55,6 +55,8 @@ class PipelineFile:
     file_hash: str
     filename: str
     doc_stage: DocStage
+    predecessor_file_id: str | None = None
+    successor_file_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +91,8 @@ def _document_ref(
         approval_status=approval,
         approval_basis=basis,
         sheet=sheet,
+        predecessor_file_id=item.predecessor_file_id,
+        successor_file_id=item.successor_file_id,
     )
 
 

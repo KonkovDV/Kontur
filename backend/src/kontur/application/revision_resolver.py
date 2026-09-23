@@ -205,9 +205,13 @@ def resolve_revision(
             f"несколько выборов инспектора для {stage.value}: {ids}"
         )
     if len(selected) == 1:
+        chosen = package_etalon(selected[0])
         return RevisionResolution(
             status=ResolveStatus.RESOLVED,
-            resolved=ResolvedRevision(document=package_etalon(selected[0]), is_stale=False),
+            resolved=ResolvedRevision(
+                document=chosen,
+                is_stale=check_stale_revision(chosen, eligible),
+            ),
         )
 
     eligible_ids: frozenset[str] = frozenset(item.file_id for item in eligible)
@@ -224,9 +228,13 @@ def resolve_revision(
         raise RevisionConflict(
             f"несколько редакций без однозначного successor для {stage.value}: {ids}"
         )
+    chosen = package_etalon(heads[0])
     return RevisionResolution(
         status=ResolveStatus.RESOLVED,
-        resolved=ResolvedRevision(document=package_etalon(heads[0]), is_stale=False),
+        resolved=ResolvedRevision(
+            document=chosen,
+            is_stale=check_stale_revision(chosen, eligible),
+        ),
     )
 
 

@@ -140,6 +140,51 @@ def test_pz001_not_approved_and_revision_conflict() -> None:
     assert "несколько" in conflict.finding.rationale
 
 
+def test_pz001_stale_revision_is_not_compared() -> None:
+    """Явный successor, не «ред. N»: страница 9999 не эталон."""
+
+    rule = _REGISTRY.get("PZ-001")
+    stale = replace(
+        _doc(DocStage.PD, file_id="pd-stale"),
+        document_code="11111-PZ",
+        successor_file_id="pd-head",
+    )
+    head = replace(
+        _doc(DocStage.PD, file_id="pd-head"),
+        document_code="11111-PZ",
+        predecessor_file_id="pd-stale",
+    )
+    rd = _doc(DocStage.RD)
+    pool = [stale, head, rd]
+    blocked = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: StagePage(document=stale, tokens=_line("Площадь", "застройки", "9999")),
+            DocStage.RD: StagePage(document=rd, tokens=_line("Площадь", "застройки", "1100")),
+        },
+        completeness=_completeness(),
+        revision_pool=pool,
+    )
+    assert blocked.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    compared = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: StagePage(
+                document=head, tokens=_line("Площадь", "застройки", "1250,5")
+            ),
+            DocStage.RD: StagePage(document=rd, tokens=_line("Площадь", "застройки", "1100")),
+        },
+        completeness=_completeness(),
+        revision_pool=pool,
+    )
+    assert compared.finding.finding_status is FindingStatus.CANDIDATE
+    assert compared.finding.expected_value == 1250.5
+    assert compared.finding.source_id == "pd-head"
+    assert compared.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+
+
 def test_pz001_ocr_disagreement_and_neighbor_number() -> None:
     rule = _REGISTRY.get("PZ-001")
     disagree = evaluate_rule(

@@ -230,3 +230,56 @@ def test_inspector_select_picks_the_earlier_file_not_the_last() -> None:
     assert pages[DocStage.PD].document.approval_basis is ApprovalBasis.INSPECTOR_SELECT
     assert stamps["f-early"] is ApprovalStatus.UNKNOWN
     assert stamps["f-late"] is ApprovalStatus.UNKNOWN
+
+
+def test_successor_head_is_used_even_if_stale_file_is_uploaded_last() -> None:
+    """Явный successor, не порядок загрузки и не «ред. N»."""
+
+    stale = ascii_pdf("CODE 12345-PZ Rev 1")
+    current = ascii_pdf("CODE 12345-PZ Rev 2")
+    rd = ascii_pdf("RD sheet")
+    files = (
+        PipelineFile(
+            "f-current",
+            file_sha256(current),
+            "current.pdf",
+            DocStage.PD,
+            predecessor_file_id="f-stale",
+        ),
+        PipelineFile("f-rd", file_sha256(rd), "rd.pdf", DocStage.RD),
+        PipelineFile(
+            "f-stale",
+            file_sha256(stale),
+            "stale.pdf",
+            DocStage.PD,
+            successor_file_id="f-current",
+        ),
+    )
+    blobs = {"f-current": current, "f-stale": stale, "f-rd": rd}
+    pages, _errors, stamps, _clean, _pool = _pages_from_blobs(files, blobs)
+    assert pages[DocStage.PD].document.file_id == "f-current"
+    assert pages[DocStage.PD].document.file_id != "f-stale"
+    rows = build_document_catalog(
+        (
+            CatalogFile(
+                "f-stale",
+                file_sha256(stale),
+                "stale.pdf",
+                DocStage.PD,
+                stale,
+                successor_file_id="f-current",
+            ),
+            CatalogFile(
+                "f-current",
+                file_sha256(current),
+                "current.pdf",
+                DocStage.PD,
+                current,
+                predecessor_file_id="f-stale",
+            ),
+        )
+    )
+    by_id = {row["file_id"]: row["actuality"] for row in rows}
+    assert by_id == {"f-current": "CURRENT", "f-stale": "SUPERSEDED"}
+    assert stamps["f-stale"] is ApprovalStatus.UNKNOWN
+    assert stamps["f-current"] is ApprovalStatus.UNKNOWN

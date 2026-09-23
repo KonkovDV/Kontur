@@ -216,6 +216,19 @@ class TestRevisionChain:
         result = resolve_revision([v1, v2], DocStage.PD)
         assert result.resolved is not None
         assert result.resolved.document.file_id == "pd-v2"
+        assert result.resolved.is_stale is False
+
+    def test_inspector_selected_predecessor_is_marked_stale(self) -> None:
+        v1 = _doc("pd-v1", approval_date=date(2025, 1, 1), successor="pd-v2")
+        v2 = _doc("pd-v2", approval_date=date(2025, 6, 1), predecessor="pd-v1")
+        result = resolve_revision(
+            [v1, v2],
+            DocStage.PD,
+            inspector_selected_file_ids=frozenset({"pd-v1"}),
+        )
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-v1"
+        assert result.resolved.is_stale is True
 
     def test_unapproved_newer_revision_does_not_become_baseline(self) -> None:
         """RT-2709-08: неутверждённая редакция, даже новее, не эталон.

@@ -120,6 +120,13 @@ _RD_CANDIDATE: tuple[tuple[str, str], ...] = (
     ("сечение воздуховода", "400×200"),
     ("приточная установка", "800 м³/ч"),
 )
+_STALE_VALUES: tuple[tuple[str, str], ...] = (
+    ("Площадь застройки", "9999"),
+    ("Класс бетона", "B10"),
+    ("Ширина проема", "0,4"),
+    ("сечение воздуховода", "100×100"),
+    ("приточная установка", "100 м³/ч"),
+)
 
 
 def _with_width(rows: Sequence[tuple[str, str]], width: str) -> tuple[tuple[str, str], ...]:
@@ -248,7 +255,41 @@ def test_pdf_pipeline_detects_five_candidates() -> None:
 
 
 @needs_font
-def test_pdf_pipeline_missing_rd_is_not_violation() -> None:
+def test_pdf_pipeline_stale_pd_numbers_are_not_compared() -> None:
+    """Явный successor: 9999 с устаревшего тома не эталон, даже если файл загружен последним."""
+
+    stale = _sheet(_STALE_VALUES)
+    current = _sheet(_PD_VALUES)
+    rd = _sheet(_RD_CANDIDATE)
+    files = (
+        PipelineFile(
+            "f-pd",
+            file_sha256(current),
+            "pd.pdf",
+            DocStage.PD,
+            predecessor_file_id="f-stale",
+        ),
+        PipelineFile("f-rd", file_sha256(rd), "rd.pdf", DocStage.RD),
+        PipelineFile(
+            "f-stale",
+            file_sha256(stale),
+            "stale.pdf",
+            DocStage.PD,
+            successor_file_id="f-pd",
+        ),
+    )
+    report = run_process_pipeline(
+        object_id=OBJECT_ID,
+        completeness=_completeness(),
+        files=files,
+        blobs={"f-pd": current, "f-stale": stale, "f-rd": rd},
+    )
+    finding = contest_findings(report.findings)["PZ-001"]
+    assert finding.finding_status is FindingStatus.CANDIDATE
+    assert finding.expected_value == 1250.5
+    assert finding.source_id == "f-pd"
+    assert finding.source_id != "f-stale"
+    assert finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
     report = _pipeline(_sheet(_PD_VALUES), None)
     for finding in contest_findings(report.findings).values():
         assert finding.finding_status is FindingStatus.MISSING_EVIDENCE

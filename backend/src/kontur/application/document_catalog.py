@@ -28,6 +28,8 @@ class CatalogFile:
     filename: str
     doc_stage: DocStage
     content: bytes
+    predecessor_file_id: str | None = None
+    successor_file_id: str | None = None
 
 
 def _row(
@@ -86,6 +88,8 @@ def _stamp_ref(item: CatalogFile, inspector_ids: frozenset[str]) -> tuple[Docume
         approval_basis=basis,
         discipline=passport.discipline,
         sheet=passport.sheet,
+        predecessor_file_id=item.predecessor_file_id,
+        successor_file_id=item.successor_file_id,
     )
     return ref, passport.discipline
 

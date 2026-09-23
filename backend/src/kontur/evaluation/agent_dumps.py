@@ -178,6 +178,7 @@ def build_handoff(
             "Treat Gate K recorder mass-confirm as live review API",
             "Guess revision order from ред. N without successor",
             "Guess bare 1200 is millimetres without a unit suffix",
+            "Treat last uploaded file as etalon when successor is declared",
             "Treat runner_id=0 or empty steps as green CI",
         ],
         "commands": {
