@@ -137,6 +137,29 @@ def test_completed_duplicate_does_not_reopen(client: TestClient) -> None:
     assert after.parse_attempts == attempts
 
 
+def test_four_stage_uploads_fit_the_parse_budget(client: TestClient) -> None:
+    created = _upload(client)
+    assert created.status_code == 202
+    process_id = created.json()["process_id"]
+    third = b"%PDF-1.7\n3 0 obj\n<<>>\nendobj\n"
+    fourth = b"%PDF-1.7\n4 0 obj\n<<>>\nendobj\n"
+    assert (
+        _upload(client, process_id=process_id, stage="RD", name="rd.pdf", body=PDF_B).status_code
+        == 202
+    )
+    assert (
+        _upload(client, process_id=process_id, stage="ID", name="id.pdf", body=third).status_code
+        == 202
+    )
+    assert (
+        _upload(client, process_id=process_id, stage="PD", name="pd-2.pdf", body=fourth).status_code
+        == 202
+    )
+    record = app.state.workspace.get(process_id)
+    assert record is not None
+    assert record.parse_attempts == 4
+
+
 def test_finalized_duplicate_remains_409(client: TestClient) -> None:
     process_id = _upload(client).json()["process_id"]
     record = app.state.workspace.get(process_id)

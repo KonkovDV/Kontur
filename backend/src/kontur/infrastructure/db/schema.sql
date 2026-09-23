@@ -224,7 +224,7 @@ CREATE TABLE processes (
     input_manifest_hash TEXT NOT NULL DEFAULT 'pending',
     protocol_id         TEXT REFERENCES protocols (id),
     parse_attempts      SMALLINT NOT NULL DEFAULT 0
-                        CHECK (parse_attempts BETWEEN 0 AND 3),
+                        CHECK (parse_attempts BETWEEN 0 AND 8),
     sync_attempts       SMALLINT NOT NULL DEFAULT 0
                         CHECK (sync_attempts BETWEEN 0 AND 4),
     sync_state          TEXT NOT NULL DEFAULT 'NOT_REQUESTED'

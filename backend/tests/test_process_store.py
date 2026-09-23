@@ -79,7 +79,7 @@ def test_sync_before_finalize_is_rejected() -> None:
 
 def test_parse_attempts_are_capped() -> None:
     with pytest.raises(ValueError, match="parse_attempts"):
-        validate_snapshot(_snap(parse_attempts=4))
+        validate_snapshot(_snap(parse_attempts=9))
 
 
 def test_sql_matches_schema_columns() -> None:

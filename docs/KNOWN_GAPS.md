@@ -21,6 +21,7 @@
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
 `put_finding` по `evidence_group_id`. Очередь после рестарта — `process_findings`,
 комплектность на `processes`, журнал — `audit_log`.
+GAP-EMB: вложения `/EmbeddedFile` пайплайн не видит (см. таблицу выше).
 
 Поставка организатора, публичный gold-seed и пакет без ответов v2.0 **не**
 закрывают `GAP-IOS4-VAL`: см. [`ORGANIZER_GOLD.md`](ORGANIZER_GOLD.md) и
