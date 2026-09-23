@@ -1,28 +1,69 @@
 # Copilot — Контур
 
-Private contest repo. Deadline 2026-09-29 23:59 MSK. Product: PD/RD/ID
-reconciliation for Mosgosstroynadzor task 10. UI name «Инспектор ИИ».
+Приватное конкурсное репо. Дедлайн 2026-09-29 23:59 МСК.
+Продукт: сверка ПД/РД/ИД по 132 параметрам (задача №9, Мосгосстройнадзор).
+UI: «Инспектор ИИ».
 
-Read first: `AGENTS.md`, `docs/GH_AGENT_BUS.md`, `docs/GH_SITUATION_2026_09_21.md`,
-`data/dataset/agent_handoff.json`. Do not invent a second process.
+## Порядок чтения при входе
 
-## Always
+1. `AGENTS.md` — 14 инвариантов.
+2. `docs/GH_AGENT_BUS.md` — claim-протокол v2, DAG, anti-patterns, test quality gate.
+3. `docs/AGENT_HANDOFF.md` — срез 23.09.2026.
+4. `data/dataset/agent_handoff.json` — гейты, `draft_prs`, `extractor_triage_complete`.
+5. Тело issue — после claim.
 
-- One GitHub issue per change. Claim it (`kontur.agent_bus.v1`) before editing.
-- Contract first: `contracts/` → schemas → code → tests.
-- Matrix rules live in `data/matrix/`, not in Python branches.
-- Automata and models never write `finding_status=CONFIRMED_VIOLATION`.
-- Do not open TEST_HIDDEN / `РАЗМЕЧЕННЫЙ_TEST__213` / Rechnikov for thresholds.
-- Do not merge leftover OCR (`feat/ocr-gate-i-crop3x-oem1`, `2ddc2b3`).
-- Do not add OIDC, TLS termination, RabbitMQ 4.x, observability, УКЭП, or
-  Rin without a sandbox contract. Contest vertical slice only.
-- `files/` is gitignored. Cloud agents cannot see contest PDFs. Skip issues
-  labeled `needs-local-files`.
-- Overlay / `annotated_documents` is not a scoring source. Do not guess
-  non-gold `RD_ID_MIXED`.
-- Never publish acceptance metrics as achieved. `scripts/check_claims.py` must pass.
+## Всегда
 
-## Validate
+- Один GitHub issue на одно изменение. Claim (`kontur.agent_bus.v2`) до правок.
+  **Сразу после claim: перечитать комментарии issue ещё раз.**
+  Убедиться, что agent = ваш ID (защита от TOCTOU-гонки).
+- Контракт первичен: `contracts/` → схемы → код → тесты.
+- Правила матрицы — данные в `data/matrix/`, не Python-ветви.
+- Автомат и LLM не пишут `finding_status=CONFIRMED_VIOLATION`.
+- Не открывать TEST_HIDDEN / `РАЗМЕЧЕННЫЙ_TEST__213` / Речников для порогов.
+- Не мержить OCR-хвосты (`feat/ocr-gate-i-crop3x-oem1`, `2ddc2b3`).
+- Не добавлять OIDC, TLS, RabbitMQ 4.x, observability, УКЭП,
+  РиН без sandbox-контракта. Только конкурсный вертикальный срез.
+- `files/` в gitignore. Облачные агенты не видят PDF. Пропускать `needs-local-files`.
+- Overlay / `annotated_documents` — не источник скоринга.
+- Не угадывать `RD_ID_MIXED` как RD+ID.
+- `scripts/check_claims.py` должен проходить в 0.
+
+## Триаж extractor_missing: барьер
+
+**Все 83 `extractor_missing` полностью разобраны** по трём
+триаж-документам. Без новых экстракторов (`geometry`,
+`object_counting`, `per_element_table`, `semantic_candidate`) не
+переводить правила в `executable`. См.:
+`data/matrix/number_family_triage.json`,
+`data/matrix/class_ladder_triage.json`,
+`data/matrix/family_triage.json`.
+
+## Качество тестов (60+ PR постмортем)
+
+Тест реальный, если **все** из следующих:
+
+- вызывает реальные функции пайплайна: `file_sha256`, `assess_pdf_bytes`,
+  `evaluate_batch`, `flatten_tokens` ит.д., не mock
+- `pytest.skip` не используется внутри ветви покрытия
+- raw `hashlib` не заменяет `file_sha256()` из `intake.py`
+- assert конкретен: `and`, не `or`; не `assert True`
+- overlay: два объекта на одной y; ротация: PDF с `Rotate: 90`;
+  сканер: через `create_scanner_pdf()`
+- промпт-инъекция < 200 символов
+
+## CI green — определение
+
+`runner_id=0` + `steps=[]` **не CI**. Зелёный CI:
+
+```text
+gh run view RUN_ID --json status,conclusion,workflowName
+# status=completed, conclusion=success, RUN_ID != 0
+```
+
+Не снимать draft PR и не писать «CI зелёный» без этой проверки.
+
+## Валидация
 
 ```text
 python -m pytest backend/tests -q
@@ -30,14 +71,17 @@ python scripts/check_claims.py
 python scripts/check_contracts.py
 ```
 
-Windows has no `make`. JWT tests use `KONTUR_ALLOW_INSECURE_DEV_AUTH` in
+Windows: нет `make`. JWT тесты: `KONTUR_ALLOW_INSECURE_DEV_AUTH` в
 `backend/tests/conftest.py`.
 
-CI: `.github/workflows/ci.yml` plus `relay.yml`, `sync-lifecycle.yml`, `gate-l.yml`.
-Do not treat GHA k6 p95 as production SLA. Do not treat JWT static keys as OIDC.
+CI: `.github/workflows/ci.yml` + `relay.yml`, `sync-lifecycle.yml`, `gate-l.yml`.
+GHA k6 p95 не production SLA. Статичные JWT-ключи не OIDC.
 
-## Layout
+## Структура
 
-`backend/` Python ≥3.11, `gateway/` Node BFF, `web/` React inspector shell,
-`data/` matrix and dumps, `docs/adr/` decisions. Prefer vector text over OCR.
-`coverage: executable` only when an extractor exists.
+`backend/` Python ≭3.11, `gateway/` Node BFF, `web/` React inspector shell,
+`data/` matrix и dumps, `docs/adr/` решения.
+Предпочитать векторный текст перед OCR.
+`coverage: executable` — только при работающем экстракторе.
+`backend/tests/adversarial/` — adversarial-тесты (#80, draft PR #115,
+ветка `feat/adversarial-pdf-pack`, HEAD `7ec43b7`).
