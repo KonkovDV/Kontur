@@ -38,8 +38,10 @@ from kontur.application.extractors.text import (
 )
 from kontur.application.pipeline import Stage, StageResult, run
 from kontur.application.revision_resolver import (
+    IdentityHead,
     ResolveStatus,
     RevisionConflict,
+    resolve_heads_by_identity,
     resolve_revision,
 )
 from kontur.application.scenarios import CompletenessMap, status_for_missing_stage
@@ -199,6 +201,30 @@ def _page_kind_tokens(page: StagePage) -> frozenset[str]:
     if page.document.discipline:
         parts.add(page.document.discipline.upper())
     return frozenset(parts)
+
+
+def _identity_kind_tokens(key: tuple[str, str, str]) -> frozenset[str]:
+    code, _sheet, discipline = key
+    folded = code.upper().replace("_", "-")
+    parts = {folded, *(part for part in folded.split("-") if part)}
+    if discipline:
+        parts.add(discipline.upper())
+    return frozenset(parts)
+
+
+def _matching_identity_heads(
+    identities: Sequence[IdentityHead],
+    wanted: frozenset[str],
+) -> tuple[IdentityHead, ...]:
+    """Цепочки шифра, которые правило считает своим разделом. Пустой wanted — нет фильтра."""
+
+    if not wanted:
+        return ()
+    return tuple(
+        item
+        for item in identities
+        if item.key is not None and not wanted.isdisjoint(_identity_kind_tokens(item.key))
+    )
 
 
 def bind_stage_page(
@@ -491,6 +517,32 @@ def evaluate_rule(
             )
 
     revision_status = _mapped(rule, "revision_conflict", FindingStatus.CLARIFICATION_REQUIRED)
+    if revision_pool is not None:
+        for stage in required:
+            wanted = _wanted_kind_tokens(rule, stage)
+            matched = _matching_identity_heads(
+                resolve_heads_by_identity(
+                    revision_pool,
+                    stage,
+                    inspector_selected_file_ids=inspector_selected_file_ids,
+                ),
+                wanted,
+            )
+            if len(matched) != 1:
+                continue
+            identity = matched[0]
+            if (
+                identity.resolution.status is not ResolveStatus.RESOLVED
+                or identity.resolution.resolved is None
+            ):
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    identity.resolution.conflict_reason
+                    or f"{stage.value}: эталон не выбран",
+                    prior=identity_ok,
+                )
     bound = _bind_required_pages(rule, pages, required)
     if isinstance(bound, str):
         return _halt(

@@ -214,6 +214,34 @@ def test_distinct_ciphers_do_not_become_revision_conflict_of_one_chain() -> None
     assert by_id == {"f-pz": "CURRENT", "f-ar": "CURRENT"}
 
 
+def test_unresolved_pz_is_not_hidden_by_resolved_ar_cipher() -> None:
+    """Конфликт шифра ПЗ не становится LOW_QUALITY из-за головы АР."""
+
+    first = ascii_pdf("CODE 12345-PZ Rev 1")
+    second = ascii_pdf("CODE 12345-PZ Rev 2")
+    ar = ascii_pdf("CODE 22222-AR")
+    rd = ascii_pdf("RD sheet")
+    files = (
+        PipelineFile("f-early", file_sha256(first), "early.pdf", DocStage.PD),
+        PipelineFile("f-late", file_sha256(second), "late.pdf", DocStage.PD),
+        PipelineFile("f-ar", file_sha256(ar), "ar.pdf", DocStage.PD),
+        PipelineFile("f-rd", file_sha256(rd), "rd.pdf", DocStage.RD),
+    )
+    blobs = {"f-early": first, "f-late": second, "f-ar": ar, "f-rd": rd}
+    report = run_process_pipeline(
+        object_id="obj-hidden-conflict",
+        completeness=_both_stages(),
+        files=files,
+        blobs=blobs,
+    )
+    pz = next(item for item in report.findings if item.rule_code == "PZ-001")
+    assert pz.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert "несколько редакций" in pz.rationale
+    assert FindingStatus.CONFIRMED_VIOLATION not in {
+        item.finding_status for item in report.findings
+    }
+
+
 def test_inspector_select_picks_the_earlier_file_not_the_last() -> None:
     earlier = ascii_pdf("CODE 12345-PZ Rev 1")
     later = ascii_pdf("CODE 12345-PZ Rev 2")

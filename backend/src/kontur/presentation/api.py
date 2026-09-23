@@ -385,6 +385,7 @@ def get_documents(
         for item in record.files
         if item.file_id in record.blobs
     ]
+    # Голова шифра и выбор инспектора, не порядок загрузки и не «ред. N».
     return {
         "process_id": process_id,
         "documents": build_document_catalog(

@@ -14,6 +14,7 @@ from kontur.infrastructure.pdfium_tokens import file_sha256
 from kontur.presentation.api import app
 
 INSPECTOR = {"Authorization": "Bearer insp-7@obj-1/INSPECTOR"}
+SELECT_COMMENT = "В комплекте это последняя утверждённая редакция тома ПЗ."
 
 
 def _seed() -> CompletenessMap:
@@ -22,6 +23,38 @@ def _seed() -> CompletenessMap:
         DocStage.RD: Completeness.MISSING,
         DocStage.ID: Completeness.MISSING,
     }
+
+
+def _attach(
+    workspace: ProcessWorkspace,
+    record_id: str,
+    *,
+    file_id: str,
+    stage: DocStage,
+    payload: bytes,
+    filename: str,
+) -> None:
+    record = workspace.get(record_id)
+    assert record is not None
+    item = AcceptedFile(
+        file_id=file_id,
+        file_hash=file_sha256(payload),
+        filename=filename,
+        doc_stage=stage,
+        size_bytes=len(payload),
+    )
+    workspace.attach_file(record, item)
+    workspace.keep_blob(record, file_id, payload)
+
+
+def _by_file_id(body: dict[str, object]) -> dict[str, dict[str, object]]:
+    rows = body["documents"]
+    assert isinstance(rows, list)
+    mapping: dict[str, dict[str, object]] = {}
+    for row in rows:
+        assert isinstance(row, dict)
+        mapping[str(row["file_id"])] = row
+    return mapping
 
 
 def test_documents_list_marks_single_pd_as_package_default(
@@ -110,3 +143,154 @@ def test_findings_list_returns_status_without_page_text(
     assert row["finding_status"] == "LOW_QUALITY"
     assert row["rule_code"] == "PZ-001"
     assert "страниц" not in listed.text
+
+
+def _pd_rd() -> CompletenessMap:
+    return {
+        DocStage.PD: Completeness.UPLOADED,
+        DocStage.RD: Completeness.UPLOADED,
+        DocStage.ID: Completeness.MISSING,
+    }
+
+
+def test_http_catalog_after_select_marks_same_cipher_superseded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Два ПД одного шифра без successor — не последний upload. Чужой шифр жив."""
+
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    early = ascii_pdf("CODE 12345-PZ Rev 1")
+    late = ascii_pdf("CODE 12345-PZ Rev 2")
+    other = ascii_pdf("CODE 22222-AR")
+    rd = ascii_pdf("RD sheet")
+    app.state.workspace = ProcessWorkspace()
+    client = TestClient(app)
+    workspace = app.state.workspace
+    record = workspace.create("obj-1", _pd_rd())
+    _attach(
+        workspace,
+        record.process_id,
+        file_id="f-early",
+        stage=DocStage.PD,
+        payload=early,
+        filename="early.pdf",
+    )
+    _attach(
+        workspace,
+        record.process_id,
+        file_id="f-late",
+        stage=DocStage.PD,
+        payload=late,
+        filename="late.pdf",
+    )
+    _attach(
+        workspace,
+        record.process_id,
+        file_id="f-ar",
+        stage=DocStage.PD,
+        payload=other,
+        filename="ar.pdf",
+    )
+    _attach(
+        workspace,
+        record.process_id,
+        file_id="f-rd",
+        stage=DocStage.RD,
+        payload=rd,
+        filename="rd.pdf",
+    )
+    workspace.run_matrix_pipeline(record)
+
+    listed = client.get(
+        f"/api/v1/processes/{record.process_id}/documents",
+        headers=INSPECTOR,
+    )
+    assert listed.status_code == 200
+    before = _by_file_id(listed.json())
+    assert before["f-early"]["actuality"] == "CLARIFICATION_REQUIRED"
+    assert before["f-late"]["actuality"] == "CLARIFICATION_REQUIRED"
+    assert before["f-ar"]["actuality"] == "CURRENT"
+    assert before["f-ar"]["approval_basis"] == "PACKAGE_DEFAULT"
+    assert before["f-rd"]["actuality"] == "CURRENT"
+
+    findings = client.get(
+        f"/api/v1/processes/{record.process_id}/findings",
+        headers=INSPECTOR,
+    )
+    assert findings.status_code == 200
+    pz = next(
+        item
+        for item in findings.json()["findings"]
+        if item["rule_code"] == "PZ-001"
+    )
+    assert pz["finding_status"] == "CLARIFICATION_REQUIRED"
+    assert "несколько редакций" in pz["rationale"]
+    assert pz["finding_status"] != "CONFIRMED_VIOLATION"
+
+    selected = client.post(
+        f"/api/v1/processes/{record.process_id}/revisions/f-early/select",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7", "comment": SELECT_COMMENT},
+    )
+    assert selected.status_code == 200
+    status = selected.json()
+    assert status["process_state"] == "READY"
+    assert status["counters"]["confirmed_violations"] == 0
+
+    listed_after = client.get(
+        f"/api/v1/processes/{record.process_id}/documents",
+        headers=INSPECTOR,
+    )
+    assert listed_after.status_code == 200
+    after = _by_file_id(listed_after.json())
+    assert after["f-early"]["actuality"] == "CURRENT"
+    assert after["f-early"]["approval_basis"] == "INSPECTOR_SELECT"
+    assert after["f-late"]["actuality"] == "SUPERSEDED"
+    assert after["f-ar"]["actuality"] == "CURRENT"
+    assert after["f-ar"]["approval_basis"] == "PACKAGE_DEFAULT"
+    assert after["f-rd"]["actuality"] == "CURRENT"
+
+    findings_after = client.get(
+        f"/api/v1/processes/{record.process_id}/findings",
+        headers=INSPECTOR,
+    )
+    assert findings_after.status_code == 200
+    rows = findings_after.json()["findings"]
+    pz_after = next(item for item in rows if item["rule_code"] == "PZ-001")
+    assert pz_after["finding_status"] != "CLARIFICATION_REQUIRED"
+    assert pz_after["finding_status"] != "CONFIRMED_VIOLATION"
+    assert "несколько редакций" not in (pz_after.get("rationale") or "")
+
+    workspace.put_finding(
+        record.process_id,
+        Finding(
+            finding_id="f-missing-stage",
+            rule_code="IOS4-078",
+            finding_status=FindingStatus.MISSING_EVIDENCE,
+            review_priority=ReviewPriority.LOW,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+            rationale="ID не представлен, сравнение не запускалось",
+        ),
+    )
+    blocked = client.post(
+        "/api/v1/findings/f-missing-stage/review",
+        headers=INSPECTOR,
+        json={
+            "action": "CONFIRM",
+            "inspector_id": "insp-7",
+            "comment": "нет стадии нельзя подтвердить как нарушение",
+        },
+    )
+    assert blocked.status_code == 409
+    still = client.get(
+        f"/api/v1/processes/{record.process_id}/findings",
+        headers=INSPECTOR,
+    )
+    stuck = next(
+        item
+        for item in still.json()["findings"]
+        if item["finding_id"] == "f-missing-stage"
+    )
+    assert stuck["finding_status"] == "MISSING_EVIDENCE"
