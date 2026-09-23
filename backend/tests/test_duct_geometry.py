@@ -12,6 +12,7 @@ from kontur.application.extractors.number import PageToken
 from kontur.infrastructure.duct_geometry import (
     PT_TO_MM,
     Segment,
+    gaps_agree,
     pair_parallel,
     segments_on_page,
     width_mm,
@@ -38,6 +39,16 @@ def test_width_uses_paper_millimetres_times_scale() -> None:
     )
     assert len(pair) == 1
     assert abs(pair[0].width_mm - 400) / 400 < 0.01
+
+
+def test_skewed_pair_disagrees_and_is_not_averaged() -> None:
+    pairs = pair_parallel(
+        [Segment(0, 0, 80, 0), Segment(0, 8, 80, 30)],
+        100,
+        angle_deg=20,
+    )
+    assert len(pairs) == 1
+    assert gaps_agree(pairs[0].gap_pt, pairs[0].reverse_gap_pt, tolerance_rel=0.02) is False
 
 
 def test_skewed_or_short_lines_are_not_a_duct() -> None:

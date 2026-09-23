@@ -15,21 +15,31 @@ STAMP_Y = 0.85
 _SCALE = re.compile(r"(?:м\s*)?1\s*:\s*(\d{2,4})", re.IGNORECASE)
 
 
-def scale_denominator(tokens: Sequence[PageToken], *, stamp_y: float = STAMP_Y) -> int | None:
-    """Знаменатель масштаба. None — в штампе нет читаемой подписи 1:N."""
+def scale_mark(
+    tokens: Sequence[PageToken], *, stamp_y: float = STAMP_Y
+) -> tuple[int, int] | None:
+    """Страница и знаменатель. None — в штампе нет читаемой подписи 1:N."""
 
-    parts: list[str] = []
+    by_page: dict[int, list[str]] = {}
     for token in tokens:
         ys = [point[1] for point in token.polygon_norm]
         if not ys or min(ys) < stamp_y:
             continue
-        parts.append(token.text)
-    if not parts:
+        by_page.setdefault(token.page, []).append(token.text)
+    for page in sorted(by_page):
+        match = _SCALE.search(" ".join(by_page[page]))
+        if match is None:
+            continue
+        value = int(match.group(1))
+        if value >= 1:
+            return page, value
+    return None
+
+
+def scale_denominator(tokens: Sequence[PageToken], *, stamp_y: float = STAMP_Y) -> int | None:
+    """Знаменатель масштаба. None — в штампе нет читаемой подписи 1:N."""
+
+    mark = scale_mark(tokens, stamp_y=stamp_y)
+    if mark is None:
         return None
-    match = _SCALE.search(" ".join(parts))
-    if match is None:
-        return None
-    value = int(match.group(1))
-    if value < 1:
-        return None
-    return value
+    return mark[1]
