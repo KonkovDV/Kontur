@@ -14,7 +14,7 @@
 | GAP-CAP-OCR | OCR `MEASURED`, таблицы `UNAVAILABLE`, чертёж `DEGRADED` | SILVER n=3013, gate_i_low≈0.426, порог 0.97 не взят. Не GOLD. Гейт I открыт | гейт I |
 | GAP-OCR-RASTER | Нет человечески проверенного эталона страниц без текстового слоя | Пилот SILVER — это PDF_TEXT_LAYER. Подписи растра не выдумывать. `cyrillic_PP-OCRv5_mobile_rec` не в основных зависимостях. `ocr_text` остаётся `MEASURED` | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
-| GAP-ETALON-UI | инспекторский SELECT_REVISION есть в API, в UI кнопки назначения эталона нет | двухпанельный viewer (#76) не закрывает J; POST `.../revisions/{file_id}/select` | конкурсный срез |
+| GAP-ETALON-UI | кнопка «Назначить эталоном» есть на живом экране комплекта | POST `.../revisions/{file_id}/select` только из READY; штамп «не утв.» не перекрывается. Gate J открыт | конкурсный срез |
 | GAP-EMB | Вложения PDF `/EmbeddedFile` | Пайплайн их не читает. Тест на `FPDFDoc_GetAttachmentCount` не писать | #80 |
 | GAP-INJ-SCAN | Сканер инъекций вызывается после `flatten_tokens` и пишет `injection_clean` | Статус находки не меняется. Текст страницы не инструкция. #84 не закрыт: нет VLM и нет system prompt | #84 |
 

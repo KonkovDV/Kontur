@@ -45,6 +45,7 @@ REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "getSystemCapabilities": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProcessStatus": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProcessDocuments": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
+    "listProcessFindings": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getFilePagePng": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getAuditLog": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),

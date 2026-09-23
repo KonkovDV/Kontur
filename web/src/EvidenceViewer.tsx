@@ -7,6 +7,7 @@ import {
   toleranceLabel,
   type EvidenceCard,
   type EvidenceRole,
+  type StagePane,
 } from "./evidence";
 
 const STAGE_TITLE: Record<(typeof STAGE_PANES)[number], string> = {
@@ -23,10 +24,11 @@ const STAGE_ROLE: Record<(typeof STAGE_PANES)[number], EvidenceRole> = {
 
 type Props = {
   card: EvidenceCard;
+  pageImages?: Partial<Record<StagePane, string>>;
   children?: ReactNode;
 };
 
-export function EvidenceViewer({ card, children }: Props) {
+export function EvidenceViewer({ card, pageImages, children }: Props) {
   const finding = card.finding;
   const decision = finding.inspector_decision;
   return (
@@ -38,6 +40,7 @@ export function EvidenceViewer({ card, children }: Props) {
             title={STAGE_TITLE[stage]}
             role={STAGE_ROLE[stage]}
             fragment={fragmentByStage(card, stage)}
+            pageImageUrl={pageImages?.[stage]}
           />
         ))}
       </div>

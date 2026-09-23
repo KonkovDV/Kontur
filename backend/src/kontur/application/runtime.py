@@ -497,7 +497,7 @@ class ProcessWorkspace:
         record.evidence_groups = {
             group.evidence_group_id: group for group in report.evidence_groups
         }
-        record.parse_attempts += 1
+        # Бюджет parse_attempts (0..3) тратят загрузки. Выбор эталона его не ест.
         record.audit.record(
             "system",
             "PIPELINE",

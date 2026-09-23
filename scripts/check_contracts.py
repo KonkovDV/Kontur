@@ -49,6 +49,7 @@ OBJECT_BOUND_OPERATIONS = frozenset(
         "uploadDocuments",
         "getProcessStatus",
         "getProcessDocuments",
+        "listProcessFindings",
         "getFilePagePng",
         "getProtocol",
         "getAuditLog",

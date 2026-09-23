@@ -113,6 +113,60 @@ select {
   margin-bottom: 0.75rem;
 }
 
+.page-frame {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.page-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #f7f3ea;
+}
+
+.page-overlay--bitmap {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  pointer-events: none;
+}
+
+.mode-switch,
+.band,
+.stage-upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.kit {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.kit th,
+.kit td {
+  border-bottom: 1px solid #d7d0c4;
+  padding: 0.35rem 0.4rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.finding-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.finding-list button.is-active {
+  font-weight: 700;
+}
+
 .meta {
   display: grid;
   gap: 0.45rem;

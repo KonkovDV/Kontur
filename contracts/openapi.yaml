@@ -147,6 +147,37 @@ paths:
                           enum: [CURRENT, SUPERSEDED, CLARIFICATION_REQUIRED, UNREADABLE]
         "404": { description: Процесс не найден }
 
+  /processes/{process_id}/findings:
+    get:
+      summary: Находки процесса по статусу, без текста страницы
+      operationId: listProcessFindings
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          description: Список находок для экрана инспектора
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [process_id, findings]
+                properties:
+                  process_id: { type: string }
+                  findings:
+                    type: array
+                    items:
+                      type: object
+                      required: [finding_id, rule_code, finding_status]
+                      properties:
+                        finding_id: { type: string }
+                        rule_code: { type: string }
+                        finding_status: { type: string }
+                        rationale: { type: string }
+                        evidence_group_id: { type: ["string", "null"] }
+        "404": { description: Процесс не найден }
+
   /processes/{process_id}/files/{file_id}/pages/{page}.png:
     get:
       summary: PNG страницы файла, целиком или по bbox

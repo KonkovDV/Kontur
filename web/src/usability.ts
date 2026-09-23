@@ -4,7 +4,10 @@ export type DecisionAction =
   | "REQUEST_CLARIFICATION"
   | "ACKNOWLEDGE_MISSING_EVIDENCE";
 
-export type FindingQuality = "CANDIDATE" | "MISSING_EVIDENCE";
+export type FindingQuality =
+  | "CANDIDATE"
+  | "MISSING_EVIDENCE"
+  | "CLARIFICATION_REQUIRED";
 
 export type UsabilityDecision = {
   finding_id: string;
