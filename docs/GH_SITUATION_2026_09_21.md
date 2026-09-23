@@ -46,7 +46,7 @@
 | HTTP пайплайн | L1–L7 inline после upload, векторный слой |
 | РиН | транспорт outbox/inbox есть; sandbox-контракта и бизнес-ACK нет; confirm брокера ≠ `SYNCED` |
 
-Семейства: number 24 executable / 64 missing; enum 5 / 11; exact_field 4 executable / 8 missing / 4 source_missing; presence 1 advisory / 11 missing.
+Семейства на 23.09 по `extractor_families.json`: number 30 executable / 55 missing; enum 10 / 9; exact_field 4 executable / 8 missing / 4 source_missing; presence 1 advisory / 11 missing.
 Файл: [`data/matrix/extractor_families.json`](../data/matrix/extractor_families.json).
 
 ## Главный вывод на 21.09
