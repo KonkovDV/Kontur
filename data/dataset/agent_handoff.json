@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "generated_on": "2026-09-22",
-  "export_git_sha": "",
+  "generated_on": "2026-09-23",
+  "export_git_sha": "76ca83a2139da7ae721ec3c7134e10e1144fae74",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -35,8 +35,37 @@
     "RT-2609-21",
     "GAP-FREE-SEARCH",
     "GAP-DWG",
-    "GAP-SPLIT"
+    "GAP-SPLIT",
+    "GAP-EMB"
   ],
+  "draft_prs": [
+    {
+      "number": 115,
+      "branch": "feat/adversarial-pdf-pack",
+      "head": "7ec43b74220c12cedc8af2145958de8162f3281c",
+      "title": "tests(adversarial): RT-C-ext / RT-B-ext via real PDF bytes + intake/visual pipeline calls",
+      "tests": 13,
+      "status": "draft",
+      "relates_to": "#80",
+      "closes": null,
+      "ci_runner": "runner_id=0 — not a real run; do not treat as green CI",
+      "note": "All 13 tests call real pipeline functions. See PR description for coverage table. GAP-EMB added to KNOWN_GAPS.md on this branch. Do not merge until live runner passes."
+    }
+  ],
+  "extractor_triage_complete": {
+    "note": "All 83 extractor_missing rules have documented triage decisions. No more rules can be promoted to executable without new extractors (geometry, object_counting, per_element_table, semantic_candidate).",
+    "triage_docs": [
+      "data/matrix/family_triage.json",
+      "data/matrix/class_ladder_triage.json",
+      "data/matrix/number_family_triage.json"
+    ],
+    "blockers_by_family": {
+      "number_55": ["drawing_measurement", "per_element_table", "object_counting", "area_from_polygon", "layered_composite", "multi_field_number", "zone_geometry", "slope_from_geometry", "schedule_chart", "daylight_calculation"],
+      "presence_11": ["graphic", "spatial_count", "mixed"],
+      "enum_9": ["two_sided_tolerance", "composite_value", "multi_field_number", "unordered_category", "inverted_ladder", "feature_set", "no_ladder"],
+      "exact_field_8": ["graphic", "text_composite"]
+    }
+  },
   "coverage_counts": {
     "advisory": 1,
     "executable": 44,
@@ -65,7 +94,7 @@
     "Treat static JWT public key as production OIDC/JWKS",
     "Open ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip or TEST_HIDDEN answers for thresholds",
     "Treat participant package without answers v2.0 as frozen val",
-    "Treat object 10_Полярная_25_СОШ1100к7 as frozen val or matrix gold",
+    "Treat object 10_Полярная_25_СОШ±1100к7 as frozen val or matrix gold",
     "Write CONFIRMED_VIOLATION from the automaton or LLM",
     "Guess non-gold RD_ID_MIXED as RD+ID",
     "Treat GOST Согласовано/ГИП header as approved etalon",
@@ -75,7 +104,10 @@
     "Require kind=materialized or assembled=true on TZ protocol JSON",
     "Treat broker confirm or inbox RECEIVED as process SYNCED / Rin ACK",
     "Do not add OIDC/TLS/RabbitMQ 4.x/observability instead of contest slice",
-    "Treat inspector-selected etalon as stamp evidence or close gate J"
+    "Treat inspector-selected etalon as stamp evidence or close gate J",
+    "Remove draft from PR #115 before live CI runner passes",
+    "Add Closes #80 to PR #115 — skew, OCR disagreement, VLM isolation, system prompt not covered",
+    "Assert that triage is done and promote extractor_missing rules without new extractors"
   ],
   "commands": {
     "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
@@ -89,6 +121,10 @@
     "gold_inventory": "data/dataset/gold_inventory.json",
     "gold_evidence_files": "data/dataset/gold_evidence_files.json",
     "coverage_snapshot": "data/matrix/coverage_snapshot.json",
+    "extractor_families": "data/matrix/extractor_families.json",
+    "family_triage": "data/matrix/family_triage.json",
+    "class_ladder_triage": "data/matrix/class_ladder_triage.json",
+    "number_family_triage": "data/matrix/number_family_triage.json",
     "index_stats": "data/dataset/train_public_index_stats.json",
     "train_public_engineering": "data/dataset/train_public_engineering.json",
     "train_public_pred": "data/dataset/train_public_pred.jsonl",
@@ -103,10 +139,6 @@
     "train_public_module": "backend/src/kontur/evaluation/train_public.py",
     "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py",
     "tz_scorecard": "data/dataset/tz_scorecard.json",
-    "extractor_families": "data/matrix/extractor_families.json",
-    "family_triage": "data/matrix/family_triage.json",
-    "class_ladder_triage": "data/matrix/class_ladder_triage.json",
-    "number_family_triage": "data/matrix/number_family_triage.json",
     "research_osint": "docs/RESEARCH_OSINT_2026.md",
     "extractor_family_triage": "docs/EXTRACTOR_FAMILY_TRIAGE.md",
     "class_ladder_triage_doc": "docs/CLASS_LADDER_TRIAGE.md",
@@ -114,6 +146,7 @@
     "gh_situation": "docs/GH_SITUATION_2026_09_21.md",
     "gh_agent_bus": "docs/GH_AGENT_BUS.md",
     "submission_pack": "docs/SUBMISSION_PACK.md",
+    "adversarial_pdf_tests": "backend/tests/adversarial/test_adversarial_pdf_pack.py",
     "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
     "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md",
     "adr_0011": "docs/adr/0011-sync-lifecycle-and-manual-retry.md",
