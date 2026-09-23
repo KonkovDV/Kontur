@@ -124,15 +124,18 @@ def resolve_revision(
     stage: DocStage,
     *,
     anchor: DocumentRef | None = None,
+    inspector_selected_file_ids: frozenset[str] = frozenset(),
 ) -> RevisionResolution:
     """Выбирает последнюю утверждённую редакцию для стадии.
 
     1. Только документы нужной стадии.
     2. При `anchor` — только та же identity (шифр, лист, раздел).
     3. `NOT_APPROVED` в пул голов не попадает. ПД без штампа остаётся кандидатом.
-    4. Голова: нет successor в пуле пригодных редакций.
-    5. Одна голова ПД без штампа получает `PACKAGE_DEFAULT`.
-    6. Несколько голов или цикл — RevisionConflict.
+    4. Ровно один пригодный файл из `inspector_selected_file_ids` — голова.
+       Два таких выбора — RevisionConflict. «Не утв.» в этот набор не входит.
+    5. Иначе голова: нет successor в пуле пригодных редакций.
+    6. Одна голова ПД без штампа получает `PACKAGE_DEFAULT`.
+    7. Несколько голов или цикл — RevisionConflict.
     """
 
     stage_docs = [item for item in documents if item.doc_stage is stage]
@@ -163,6 +166,20 @@ def resolve_revision(
                 f"нет редакции без явного «не утв.» для {stage.value}"
                 f" ({len(stage_docs)} отклонено)"
             ),
+        )
+
+    selected = [
+        item for item in eligible if item.file_id in inspector_selected_file_ids
+    ]
+    if len(selected) > 1:
+        ids = ", ".join(item.file_id for item in selected)
+        raise RevisionConflict(
+            f"несколько выборов инспектора для {stage.value}: {ids}"
+        )
+    if len(selected) == 1:
+        return RevisionResolution(
+            status=ResolveStatus.RESOLVED,
+            resolved=ResolvedRevision(document=package_etalon(selected[0]), is_stale=False),
         )
 
     eligible_ids: frozenset[str] = frozenset(item.file_id for item in eligible)

@@ -10,8 +10,8 @@ HEAD смотреть `git rev-parse origin/main`.
 **Freeze инфры до 29.09:** не добавлять OIDC/TLS/RabbitMQ 4.x/observability/УКЭП/РиН
 без sandbox. Critical path — конкурсный вертикальный срез (evidence UI, Gate K,
 пять правил), не транспорт. Issues [#75](https://github.com/KonkovDV/Kontur/issues/75)–[#84](https://github.com/KonkovDV/Kontur/issues/84).
-Открытых продуктовых PR нет; draft PR #115 (не снимать draft). Weekly Dependabot (#85) — не P0, не мержить ради
-«только main», пока не зелёный и пока не решено, нужны ли auto-update PR до подачи.
+Открытых продуктовых PR нет. Adversarial-пакет влит в #128 и не закрывает #80.
+Weekly Dependabot (#85) — не P0.
 На origin рабочая линия — `main`. OCR-хвосты `16f3a06` / `2ddc2b3` не мержить.
 
 ## Допуск 23.09.2026
@@ -98,8 +98,8 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
 не гейт K. Пакет сдачи #79: `docs/SUBMISSION_PACK.md`,
 `python scripts/export_submission_pack.py`. Backlog GitHub:
 #76 evidence UI, #77 Gate K,
-#80 adversarial PDF (**Draft PR #115**: 13 тестов, ветка `feat/adversarial-pdf-pack`
-HEAD `7ec43b7`; не снимать draft до живого CI-раннера; `Closes #80` не ставить;
+#80 adversarial PDF (пакет влит в #128, issue открыт: нет skew, OCR-расхождения,
+VLM и запрета класть текст страницы в system prompt; `Closes #80` не ставить;
 `runner_id=0` = не настоящий CI-прогон),
 #81 branch protection (GitHub Free private → 403),
 #82 family extractors (**все 83 `extractor_missing` разобраны** по трём триаж-док.; новых правил без геометрии нет), #83 split,
@@ -130,7 +130,7 @@ GAP-EMB добавлен в `docs/KNOWN_GAPS.md` на ветке `feat/adversari
 - Требовать `payload.kind = materialized` или `assembled=true` в JSON ТЗ:
   `protocol.schema.json` с `additionalProperties: false` такие поля не содержит
   (ADR-0009). Guard выгрузки — `PROTOCOL_FINALIZED` + hex `payload_sha256`.
-- Снимать draft PR #115 до живого CI-раннера; `runner_id=0` — не настоящий прогон.
+- Закрывать #80 по влитому adversarial-пакету; `runner_id=0` — не настоящий прогон.
 - Переводить `extractor_missing` в `executable` без нового экстрактора: все 83 разобраны, блокер документирован.
 
 ## Следующие слайсы

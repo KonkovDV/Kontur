@@ -49,7 +49,7 @@
   "gold_matrix_positives": 6,
   "wilson_perfect_n_min_recall": 16,
   "pipeline_limitations": [
-    "last_file_per_stage_fallback",
+    "train_public_harness_still_last_file_per_stage",
     "non_gold_RD_ID_MIXED_skipped",
     "gold_RD_ID_MIXED_loaded_as_RD_only",
     "pd_cover_without_filled_utverdil",

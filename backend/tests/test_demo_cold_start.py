@@ -163,8 +163,18 @@ def test_demo_rehearsal_confirm_reject_protocol_outbox() -> None:
     assert FindingStatus.CONFIRMED_VIOLATION not in {
         item.finding_status for item in record.findings.values()
     }
+    unordered = demo_findings(tuple(record.findings.values()))
+    for code in DEMO_CODES:
+        assert unordered[code].finding_status is FindingStatus.CLARIFICATION_REQUIRED
+        assert "несколько редакций" in unordered[code].rationale
 
-    grouped = groups_by_rule(report.evidence_groups)
+    workspace.select_revision(
+        record.process_id,
+        "f-pd",
+        actor=INSPECTOR,
+        comment="В комплекте это утверждённая редакция тома, черновик не эталон.",
+    )
+    grouped = groups_by_rule(tuple(record.evidence_groups.values()))
     slice_findings = demo_findings(tuple(record.findings.values()))
     for code in DEMO_CODES:
         finding = slice_findings[code]

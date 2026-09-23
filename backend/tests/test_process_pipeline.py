@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from test_pdf_tokens import ascii_pdf, empty_pdf
 
-from kontur.application.process_pipeline import PipelineFile, run_process_pipeline
+from kontur.application.process_pipeline import (
+    PipelineFile,
+    _pages_from_blobs,
+    run_process_pipeline,
+)
 from kontur.application.scenarios import CompletenessMap
-from kontur.domain.models import ApprovalStatus, DocStage
+from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage
 from kontur.domain.statuses import HUMAN_ONLY_STATUSES, Completeness, FindingStatus
 from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT
 from kontur.infrastructure.pdfium_tokens import file_sha256
@@ -109,3 +113,75 @@ def test_page_injection_stays_data_and_does_not_approve() -> None:
         finding.finding_status for finding in report.findings
     }
     assert all(finding.finding_status not in HUMAN_ONLY_STATUSES for finding in report.findings)
+
+
+def _both_stages() -> CompletenessMap:
+    return {
+        DocStage.PD: Completeness.UPLOADED,
+        DocStage.RD: Completeness.UPLOADED,
+        DocStage.ID: Completeness.MISSING,
+    }
+
+
+def test_two_unordered_pd_files_do_not_compare_the_last_upload() -> None:
+    first = ascii_pdf("CODE 12345-PZ Rev 1")
+    second = ascii_pdf("CODE 12345-PZ Rev 2")
+    rd = ascii_pdf("RD sheet")
+    files = (
+        PipelineFile("f-early", file_sha256(first), "early.pdf", DocStage.PD),
+        PipelineFile("f-late", file_sha256(second), "late.pdf", DocStage.PD),
+        PipelineFile("f-rd", file_sha256(rd), "rd.pdf", DocStage.RD),
+    )
+    blobs = {"f-early": first, "f-late": second, "f-rd": rd}
+    pages, _errors, stamps, _clean, _pool = _pages_from_blobs(files, blobs)
+    assert DocStage.PD not in pages
+    assert pages[DocStage.RD].document.file_id == "f-rd"
+    assert stamps["f-early"] is ApprovalStatus.UNKNOWN
+    assert stamps["f-late"] is ApprovalStatus.UNKNOWN
+    report = run_process_pipeline(
+        object_id="obj-revs",
+        completeness=_both_stages(),
+        files=files,
+        blobs=blobs,
+    )
+    pz = next(item for item in report.findings if item.rule_code == "PZ-001")
+    assert pz.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert "несколько редакций" in pz.rationale
+    assert FindingStatus.CONFIRMED_VIOLATION not in {
+        item.finding_status for item in report.findings
+    }
+
+
+def test_later_not_approved_does_not_hide_the_earlier_file() -> None:
+    earlier = ascii_pdf("CODE 12345-PZ")
+    later = ascii_pdf("not approved CODE 12345-PZ")
+    files = (
+        PipelineFile("f-early", file_sha256(earlier), "early.pdf", DocStage.PD),
+        PipelineFile("f-late", file_sha256(later), "late.pdf", DocStage.PD),
+    )
+    pages, _errors, stamps, _clean, _pool = _pages_from_blobs(
+        files,
+        {"f-early": earlier, "f-late": later},
+    )
+    assert pages[DocStage.PD].document.file_id == "f-early"
+    assert pages[DocStage.PD].document.approval_basis is ApprovalBasis.PACKAGE_DEFAULT
+    assert stamps["f-early"] is ApprovalStatus.UNKNOWN
+    assert stamps["f-late"] is ApprovalStatus.NOT_APPROVED
+
+
+def test_inspector_select_picks_the_earlier_file_not_the_last() -> None:
+    earlier = ascii_pdf("CODE 12345-PZ Rev 1")
+    later = ascii_pdf("CODE 12345-PZ Rev 2")
+    files = (
+        PipelineFile("f-early", file_sha256(earlier), "early.pdf", DocStage.PD),
+        PipelineFile("f-late", file_sha256(later), "late.pdf", DocStage.PD),
+    )
+    pages, _errors, stamps, _clean, _pool = _pages_from_blobs(
+        files,
+        {"f-early": earlier, "f-late": later},
+        inspector_approved_file_ids=frozenset({"f-early"}),
+    )
+    assert pages[DocStage.PD].document.file_id == "f-early"
+    assert pages[DocStage.PD].document.approval_basis is ApprovalBasis.INSPECTOR_SELECT
+    assert stamps["f-early"] is ApprovalStatus.UNKNOWN
+    assert stamps["f-late"] is ApprovalStatus.UNKNOWN
