@@ -45,6 +45,7 @@ app.use((req, res, next) => {
 });
 
 // RBAC — в Python-ядре (presentation/rbac.py); шлюз не пишет finding_status.
+// Express срезает префикс монтирования. Ядро ждёт полный путь /api/v1/...
 app.use(
   "/api/v1",
   createProxyMiddleware({
@@ -52,6 +53,8 @@ app.use(
     changeOrigin: true,
     proxyTimeout: PROXY_TIMEOUT_MS,
     timeout: PROXY_TIMEOUT_MS,
+    pathRewrite: (requestPath) =>
+      requestPath.startsWith("/api/v1") ? requestPath : `/api/v1${requestPath}`,
   }),
 );
 
