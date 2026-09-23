@@ -330,6 +330,7 @@ def evaluate_rule(
     pages: dict[DocStage, StagePage],
     completeness: CompletenessMap,
     revision_pool: list[DocumentRef] | None = None,
+    inspector_selected_file_ids: frozenset[str] = frozenset(),
 ) -> RuleEvaluation:
     """Исполнить одно правило на уже разрезанных страницах."""
 
@@ -396,6 +397,7 @@ def evaluate_rule(
                     revision_pool,
                     stage,
                     anchor=None if staged is None else staged.document,
+                    inspector_selected_file_ids=inspector_selected_file_ids,
                 )
             except RevisionConflict as exc:
                 return _halt(

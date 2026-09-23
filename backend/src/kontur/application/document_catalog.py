@@ -122,7 +122,11 @@ def build_document_catalog(
             head_by_stage[stage] = None
             continue
         try:
-            resolution = resolve_revision(refs, stage)
+            resolution = resolve_revision(
+                refs,
+                stage,
+                inspector_selected_file_ids=inspector_approved_file_ids,
+            )
         except RevisionConflict:
             blocked.add(stage)
             head_by_stage[stage] = None

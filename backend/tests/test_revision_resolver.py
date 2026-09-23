@@ -84,6 +84,40 @@ class TestBasicResolution:
         with pytest.raises(RevisionConflict, match="pd-v1"):
             resolve_revision([first, second], DocStage.PD)
 
+    def test_one_inspector_choice_is_the_head(self) -> None:
+        first = _doc("pd-v1")
+        second = _doc("pd-v2")
+        result = resolve_revision(
+            [first, second],
+            DocStage.PD,
+            inspector_selected_file_ids=frozenset({"pd-v1"}),
+        )
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-v1"
+
+    def test_two_inspector_choices_conflict(self) -> None:
+        with pytest.raises(RevisionConflict, match="инспектор"):
+            resolve_revision(
+                [_doc("pd-v1"), _doc("pd-v2")],
+                DocStage.PD,
+                inspector_selected_file_ids=frozenset({"pd-v1", "pd-v2"}),
+            )
+
+    def test_inspector_choice_does_not_override_not_approved(self) -> None:
+        from kontur.domain.models import ApprovalBasis
+
+        rejected = _doc("pd-bad", approval=ApprovalStatus.NOT_APPROVED)
+        kept = _doc("pd-ok", approval=ApprovalStatus.UNKNOWN)
+        result = resolve_revision(
+            [rejected, kept],
+            DocStage.PD,
+            inspector_selected_file_ids=frozenset({"pd-bad"}),
+        )
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-ok"
+        assert result.resolved.document.approval_basis is ApprovalBasis.PACKAGE_DEFAULT
+
     def test_rd_without_stamp_resolves(self) -> None:
         doc = _doc("rd-v1", stage=DocStage.RD, approval=ApprovalStatus.UNKNOWN)
         result = resolve_revision([doc], DocStage.RD)

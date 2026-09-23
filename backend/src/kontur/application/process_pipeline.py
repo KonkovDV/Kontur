@@ -1,4 +1,7 @@
-"""Прогон матрицы на загруженных PDF: токены → evaluate_rule → находки.
+"""Прогон матрицы на загруженных PDF: токены → голова редакции → evaluate_rule.
+
+Несколько файлов одной стадии без successor не схлопываются в последний
+файл: нет однозначной головы — страница стадии не строится.
 
 Вызывается после intake. Пустой растр при наличии Tesseract идёт в
 `fill_empty_raster_pages`; иначе пустые токены. Ошибка OCR — статусы
@@ -14,7 +17,12 @@ from dataclasses import dataclass, field, replace
 
 from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.passport import read_passport
-from kontur.application.revision_resolver import approval_with_basis, package_etalon
+from kontur.application.revision_resolver import (
+    ResolveStatus,
+    RevisionConflict,
+    approval_with_basis,
+    resolve_revision,
+)
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import (
     ApprovalBasis,
@@ -94,11 +102,18 @@ def _pages_from_blobs(
     tuple[str, ...],
     dict[str, ApprovalStatus],
     dict[str, bool],
+    list[DocumentRef],
 ]:
-    pages: dict[DocStage, StagePage] = {}
+    """Страница стадии — голова резолвера, не последний загруженный файл.
+
+    Нет однозначной головы — страницы стадии нет. Штамп в `stamps` остаётся
+    прочитанным, без `PACKAGE_DEFAULT`.
+    """
+
     errors: list[str] = []
     stamps: dict[str, ApprovalStatus] = {}
     injection_clean: dict[str, bool] = {}
+    built: list[tuple[DocumentRef, StagePage]] = []
     for item in files:
         if not _is_pdf(item.filename):
             continue
@@ -137,25 +152,58 @@ def _pages_from_blobs(
             passport.approval_basis,
             inspector_selected=item.file_id in inspector_approved_file_ids,
         )
-        ref = package_etalon(
-            _document_ref(
-                item,
-                passport.document_code,
-                passport.revision,
-                approval,
-                basis,
-                passport.sheet,
-            )
+        ref = _document_ref(
+            item,
+            passport.document_code,
+            passport.revision,
+            approval,
+            basis,
+            passport.sheet,
         )
         cache = PageImageCache(raw) if tesseract_available() else None
-        pages[item.doc_stage] = StagePage(
-            document=ref,
-            tokens=tokens,
-            pdf_bytes=raw,
-            frames=tuple(page.frame for page in document.pages),
-            render_cache=cache,
+        built.append(
+            (
+                ref,
+                StagePage(
+                    document=ref,
+                    tokens=tokens,
+                    pdf_bytes=raw,
+                    frames=tuple(page.frame for page in document.pages),
+                    render_cache=cache,
+                ),
+            )
         )
-    return pages, tuple(errors), stamps, injection_clean
+    pool = [ref for ref, _page in built]
+    pages = _stages_from_heads(built, inspector_approved_file_ids)
+    return pages, tuple(errors), stamps, injection_clean, pool
+
+
+def _stages_from_heads(
+    built: Sequence[tuple[DocumentRef, StagePage]],
+    inspector_approved_file_ids: frozenset[str],
+) -> dict[DocStage, StagePage]:
+    """Одна страница на стадию: голова резолвера. Конфликт стадию не заполняет."""
+
+    by_stage: dict[DocStage, list[tuple[DocumentRef, StagePage]]] = {}
+    for ref, page in built:
+        by_stage.setdefault(ref.doc_stage, []).append((ref, page))
+    pages: dict[DocStage, StagePage] = {}
+    for stage, items in by_stage.items():
+        refs = [ref for ref, _page in items]
+        try:
+            resolution = resolve_revision(
+                refs,
+                stage,
+                inspector_selected_file_ids=inspector_approved_file_ids,
+            )
+        except RevisionConflict:
+            continue
+        if resolution.status is not ResolveStatus.RESOLVED or resolution.resolved is None:
+            continue
+        chosen = resolution.resolved.document
+        page = next(page for ref, page in items if ref.file_id == chosen.file_id)
+        pages[stage] = replace(page, document=chosen)
+    return pages
 
 
 def run_process_pipeline(
@@ -173,7 +221,7 @@ def run_process_pipeline(
     codes = source.all_codes()
     if len(codes) != EXPECTED_PARAM_COUNT:
         raise ValueError(f"матрица {len(codes)} правил, ожидалось {EXPECTED_PARAM_COUNT}")
-    pages, parse_errors, stamps, injection_clean = _pages_from_blobs(
+    pages, parse_errors, stamps, injection_clean, revision_pool = _pages_from_blobs(
         files,
         blobs,
         inspector_approved_file_ids=inspector_approved_file_ids,
@@ -186,6 +234,8 @@ def run_process_pipeline(
             object_id=object_id,
             pages=pages,
             completeness=completeness,
+            revision_pool=revision_pool,
+            inspector_selected_file_ids=inspector_approved_file_ids,
         )
         finding = result.finding
         if finding.finding_status in HUMAN_ONLY_STATUSES:
