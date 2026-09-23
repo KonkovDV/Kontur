@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-23",
-  "export_git_sha": "c97635167e85f2a50b0dd24bf143f1ef2365a6fa",
+  "export_git_sha": "abfd0cc29ef9f793f572744125cc55c663baf3fe",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -12,7 +12,7 @@
   "closes_gate_l": false,
   "hidden_test_contents_inspected": false,
   "pr_118_lesson": {
-    "summary": "PR #118 (влит 23.09) исправил галлюцинации IA в GH_AGENT_BUS.md.",
+    "summary": "PR #118 (влит 23.09) исправил галлюцинации ИИ в GH_AGENT_BUS.md.",
     "corrections": [
       {
         "wrong": "file_sha256() живёт в intake.py",
@@ -27,11 +27,11 @@
       {
         "wrong": "Тест embedded через FPDFDoc_GetAttachmentCount + pytest.skip",
         "correct": "Тест embedded не писать вообще: пайплайн не читает /EmbeddedFile (GAP-EMB)",
-        "lesson": "Если GAP задокументирован — не писать тест, претендующий покрыть его"
+        "lesson": "Если GAP задокументирован — не писать тест. Для GAP-EMB pytest.skip тоже не подходит: тест не должен существовать."
       },
       {
         "wrong": "runner_id=0 + непустой run_id = CI зелёный",
-        "correct": "runner_id=0 и steps=[] = раннер не назначался. ЦИ нет.",
+        "correct": "runner_id=0 и steps=[] = раннер не назначался. CI нет.",
         "lesson": "CI green = completed + success + runner_id != 0 + steps не []"
       }
     ]
@@ -134,7 +134,8 @@
     "Add Closes #80 to PR #115 — skew, OCR disagreement, VLM isolation, system prompt not covered",
     "Assert that triage is done and promote extractor_missing rules without new extractors",
     "Write import paths or helper function names without verifying via get_file_contents or search_code",
-    "Write a test for a documented GAP (use pytest.skip at top with reason, or omit the test entirely)"
+    "Write a test for GAP-EMB (/EmbeddedFile): the pipeline does not read embedded files. Do not write this test at all — pytest.skip is also not acceptable here, as it implies the test should exist",
+    "Write a test that claims to cover any other documented GAP without pytest.skip at the top with the GAP identifier as the reason"
   ],
   "commands": {
     "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
