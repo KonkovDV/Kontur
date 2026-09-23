@@ -8,9 +8,8 @@ from dataclasses import dataclass
 from kontur.application.passport import read_passport
 from kontur.application.revision_resolver import (
     ResolveStatus,
-    RevisionConflict,
     approval_with_basis,
-    resolve_revision,
+    resolve_heads_by_identity,
 )
 from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage, DocumentRef
 from kontur.infrastructure.injection_scan import scan_tokens_for_injection
@@ -115,27 +114,30 @@ def build_document_catalog(
     for ref in parsed.values():
         by_stage[ref.doc_stage].append(ref)
 
-    head_by_stage: dict[DocStage, DocumentRef | None] = {}
-    blocked: set[DocStage] = set()
+    current_ids: set[str] = set()
+    superseded_ids: set[str] = set()
+    blocked_ids: set[str] = set()
+    shown_head: dict[str, DocumentRef] = {}
     for stage, refs in by_stage.items():
         if not refs:
-            head_by_stage[stage] = None
             continue
-        try:
-            resolution = resolve_revision(
-                refs,
-                stage,
-                inspector_selected_file_ids=inspector_approved_file_ids,
+        for identity in resolve_heads_by_identity(
+            refs,
+            stage,
+            inspector_selected_file_ids=inspector_approved_file_ids,
+        ):
+            if (
+                identity.resolution.status is not ResolveStatus.RESOLVED
+                or identity.resolution.resolved is None
+            ):
+                blocked_ids.update(identity.file_ids)
+                continue
+            chosen = identity.resolution.resolved.document
+            shown_head[chosen.file_id] = chosen
+            current_ids.add(chosen.file_id)
+            superseded_ids.update(
+                file_id for file_id in identity.file_ids if file_id != chosen.file_id
             )
-        except RevisionConflict:
-            blocked.add(stage)
-            head_by_stage[stage] = None
-            continue
-        if resolution.status is not ResolveStatus.RESOLVED or resolution.resolved is None:
-            blocked.add(stage)
-            head_by_stage[stage] = None
-            continue
-        head_by_stage[stage] = resolution.resolved.document
 
     rows: list[dict[str, object]] = []
     lookup: Mapping[str, DocumentRef] = parsed
@@ -154,16 +156,18 @@ def build_document_catalog(
             )
             continue
         ref = lookup[item.file_id]
-        head = head_by_stage[item.doc_stage]
-        if item.doc_stage in blocked or head is None:
+        if item.file_id in blocked_ids:
             shown = ref
             actuality = "CLARIFICATION_REQUIRED"
-        elif head.file_id == item.file_id:
-            shown = head
+        elif item.file_id in current_ids:
+            shown = shown_head[item.file_id]
             actuality = "CURRENT"
-        else:
+        elif item.file_id in superseded_ids:
             shown = ref
             actuality = "SUPERSEDED"
+        else:
+            shown = ref
+            actuality = "CLARIFICATION_REQUIRED"
         rows.append(
             _row(
                 item,

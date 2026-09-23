@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from uuid import uuid4
 
@@ -135,6 +136,116 @@ def _required_stages(rule: dict[str, object]) -> tuple[DocStage, ...]:
     if not isinstance(raw, list) or not raw:
         return (DocStage.PD, DocStage.RD)
     return tuple(DocStage(str(item)) for item in raw)
+
+
+_KIND_LATIN: dict[str, str] = {
+    "ПЗ": "PZ",
+    "АР": "AR",
+    "КР": "KR",
+    "ИД": "ID",
+    "ОВ": "OV",
+    "КЖ": "KJ",
+    "ОД": "OD",
+    "ПЗУ": "PZU",
+    "ИОС": "IOS",
+    "ИОС4": "IOS4",
+    "ПОС": "POS",
+    "ПОД": "POD",
+    "ЗУ": "ZU",
+    "ППМ": "PPM",
+    "ОДИ": "ODI",
+    "ООС": "OOS",
+    "СПЗУ": "SPZU",
+}
+
+
+def stage_candidates(
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
+    stage: DocStage,
+) -> tuple[StagePage, ...]:
+    raw = pages.get(stage)
+    if raw is None:
+        return ()
+    if isinstance(raw, StagePage):
+        return (raw,)
+    return tuple(raw)
+
+
+def _kind_aliases(raw: str) -> frozenset[str]:
+    folded = raw.strip().upper().replace(" ", "")
+    return frozenset({folded, _KIND_LATIN.get(folded, folded)})
+
+
+def _wanted_kind_tokens(rule: dict[str, object], stage: DocStage) -> frozenset[str]:
+    tokens: set[str] = set()
+    section = rule.get("section")
+    if isinstance(section, str) and section.strip():
+        tokens.update(_kind_aliases(section))
+    sources = rule.get("sources")
+    if isinstance(sources, dict):
+        bucket = sources.get(stage.value.lower())
+        if isinstance(bucket, dict):
+            kinds = bucket.get("document_kind")
+            if isinstance(kinds, list):
+                for item in kinds:
+                    if isinstance(item, str) and item.strip():
+                        tokens.update(_kind_aliases(item))
+    return frozenset(tokens)
+
+
+def _page_kind_tokens(page: StagePage) -> frozenset[str]:
+    code = page.document.document_code.upper().replace("_", "-")
+    parts = {code, *(item for item in code.split("-") if item)}
+    if page.document.discipline:
+        parts.add(page.document.discipline.upper())
+    return frozenset(parts)
+
+
+def bind_stage_page(
+    rule: dict[str, object],
+    stage: DocStage,
+    candidates: Sequence[StagePage],
+) -> StagePage | str | None:
+    """Одна голова раздела правила. Чужой шифр не даёт числа и не конфликтует."""
+
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+    wanted = _wanted_kind_tokens(rule, stage)
+    matched = [
+        page
+        for page in candidates
+        if wanted and not wanted.isdisjoint(_page_kind_tokens(page))
+    ]
+    if len(matched) == 1:
+        return matched[0]
+    if len(matched) > 1:
+        ids = ", ".join(page.document.file_id for page in matched)
+        return f"{stage.value}: несколько голов раздела правила ({ids})"
+    ids = ", ".join(page.document.file_id for page in candidates)
+    return f"{stage.value}: нет документа раздела правила среди голов {ids}"
+
+
+def _bind_required_pages(
+    rule: dict[str, object],
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
+    required: tuple[DocStage, ...],
+) -> dict[DocStage, StagePage] | str:
+    bound: dict[DocStage, StagePage] = {}
+    for stage in required:
+        picked = bind_stage_page(rule, stage, stage_candidates(pages, stage))
+        if isinstance(picked, str):
+            return picked
+        if picked is not None:
+            bound[stage] = picked
+    for stage in pages:
+        if stage in bound:
+            continue
+        extra = stage_candidates(pages, stage)
+        if len(extra) == 1:
+            bound[stage] = extra[0]
+    return bound
 
 
 def _assert_machine_status(status: FindingStatus) -> None:
@@ -327,7 +438,7 @@ def evaluate_rule(
     rule: dict[str, object],
     *,
     object_id: str,
-    pages: dict[DocStage, StagePage],
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
     completeness: CompletenessMap,
     revision_pool: list[DocumentRef] | None = None,
     inspector_selected_file_ids: frozenset[str] = frozenset(),
@@ -379,6 +490,18 @@ def evaluate_rule(
                 missing_stage=stage,
             )
 
+    revision_status = _mapped(rule, "revision_conflict", FindingStatus.CLARIFICATION_REQUIRED)
+    bound = _bind_required_pages(rule, pages, required)
+    if isinstance(bound, str):
+        return _halt(
+            rule,
+            Stage.L4_REVISION,
+            revision_status,
+            bound,
+            prior=identity_ok,
+        )
+    pages = bound
+
     for stage, page in pages.items():
         if not _identity_ok(page):
             return _halt(
@@ -388,7 +511,6 @@ def evaluate_rule(
                 f"{stage.value}: нет file_id/SHA-256 или страница 0",
             )
 
-    revision_status = _mapped(rule, "revision_conflict", FindingStatus.CLARIFICATION_REQUIRED)
     if revision_pool is not None:
         for stage in required:
             try:

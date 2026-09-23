@@ -230,6 +230,56 @@ def resolve_revision(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class IdentityHead:
+    """Голова одной цепочки шифра. Конфликт чужой шифр не трогает."""
+
+    key: tuple[str, str, str] | None
+    file_ids: tuple[str, ...]
+    resolution: RevisionResolution
+
+
+def resolve_heads_by_identity(
+    documents: list[DocumentRef],
+    stage: DocStage,
+    *,
+    inspector_selected_file_ids: frozenset[str] = frozenset(),
+) -> tuple[IdentityHead, ...]:
+    """Каждый шифр стадии резолвится отдельно. Пустой шифр — своя группа."""
+
+    stage_docs = [item for item in documents if item.doc_stage is stage]
+    groups: dict[tuple[str, str, str] | None, list[DocumentRef]] = {}
+    for item in stage_docs:
+        groups.setdefault(_identity_key(item), []).append(item)
+    result: list[IdentityHead] = []
+    for key, group in groups.items():
+        selected = frozenset(
+            item.file_id
+            for item in group
+            if item.file_id in inspector_selected_file_ids
+        )
+        try:
+            resolution = resolve_revision(
+                group,
+                stage,
+                inspector_selected_file_ids=selected,
+            )
+        except RevisionConflict as exc:
+            resolution = RevisionResolution(
+                status=ResolveStatus.CLARIFICATION_REQUIRED,
+                resolved=None,
+                conflict_reason=str(exc),
+            )
+        result.append(
+            IdentityHead(
+                key=key,
+                file_ids=tuple(item.file_id for item in group),
+                resolution=resolution,
+            )
+        )
+    return tuple(result)
+
+
 def check_stale_revision(
     candidate: DocumentRef,
     all_documents: list[DocumentRef],

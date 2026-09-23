@@ -1,5 +1,10 @@
 # Срез ситуации Kontur — 21.09.2026
 
+Исторический снимок **21.09**. Живые факты — `AGENT_HANDOFF.md`, `GH_AGENT_BUS.md`,
+`git rev-parse origin/main`. С 23.09 репозиторий публичный, Apache-2.0.
+Ruleset `main-pr-and-ci` активен; #81 закрыт по критерию ветки, не по гейту.
+Строки ниже про «private» и «main без branch protection» — состояние 21.09.
+
 Документ для ИИ, который заходит **только через GitHub** (clone `main`, Issues, PR).
 Не frozen val, не GOLD OCR, не scorecard приёмки ТЗ и не заявление, что
 вся матрица executable.

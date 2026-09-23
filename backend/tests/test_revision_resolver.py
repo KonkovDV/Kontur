@@ -15,6 +15,7 @@ from kontur.application.revision_resolver import (
     ResolveStatus,
     RevisionConflict,
     check_stale_revision,
+    resolve_heads_by_identity,
     resolve_revision,
 )
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
@@ -165,6 +166,42 @@ class TestBasicResolution:
         blank = replace(_doc("pd-blank"), document_code="")
         with pytest.raises(RevisionConflict, match="не прочитан"):
             resolve_revision([coded, blank], DocStage.PD)
+
+
+class TestIdentityHeads:
+    def test_two_ciphers_resolve_independently(self) -> None:
+        pz = _doc("pd-pz", document_code="12345-PZ")
+        ar = _doc("pd-ar", document_code="12345-AR")
+        heads = resolve_heads_by_identity([pz, ar], DocStage.PD)
+        chosen = {
+            item.resolution.resolved.document.file_id
+            for item in heads
+            if item.resolution.resolved is not None
+        }
+        assert chosen == {"pd-pz", "pd-ar"}
+        assert all(item.resolution.status is ResolveStatus.RESOLVED for item in heads)
+
+    def test_inspector_select_does_not_block_other_cipher(self) -> None:
+        pz = _doc("pd-pz", document_code="12345-PZ")
+        ar = _doc("pd-ar", document_code="12345-AR")
+        heads = resolve_heads_by_identity(
+            [pz, ar],
+            DocStage.PD,
+            inspector_selected_file_ids=frozenset({"pd-pz"}),
+        )
+        chosen = {
+            item.resolution.resolved.document.file_id
+            for item in heads
+            if item.resolution.resolved is not None
+        }
+        assert chosen == {"pd-pz", "pd-ar"}
+
+    def test_blank_cipher_does_not_join_known_cipher(self) -> None:
+        coded = _doc("pd-pz", document_code="12345-PZ")
+        blank = replace(_doc("pd-blank"), document_code="")
+        heads = resolve_heads_by_identity([coded, blank], DocStage.PD)
+        assert len(heads) == 2
+        assert all(item.resolution.status is ResolveStatus.RESOLVED for item in heads)
 
 
 # ---------------------------------------------------------------------------

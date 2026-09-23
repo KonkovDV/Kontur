@@ -337,8 +337,8 @@ gh run list --branch main --limit 5
 gh run view RUN_ID --json status,conclusion,workflowName
 ```
 
-После merge в `main`: `python scripts/export_agent_dumps.py`, claim `done`,
-снять `claimed`. Не закрывать эпик, пока P0 открыты.
+После merge в `main`: handoff-комментарий и снять `claimed`. Не закрывать эпик,
+пока P0 открыты. `export_agent_dumps.py` — по календарю 28.09, не после каждого PR.
 
 ---
 
@@ -347,7 +347,32 @@ gh run view RUN_ID --json status,conclusion,workflowName
 - Discussions, Wiki, Projects v2 как единственный статус.
 - IssueOps Actions (`issue_comment` → /claim).
 - Авто-assign Copilot на все P0.
-- Branch protection «на удачу» — API 403 (#81).
+- Branch protection «на удачу». Ruleset `main-pr-and-ci` (id 23890545) уже
+  активен; #81 закрыт по критерию ветки, не по гейту.
+
+---
+
+## Уроки Red Team 23.09
+
+Не переносить эти ошибки в следующий слайс.
+
+1. «Последний файл стадии» ≠ голова редакции. Сравнивать `resolve_revision`.
+2. Разные шифры одной стадии — не одна цепочка и не конфликт всего комплекта.
+   Группировать `resolve_heads_by_identity`. Правило берёт документ раздела
+   (`document_kind` / `section`), а не чужой том.
+3. Выбор инспектора не перекрывает «не утв.» и не помечает чужой шифр
+   `SUPERSEDED`.
+4. Живой экран без массового confirm. Рекордер Gate K пишет локальный JSON и
+   не вызывает API рецензии — это не «массового подтверждения нет» вообще.
+5. `runner_id=0` и пустые `steps` — не зелёный CI.
+6. Не писать «main без ruleset / GitHub Free private / API 403», если
+   `main-pr-and-ci` активен. Не закрывать гейты I/J/K/L ruleset'ом.
+7. Не оставлять в шине «draft #115» и открытые Dependabot #116/#117 после
+   влития #128. Adversarial-пакет не закрывает #80.
+8. Не угадывать порядок редакций по «ред. 1 / ред. 2» без successor.
+9. Не перекрашивать 83 `extractor_missing`. Не ставить `ocr_text=AVAILABLE`.
+10. `export_agent_dumps.py` не гонять до 28.09; `export_git_sha` отстаёт нарочно.
+    Не править руками `train_public_engineering.json`.
 
 ---
 
@@ -357,3 +382,5 @@ gh run view RUN_ID --json status,conclusion,workflowName
 `AUTO_NO_DIFFERENCE` не на проводе ТЗ. TEST_HIDDEN не открывать.
 Не закрывать I/J по SILVER, n=6, n=15. Confirm брокера ≠ `SYNCED`.
 Не наращивать OIDC/TLS/RabbitMQ 4.x/observability/УКЭП вместо среза.
+Не считать две головы разных шифров конфликтом стадии. Не считать рекордер
+Gate K живым API рецензии.

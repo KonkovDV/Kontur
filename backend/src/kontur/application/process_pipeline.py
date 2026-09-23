@@ -1,7 +1,8 @@
 """Прогон матрицы на загруженных PDF: токены → голова редакции → evaluate_rule.
 
 Несколько файлов одной стадии без successor не схлопываются в последний
-файл: нет однозначной головы — страница стадии не строится.
+файл. Разные шифры — отдельные головы. Нет однозначной головы шифра —
+эта цепочка в страницы стадии не входит.
 
 Вызывается после intake. Пустой растр при наличии Tesseract идёт в
 `fill_empty_raster_pages`; иначе пустые токены. Ошибка OCR — статусы
@@ -19,9 +20,8 @@ from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.passport import read_passport
 from kontur.application.revision_resolver import (
     ResolveStatus,
-    RevisionConflict,
     approval_with_basis,
-    resolve_revision,
+    resolve_heads_by_identity,
 )
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import (
@@ -98,7 +98,7 @@ def _pages_from_blobs(
     *,
     inspector_approved_file_ids: frozenset[str] = frozenset(),
 ) -> tuple[
-    dict[DocStage, StagePage],
+    dict[DocStage, StagePage | tuple[StagePage, ...]],
     tuple[str, ...],
     dict[str, ApprovalStatus],
     dict[str, bool],
@@ -181,29 +181,44 @@ def _pages_from_blobs(
 def _stages_from_heads(
     built: Sequence[tuple[DocumentRef, StagePage]],
     inspector_approved_file_ids: frozenset[str],
-) -> dict[DocStage, StagePage]:
-    """Одна страница на стадию: голова резолвера. Конфликт стадию не заполняет."""
+) -> dict[DocStage, StagePage | tuple[StagePage, ...]]:
+    """Одна или несколько голов стадии: по шифру, не последний файл."""
 
     by_stage: dict[DocStage, list[tuple[DocumentRef, StagePage]]] = {}
     for ref, page in built:
         by_stage.setdefault(ref.doc_stage, []).append((ref, page))
-    pages: dict[DocStage, StagePage] = {}
+    pages: dict[DocStage, StagePage | tuple[StagePage, ...]] = {}
     for stage, items in by_stage.items():
         refs = [ref for ref, _page in items]
-        try:
-            resolution = resolve_revision(
-                refs,
-                stage,
-                inspector_selected_file_ids=inspector_approved_file_ids,
-            )
-        except RevisionConflict:
-            continue
-        if resolution.status is not ResolveStatus.RESOLVED or resolution.resolved is None:
-            continue
-        chosen = resolution.resolved.document
-        page = next(page for ref, page in items if ref.file_id == chosen.file_id)
-        pages[stage] = replace(page, document=chosen)
+        by_id = {ref.file_id: page for ref, page in items}
+        heads: list[StagePage] = []
+        for identity in resolve_heads_by_identity(
+            refs,
+            stage,
+            inspector_selected_file_ids=inspector_approved_file_ids,
+        ):
+            if (
+                identity.resolution.status is not ResolveStatus.RESOLVED
+                or identity.resolution.resolved is None
+            ):
+                continue
+            chosen = identity.resolution.resolved.document
+            page = by_id[chosen.file_id]
+            heads.append(replace(page, document=chosen))
+        if len(heads) == 1:
+            pages[stage] = heads[0]
+        elif len(heads) > 1:
+            pages[stage] = tuple(heads)
     return pages
+
+
+def _count_built_pages(
+    pages: Mapping[DocStage, StagePage | tuple[StagePage, ...]],
+) -> int:
+    total = 0
+    for item in pages.values():
+        total += len(item) if isinstance(item, tuple) else 1
+    return total
 
 
 def run_process_pipeline(
@@ -247,7 +262,7 @@ def run_process_pipeline(
         findings=tuple(findings),
         rules_evaluated=len(findings),
         parse_errors=parse_errors,
-        pages_built=len(pages),
+        pages_built=_count_built_pages(pages),
         stamp_by_file_id=stamps,
         evidence_groups=tuple(groups),
         injection_clean_by_file_id=injection_clean,
