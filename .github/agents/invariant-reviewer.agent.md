@@ -63,8 +63,7 @@ Test quality checklist (check every added test function):
   is allowed only when the required API is absent (e.g. rotation:
   no `set_rotation` method)
 - [ ] No `FPDFDoc_GetAttachmentCount`. GAP-EMB: the pipeline does not
-  read `/EmbeddedFile`. A raw pdfium count is not coverage. Do not
-  write this test at all — skip at top with reason `GAP-EMB`
+  read `/EmbeddedFile`. Do not write this test.
 - [ ] Assertions name the required outcome
   (`assert a in text and b in text`), not `assert True`,
   `isinstance(bool)`, or `a or b`
