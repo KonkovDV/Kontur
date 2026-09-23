@@ -21,8 +21,8 @@
 4. Три кандидата: `PZ-001`, `KR-055`, `AR-041`. Автомат не пишет
    `CONFIRMED_VIOLATION`.
 5. Инспектор confirm/reject с комментарием; REJECT — с `reason_code`.
-6. `complete` → `finalize` → protocol v1 (`PROTOCOL_FINALIZED`).
-   Карман `AUTO_NO_DIFFERENCE` на провод ТЗ не выходит.
+6. `verify` → `complete` → `finalize` → protocol v1 (`PROTOCOL_FINALIZED`).
+   Прямой `complete` из `READY` — 409. Карман `AUTO_NO_DIFFERENCE` на провод ТЗ не выходит.
 7. Outbox `PENDING`, destination `RIN`. Confirm брокера ≠ бизнес-ACK РиН.
 
 Стоп: Polar как frozen val; открытие TEST_HIDDEN; «гейт K закрыт» без пяти
@@ -65,9 +65,11 @@ curl -s http://127.0.0.1:8000/api/v1/healthz
 3. `doc_stage=RD` — расхождения по трём полям.
 4. `doc_stage=ID` — совпадает с утверждённой ПД (стадия загружена, не эталон ПД).
 
-Дальше: `GET .../status` → `POST .../findings/{id}/review` на `pipe-PZ-001`,
-`pipe-KR-055`, `pipe-AR-041` → `POST .../complete` → `POST .../finalize` →
-`GET .../protocol`. В `sections` нет `preliminary_no_difference`.
+Дальше: `GET .../status` → `GET .../findings/{id}/evidence-card` (ПД и РД с
+polygon, пустая ИД — нет фрагмента) → `POST .../findings/{id}/review` на
+`pipe-PZ-001`, `pipe-KR-055`, `pipe-AR-041` → `POST .../verify` →
+`POST .../complete` → `POST .../finalize` → `GET .../protocol`.
+В `sections` нет `preliminary_no_difference`. Явный «не утв.» не назначается эталоном.
 
 Outbox остаётся `PENDING`, пока relay не подтвердит брокер. Это не `SYNCED`.
 
