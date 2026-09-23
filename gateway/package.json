@@ -10,9 +10,9 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "express": "^4.21.0",
-    "http-proxy-middleware": "^3.0.0",
-    "pino": "^9.4.0"
+    "express": "^5.2.1",
+    "http-proxy-middleware": "^4.2.0",
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "eslint": "^9.12.0"
