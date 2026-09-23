@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -142,6 +143,28 @@ class TestBasicResolution:
         result = resolve_revision([pz, ar], DocStage.PD, anchor=pz)
         assert result.resolved is not None
         assert result.resolved.document.file_id == "pd-pz"
+
+    def test_distinct_ciphers_are_not_one_revision_chain(self) -> None:
+        pz = _doc("pd-pz", document_code="12345-PZ")
+        ar = _doc("pd-ar", document_code="12345-AR")
+        with pytest.raises(RevisionConflict, match="не цепочка одного шифра"):
+            resolve_revision([pz, ar], DocStage.PD)
+
+    def test_inspector_select_does_not_supersede_another_cipher(self) -> None:
+        pz = _doc("pd-pz", document_code="12345-PZ")
+        ar = _doc("pd-ar", document_code="12345-AR")
+        with pytest.raises(RevisionConflict, match="12345-AR"):
+            resolve_revision(
+                [pz, ar],
+                DocStage.PD,
+                inspector_selected_file_ids=frozenset({"pd-pz"}),
+            )
+
+    def test_unreadable_cipher_does_not_join_a_known_one(self) -> None:
+        coded = _doc("pd-pz", document_code="12345-PZ")
+        blank = replace(_doc("pd-blank"), document_code="")
+        with pytest.raises(RevisionConflict, match="не прочитан"):
+            resolve_revision([coded, blank], DocStage.PD)
 
 
 # ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from test_pdf_tokens import ascii_pdf, empty_pdf
 
+from kontur.application.document_catalog import CatalogFile, build_document_catalog
 from kontur.application.process_pipeline import (
     PipelineFile,
     _pages_from_blobs,
@@ -167,6 +168,48 @@ def test_later_not_approved_does_not_hide_the_earlier_file() -> None:
     assert pages[DocStage.PD].document.approval_basis is ApprovalBasis.PACKAGE_DEFAULT
     assert stamps["f-early"] is ApprovalStatus.UNKNOWN
     assert stamps["f-late"] is ApprovalStatus.NOT_APPROVED
+
+
+def test_distinct_ciphers_do_not_become_revision_conflict_of_one_chain() -> None:
+    pz = ascii_pdf("CODE 11111-PZ")
+    ar = ascii_pdf("CODE 22222-AR")
+    rd = ascii_pdf("RD sheet")
+    files = (
+        PipelineFile("f-pz", file_sha256(pz), "pz.pdf", DocStage.PD),
+        PipelineFile("f-ar", file_sha256(ar), "ar.pdf", DocStage.PD),
+        PipelineFile("f-rd", file_sha256(rd), "rd.pdf", DocStage.RD),
+    )
+    blobs = {"f-pz": pz, "f-ar": ar, "f-rd": rd}
+    pages, _errors, stamps, _clean, _pool = _pages_from_blobs(
+        files,
+        blobs,
+        inspector_approved_file_ids=frozenset({"f-pz"}),
+    )
+    assert DocStage.PD not in pages
+    assert stamps["f-pz"] is ApprovalStatus.UNKNOWN
+    assert stamps["f-ar"] is ApprovalStatus.UNKNOWN
+    report = run_process_pipeline(
+        object_id="obj-ciphers",
+        completeness=_both_stages(),
+        files=files,
+        blobs=blobs,
+        inspector_approved_file_ids=frozenset({"f-pz"}),
+    )
+    finding = next(item for item in report.findings if item.rule_code == "PZ-001")
+    assert finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert "не цепочка одного шифра" in finding.rationale
+    assert "11111-PZ" in finding.rationale
+    assert FindingStatus.CONFIRMED_VIOLATION not in {
+        item.finding_status for item in report.findings
+    }
+    rows = build_document_catalog(
+        (
+            CatalogFile("f-pz", file_sha256(pz), "pz.pdf", DocStage.PD, pz),
+            CatalogFile("f-ar", file_sha256(ar), "ar.pdf", DocStage.PD, ar),
+        ),
+        inspector_approved_file_ids=frozenset({"f-pz"}),
+    )
+    assert {row["actuality"] for row in rows} == {"CLARIFICATION_REQUIRED"}
 
 
 def test_inspector_select_picks_the_earlier_file_not_the_last() -> None:

@@ -16,6 +16,29 @@ from enum import StrEnum
 from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage, DocumentRef
 
 
+def _identity_key(doc: DocumentRef) -> tuple[str, str, str] | None:
+    """Шифр + лист + раздел. Пустой шифр не доказывает совпадение с другим файлом."""
+
+    if not doc.document_code:
+        return None
+    return (doc.document_code, doc.sheet or "", doc.discipline or "")
+
+
+def _reject_mixed_identities(docs: list[DocumentRef], stage: DocStage) -> None:
+    """Разные документы стадии — не цепочка редакций одного шифра (ADR-0003)."""
+
+    known = {key for item in docs if (key := _identity_key(item)) is not None}
+    if len(known) > 1:
+        labels = ", ".join(sorted({key[0] for key in known}))
+        raise RevisionConflict(
+            f"несколько документов стадии {stage.value}, не цепочка одного шифра: {labels}"
+        )
+    if known and any(_identity_key(item) is None for item in docs):
+        raise RevisionConflict(
+            f"шифр части файлов стадии {stage.value} не прочитан, цепочка не строится"
+        )
+
+
 def _same_document_identity(left: DocumentRef, right: DocumentRef) -> bool:
     """Цепочка редакций — один документ, не все файлы стадии (ADR-0003)."""
 
@@ -131,11 +154,14 @@ def resolve_revision(
     1. Только документы нужной стадии.
     2. При `anchor` — только та же identity (шифр, лист, раздел).
     3. `NOT_APPROVED` в пул голов не попадает. ПД без штампа остаётся кандидатом.
-    4. Ровно один пригодный файл из `inspector_selected_file_ids` — голова.
-       Два таких выбора — RevisionConflict. «Не утв.» в этот набор не входит.
-    5. Иначе голова: нет successor в пуле пригодных редакций.
-    6. Одна голова ПД без штампа получает `PACKAGE_DEFAULT`.
-    7. Несколько голов или цикл — RevisionConflict.
+    4. Разные шифры или лист/раздел — не одна цепочка. Выбор инспектора
+       чужой документ не поглощает.
+    5. Ровно один пригодный файл из `inspector_selected_file_ids` внутри
+       этой цепочки — голова. Два таких выбора — RevisionConflict.
+       «Не утв.» в этот набор не входит.
+    6. Иначе голова: нет successor в пуле пригодных редакций.
+    7. Одна голова ПД без штампа получает `PACKAGE_DEFAULT`.
+    8. Несколько голов или цикл — RevisionConflict.
     """
 
     stage_docs = [item for item in documents if item.doc_stage is stage]
@@ -167,6 +193,8 @@ def resolve_revision(
                 f" ({len(stage_docs)} отклонено)"
             ),
         )
+
+    _reject_mixed_identities(stage_docs, stage)
 
     selected = [
         item for item in eligible if item.file_id in inspector_selected_file_ids
