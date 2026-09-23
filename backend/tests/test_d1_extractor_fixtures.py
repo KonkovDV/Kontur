@@ -201,6 +201,72 @@ def test_ar041_bare_1200_is_not_guessed_as_millimetres() -> None:
     assert hit.extraction.normalized_value == 1200.0
 
 
+def test_ar041_dual_read_agrees_after_mm_and_m() -> None:
+    """Первое и последнее чтение окна согласны только после перевода единиц."""
+
+    rule = _REGISTRY.get("AR-041")
+    tokens = _line("Ширина", "проема", "1200", "мм", "1,2", "м")
+    hit = extract_number(tokens, rule)
+    assert hit is not None
+    assert hit.extraction.normalized_value == 1.2
+    assert hit.extraction.second_read_agrees is True
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: _page(DocStage.PD, tokens),
+            DocStage.RD: _page(DocStage.RD, _line("Ширина", "проема", "1,2", "м")),
+        },
+        completeness=_completeness(),
+    )
+    assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+
+
+def test_ar041_dual_read_mm_mismatch_abstains() -> None:
+    rule = _REGISTRY.get("AR-041")
+    tokens = _line("Ширина", "проема", "1200", "мм", "1100", "мм")
+    hit = extract_number(tokens, rule)
+    assert hit is not None
+    assert hit.extraction.second_read_agrees is False
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: _page(DocStage.PD, tokens),
+            DocStage.RD: _page(DocStage.RD, _line("Ширина", "проема", "1,2", "м")),
+        },
+        completeness=_completeness(),
+    )
+    assert result.finding.finding_status is FindingStatus.ABSTAIN
+
+
+def test_ar041_missing_and_neighbor_height() -> None:
+    rule = _REGISTRY.get("AR-041")
+    missing = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={DocStage.PD: _page(DocStage.PD, _line("Ширина", "проема", "1200", "мм"))},
+        completeness=_completeness(rd=Completeness.MISSING),
+    )
+    assert missing.finding.finding_status is FindingStatus.MISSING_EVIDENCE
+    neighbor = _line("Высота", "проема", "2100", "мм", y=0.18) + _line(
+        "Ширина", "проема", "1200", "мм", y=0.42
+    )
+    hit = extract_number(neighbor, rule)
+    assert hit is not None
+    assert hit.extraction.normalized_value == 1.2
+
+
+def test_ios4078_area_is_not_scaled_as_length() -> None:
+    """мм² не длина: 500×300 мм остаётся 150000, не 0,15 м."""
+
+    rule = _REGISTRY.get("IOS4-078")
+    hit = extract_number(_line("сечение", "воздуховода", "500×300", "мм"), rule)
+    assert hit is not None
+    assert hit.extraction.normalized_value == 150_000.0
+    assert scale_length_to_target(150_000.0, source_unit="мм", target_unit="мм²") == 150_000.0
+
+
 def test_kr055_equal_mismatch_and_neighbor_class() -> None:
     rule = _REGISTRY.get("KR-055")
     equal = evaluate_rule(
