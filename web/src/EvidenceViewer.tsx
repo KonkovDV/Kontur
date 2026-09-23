@@ -2,10 +2,24 @@ import type { ReactNode } from "react";
 
 import { EvidencePane } from "./EvidencePane";
 import {
-  fragmentByRole,
+  STAGE_PANES,
+  fragmentByStage,
   toleranceLabel,
   type EvidenceCard,
+  type EvidenceRole,
 } from "./evidence";
+
+const STAGE_TITLE: Record<(typeof STAGE_PANES)[number], string> = {
+  PD: "ПД",
+  RD: "РД",
+  ID: "ИД",
+};
+
+const STAGE_ROLE: Record<(typeof STAGE_PANES)[number], EvidenceRole> = {
+  PD: "expected",
+  RD: "actual",
+  ID: "context",
+};
 
 type Props = {
   card: EvidenceCard;
@@ -13,13 +27,20 @@ type Props = {
 };
 
 export function EvidenceViewer({ card, children }: Props) {
-  const expected = fragmentByRole(card, "expected");
-  const actual = fragmentByRole(card, "actual");
   const finding = card.finding;
   const decision = finding.inspector_decision;
   return (
-    <div className="panes">
-      <EvidencePane title="Ожидаемое (эталон)" role="expected" fragment={expected} />
+    <div className="panes panes--stack">
+      <div className="stage-row">
+        {STAGE_PANES.map((stage) => (
+          <EvidencePane
+            key={stage}
+            title={STAGE_TITLE[stage]}
+            role={STAGE_ROLE[stage]}
+            fragment={fragmentByStage(card, stage)}
+          />
+        ))}
+      </div>
       <section className="card" aria-label="Карточка правила">
         <p className="eyebrow">{card.rule.name ?? "правило матрицы"}</p>
         <h2>{finding.rule_code}</h2>
@@ -57,7 +78,6 @@ export function EvidenceViewer({ card, children }: Props) {
         <p className="gate-note">карточка не закрывает Gate K</p>
         {children}
       </section>
-      <EvidencePane title="Фактическое" role="actual" fragment={actual} />
     </div>
   );
 }

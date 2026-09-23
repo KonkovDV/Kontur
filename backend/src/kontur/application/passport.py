@@ -16,7 +16,7 @@ from datetime import date, datetime
 from kontur.application.extractors.number import PageToken
 from kontur.application.normalize import fold_label, normalize_key_field
 from kontur.domain.geometry import bbox_from_polygon, reading_key
-from kontur.domain.models import ApprovalStatus, DocStage
+from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage
 
 _HASH = re.compile(r"^[a-f0-9]{64}$")
 
@@ -76,6 +76,7 @@ class DocumentPassport:
     sheet: str | None = None
     discipline: str | None = None
     approval_status: ApprovalStatus = ApprovalStatus.UNKNOWN
+    approval_basis: ApprovalBasis = ApprovalBasis.UNPROVEN
     approval_date: date | None = None
     object_id: str | None = None
     rotate: int = 0
@@ -109,6 +110,7 @@ class DocumentPassport:
             "document_code": self.document_code,
             "revision": self.revision,
             "approval_status": self.approval_status.value,
+            "approval_basis": self.approval_basis.value,
             "approval_date": self.approval_date.isoformat() if self.approval_date else None,
             "sheet": self.sheet,
             "pages": self.pages,
@@ -284,12 +286,18 @@ def read_passport(
     if has_text and code is None and text_render_agreement is not False:
         needs = True
         reason = reason or "шифр в основной надписи не найден"
+    basis = ApprovalBasis.UNPROVEN
     approval, approval_date = _approval(search)
+    if approval is not ApprovalStatus.UNKNOWN:
+        basis = ApprovalBasis.TITLE_BLOCK
     if approval is ApprovalStatus.UNKNOWN:
         later, later_date = _title_block_approval(tokens)
-        approval, approval_date = later, later_date or approval_date
+        if later is not ApprovalStatus.UNKNOWN:
+            approval, approval_date = later, later_date or approval_date
+            basis = ApprovalBasis.TITLE_BLOCK
     if text_render_agreement is False:
         approval, approval_date = ApprovalStatus.UNKNOWN, None
+        basis = ApprovalBasis.UNPROVEN
     filled = sum(1 for item in (code, revision, sheet) if item)
     confidence = None
     if has_text:
@@ -304,6 +312,7 @@ def read_passport(
         revision=revision,
         sheet=sheet,
         approval_status=approval,
+        approval_basis=basis,
         approval_date=approval_date,
         object_id=object_id,
         rotate=rotate,

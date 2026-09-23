@@ -82,6 +82,10 @@
           "type": "string",
           "enum": ["APPROVED", "NOT_APPROVED", "UNKNOWN"]
         },
+        "approval_basis": {
+          "type": "string",
+          "enum": ["TITLE_BLOCK", "INSPECTOR_SELECT", "UNPROVEN"]
+        },
         "approval_date": { "type": "string", "format": "date" },
         "sheet": { "type": "string" },
         "predecessor_file_id": { "type": ["string", "null"] },

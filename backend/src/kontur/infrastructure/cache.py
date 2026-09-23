@@ -38,7 +38,7 @@ from datetime import date
 from typing import Any, Protocol
 
 from kontur.application.passport import DocumentPassport
-from kontur.domain.models import ApprovalStatus, DocStage
+from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage
 
 
 class PassportCacheClient(Protocol):
@@ -82,6 +82,7 @@ def _passport_to_dict(passport: DocumentPassport) -> dict[str, Any]:
         "sheet": passport.sheet,
         "discipline": passport.discipline,
         "approval_status": passport.approval_status.value,
+        "approval_basis": passport.approval_basis.value,
         "approval_date": (
             passport.approval_date.isoformat() if passport.approval_date else None
         ),
@@ -106,6 +107,7 @@ def _passport_from_dict(d: dict[str, Any]) -> DocumentPassport:
     approval = _APPROVAL_FROM_VALUE.get(
         approval_str or "UNKNOWN", ApprovalStatus.UNKNOWN
     )
+    basis = ApprovalBasis(str(d.get("approval_basis") or ApprovalBasis.UNPROVEN.value))
 
     approval_date_str: str | None = d.get("approval_date")
     approval_date: date | None = (
@@ -132,6 +134,7 @@ def _passport_from_dict(d: dict[str, Any]) -> DocumentPassport:
         sheet=d.get("sheet") or None,
         discipline=d.get("discipline") or None,
         approval_status=approval,
+        approval_basis=basis,
         approval_date=approval_date,
         object_id=d.get("object_id") or None,
         rotate=int(d.get("rotate", 0)),

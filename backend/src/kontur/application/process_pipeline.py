@@ -14,9 +14,16 @@ from dataclasses import dataclass, replace
 
 from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.passport import read_passport
-from kontur.application.revision_resolver import overlay_inspector_approval
+from kontur.application.revision_resolver import approval_with_basis
 from kontur.application.scenarios import CompletenessMap
-from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, EvidenceGroup, Finding
+from kontur.domain.models import (
+    ApprovalBasis,
+    ApprovalStatus,
+    DocStage,
+    DocumentRef,
+    EvidenceGroup,
+    Finding,
+)
 from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus
 from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
 from kontur.infrastructure.ocr_tesseract import (
@@ -56,6 +63,7 @@ def _document_ref(
     passport_code: str | None,
     passport_rev: str | None,
     approval: ApprovalStatus,
+    basis: ApprovalBasis,
     sheet: str | None,
 ) -> DocumentRef:
     return DocumentRef(
@@ -65,6 +73,7 @@ def _document_ref(
         document_code=passport_code or "",
         revision=passport_rev or "",
         approval_status=approval,
+        approval_basis=basis,
         sheet=sheet,
     )
 
@@ -104,14 +113,17 @@ def _pages_from_blobs(
         )
         stamp = passport.approval_status
         stamps[item.file_id] = stamp
+        approval, basis = approval_with_basis(
+            stamp,
+            passport.approval_basis,
+            inspector_selected=item.file_id in inspector_approved_file_ids,
+        )
         ref = _document_ref(
             item,
             passport.document_code,
             passport.revision,
-            overlay_inspector_approval(
-                stamp,
-                inspector_selected=item.file_id in inspector_approved_file_ids,
-            ),
+            approval,
+            basis,
             passport.sheet,
         )
         cache = PageImageCache(raw) if tesseract_available() else None

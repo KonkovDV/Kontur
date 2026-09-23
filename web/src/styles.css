@@ -72,6 +72,32 @@ select {
   gap: 1rem;
 }
 
+.panes--stack {
+  grid-template-columns: 1fr;
+}
+
+.stage-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.mass-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+}
+
+.mass-confirm p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.actions button.action-secondary {
+  font-weight: 400;
+}
+
 .page-overlay {
   width: 100%;
   max-height: 16rem;
@@ -181,7 +207,8 @@ select {
     flex-direction: column;
   }
 
-  .panes {
+  .panes,
+  .stage-row {
     grid-template-columns: 1fr;
   }
 

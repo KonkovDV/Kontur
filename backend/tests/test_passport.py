@@ -10,7 +10,7 @@ import pytest
 
 from kontur.application.extractors.number import PageToken
 from kontur.application.passport import KEY_FIELDS, read_passport
-from kontur.domain.models import ApprovalStatus, DocStage
+from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage
 
 HASH = "a" * 64
 SCHEMA_PATH = (
@@ -49,6 +49,7 @@ def test_stamp_fills_key_fields_and_matches_schema() -> None:
     assert passport.sheet == "2"
     assert passport.doc_stage is DocStage.PD
     assert passport.approval_status is ApprovalStatus.APPROVED
+    assert passport.approval_basis is ApprovalBasis.TITLE_BLOCK
     assert str(passport.approval_date) == "2026-09-16"
     assert passport.needs_clarification is False
     assert passport.text_render_agreement is None
@@ -158,6 +159,38 @@ def test_utverdil_with_full_name_is_approved() -> None:
     assert passport.approval_date is None
 
 
+def test_volume_stamp_gip_surname_without_utverdil_stays_unproven() -> None:
+    """Макет штампа тома ПД: роли ГИП/ГАП/Разраб. и фамилия, без графы «Утвердил»."""
+
+    passport = _read(
+        _tok("Изм.", 0.10, 0.87),
+        _tok("Подпись", 0.31, 0.87),
+        _tok("Дата", 0.38, 0.87),
+        _tok("ГИП", 0.10, 0.89),
+        _tok("Сердюков", 0.20, 0.89),
+        _tok("ГАП", 0.10, 0.90),
+        _tok("Кузнецова", 0.20, 0.90),
+        _tok("Разраб.", 0.10, 0.92),
+        _tok("Артюхов", 0.20, 0.92),
+        _tok("Н.контроль", 0.10, 0.94),
+        _tok("Сердюков", 0.20, 0.94),
+        _tok("Стадия", 0.75, 0.89),
+        _tok("П", 0.77, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_basis is ApprovalBasis.UNPROVEN
+
+
+def test_production_stamp_is_not_an_approval_basis() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("В производство работ", 0.08, 0.90),
+        _tok("заключение экспертизы", 0.08, 0.94),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_basis is ApprovalBasis.UNPROVEN
+
+
 def test_soglasovano_header_on_later_sheet_is_not_approved() -> None:
     passport = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82, page=1),
@@ -166,6 +199,7 @@ def test_soglasovano_header_on_later_sheet_is_not_approved() -> None:
         _tok("Сердюков Р.С.", 0.22, 0.92, page=2),
     )
     assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_basis is ApprovalBasis.UNPROVEN
 
 
 def test_not_approved_beats_approved_evidence() -> None:
@@ -176,6 +210,7 @@ def test_not_approved_beats_approved_evidence() -> None:
         _tok("Иванов И.И.", 0.50, 0.90),
     )
     assert passport.approval_status is ApprovalStatus.NOT_APPROVED
+    assert passport.approval_basis is ApprovalBasis.TITLE_BLOCK
 
 
 def test_empty_vector_page_is_raster_not_ocr() -> None:

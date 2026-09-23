@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { EvidenceViewer } from "./EvidenceViewer";
 import demoCards from "./demo_cards.json";
@@ -59,6 +59,7 @@ export function App() {
   const [decisions, setDecisions] = useState<UsabilityDecision[]>([]);
   const [finishedAt, setFinishedAt] = useState<Date | null>(null);
   const [session, setSession] = useState<UsabilityExport | null>(null);
+  const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const completeness = useMemo(
     () => ({ pd: "PD_UPLOADED", rd: "RD_PARTIAL", id: "ID_MISSING" }),
     [],
@@ -74,10 +75,34 @@ export function App() {
     if (inSession) setClicks((current) => current + 1);
   }
 
+  function finishOrAdvance(nextDecisions: UsabilityDecision[], now: Date) {
+    if (startedAt === null) return;
+    setDecisions(nextDecisions);
+    setClicks(0);
+    setReason("");
+    if (nextDecisions.length >= EXPECTED_FINDINGS) {
+      setFinishedAt(now);
+      setSession(
+        buildUsabilityExport(participantId, startedAt, now, nextDecisions),
+      );
+      return;
+    }
+    const nextIndex = DEMO_CARDS.findIndex(
+      (card) =>
+        !nextDecisions.some(
+          (item) => item.finding_id === card.finding.finding_id,
+        ),
+    );
+    if (nextIndex >= 0) setActiveIndex(nextIndex);
+  }
+
   function decide(action: DecisionAction) {
     if (!inSession || findingCard === undefined || startedAt === null) return;
     if (quality === null || !isActionAllowed(quality, action)) return;
     if (action === "REJECT" && reason === "") return;
+    if (decisions.some((item) => item.finding_id === findingCard.finding.finding_id)) {
+      return;
+    }
     const now = new Date();
     const next: UsabilityDecision = {
       finding_id: findingCard.finding.finding_id,
@@ -89,19 +114,53 @@ export function App() {
     if (action === "REJECT") {
       next.reason_code = reason;
     }
-    const nextDecisions = [...decisions, next];
-    setDecisions(nextDecisions);
-    setClicks(0);
-    setReason("");
-    if (nextDecisions.length === EXPECTED_FINDINGS) {
-      setFinishedAt(now);
-      setSession(
-        buildUsabilityExport(participantId, startedAt, now, nextDecisions),
-      );
-    } else {
-      setActiveIndex((current) => current + 1);
-    }
+    finishOrAdvance([...decisions, next], now);
   }
+
+  function confirmChecked() {
+    if (!inSession || startedAt === null || checkedIds.length === 0) return;
+    const now = new Date();
+    const extra: UsabilityDecision[] = [];
+    for (const id of checkedIds) {
+      if (decisions.some((item) => item.finding_id === id)) continue;
+      if (extra.some((item) => item.finding_id === id)) continue;
+      const card = DEMO_CARDS.find((item) => item.finding.finding_id === id);
+      if (card === undefined || qualityOf(card.finding.finding_status) !== "CANDIDATE") {
+        continue;
+      }
+      extra.push({
+        finding_id: id,
+        finding_status: "CANDIDATE",
+        action: "CONFIRM",
+        clicks_to_decision: 2,
+        elapsed_ms: now.getTime() - startedAt.getTime(),
+      });
+    }
+    if (extra.length === 0) return;
+    setCheckedIds([]);
+    finishOrAdvance([...decisions, ...extra], now);
+  }
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!inSession || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "SELECT" ||
+          target.tagName === "TEXTAREA")
+      ) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "c") decide("CONFIRM");
+      if (key === "r") decide("REJECT");
+      if (key === "q") decide("REQUEST_CLARIFICATION");
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   return (
     <main className="workspace">
@@ -109,10 +168,10 @@ export function App() {
         <div>
           <h1>Инспектор ИИ</h1>
           <p>
-            Учебный рекордер Gate K: пять evidence-карточек (две панели,
-            bbox/polygon, raw/normalized, audit). Не закрывает гейт.
-            «Подтвердить» не в фокусе. <code>MISSING_EVIDENCE</code> нельзя
-            подтвердить как нарушение.
+            Учебный рекордер Gate K: пять карточек, три панели ПД / РД / ИД.
+            Пустая стадия — нет фрагмента, не нарушение. Не закрывает гейт.
+            «Подтвердить» не в фокусе. Клавиши C / R / Q.
+            <code>MISSING_EVIDENCE</code> нельзя подтвердить как нарушение.
           </p>
         </div>
         <label className="participant">
@@ -146,6 +205,44 @@ export function App() {
             Начать учебную сессию
           </button>
         </section>
+      ) : null}
+
+      {inSession ? (
+        <fieldset className="mass-confirm">
+          <legend>Массовое подтверждение</legend>
+          <p>
+            Отметить можно только кандидатов. Отклонение остаётся на одной
+            карточке и требует причину.
+          </p>
+          {DEMO_CARDS.map((card) => {
+            const id = card.finding.finding_id;
+            if (qualityOf(card.finding.finding_status) !== "CANDIDATE") return null;
+            if (decisions.some((item) => item.finding_id === id)) return null;
+            return (
+              <label key={id}>
+                <input
+                  type="checkbox"
+                  checked={checkedIds.includes(id)}
+                  onChange={(event) => {
+                    setCheckedIds((current) =>
+                      event.target.checked
+                        ? [...current, id]
+                        : current.filter((item) => item !== id),
+                    );
+                  }}
+                />
+                {card.finding.rule_code}
+              </label>
+            );
+          })}
+          <button
+            type="button"
+            disabled={checkedIds.length === 0}
+            onClick={confirmChecked}
+          >
+            Подтвердить отмеченные
+          </button>
+        </fieldset>
       ) : null}
 
       {findingCard && quality && inSession ? (
@@ -190,16 +287,20 @@ export function App() {
                   disabled={!canReject}
                   onClick={() => decide("REJECT")}
                 >
-                  Отклонить
+                  Отклонить (R)
                 </button>
                 <button
                   type="button"
                   onClick={() => decide("REQUEST_CLARIFICATION")}
                 >
-                  Уточнить
+                  Уточнить (Q)
                 </button>
-                <button type="button" onClick={() => decide("CONFIRM")}>
-                  Подтвердить
+                <button
+                  type="button"
+                  className="action-secondary"
+                  onClick={() => decide("CONFIRM")}
+                >
+                  Подтвердить (C)
                 </button>
               </div>
             )}
