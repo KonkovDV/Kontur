@@ -42,7 +42,7 @@
 | Публичный gold-позитив матрицы | 6 (нужно n≥16 даже при 6/6 для Wilson recall) |
 | Gold-evidence прогон TRAIN_PUBLIC | 0/6: L4, у ПД F0171 нет заполненной графы «Утвердил» |
 | Гейты I / J / K / L | все **открыты** (`closes_gate_*`: false) |
-| OCR capabilities | `ocr_text=UNAVAILABLE` |
+| OCR capabilities | `ocr_text=MEASURED`, гейт I открыт, замер ниже порога |
 | HTTP пайплайн | L1–L7 inline после upload, векторный слой |
 | РиН | транспорт outbox/inbox есть; sandbox-контракта и бизнес-ACK нет; confirm брокера ≠ `SYNCED` |
 

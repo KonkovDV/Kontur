@@ -12,7 +12,7 @@
 | 7 | 12 модулей системы | `application/` | — | skeleton |
 | 8 | Матрица 132 параметра, таблица `Params` | `data/matrix/`, `contracts/schemas/rule.schema.json` | `test_matrix_registry.py` | in_progress |
 
-| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/process_pipeline.py`, `pipeline.py`, `pdfium_tokens.py`, `passport.py`, `revision_resolver.py` | `test_process_pipeline.py`, `test_pipeline.py`, `test_pdf_tokens.py`, `test_passport.py` | in_progress (векторный каскад в HTTP; dual-read/region-crop в коде; `ocr_text=UNAVAILABLE` до GOLD; CV нет; связка ≥0,97 не измерена) |
+| 9.1 | Intake, OCR, NLP, CV, координаты, кеш, выбор редакции, дозагрузка | `application/process_pipeline.py`, `pipeline.py`, `pdfium_tokens.py`, `passport.py`, `revision_resolver.py` | `test_process_pipeline.py`, `test_pipeline.py`, `test_pdf_tokens.py`, `test_passport.py` | in_progress (векторный каскад в HTTP; dual-read/region-crop в коде; `ocr_text=MEASURED` (SILVER ниже порога, не AVAILABLE) до GOLD; CV нет; связка ≥0,97 не измерена) |
 | 9.1 | Ошибки загрузки: формат, повреждение, 50 МБ, 200 МБ, таймаут | `application/intake.py`, `application/retry_policy.py`, `presentation/api.py` | `test_intake.py`, `test_retry_policy.py`, `test_api.py` | in_progress |
 | 9.1 | Статусы загрузки `PD_/RD_/ID_UPLOADED/PARTIAL/MISSING` | `domain/status_map.py` | `test_status_map.py` | skeleton |
 | 9.2 | Сценарии FULL…PARTIALLY_LOADED; пустой пакет — ошибка | `application/scenarios.py` | `test_scenarios.py` | skeleton |

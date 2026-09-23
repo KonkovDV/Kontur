@@ -239,10 +239,10 @@ def test_pipeline_invokes_ocr_helper_when_tesseract_present(
     }
 
 
-def test_capabilities_stay_unavailable_regardless_of_tesseract() -> None:
+def test_capabilities_stay_measured_not_available() -> None:
     payload = capabilities_payload()
     engines = {item["name"]: item for item in payload["engines"]}  # type: ignore[misc]
-    assert engines["ocr_text"]["status"] == "UNAVAILABLE"
+    assert engines["ocr_text"]["status"] == "MEASURED"
     assert payload["overall"] == "AVAILABLE"
 
 

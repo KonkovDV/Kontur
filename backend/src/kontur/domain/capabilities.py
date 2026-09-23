@@ -27,6 +27,7 @@ KNOWN_ENGINES: tuple[str, ...] = (
 class CapStatus(StrEnum):
     AVAILABLE = "AVAILABLE"
     DEGRADED = "DEGRADED"
+    MEASURED = "MEASURED"
     UNAVAILABLE = "UNAVAILABLE"
 
 
@@ -56,7 +57,10 @@ def kit_blocked(capabilities: tuple[Capability, ...]) -> bool:
 def kit_degraded(capabilities: tuple[Capability, ...]) -> bool:
     """True если вердиктный слой жив, но не в полном качестве."""
 
-    return any(item.affects_verdict and item.status is CapStatus.DEGRADED for item in capabilities)
+    return any(
+        item.affects_verdict and item.status in {CapStatus.DEGRADED, CapStatus.MEASURED}
+        for item in capabilities
+    )
 
 
 def overall_kit_status(capabilities: tuple[Capability, ...]) -> CapStatus:
@@ -73,6 +77,7 @@ def engine_health_summary(capabilities: tuple[Capability, ...]) -> dict[str, lis
     by_name = {item.name: item for item in capabilities}
     healthy: list[str] = []
     degraded: list[str] = []
+    measured: list[str] = []
     failed: list[str] = []
     skipped: list[str] = []
     for name in KNOWN_ENGINES:
@@ -84,6 +89,8 @@ def engine_health_summary(capabilities: tuple[Capability, ...]) -> dict[str, lis
             healthy.append(name)
         elif item.status is CapStatus.DEGRADED:
             degraded.append(name)
+        elif item.status is CapStatus.MEASURED:
+            measured.append(name)
         elif item.affects_verdict:
             failed.append(name)
         else:
@@ -91,6 +98,7 @@ def engine_health_summary(capabilities: tuple[Capability, ...]) -> dict[str, lis
     return {
         "healthy": healthy,
         "degraded": degraded,
+        "measured": measured,
         "failed": failed,
         "skipped": skipped,
     }
@@ -103,12 +111,11 @@ def live_kit() -> tuple[Capability, ...]:
 
 
 def declared_capabilities() -> tuple[Capability, ...]:
-    """Векторный текст жив. Штрихи листа читаются, но не измеряют сечение.
-    OCR и LLM в запросе не стоят."""
+    """Векторный текст жив. OCR измерен и ниже порога. Чертёж читает штрихи."""
 
     return (
         describe("vector_text", CapStatus.AVAILABLE),
-        describe("ocr_text", CapStatus.UNAVAILABLE),
+        describe("ocr_text", CapStatus.MEASURED),
         describe("ocr_tables", CapStatus.UNAVAILABLE),
         describe("drawing_analysis", CapStatus.DEGRADED),
         describe("llm_advisory", CapStatus.UNAVAILABLE),
@@ -132,7 +139,8 @@ def capabilities_payload() -> dict[str, object]:
         "health": engine_health_summary(declared),
         "note": (
             "overall считается по живому пути (векторный текст). "
-            "OCR остаётся UNAVAILABLE. drawing_analysis DEGRADED: "
-            "сетка штрихов листа читается и не закрывает гейт I."
+            "ocr_text=MEASURED: SILVER OBJ-VIOLATION-EXAMPLES, n=3013, "
+            "gate_i_low≈0.426 при пороге 0.97. Это не AVAILABLE и не закрывает гейт I. "
+            "drawing_analysis DEGRADED: сетка штрихов, сечение не измеряется."
         ),
     }

@@ -55,7 +55,7 @@
 2. Gate K: пять сессий человеком; код рекордера не закрывает гейт.
 3. Честный coverage 44 executable / 83 extractor_missing / 1 advisory / 4 source_missing; без заявления,
    что вся матрица executable.
-4. E2E demo на векторном слое; `ocr_text=UNAVAILABLE`.
+4. E2E demo на векторном слое; `ocr_text=MEASURED`, гейт I открыт.
 5. Gate L измерен на GHA и **не** назван production SLA.
 6. Capabilities честно показывают пробелы.
 
