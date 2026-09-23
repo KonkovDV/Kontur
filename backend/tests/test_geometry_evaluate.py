@@ -129,6 +129,23 @@ def test_narrower_rd_is_a_candidate_with_evidence() -> None:
     assert len(group.fragments) == 2
 
 
+def test_nearby_dimension_label_disagreement_abstains() -> None:
+    data = _lines(40, 52)
+    stamp = list(_stamp())
+    label = ((0.30, 0.72), (0.42, 0.72), (0.42, 0.76), (0.30, 0.76))
+    stamp.append(PageToken(text="999", page=1, polygon_source=label, polygon_norm=label))
+    pages = {
+        DocStage.PD: _page(DocStage.PD, data, tuple(stamp)),
+        DocStage.RD: _page(DocStage.RD, data, _stamp()),
+    }
+    result = evaluate_rule(
+        _rule(), object_id="OBJ-GEOM", pages=pages, completeness=_completeness()
+    )
+    assert result.finding.finding_status is FindingStatus.ABSTAIN
+    assert "сечения" in result.finding.rationale
+    assert is_predicted_positive(result.finding.finding_status) is False
+
+
 def test_missing_scale_is_low_quality() -> None:
     drawing = ((0.10, 0.40), (0.30, 0.40), (0.30, 0.44), (0.10, 0.44))
     token = PageToken(text="план", page=1, polygon_source=drawing, polygon_norm=drawing)
@@ -180,6 +197,11 @@ def test_live_ios4_rule_stays_number() -> None:
     assert isinstance(extractor, dict)
     assert extractor["type"] == "number"
     assert rule["coverage"] == "executable"
+    params = extractor["params"]
+    assert isinstance(params, dict)
+    assert params["angle_deg"] == 2
+    assert params["gap_min_pt"] == 2
+    assert params["gap_max_pt"] == 60
 
 
 def test_geometry_params_match_the_contract() -> None:

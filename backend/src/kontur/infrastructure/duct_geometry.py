@@ -7,12 +7,14 @@
 
 from __future__ import annotations
 
+import ctypes
 import math
 from dataclasses import dataclass
 
 import pypdfium2 as pdfium  # type: ignore[import-untyped]
 import pypdfium2.raw as pdfium_c  # type: ignore[import-untyped]
 
+from kontur.domain.coordinates import PageFrame, to_normalized
 from kontur.domain.models import Polygon
 
 PT_TO_MM = 25.4 / 72.0
@@ -37,6 +39,16 @@ DEFAULT_MIN_LENGTH_PT = 20.0
 DEFAULT_GAP_MIN_PT = 2.0
 DEFAULT_GAP_MAX_PT = 60.0
 DEFAULT_READ_TOLERANCE_REL = 0.02
+DEFAULT_LABEL_MAX_NORM = 0.08
+
+
+@dataclass(frozen=True, slots=True)
+class DuctSection:
+    """Сечение на листе: ширина в мм и нормализованный контур."""
+
+    width_mm: float
+    polygon_norm: Polygon
+    page: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +84,18 @@ def choose_pair(pairs: list[DuctPair]) -> DuctPair | None:
     if not pairs:
         return None
     return max(pairs, key=lambda item: (item.span_pt, -item.gap_pt))
+
+
+def duct_section(pair: DuctPair, frame: PageFrame, page: int) -> DuctSection:
+    """Нормализованный контур пары. Выход за страницу — ошибка источника."""
+
+    if page < 1:
+        raise ValueError("номер страницы начинается с 1")
+    return DuctSection(
+        width_mm=pair.width_mm,
+        polygon_norm=to_normalized(pair.polygon, frame),
+        page=page,
+    )
 
 
 def pair_parallel(
@@ -129,9 +153,19 @@ def segments_on_page(data: bytes, page_number: int) -> list[Segment]:
             raise ValueError(f"в PDF нет страницы {page_number}")
         page = document[page_number - 1]
         segments: list[Segment] = []
-        for obj in page.get_objects(filter=[pdfium_c.FPDF_PAGEOBJ_PATH], max_depth=0):
+        objects = iter(page.get_objects(filter=[pdfium_c.FPDF_PAGEOBJ_PATH], max_depth=0))
+        while True:
             try:
-                left, bottom, right, top = (float(value) for value in obj.get_bounds())
+                obj = next(objects)
+            except StopIteration:
+                break
+            except ctypes.ArgumentError:
+                break
+            try:
+                try:
+                    left, bottom, right, top = (float(value) for value in obj.get_bounds())
+                except ctypes.ArgumentError:
+                    continue
             finally:
                 obj.close()
             width = right - left

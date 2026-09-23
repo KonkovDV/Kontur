@@ -1,49 +1,70 @@
 """Ширина пары штрихов как число для компаратора.
 
-Живое правило IOS4-078 остаётся extractor.type=number: текстовое A×B
-не подменяется обмером, пока параметры не заморожены на неразмеченных листах.
-Этот модуль включается только у правила с type=geometry.
+Контрактный тип — geometry, не drawing_dimension. Живое IOS4-078 остаётся
+number: текстовое A×B не подменяется обмером. Пороги читаются из
+extractor.params (иначе geometry_params). Второе чтение — подпись размера
+рядом с контуром; нет подписи не считается расхождением.
 """
 
 from __future__ import annotations
 
+import math
+import re
 from collections.abc import Sequence
 
 from kontur.application.extractors.drawing_scale import STAMP_Y, scale_mark
 from kontur.application.extractors.number import ENGINE_VERSION, NumberHit, PageToken
-from kontur.domain.coordinates import PageFrame, to_normalized
-from kontur.domain.models import Extraction, ExtractionEngine
+from kontur.domain.coordinates import PageFrame
+from kontur.domain.geometry import bbox_from_polygon
+from kontur.domain.models import Extraction, ExtractionEngine, Polygon
 from kontur.infrastructure.duct_geometry import (
     DEFAULT_ANGLE_DEG,
     DEFAULT_GAP_MAX_PT,
     DEFAULT_GAP_MIN_PT,
+    DEFAULT_LABEL_MAX_NORM,
     DEFAULT_MIN_LENGTH_PT,
     DEFAULT_MIN_OVERLAP,
     DEFAULT_READ_TOLERANCE_REL,
     choose_pair,
+    duct_section,
     gaps_agree,
     pair_parallel,
     segments_on_page,
     width_mm,
 )
 
+_PAIR = re.compile(r"(\d{2,4}(?:[.,]\d+)?)\s*[×xх]\s*(\d{2,4}(?:[.,]\d+)?)")
+_SIDE = re.compile(r"(?<![0-9])(\d{2,4}(?:[.,]\d+)?)(?![0-9])")
+
 
 def _number(raw: dict[str, object], key: str, default: float) -> float:
     value = raw.get(key, default)
     if isinstance(value, bool) or not isinstance(value, int | float):
-        raise ValueError(f"geometry_params.{key} должен быть числом")
+        raise ValueError(f"extractor.params.{key} должен быть числом")
     return float(value)
 
 
-def geometry_params(rule: dict[str, object]) -> dict[str, float]:
-    """Пороги из правила или заранее заданные константы модуля штрихов."""
-
+def _raw_params(rule: dict[str, object]) -> dict[str, object]:
     extractor = rule.get("extractor")
-    raw = extractor.get("geometry_params") if isinstance(extractor, dict) else None
+    if not isinstance(extractor, dict):
+        return {}
+    raw = extractor.get("params")
     if raw is None:
-        raw = {}
+        raw = extractor.get("geometry_params")
+    if raw is None:
+        return {}
     if not isinstance(raw, dict):
-        raise ValueError("geometry_params должен быть объектом")
+        raise ValueError("extractor.params должен быть объектом")
+    return raw
+
+
+def geometry_params(rule: dict[str, object]) -> dict[str, float]:
+    """Пороги из extractor.params.
+
+    Пропуск ключа — заранее заданная константа, не подгон по золоту.
+    """
+
+    raw = _raw_params(rule)
     params = {
         "angle_deg": _number(raw, "angle_deg", DEFAULT_ANGLE_DEG),
         "min_overlap": _number(raw, "min_overlap", DEFAULT_MIN_OVERLAP),
@@ -52,6 +73,7 @@ def geometry_params(rule: dict[str, object]) -> dict[str, float]:
         "gap_max_pt": _number(raw, "gap_max_pt", DEFAULT_GAP_MAX_PT),
         "stamp_y": _number(raw, "stamp_y", STAMP_Y),
         "read_tolerance_rel": _number(raw, "read_tolerance_rel", DEFAULT_READ_TOLERANCE_REL),
+        "label_max_norm": _number(raw, "label_max_norm", DEFAULT_LABEL_MAX_NORM),
     }
     if not 0 < params["angle_deg"] <= 45:
         raise ValueError("angle_deg должен быть в (0; 45]")
@@ -65,7 +87,58 @@ def geometry_params(rule: dict[str, object]) -> dict[str, float]:
         raise ValueError("stamp_y должен быть в (0; 1)")
     if not 0 <= params["read_tolerance_rel"] <= 1:
         raise ValueError("read_tolerance_rel должен быть в [0; 1]")
+    if not 0 < params["label_max_norm"] <= 1:
+        raise ValueError("label_max_norm должен быть в (0; 1]")
     return params
+
+
+def _millimetres(text: str) -> float:
+    return float(text.replace(",", "."))
+
+
+def _label_mm(text: str, width_mm: float) -> float | None:
+    pair = _PAIR.search(text)
+    if pair:
+        sides = (_millimetres(pair.group(1)), _millimetres(pair.group(2)))
+        return min(sides, key=lambda item: abs(item - width_mm))
+    single = _SIDE.search(text)
+    if single is None:
+        return None
+    return _millimetres(single.group(1))
+
+
+def _distance(px: float, py: float, box: tuple[float, float, float, float]) -> float:
+    left, top, right, bottom = box
+    dx = max(left - px, 0.0, px - right)
+    dy = max(top - py, 0.0, py - bottom)
+    return math.hypot(dx, dy)
+
+
+def _nearby_label(
+    tokens: Sequence[PageToken],
+    page: int,
+    polygon_norm: Polygon,
+    width_mm: float,
+    radius: float,
+) -> float | None:
+    box = bbox_from_polygon(polygon_norm)
+    best: float | None = None
+    best_dist = radius
+    seen = False
+    for token in tokens:
+        if token.page != page:
+            continue
+        value = _label_mm(token.text, width_mm)
+        if value is None:
+            continue
+        xs = [point[0] for point in token.polygon_norm]
+        ys = [point[1] for point in token.polygon_norm]
+        dist = _distance((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, box)
+        if dist <= radius and (not seen or dist < best_dist):
+            best = value
+            best_dist = dist
+            seen = True
+    return best
 
 
 def extract_duct_width(
@@ -102,37 +175,46 @@ def extract_duct_width(
     if chosen is None:
         return None, "пара параллельных штрихов не найдена"
     try:
-        polygon_norm = to_normalized(chosen.polygon, frames[page_number - 1])
+        section = duct_section(chosen, frames[page_number - 1], page_number)
     except ValueError:
         return None, "контур сечения вне страницы"
-    agrees = gaps_agree(
-        chosen.gap_pt,
-        chosen.reverse_gap_pt,
-        tolerance_rel=params["read_tolerance_rel"],
+    tolerance = params["read_tolerance_rel"]
+    agrees = gaps_agree(chosen.gap_pt, chosen.reverse_gap_pt, tolerance_rel=tolerance)
+    label = _nearby_label(
+        tokens,
+        page_number,
+        section.polygon_norm,
+        section.width_mm,
+        params["label_max_norm"],
     )
+    if label is not None and not gaps_agree(section.width_mm, label, tolerance_rel=tolerance):
+        agrees = False
     reverse_mm = width_mm(chosen.reverse_gap_pt, scale)
+    features = {
+        "gap_pt": chosen.gap_pt,
+        "reverse_gap_pt": chosen.reverse_gap_pt,
+        "reverse_mm": reverse_mm,
+        "scale": float(scale),
+    }
+    if label is not None:
+        features["label_mm"] = label
     return (
         NumberHit(
             extraction=Extraction(
-                raw_token=f"{chosen.width_mm:.2f}",
+                raw_token=f"{section.width_mm:.2f}",
                 engine=ExtractionEngine.VECTOR,
                 engine_version=ENGINE_VERSION,
                 confidence=0.99 if agrees else 0.4,
-                normalized_value=chosen.width_mm,
+                normalized_value=section.width_mm,
                 unit=str(rule["unit"]) if rule.get("unit") else None,
                 grounded_in_source_tokens=True,
                 second_read_agrees=agrees,
-                confidence_features={
-                    "gap_pt": chosen.gap_pt,
-                    "reverse_gap_pt": chosen.reverse_gap_pt,
-                    "reverse_mm": reverse_mm,
-                    "scale": float(scale),
-                },
+                confidence_features=features,
             ),
-            page=page_number,
+            page=section.page,
             polygon_source=chosen.polygon,
-            polygon_norm=polygon_norm,
-            window_text=f"1:{scale} {chosen.width_mm:.2f}",
+            polygon_norm=section.polygon_norm,
+            window_text=f"1:{scale} {section.width_mm:.2f}",
         ),
         "",
     )

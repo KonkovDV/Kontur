@@ -96,7 +96,23 @@
             "gap_min_pt": { "type": "number" },
             "gap_max_pt": { "type": "number" },
             "stamp_y": { "type": "number" },
-            "read_tolerance_rel": { "type": "number" }
+            "read_tolerance_rel": { "type": "number" },
+            "label_max_norm": { "type": "number" }
+          }
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Замороженные пороги обмера. Не подбираются по золотым строкам.",
+          "properties": {
+            "angle_deg": { "type": "number" },
+            "min_overlap": { "type": "number" },
+            "min_length_pt": { "type": "number" },
+            "gap_min_pt": { "type": "number" },
+            "gap_max_pt": { "type": "number" },
+            "stamp_y": { "type": "number" },
+            "read_tolerance_rel": { "type": "number" },
+            "label_max_norm": { "type": "number" }
           }
         }
       }
