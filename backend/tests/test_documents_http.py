@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 from test_pdf_tokens import ascii_pdf
@@ -9,7 +11,7 @@ from test_pdf_tokens import ascii_pdf
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import DocStage, Finding
-from kontur.domain.statuses import Completeness, FindingStatus, ReviewPriority
+from kontur.domain.statuses import Completeness, FindingStatus, ProcessState, ReviewPriority
 from kontur.infrastructure.pdfium_tokens import file_sha256
 from kontur.presentation.api import app
 
@@ -294,3 +296,172 @@ def test_http_catalog_after_select_marks_same_cipher_superseded(
         if item["finding_id"] == "f-missing-stage"
     )
     assert stuck["finding_status"] == "MISSING_EVIDENCE"
+
+
+def _candidate(finding_id: str, rule_code: str) -> Finding:
+    return Finding(
+        finding_id=finding_id,
+        evidence_group_id=f"eg-{finding_id}",
+        rule_code=rule_code,
+        finding_status=FindingStatus.CANDIDATE,
+        review_priority=ReviewPriority.HIGH,
+        matrix_version="draft-0",
+        rule_version="0.1.0",
+        model_version="none",
+        rationale="расхождение для очереди инспектора",
+    )
+
+
+def test_http_confirm_reject_then_download_protocol_and_audit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exit Д2: подтвердил, отклонил с reason_code, протокол и журнал."""
+
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    app.state.workspace = ProcessWorkspace()
+    client = TestClient(app)
+    record = app.state.workspace.create("obj-1", _seed())
+    record.process_state = ProcessState.READY
+    app.state.workspace.put_finding(record.process_id, _candidate("f-confirm", "PZ-001"))
+    app.state.workspace.put_finding(record.process_id, _candidate("f-reject", "KR-055"))
+
+    blocked = client.post(
+        "/api/v1/findings/f-reject/review",
+        headers=INSPECTOR,
+        json={
+            "action": "REJECT",
+            "inspector_id": "insp-7",
+            "comment": "отклонение без причины",
+        },
+    )
+    assert blocked.status_code == 409
+
+    too_early = client.post(
+        f"/api/v1/processes/{record.process_id}/complete",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert too_early.status_code == 409
+
+    confirmed = client.post(
+        "/api/v1/findings/f-confirm/review",
+        headers=INSPECTOR,
+        json={
+            "action": "CONFIRM",
+            "inspector_id": "insp-7",
+            "comment": "площадь в РД меньше утверждённой ПД",
+        },
+    )
+    assert confirmed.status_code == 200
+    assert confirmed.json()["finding_status"] == "CONFIRMED_VIOLATION"
+
+    rejected = client.post(
+        "/api/v1/findings/f-reject/review",
+        headers=INSPECTOR,
+        json={
+            "action": "REJECT",
+            "inspector_id": "insp-7",
+            "reason_code": "APPROVED_CHANGE_EXISTS",
+            "comment": "изменение утверждено отдельным листом",
+        },
+    )
+    assert rejected.status_code == 200
+    assert rejected.json()["finding_status"] == "NEGATIVE_VERIFIED"
+
+    completed = client.post(
+        f"/api/v1/processes/{record.process_id}/complete",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert completed.status_code == 200
+    assert completed.json()["process_state"] == "COMPLETED"
+    assert completed.json()["counters"]["confirmed_violations"] == 1
+    assert completed.json()["counters"]["negative_verified"] == 1
+    assert completed.json()["counters"]["candidates"] == 0
+
+    finalized = client.post(
+        f"/api/v1/processes/{record.process_id}/finalize",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert finalized.status_code == 200
+    assert finalized.json()["process_state"] == "FINALIZED"
+
+    protocol = client.get(
+        f"/api/v1/processes/{record.process_id}/protocol",
+        headers=INSPECTOR,
+    )
+    assert protocol.status_code == 200
+    body = protocol.json()
+    dumped = json.dumps(body)
+    assert "AUTO_NO_DIFFERENCE" not in dumped
+    assert body["violation_count"] == 1
+    assert body["sections"]["confirmed"][0]["rule_code"] == "PZ-001"
+    assert body["sections"]["negative_verified"][0]["rule_code"] == "KR-055"
+
+    journal = client.get(
+        f"/api/v1/processes/{record.process_id}/audit",
+        headers=INSPECTOR,
+    )
+    assert journal.status_code == 200
+    actions = [event["action"] for event in journal.json()["events"]]
+    assert actions.count("REVIEW") == 2
+    assert "COMPLETE_VERIFICATION" in actions
+    assert "FINALIZE" in actions
+
+
+def test_http_protocol_from_ready_without_candidates_goes_through_verify(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Без кандидатов очередь всё равно READY → VERIFYING → COMPLETED → FINALIZED."""
+
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    app.state.workspace = ProcessWorkspace()
+    client = TestClient(app)
+    record = app.state.workspace.create("obj-1", _seed())
+    record.process_state = ProcessState.READY
+    app.state.workspace.put_finding(
+        record.process_id,
+        Finding(
+            finding_id="f-missing",
+            rule_code="AR-041",
+            finding_status=FindingStatus.MISSING_EVIDENCE,
+            review_priority=ReviewPriority.LOW,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+            rationale="ID не представлен, сравнение не запускалось",
+        ),
+    )
+    skipped = client.post(
+        f"/api/v1/processes/{record.process_id}/complete",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert skipped.status_code == 409
+    opened = client.post(
+        f"/api/v1/processes/{record.process_id}/verify",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert opened.status_code == 200
+    assert opened.json()["process_state"] == "VERIFYING"
+    completed = client.post(
+        f"/api/v1/processes/{record.process_id}/complete",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert completed.status_code == 200
+    finalized = client.post(
+        f"/api/v1/processes/{record.process_id}/finalize",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7"},
+    )
+    assert finalized.status_code == 200
+    protocol = client.get(
+        f"/api/v1/processes/{record.process_id}/protocol",
+        headers=INSPECTOR,
+    )
+    assert protocol.status_code == 200
+    assert protocol.json()["violation_count"] == 0
+    assert "CONFIRMED_VIOLATION" not in json.dumps(protocol.json())

@@ -180,6 +180,8 @@ export function LiveWorkspace({ token }: Props) {
   const active = findings.find((item) => item.finding_id === activeId) ?? null;
   const canReview = active !== null && reviewable(active.finding_status) && comment.trim() !== "";
   const canReject = canReview && reason !== "";
+  const blockingQueue =
+    (status?.counters.candidates ?? 0) > 0 || (status?.counters.suspicions ?? 0) > 0;
 
   async function refresh(nextProcessId: string) {
     const [listedDocs, listedFindings, nextStatus] = await Promise.all([
@@ -349,26 +351,39 @@ export function LiveWorkspace({ token }: Props) {
     }
   }
 
+  async function postProcess(
+    id: string,
+    path: "verify" | "complete" | "finalize",
+  ): Promise<ProcessStatus> {
+    return readJson<ProcessStatus>(
+      await fetch(`/api/v1/processes/${id}/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inspector_id: session.subject }),
+      }),
+    );
+  }
+
   async function finalizeProtocol() {
     if (!processId) return;
+    if (blockingQueue) {
+      setError("сначала закройте кандидатов и подозрения");
+      return;
+    }
     setBusy(true);
     setError("");
     setProtocolNote("");
     try {
-      await readJson(
-        await fetch(`/api/v1/processes/${processId}/complete`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ inspector_id: session.subject }),
-        }),
-      );
-      await readJson(
-        await fetch(`/api/v1/processes/${processId}/finalize`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ inspector_id: session.subject }),
-        }),
-      );
+      let state = status?.process_state;
+      if (state === "READY") {
+        state = (await postProcess(processId, "verify")).process_state;
+      }
+      if (state === "VERIFYING") {
+        state = (await postProcess(processId, "complete")).process_state;
+      }
+      if (state === "COMPLETED") {
+        await postProcess(processId, "finalize");
+      }
       const protocol = await readJson<object>(
         await fetch(`/api/v1/processes/${processId}/protocol`),
       );
@@ -376,9 +391,10 @@ export function LiveWorkspace({ token }: Props) {
       const log = await readJson<{ events: AuditEvent[] }>(
         await fetch(`/api/v1/processes/${processId}/audit`),
       );
+      downloadJson(`audit-${processId}.json`, log);
       setAudit(log.events);
       await refresh(processId);
-      setProtocolNote("Протокол скачан. Журнал ниже. РиН не подтверждался.");
+      setProtocolNote("Протокол и журнал скачаны. РиН не подтверждался.");
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "протокол не собран");
     } finally {
@@ -675,7 +691,11 @@ export function LiveWorkspace({ token }: Props) {
             Осталось кандидатов: {status?.counters.candidates ?? "—"}, подозрений:{" "}
             {status?.counters.suspicions ?? "—"}.
           </p>
-          <button type="button" disabled={busy} onClick={() => void finalizeProtocol()}>
+          <button
+            type="button"
+            disabled={busy || blockingQueue}
+            onClick={() => void finalizeProtocol()}
+          >
             Собрать и скачать протокол
           </button>
           {protocolNote ? <p>{protocolNote}</p> : null}
