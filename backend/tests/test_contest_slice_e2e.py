@@ -11,8 +11,12 @@ import pytest
 from pdf_fixtures import contest_slice_font, cyrillic_pdf
 
 from kontur.application.evaluate import StagePage, evaluate_rule
-from kontur.application.extractors.number import PageToken
-from kontur.application.process_pipeline import PipelineFile, run_process_pipeline
+from kontur.application.extractors.number import PageToken, extract_number
+from kontur.application.process_pipeline import (
+    PipelineFile,
+    _pages_from_blobs,
+    run_process_pipeline,
+)
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
@@ -116,6 +120,10 @@ _RD_CANDIDATE: tuple[tuple[str, str], ...] = (
     ("сечение воздуховода", "400×200"),
     ("приточная установка", "800 м³/ч"),
 )
+
+
+def _with_width(rows: Sequence[tuple[str, str]], width: str) -> tuple[tuple[str, str], ...]:
+    return tuple((label, width if label == "Ширина проема" else value) for label, value in rows)
 
 
 def test_contest_codes_are_executable() -> None:
@@ -244,6 +252,45 @@ def test_pdf_pipeline_missing_rd_is_not_violation() -> None:
     report = _pipeline(_sheet(_PD_VALUES), None)
     for finding in contest_findings(report.findings).values():
         assert finding.finding_status is FindingStatus.MISSING_EVIDENCE
+
+
+@needs_font
+def test_pdf_pipeline_ar041_mm_equals_metres_after_conversion() -> None:
+    """1200 мм и 1,2 м на векторном PDF — одно значение в метрах, не угадка голого 1200."""
+
+    report = _pipeline(
+        _sheet(_with_width(_PD_VALUES, "1200 мм")),
+        _sheet(_with_width(_PD_VALUES, "1,2 м")),
+    )
+    finding = contest_findings(report.findings)["AR-041"]
+    assert finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+    assert finding.actual_value == pytest.approx(1.2)
+    assert finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+
+
+@needs_font
+def test_pdf_pipeline_ar041_899mm_is_candidate_not_bare_guess() -> None:
+    report = _pipeline(
+        _sheet(_with_width(_PD_VALUES, "1200 мм")),
+        _sheet(_with_width(_PD_VALUES, "899 мм")),
+    )
+    finding = contest_findings(report.findings)["AR-041"]
+    assert finding.finding_status is FindingStatus.CANDIDATE
+    assert finding.actual_value == pytest.approx(0.899)
+    assert finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+
+
+@needs_font
+def test_pdf_pipeline_ar041_bare_1200_stays_unconverted() -> None:
+    pd = _sheet(_with_width(_PD_VALUES, "1200"))
+    item = PipelineFile("f-pd", file_sha256(pd), "pd.pdf", DocStage.PD)
+    pages, errors, _stamps, _clean, _pool = _pages_from_blobs((item,), {"f-pd": pd})
+    assert errors == ()
+    page = pages[DocStage.PD]
+    tokens = page[0].tokens if isinstance(page, tuple) else page.tokens
+    hit = extract_number(tokens, _REGISTRY.get("AR-041"))
+    assert hit is not None
+    assert hit.extraction.normalized_value == 1200.0
 
 
 @needs_font
