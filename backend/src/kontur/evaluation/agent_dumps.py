@@ -150,7 +150,7 @@ def build_handoff(
             "non_gold_RD_ID_MIXED_skipped",
             "gold_RD_ID_MIXED_loaded_as_RD_only",
             "pd_cover_without_filled_utverdil",
-            "ocr_text_UNAVAILABLE",
+            "ocr_text_MEASURED_below_gate",
         ],
         "do_not": [
             "Merge leftover OCR branches (PR #54, 2ddc2b3 one-line ocr_tesseract.py)",

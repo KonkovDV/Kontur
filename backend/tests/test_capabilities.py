@@ -68,12 +68,14 @@ def test_payload_overall_follows_live_kit_not_missing_ocr() -> None:
     assert live_kit()[0].name == "vector_text"
     engines = {item["name"]: item for item in payload["engines"]}  # type: ignore[misc]
     assert engines["vector_text"]["status"] == "AVAILABLE"
-    assert engines["ocr_text"]["status"] == "UNAVAILABLE"
+    assert engines["ocr_text"]["status"] == "MEASURED"
     assert engines["drawing_analysis"]["status"] == "DEGRADED"
     assert engines["ocr_text"]["affects_verdict"] is True
     health = payload["health"]
     assert isinstance(health, dict)
-    assert "ocr_text" in health["failed"]
+    assert "ocr_text" in health["measured"]
+    assert "ocr_text" not in health["failed"]
+    assert "ocr_text" not in health["healthy"]
     assert "vector_text" in health["healthy"]
     assert "overall_kit_status" not in payload
     assert "engine_status" not in payload

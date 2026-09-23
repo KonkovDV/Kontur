@@ -78,9 +78,10 @@ def test_capabilities_are_honest_about_missing_ocr(client: TestClient) -> None:
     assert body["kit_blocked"] is False
     engines = {item["name"]: item for item in body["engines"]}
     assert engines["vector_text"]["status"] == "AVAILABLE"
-    assert engines["ocr_text"]["status"] == "UNAVAILABLE"
+    assert engines["ocr_text"]["status"] == "MEASURED"
     assert engines["drawing_analysis"]["status"] == "DEGRADED"
-    assert "ocr_text" in body["health"]["failed"]
+    assert "ocr_text" in body["health"]["measured"]
+    assert "ocr_text" not in body["health"]["failed"]
     assert "drawing_analysis" in body["health"]["degraded"]
     assert "vector_text" in body["health"]["healthy"]
     assert "overall_kit_status" not in body

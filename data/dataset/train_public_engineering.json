@@ -5,7 +5,7 @@
   "in_git": true,
   "purpose": "Инженерный снимок gold_evidence_mixed_as_rd на TRAIN_PUBLIC. Не frozen val, не порог ТЗ.",
   "pred_jsonl": "data/dataset/train_public_pred.jsonl",
-  "why_zero_hits": "Gold F0171 как PD, F0201 RD_ID_MIXED только как RD (не ID). Пайплайн видит PD+RD. F0201: заполненная графа «Утвердил» + ФИО → APPROVED. F0171 (обложка тома ПД): в штампе нет «утв.»/«Утвердил»+ФИО → L4 CLARIFICATION_REQUIRED, компаратор не запускался. Заголовок ГОСТ «Согласовано» не считаем утверждением. Гейт J открыт.",
+  "why_zero_hits": "Gold F0171 как PD, F0201 RD_ID_MIXED только как RD (не ID). Пайплайн видит PD+RD. F0201: заполненная графа «Утвердил» + ФИО → APPROVED. F0171: в штампе нет «Утвердил»+ФИО → L4 CLARIFICATION_REQUIRED. TRAIN-0001 (IOS4-079) и TRAIN-0006…0010 (IOS4-078) поэтому не CANDIDATE. Если инспектор выберет F0171, те же коды дают LOW_QUALITY: у якоря нет числа правила. «Согласовано» и ГИП не утверждение. Гейт J открыт.",
   "n_index": 203,
   "n_read": 2,
   "n_skip_stage": 11,

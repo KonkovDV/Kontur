@@ -156,7 +156,7 @@ def test_empty_pack_validates_and_keeps_gates_open() -> None:
     gate = pack["gate_k"]
     assert gate["closes_gate_k"] is False
     assert gate["sessions_present"] is False
-    assert "ocr_text_UNAVAILABLE" in pack["limitations"]
+    assert "ocr_text_MEASURED_below_gate" in pack["limitations"]
     assert "GAP-IOS4-VAL" in pack["open_gaps"]
     assert pack["ci"]["run_id"] is None
 
