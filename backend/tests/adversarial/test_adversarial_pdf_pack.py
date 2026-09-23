@@ -40,7 +40,6 @@ from kontur.infrastructure.injection_scan import (
 from kontur.infrastructure.pdfium_tokens import extract_pdf_bytes, file_sha256, flatten_tokens
 from kontur.infrastructure.pdfium_visual import assess_pdf_bytes
 
-
 # ─────────────────────────────────────────────────────────────────────────────────
 # PDF-фабрики (inline, cloud-ok: нет files/, нет сети)
 # ─────────────────────────────────────────────────────────────────────────────────
