@@ -30,29 +30,21 @@ Read `AGENTS.md`, `docs/GH_AGENT_BUS.md`, the PR diff, and CI.
 Test quality checklist (check every added test function):
 
 - [ ] Test calls real pipeline functions, not mocks or stubs
-  - `file_sha256()` from `intake.py`, NOT raw `hashlib.sha256()`
-  - `assess_pdf_bytes()` for OCR disagreement tests
-  - `evaluate_batch()` / `evaluate_rule()` for pipeline coverage
-  - `flatten_tokens()` for scanner/rotation tests
-- [ ] No `pytest.skip` inside the coverage branch of a test (skip at top is OK
-  when dependency is unavailable; skip inside the assertion path is fake coverage)
-- [ ] No `FPDFDoc_GetAttachmentCount` called directly without going through
-  the pipeline (GAP-EMB: embedded attachments are a documented gap, not a
-  coverage item)
-- [ ] Assertions are specific (`assert x == expected`, `assert a and b`),
-  not trivially true (`assert True`, `assert x or y` when `y` is trivially true)
-- [ ] Overlay tests: two objects at the same y-coordinate for stamp-over-stamp
-  (objects at y=80 and y=120 are not an overlay)
-- [ ] Rotation tests: PDF with `Rotate: 90` in MediaBox
-- [ ] Scanner tests: PDF created via `create_scanner_pdf()` helper
-- [ ] Prompt-injection payloads fit inside the target bounding box
-  (long payloads >200 chars overflow bbox → `flatten_tokens=[]` → trivial pass)
+  - `file_sha256()` from `kontur.infrastructure.pdfium_tokens`, not raw `hashlib.sha256()`, when the test checks file identity
+  - `assess_pdf_bytes()` when the test claims visual/text disagreement
+  - `evaluate_batch()` / `evaluate_rule()` / `extract_pdf_bytes` / `scan_tokens_for_injection` for the path the test names
+  - `flatten_tokens()` after a real PDF, then `assert tokens` before a scanner assert
+- [ ] No `pytest.skip` on the assertion path. Skip before the assert is allowed only when the API is absent (rotation: no `set_rotation`)
+- [ ] No `FPDFDoc_GetAttachmentCount`. GAP-EMB: the pipeline does not read `/EmbeddedFile`. A raw pdfium count is not coverage
+- [ ] Assertions name the required outcome (`assert a in text and b in text`), not `assert True`, `isinstance(bool)`, or `a or b`
+- [ ] Overlay: both text objects share one `(x, y)` and both strings are extracted
+- [ ] Rotation: `page.set_rotation(90)` and `frame.rotate == 90`. A page that was never rotated must not pass
+- [ ] Injection phrase fits `stamp_pdf` on a 200×200 pt page (`backend/tests/pdf_fixtures.py`). There is no `create_scanner_pdf()`
 
 ## Reject or request changes if CI claim is invalid
 
-- `ci_run_id` in `op=done` must be a real GHA run URL with `status=completed`,
-  `conclusion=success`, and `RUN_ID != 0`
-- `runner_id=0` with `steps=[]` is NOT a passing CI run
+- `ci_run_id` in `op=done` must be a GHA run whose `conclusion` is `success`
+- The `backend` job must have `runner_id != 0`, a non-empty `runner_name`, and non-empty `steps`. A non-zero run id with `runner_id=0` is not CI
 - Do not approve a PR that removes draft status without a verified CI run
 
 ## Reject or request changes if triage_complete is violated

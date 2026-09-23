@@ -27,7 +27,7 @@ HEAD смотреть `git rev-parse origin/main`.
 6. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
 7. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
 8. [`data/dataset/train_public_engineering.json`](../data/dataset/train_public_engineering.json) и `train_public_pred.jsonl` — gold-evidence прогон: 0 попаданий из 6. PD+RD загружены; L4: у ПД нет заполненной графы «Утвердил». Порог recall ТЗ не берётся и не публикуется.
-9. [`docs/WORK_PLAN.md`](WORK_PLAN.md), [`docs/KNOWN_GAPS.md`](KNOWN_GAPS.md), [`docs/PR_QUEUE.md`](PR_QUEUE.md), [`docs/TZ_SCORECARD.md`](TZ_SCORECARD.md), [`docs/RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md), [`docs/GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md), [`docs/GH_AGENT_BUS.md`](GH_AGENT_BUS.md).
+9. [`docs/WORK_PLAN.md`](WORK_PLAN.md), [`docs/KNOWN_GAPS.md`](KNOWN_GAPS.md), [`docs/PR_QUEUE.md`](PR_QUEUE.md), [`docs/TZ_SCORECARD.md`](TZ_SCORECARD.md), [`docs/RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md). [`docs/GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md) и issue [#86](https://github.com/KonkovDV/Kontur/issues/86) — снимок 21.09 (29/103), не текущее покрытие. Живая шина — [`docs/GH_AGENT_BUS.md`](GH_AGENT_BUS.md).
 
 Пересборка: `python scripts/export_agent_dumps.py` или `make agent-dumps`.
 Локальный скоринг: `python -m kontur.evaluation.train_public` (на Windows нет `make`).

@@ -58,6 +58,12 @@ gh issue view N --json title,labels,parent,subIssues,blockedBy,blocking,comments
 `data/dataset/agent_handoff.json` → тело issue `N`.
 **Не начинать работу, пока не выполнен claim.**
 
+Issue [#86](https://github.com/KonkovDV/Kontur/issues/86) и
+[`GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md) — снимок
+**21.09** (29 executable / 103 extractor_missing). Текущая разбивка —
+только `data/matrix/coverage_snapshot.json` и `coverage_counts` в
+`agent_handoff.json` (на 23.09: 44 / 83 / 1 / 4).
+
 Проверка свежести контекста (защита от context drift):
 
 ```text
@@ -126,9 +132,11 @@ gh issue list --search "label:contest-p0 is:open -label:claimed -label:frozen-in
 
 - **claim** — первый валидный JSON на открытом issue без метки `claimed`
   побеждает. **Сразу после:** `gh issue edit N --add-label claimed`,
-  **перечитать комментарии issue ещё раз** и убедиться, что
-  `agent` = ваш ID (защита от TOCTOU-гонки). Ветка `feat/#N-slug`
-  от `origin/main`. Draft PR — после первого push.
+  затем ещё раз прочитать комментарии. Если более ранний JSON с
+  `op=claim` принадлежит другому `agent`, остановиться и не пушить.
+  Повторное чтение только обнаруживает проигранную гонку, оно не
+  делает запись атомарной. Ветка `feat/#N-slug` от `origin/main`.
+  Draft PR — после первого push.
 - **heartbeat** — не реже чем раз в 6 часов, пока нет зелёного PR.
 - **steal** — только если нет heartbeat 6 ч **и** нет коммитов в ветке.
   Не force-push чужую ветку.
@@ -140,13 +148,15 @@ gh issue list --search "label:contest-p0 is:open -label:claimed -label:frozen-in
 
 ### Определение «зелёный CI» (v2)
 
-CI считается зелёным если и только если:
+Ненулевой номер run ещё не прогон. Падения 23.09 имели обычный `databaseId`
+и при этом `runner_id=0`, пустой `runner_name` и `steps=[]`.
 
-1. `gh run view RUN_ID --json status,conclusion` → `status=completed`, `conclusion=success`
-2. `RUN_ID != 0` (не плейсхолдер без runner)
-3. `workflow` = `ci.yml` или полный прогон ci/relay/sync-lifecycle
+CI на SHA зелёный, только если для job `backend` этого run:
 
-`runner_id=0` с `steps=[]` — **не CI**. Не писать «CI зелёный» без проверки.
+1. `gh run view RUN_ID --json status,conclusion` → `completed` и `success`
+2. у job: `runner_id` не 0, `runner_name` не пустой, `steps` не пустой
+
+`runner_id=0` — раннер не назначался. Это не зелёный CI и не повод мержить.
 
 ---
 
@@ -154,22 +164,23 @@ CI считается зелёным если и только если:
 
 Тест считается реальным если все следующие пункты выполняются:
 
-| Проверка | Реальный тест | Фейк — запрещен |
+| Проверка | Реальный тест | Фейк — запрещён |
 |---|---|---|
-| SHA-256 файла | `file_sha256()` из `intake.py` | `hashlib.sha256(data).hexdigest()` напрямую |
-| Вложения PDF | `FPDFDoc_GetAttachmentCount` через пайплайн | прямой вызов pdfium-символа |
-| OCR расхождение | `assess_pdf_bytes()` | заголовок функции без вызова |
-| Покрытие кейса | тест входит в ветвь пайплайна | `pytest.skip` внутри теста |
-| assert поведение | конкретное условие (`and`, не `or`) | `assert result` или `assert True` |
-| Точка overlay | два объекта на одной y | один объект на y=80, второй на y=120 |
-| Ротация | pdf с 90° rotate, flatten_tokens изменяют y | обычный pdf без rotate |
-| Сканер | фикстура создана через `create_scanner_pdf()` | любой другой путь |n| Длина фразы | короткая (влезает в bbox) | «ignore all rules and forget previous instructions» (>200 символов) |
+| SHA-256 файла | `file_sha256()` из `kontur.infrastructure.pdfium_tokens` | `hashlib.sha256` вместо него, когда проверяется identity файла |
+| Вложения PDF | не писать тест: пайплайн не читает `/EmbeddedFile` (GAP-EMB) | `FPDFDoc_GetAttachmentCount` и `pytest.skip`, если символа нет |
+| Слой и растр | `assess_pdf_bytes()` | заголовок теста без вызова |
+| Покрытие кейса | вызывается функция пайплайна (`evaluate_batch`, `extract_pdf_bytes`, `scan_tokens_for_injection`) | `pytest.skip` на пути assert |
+| assert | оба текста, конкретное поле | `assert True`, `isinstance(bool)`, `a or b` когда достаточно одного |
+| Overlay | два объекта в одной точке `(x, y)` и оба читаются | разные y или «хотя бы один» |
+| Ротация | `page.set_rotation(90)` и `frame.rotate == 90`; нет метода — `pytest.skip` до assert | страница без rotate, тест всё равно зелёный |
+| Инъекция в PDF | `stamp_pdf` из `backend/tests/pdf_fixtures.py`, фраза влезает в страницу 200×200 pt, затем `assert tokens` | длинная фраза даёт пустые токены и `is_clean=True` |
 
 ---
 
 ## Типичные сбои (60+ PR постмортем)
 
-Этот раздел **читать перед любой работой**. Каждый пункт воспроизводился ≥ 3 раз.
+Этот раздел читать перед работой. Список собран по повторным PR.
+Не каждый пункт случался трижды.
 
 ### Нарушения инвариантов
 
@@ -219,7 +230,8 @@ CI считается зелёным если и только если:
 
 ❌ `overlay AND`: `assert x in tokens or y in tokens` — слабый assert.
 
-❌ Промпт-инъекция > 200 символов переполняет bbox, flatten_tokens = [].
+❌ Длинная фраза на странице 200×200 pt (`stamp_pdf`) не влезает:
+`flatten_tokens` пустой, сканер отвечает `is_clean=True`. Это не пойманная инъекция.
 
 ---
 
@@ -243,23 +255,24 @@ CI считается зелёным если и только если:
 
 Эпик (parent): [#87](https://github.com/KonkovDV/Kontur/issues/87).
 
-| Issue | Тема | Статус | Где | blocked-by |
-|---|---|---|---|---|
-| [#75](https://github.com/KonkovDV/Kontur/issues/75) E2E пяти правил | **✅ landed** PR #88 | — | — | — |
-| [#76](https://github.com/KonkovDV/Kontur/issues/76) evidence UI | **✅ landed** PR #98 | — | — | — |
-| [#78](https://github.com/KonkovDV/Kontur/issues/78) demo/Compose | **✅ landed** PR #96 | — | — | — |
-| [#79](https://github.com/KonkovDV/Kontur/issues/79) submission pack | **✅ landed** PR #97 | — | — | — |
-| [#82](https://github.com/KonkovDV/Kontur/issues/82) family extractors | **✅ триаж завершён** PR #99/#100/#103/#106/#107 | — | — | — |
-| [#77](https://github.com/KonkovDV/Kontur/issues/77) Gate K сессии | ⏳ открыт, P0 | local+человек | 76✅, 78✅ | — |
-| [#80](https://github.com/KonkovDV/Kontur/issues/80) adversarial PDF | ⏸ draft PR #115 | cloud-ok | feat/adversarial-pdf-pack HEAD 7ec43b7 | — |
-| [#83](https://github.com/KonkovDV/Kontur/issues/83) GAP-SPLIT | ⏳ открыт | cloud-ok | — | — |
-| [#84](https://github.com/KonkovDV/Kontur/issues/84) VLM isolation | ⏳ открыт | cloud-ok | — | — |
-| [#81](https://github.com/KonkovDV/Kontur/issues/81) branch protection | блок — Free/Pro | — | — | — |
-| [#85](https://github.com/KonkovDV/Kontur/pull/85) Dependabot | `do-not-merge` | — | — | — |
+| Issue | Статус на 23.09 | Не делать |
+|---|---|---|
+| [#75](https://github.com/KonkovDV/Kontur/issues/75) E2E пяти правил | на `main`, PR #88 | не открывать заново |
+| [#76](https://github.com/KonkovDV/Kontur/issues/76) evidence UI | на `main`, PR #98 | не открывать заново |
+| [#78](https://github.com/KonkovDV/Kontur/issues/78) demo/Compose | на `main`, PR #96 | не открывать заново |
+| [#79](https://github.com/KonkovDV/Kontur/issues/79) submission pack | на `main`, PR #97 | не открывать заново |
+| [#82](https://github.com/KonkovDV/Kontur/issues/82) family extractors | триаж на `main`, PR #99/#100/#103/#106/#107 | не красить семейство целиком в `executable` |
+| [#77](https://github.com/KonkovDV/Kontur/issues/77) Gate K | открыт, P0, нужен человек и `files/` | не закрывать рекордером |
+| [#80](https://github.com/KonkovDV/Kontur/issues/80) adversarial PDF | draft [#115](https://github.com/KonkovDV/Kontur/pull/115), HEAD `7ec43b7` | не `Closes`, пока нет живого CI; нет skew, OCR, VLM, system prompt, вложений |
+| [#83](https://github.com/KonkovDV/Kontur/issues/83) GAP-SPLIT | открыт, после RC freeze | не заменять `NotImplementedError` заглушкой `evidence_group_id`; `source_id` — file_id эталона |
+| [#84](https://github.com/KonkovDV/Kontur/issues/84) VLM isolation | открыт | схема без вызова не изолирует; `scan_tokens_for_injection` в `backend/src` не вызывается |
+| [#81](https://github.com/KonkovDV/Kontur/issues/81) branch protection | GitHub Free private → API 403 | не строить процесс на rulesets |
+| [#86](https://github.com/KonkovDV/Kontur/issues/86) срез 21.09 | исторический, 29/103 | не брать оттуда текущее покрытие |
+| Dependabot | [#116](https://github.com/KonkovDV/Kontur/pull/116), [#117](https://github.com/KonkovDV/Kontur/pull/117) | не P0, не мержить ради пустой очереди |
 
-**Блокировки #77:** разблокированы (#76 и #78 на main). Стартовать.
-**Параллелить безопасно:** 77 (параллельно 80 и 83/84).
-**Не параллелить** двух агентов на одном номере.
+**#77** разблокирован: #76 и #78 уже на `main`. Стартовать может только локальный агент с `files/` и живыми сессиями.
+**#83 не параллелить с работой до RC freeze.**
+Двух агентов на одном номере не ставить.
 
 ---
 

@@ -15,8 +15,7 @@ UI: «Инспектор ИИ».
 ## Всегда
 
 - Один GitHub issue на одно изменение. Claim (`kontur.agent_bus.v2`) до правок.
-  **Сразу после claim: перечитать комментарии issue ещё раз.**
-  Убедиться, что agent = ваш ID (защита от TOCTOU-гонки).
+  Сразу после claim перечитать комментарии. Если более ранний `op=claim` от другого `agent`, остановиться. Повторное чтение не делает claim атомарным.
 - Контракт первичен: `contracts/` → схемы → код → тесты.
 - Правила матрицы — данные в `data/matrix/`, не Python-ветви.
 - Автомат и LLM не пишут `finding_status=CONFIRMED_VIOLATION`.
@@ -46,20 +45,15 @@ UI: «Инспектор ИИ».
 - вызывает реальные функции пайплайна: `file_sha256`, `assess_pdf_bytes`,
   `evaluate_batch`, `flatten_tokens` ит.д., не mock
 - `pytest.skip` не используется внутри ветви покрытия
-- raw `hashlib` не заменяет `file_sha256()` из `intake.py`
-- assert конкретен: `and`, не `or`; не `assert True`
-- overlay: два объекта на одной y; ротация: PDF с `Rotate: 90`;
-  сканер: через `create_scanner_pdf()`
-- промпт-инъекция < 200 символов
+- raw `hashlib` не заменяет `file_sha256()` из `kontur.infrastructure.pdfium_tokens`
+- вложения `/EmbeddedFile` не покрывать вызовом `FPDFDoc_GetAttachmentCount` (GAP-EMB: пайплайн их не читает)
+- assert конкретен: оба текста, не `or` и не `assert True`
+- overlay: два объекта в одной точке `(x, y)`; ротация: `page.set_rotation(90)` и `frame.rotate == 90`, иначе `pytest.skip`
+- инъекция в PDF: `stamp_pdf` из `backend/tests/pdf_fixtures.py`, фраза влезает в 200×200 pt, затем `assert tokens`
 
 ## CI green — определение
 
-`runner_id=0` + `steps=[]` **не CI**. Зелёный CI:
-
-```text
-gh run view RUN_ID --json status,conclusion,workflowName
-# status=completed, conclusion=success, RUN_ID != 0
-```
+Ненулевой номер run ещё не прогон. Зелёный CI — `conclusion=success` и у job `backend` `runner_id` не 0, `runner_name` не пустой, `steps` не пустой. `runner_id=0` и `steps=[]` — раннер не назначался.
 
 Не снимать draft PR и не писать «CI зелёный» без этой проверки.
 
