@@ -14,9 +14,14 @@ type PaneProps = {
   title: string;
   role: EvidenceRole;
   fragment: FragmentView | undefined;
+  pageImageUrl?: string;
 };
 
-export function EvidencePane({ title, role, fragment }: PaneProps) {
+function overlayPoints(polygon: Point[]): string {
+  return polygon.map(([x, y]) => `${x},${1 - y}`).join(" ");
+}
+
+export function EvidencePane({ title, role, fragment, pageImageUrl }: PaneProps) {
   const polygon = fragment?.polygon_norm;
   const bbox = polygon && polygon.length >= 3 ? bboxFromPolygon(polygon) : null;
   const missing = fragment === undefined;
@@ -27,6 +32,24 @@ export function EvidencePane({ title, role, fragment }: PaneProps) {
         <p className="missing-hint">Нет фрагмента: отсутствие доказательства, не нарушение.</p>
       ) : (
         <>
+          {pageImageUrl ? (
+            <div className="page-frame">
+              <img src={pageImageUrl} alt={`страница ${fragment.page}`} />
+              <svg
+                className="page-overlay page-overlay--bitmap"
+                viewBox="0 0 1 1"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <polygon
+                  points={overlayPoints(fragment.polygon_norm)}
+                  fill="rgba(163, 21, 21, 0.28)"
+                  stroke="#a31515"
+                  strokeWidth="0.008"
+                />
+              </svg>
+            </div>
+          ) : (
           <svg
             className="page-overlay"
             viewBox={`0 0 ${PAGE_W} ${PAGE_H}`}
@@ -48,6 +71,7 @@ export function EvidencePane({ title, role, fragment }: PaneProps) {
               strokeWidth="0.8"
             />
           </svg>
+          )}
           <dl className="meta">
             <div>
               <dt>Документ</dt>
@@ -58,7 +82,12 @@ export function EvidencePane({ title, role, fragment }: PaneProps) {
             </div>
             <div>
               <dt>Утверждение</dt>
-              <dd>{fragment.document.approval_status}</dd>
+              <dd>
+                {fragment.document.approval_status}
+                {fragment.document.approval_basis
+                  ? ` / ${fragment.document.approval_basis}`
+                  : ""}
+              </dd>
             </div>
             <div>
               <dt>Лист / страница</dt>

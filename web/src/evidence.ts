@@ -9,6 +9,7 @@ export type DocumentRefView = {
   document_code: string;
   revision: string;
   approval_status: "APPROVED" | "NOT_APPROVED" | "UNKNOWN";
+  approval_basis?: string;
   sheet?: string;
 };
 

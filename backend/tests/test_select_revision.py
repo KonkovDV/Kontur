@@ -62,6 +62,7 @@ def test_package_default_unblocks_l4_without_human_verdict() -> None:
     workspace.run_matrix_pipeline(record)
 
     assert record.process_state is ProcessState.READY
+    assert record.parse_attempts == 1
     assert _l4_blocked(record) == []
     assert all(item.stamp_approval is ApprovalStatus.UNKNOWN for item in record.files)
 
@@ -75,6 +76,7 @@ def test_package_default_unblocks_l4_without_human_verdict() -> None:
     assert record.process_state is ProcessState.READY
     actions = [action for _actor, action, _payload in record.audit.records]
     assert actions.count("SELECT_REVISION") == 2
+    assert record.parse_attempts == 1
 
 
 def test_select_revision_refuses_unknown_file() -> None:

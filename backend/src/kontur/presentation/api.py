@@ -394,6 +394,30 @@ def get_documents(
     }
 
 
+@app.get("/api/v1/processes/{process_id}/findings", response_model=None)
+def list_findings(
+    process_id: str,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    _subject, _granted, object_id = _require("listProcessFindings", authorization)
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    return {
+        "process_id": process_id,
+        "findings": [
+            {
+                "finding_id": item.finding_id,
+                "rule_code": item.rule_code,
+                "finding_status": item.finding_status.value,
+                "rationale": item.rationale,
+                "evidence_group_id": item.evidence_group_id,
+            }
+            for item in record.findings.values()
+        ],
+    }
+
+
 @app.get(
     "/api/v1/processes/{process_id}/files/{file_id}/pages/{page}.png",
     response_model=None,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { EvidenceViewer } from "./EvidenceViewer";
+import { LiveWorkspace } from "./LiveWorkspace";
 import demoCards from "./demo_cards.json";
 import type { EvidenceCard } from "./evidence";
 import {
@@ -61,6 +62,9 @@ export function App() {
   const [decisions, setDecisions] = useState<UsabilityDecision[]>([]);
   const [finishedAt, setFinishedAt] = useState<Date | null>(null);
   const [session, setSession] = useState<UsabilityExport | null>(null);
+  const [mode, setMode] = useState<"live" | "recorder">(
+    DEMO_TOKEN ? "live" : "recorder",
+  );
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const completeness = useMemo(
     () => ({ pd: "PD_UPLOADED", rd: "RD_PARTIAL", id: "ID_MISSING" }),
@@ -160,7 +164,9 @@ export function App() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (!inSession || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (mode !== "recorder" || !inSession || event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
       const target = event.target;
       if (
         target instanceof HTMLElement &&
@@ -182,6 +188,25 @@ export function App() {
   return (
     <main className="workspace">
       {DEMO_BANNER ? <p className="demo-banner">{DEMO_BANNER}</p> : null}
+      <nav className="mode-switch" aria-label="Режим экрана">
+        <button
+          type="button"
+          aria-pressed={mode === "live"}
+          onClick={() => setMode("live")}
+        >
+          Живой комплект
+        </button>
+        <button
+          type="button"
+          aria-pressed={mode === "recorder"}
+          onClick={() => setMode("recorder")}
+        >
+          Учебный рекордер
+        </button>
+      </nav>
+      {mode === "live" ? <LiveWorkspace token={DEMO_TOKEN} /> : null}
+      {mode === "recorder" ? (
+      <>
       <header className="workspace__header">
         <div>
           <h1>Инспектор ИИ</h1>
@@ -371,6 +396,8 @@ export function App() {
           <li>MISSING_EVIDENCE не является нарушением.</li>
         </ul>
       </section>
+      </>
+      ) : null}
     </main>
   );
 }

@@ -8,8 +8,8 @@ from test_pdf_tokens import ascii_pdf
 
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
-from kontur.domain.models import DocStage
-from kontur.domain.statuses import Completeness
+from kontur.domain.models import DocStage, Finding
+from kontur.domain.statuses import Completeness, FindingStatus, ReviewPriority
 from kontur.infrastructure.pdfium_tokens import file_sha256
 from kontur.presentation.api import app
 
@@ -79,3 +79,34 @@ def test_documents_list_marks_single_pd_as_package_default(
         headers=INSPECTOR,
     )
     assert missing.status_code == 404
+
+
+def test_findings_list_returns_status_without_page_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    app.state.workspace = ProcessWorkspace()
+    client = TestClient(app)
+    record = app.state.workspace.create("obj-1", _seed())
+    app.state.workspace.put_finding(
+        record.process_id,
+        Finding(
+            finding_id="f-low",
+            rule_code="PZ-001",
+            finding_status=FindingStatus.LOW_QUALITY,
+            review_priority=ReviewPriority.LOW,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+            rationale="PD: якорь или число не найдены",
+        ),
+    )
+    listed = client.get(
+        f"/api/v1/processes/{record.process_id}/findings",
+        headers=INSPECTOR,
+    )
+    assert listed.status_code == 200
+    row = listed.json()["findings"][0]
+    assert row["finding_status"] == "LOW_QUALITY"
+    assert row["rule_code"] == "PZ-001"
+    assert "страниц" not in listed.text
