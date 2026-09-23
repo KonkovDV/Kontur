@@ -20,7 +20,7 @@ Weekly Dependabot (#85) — не P0.
 Вопросы 20–22 не отправлены: связи с жюри нет; решения ниже приняты по записи сессии 16.09 и доске оценивания.
 Скрытый тест не открывать. Эталон ПД без штампа — ADR-0014 (`PACKAGE_DEFAULT`). Индекс и «В производство работ» не утверждение.
 `export_git_sha` в `agent_handoff.json` отстаёт от HEAD нарочно.
-Живой экран инспектора: загрузка по стадии, комплект, «Назначить эталоном», список `GET .../findings`, три панели с PNG и polygon, решение по одной находке. Массового подтверждения нет. РиН на экране — `sync_state`, не ACK. Gate K не закрыт.
+Живой экран инспектора: загрузка по стадии, комплект, «Назначить эталоном», список `GET .../findings`, три панели с PNG и polygon, решение по одной находке. На живом экране массового подтверждения нет. Учебный рекордер Gate K пишет локальный JSON по отмеченным кандидатам и не вызывает API рецензии. РиН на экране — `sync_state`, не ACK. Gate K не закрыт.
 
 ## Читать в этом порядке
 
@@ -64,8 +64,10 @@ POD-095 — `advisory` (`presence` не способен выдать CANDIDATE)
 для `advisory` / `source_missing` / `not_applicable`. Gate J не закрыт.
 Учебный рекордер Gate K в `web/` пишет JSON `kontur-usability-v1`; сессий нет,
 `closes_gate_k` false. `MISSING_EVIDENCE` нельзя подтвердить как нарушение.
-`main` без branch protection: GitHub Free private не даёт rulesets
-(API 403, issue #81). Force-push не используем.
+Ruleset `main-pr-and-ci` (id 23890545) активен на `main`: PR, запрет
+force-push и удаления, обязательные checks `ci.yml`, `relay-container` и
+`sync-lifecycle-db`. Обязательных ревью 0. Это не закрытие гейтов I/J/K.
+Force-push не используем.
 PostgreSQL `save()` финализации fail-closed (PR #64): без атомарной
 материализации INSERT placeholder запрещён. Payload собирается в
 application-слое, JSON пишется в той же транзакции, что и процесс;
@@ -101,7 +103,7 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
 #80 adversarial PDF (пакет влит в #128, issue открыт: нет skew, OCR-расхождения,
 VLM и запрета класть текст страницы в system prompt; `Closes #80` не ставить;
 `runner_id=0` = не настоящий CI-прогон),
-#81 branch protection (GitHub Free private → 403),
+#81 branch protection (ruleset `main-pr-and-ci` закрывает критерий; не гейт),
 #82 family extractors (**все 83 `extractor_missing` разобраны** по трём триаж-док.; новых правил без геометрии нет), #83 split,
 #84 VLM isolation.
 GAP-EMB добавлен в `docs/KNOWN_GAPS.md` на ветке `feat/adversarial-pdf-pack` (commit `7ec43b7`).

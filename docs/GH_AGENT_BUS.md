@@ -13,11 +13,16 @@ executable. Инварианты — [`../AGENTS.md`](../AGENTS.md). Срез �
 
 ## Зачем так, а не «чат в комментариях»
 
-GitHub Free **private** на этом репозитории:
+Репозиторий публичный, лицензия кода Apache-2.0. Ruleset `main-pr-and-ci`
+(id 23890545) активен на `main`: PR обязателен, force-push и удаление ветки
+запрещены, обязательны checks `backend`, `contracts`, `db`, `claims`,
+`frontend`, `container-config`, `container-core`, `container-gateway`,
+`container-smoke`, `relay-container`, `sync-lifecycle-db`. Число обязательных
+ревью — 0 (соло-аккаунт). Это не закрытие гейтов I/J/K.
 
 | Есть | Нет (не строить процесс вокруг этого) |
 |---|---|
-| Issues, PR, labels, milestones | Branch protection / rulesets (API 403, [#81](https://github.com/KonkovDV/Kontur/issues/81)) |
+| Issues, PR, labels, milestones, ruleset `main-pr-and-ci` | Путать ruleset с закрытием гейтов I/J/K |
 | Sub-issues (`gh issue edit --add-sub-issue`) | Обязательные ревьюеры, CODEOWNERS как enforcement |
 | Issue dependencies (`--add-blocked-by`) | Несколько assignees на issue/PR |
 | Actions ~2000 мин/мес | Wiki, private Pages |
@@ -263,12 +268,12 @@ CI на SHA зелёный, только если для job `backend` этог�
 | [#79](https://github.com/KonkovDV/Kontur/issues/79) submission pack | на `main`, PR #97 | не открывать заново |
 | [#82](https://github.com/KonkovDV/Kontur/issues/82) family extractors | триаж на `main`, PR #99/#100/#103/#106/#107 | не красить семейство целиком в `executable` |
 | [#77](https://github.com/KonkovDV/Kontur/issues/77) Gate K | открыт, P0, нужен человек и `files/` | не закрывать рекордером |
-| [#80](https://github.com/KonkovDV/Kontur/issues/80) adversarial PDF | draft [#115](https://github.com/KonkovDV/Kontur/pull/115), HEAD `7ec43b7` | не `Closes`, пока нет живого CI; нет skew, OCR, VLM, system prompt, вложений |
+| [#80](https://github.com/KonkovDV/Kontur/issues/80) adversarial PDF | пакет влит в #128, issue открыт | не `Closes`: нет skew, OCR, VLM, system prompt, вложений |
 | [#83](https://github.com/KonkovDV/Kontur/issues/83) GAP-SPLIT | открыт, после RC freeze | не заменять `NotImplementedError` заглушкой `evidence_group_id`; `source_id` — file_id эталона |
 | [#84](https://github.com/KonkovDV/Kontur/issues/84) VLM isolation | открыт | сканер вызывается из `_pages_from_blobs` и пишет `injection_clean`; статус находки не меняется; #84 не закрывать без VLM и запрета класть текст страницы в system prompt |
-| [#81](https://github.com/KonkovDV/Kontur/issues/81) branch protection | GitHub Free private → API 403 | не строить процесс на rulesets |
+| [#81](https://github.com/KonkovDV/Kontur/issues/81) branch protection | ruleset закрывает критерий issue | не считать это закрытием гейтов I/J/K |
 | [#86](https://github.com/KonkovDV/Kontur/issues/86) срез 21.09 | исторический, 29/103 | не брать оттуда текущее покрытие |
-| Dependabot | [#116](https://github.com/KonkovDV/Kontur/pull/116), [#117](https://github.com/KonkovDV/Kontur/pull/117) | не P0, не мержить ради пустой очереди |
+| Dependabot | #116 и #117 закрыты, диапазоны версий шлюза на `main` | не P0; `runner_id=0` — не прогон |
 
 **#77** разблокирован: #76 и #78 уже на `main`. Стартовать может только локальный агент с `files/` и живыми сессиями.
 **#83 не параллелить с работой до RC freeze.**
