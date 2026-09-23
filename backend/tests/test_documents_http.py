@@ -465,3 +465,53 @@ def test_http_protocol_from_ready_without_candidates_goes_through_verify(
     assert protocol.status_code == 200
     assert protocol.json()["violation_count"] == 0
     assert "CONFIRMED_VIOLATION" not in json.dumps(protocol.json())
+
+
+def test_http_select_refuses_explicit_not_approved(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Кнопка эталона не перекрывает явный «не утв.»."""
+
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    payload = ascii_pdf("not approved CODE 12345-PZ")
+    app.state.workspace = ProcessWorkspace()
+    client = TestClient(app)
+    workspace = app.state.workspace
+    record = workspace.create("obj-1", _seed())
+    _attach(
+        workspace,
+        record.process_id,
+        file_id="f-draft",
+        stage=DocStage.PD,
+        payload=payload,
+        filename="draft.pdf",
+    )
+    workspace.run_matrix_pipeline(record)
+
+    listed = client.get(
+        f"/api/v1/processes/{record.process_id}/documents",
+        headers=INSPECTOR,
+    )
+    assert listed.status_code == 200
+    row = _by_file_id(listed.json())["f-draft"]
+    assert row["approval_status"] == "NOT_APPROVED"
+    assert row["approval_basis"] != "INSPECTOR_SELECT"
+
+    refused = client.post(
+        f"/api/v1/processes/{record.process_id}/revisions/f-draft/select",
+        headers=INSPECTOR,
+        json={"inspector_id": "insp-7", "comment": SELECT_COMMENT},
+    )
+    assert refused.status_code == 409
+    assert "нельзя перекрыть" in refused.json()["detail"]
+
+    again = client.get(
+        f"/api/v1/processes/{record.process_id}/documents",
+        headers=INSPECTOR,
+    )
+    kept = _by_file_id(again.json())["f-draft"]
+    assert kept["approval_status"] == "NOT_APPROVED"
+    assert kept["approval_basis"] != "INSPECTOR_SELECT"
+    stored = app.state.workspace.get(record.process_id)
+    assert stored is not None
+    assert "f-draft" not in stored.inspector_approved_file_ids

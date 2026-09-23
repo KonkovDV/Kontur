@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from pdf_fixtures import contest_slice_font, cyrillic_pdf
 
 from kontur.application.process_pipeline import PipelineFile, run_process_pipeline
@@ -32,6 +33,7 @@ from kontur.evaluation.demo_cold_start import (
 from kontur.infrastructure.db.process_store import MemoryProcessStore
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
 from kontur.infrastructure.pdfium_tokens import file_sha256
+from kontur.presentation.api import app
 
 _FONT = contest_slice_font()
 needs_font = pytest.mark.skipif(_FONT is None, reason="нет TTF с кириллицей")
@@ -246,3 +248,73 @@ def test_demo_rehearsal_confirm_reject_protocol_outbox() -> None:
     assert outbox["process_id"] == record.process_id
     digest = outbox["payload_sha256"]
     assert isinstance(digest, str) and len(digest) == 64
+
+
+def _unit_square(polygon: object) -> None:
+    assert isinstance(polygon, list)
+    assert len(polygon) >= 3
+    for point in polygon:
+        assert isinstance(point, list)
+        assert len(point) == 2
+        x, y = point
+        assert isinstance(x, (int, float))
+        assert isinstance(y, (int, float))
+        assert 0 <= x <= 1
+        assert 0 <= y <= 1
+
+
+@needs_font
+def test_http_evidence_card_serves_pd_rd_png_and_leaves_id_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Три панели экрана: ПД и РД с листом и polygon, пустая ИД — не нарушение."""
+
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    pd = _sheet(_PD_VALUES)
+    rd = _sheet(_RD_VALUES)
+    app.state.workspace = ProcessWorkspace()
+    client = TestClient(app)
+    headers = {"Authorization": "Bearer insp-7@obj-1/INSPECTOR"}
+    workspace = app.state.workspace
+    record = workspace.create("obj-1", _completeness())
+    _attach(workspace, record, "f-pd", DocStage.PD, pd)
+    _attach(workspace, record, "f-rd", DocStage.RD, rd)
+    workspace.run_matrix_pipeline(record)
+
+    listed = client.get(
+        f"/api/v1/processes/{record.process_id}/findings",
+        headers=headers,
+    )
+    assert listed.status_code == 200
+    rows = listed.json()["findings"]
+    assert "CONFIRMED_VIOLATION" not in {item["finding_status"] for item in rows}
+    pz = next(item for item in rows if item["rule_code"] == "PZ-001")
+    assert pz["finding_status"] == "CANDIDATE"
+
+    card = client.get(
+        f"/api/v1/processes/{record.process_id}/findings/{pz['finding_id']}/evidence-card",
+        headers=headers,
+    )
+    assert card.status_code == 200
+    body = card.json()
+    assert body["schema_version"] == "kontur.evidence_card.v1"
+    assert body["closes_gate_k"] is False
+    assert body["finding"]["finding_status"] == "CANDIDATE"
+    assert body["finding"]["expected_value"] == 1250.5
+    assert body["finding"]["actual_value"] == 1100.0
+    fragments = body["evidence_group"]["fragments"]
+    by_stage = {item["document"]["doc_stage"]: item for item in fragments}
+    assert set(by_stage) == {"PD", "RD"}
+    assert by_stage["PD"]["document"]["file_id"] == "f-pd"
+    assert by_stage["RD"]["document"]["file_id"] == "f-rd"
+    for stage in ("PD", "RD"):
+        fragment = by_stage[stage]
+        assert fragment["page"] >= 1
+        _unit_square(fragment["polygon_norm"])
+        page = client.get(
+            f"/api/v1/processes/{record.process_id}/files/"
+            f"{fragment['document']['file_id']}/pages/{fragment['page']}.png",
+            headers=headers,
+        )
+        assert page.status_code == 200
+        assert page.content.startswith(b"\x89PNG")
