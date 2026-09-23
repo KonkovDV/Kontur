@@ -6,7 +6,7 @@ from test_pdf_tokens import ascii_pdf
 
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
-from kontur.domain.models import DocStage
+from kontur.domain.models import ApprovalStatus, DocStage
 from kontur.domain.state_machines import Actor, TransitionError
 from kontur.domain.statuses import Completeness, FindingStatus, ProcessState
 from kontur.infrastructure.pdfium_tokens import file_sha256
@@ -52,7 +52,7 @@ def _l4_blocked(record) -> list[str]:
     ]
 
 
-def test_inspector_etalon_unblocks_l4_without_human_verdict() -> None:
+def test_package_default_unblocks_l4_without_human_verdict() -> None:
     pd = ascii_pdf("PD sheet 1")
     rd = ascii_pdf("RD sheet 1")
     workspace = ProcessWorkspace()
@@ -62,17 +62,10 @@ def test_inspector_etalon_unblocks_l4_without_human_verdict() -> None:
     workspace.run_matrix_pipeline(record)
 
     assert record.process_state is ProcessState.READY
-    blocked = _l4_blocked(record)
-    assert "PZ-001" in blocked
-    assert "IOS4-078" in blocked
-    assert "KR-055" in blocked
+    assert _l4_blocked(record) == []
+    assert all(item.stamp_approval is ApprovalStatus.UNKNOWN for item in record.files)
 
     workspace.select_revision(record.process_id, "f-pd", actor=INSPECTOR, comment=COMMENT)
-    assert any(
-        "RD: эталон без признака утверждения" in item.rationale
-        for item in record.findings.values()
-    )
-
     workspace.select_revision(record.process_id, "f-rd", actor=INSPECTOR, comment=COMMENT)
     assert _l4_blocked(record) == []
     assert all(

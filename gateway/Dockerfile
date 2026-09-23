@@ -1,9 +1,20 @@
-FROM node:22-alpine
+FROM node:22-alpine AS web
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+ARG VITE_DEMO_BANNER=
+ARG VITE_DEMO_TOKEN=
+ENV VITE_DEMO_BANNER=$VITE_DEMO_BANNER
+ENV VITE_DEMO_TOKEN=$VITE_DEMO_TOKEN
+RUN npm run build
 
+FROM node:22-alpine
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY gateway/package.json gateway/package-lock.json ./
 RUN npm ci --omit=dev
-COPY src ./src
+COPY gateway/src ./src
+COPY --from=web /web/dist ./web
 
 # Dependencies and application code remain owned by root and read-only at
 # runtime. The fixed identity matches the compose runtime contract.

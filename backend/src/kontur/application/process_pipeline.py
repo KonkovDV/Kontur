@@ -14,7 +14,7 @@ from dataclasses import dataclass, field, replace
 
 from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.passport import read_passport
-from kontur.application.revision_resolver import approval_with_basis
+from kontur.application.revision_resolver import approval_with_basis, package_etalon
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import (
     ApprovalBasis,
@@ -33,7 +33,11 @@ from kontur.infrastructure.ocr_tesseract import (
     raster_pages_need_ocr,
     tesseract_available,
 )
-from kontur.infrastructure.pdf_guard import PdfParseTimeoutError, run_pdf_parse_sync
+from kontur.infrastructure.pdf_guard import (
+    PdfParseTimeoutError,
+    pdf_parse_timeout_s,
+    run_pdf_parse_sync,
+)
 from kontur.infrastructure.pdfium_tokens import PdfDocumentTokens, extract_pdf_bytes, flatten_tokens
 
 
@@ -103,7 +107,11 @@ def _pages_from_blobs(
             errors.append(f"{item.file_id}: нет содержимого в памяти")
             continue
         try:
-            document = run_pdf_parse_sync(extract_pdf_bytes, raw)
+            document = run_pdf_parse_sync(
+                extract_pdf_bytes,
+                raw,
+                timeout_s=pdf_parse_timeout_s(),
+            )
         except (PdfParseTimeoutError, ValueError) as exc:
             errors.append(f"{item.file_id}: {exc}")
             continue
@@ -129,13 +137,15 @@ def _pages_from_blobs(
             passport.approval_basis,
             inspector_selected=item.file_id in inspector_approved_file_ids,
         )
-        ref = _document_ref(
-            item,
-            passport.document_code,
-            passport.revision,
-            approval,
-            basis,
-            passport.sheet,
+        ref = package_etalon(
+            _document_ref(
+                item,
+                passport.document_code,
+                passport.revision,
+                approval,
+                basis,
+                passport.sheet,
+            )
         )
         cache = PageImageCache(raw) if tesseract_available() else None
         pages[item.doc_stage] = StagePage(

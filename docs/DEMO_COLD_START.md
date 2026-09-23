@@ -13,8 +13,9 @@
 1. `docker compose up -d` поднимает postgres, redis, rabbitmq, minio, core,
    outbox-relay, inbox-consumer, gateway.
 2. Загрузка ПД (черновик без штампа, затем утверждённая редакция), РД, ИД.
-3. Паспорт читает штамп «Утвердил» + ФИО. Неутверждённый черновик не эталон:
-   пайплайн берёт последний файл стадии (`last_file_per_stage_fallback`).
+3. Паспорт читает штамп «Утвердил» + ФИО. Явный «не утв.» не эталон.
+   Одна ПД без этой пометки — `PACKAGE_DEFAULT`. Пайплайн берёт последний
+   файл стадии (`last_file_per_stage_fallback`).
 4. Три кандидата: `PZ-001`, `KR-055`, `AR-041`. Автомат не пишет
    `CONFIRMED_VIOLATION`.
 5. Инспектор confirm/reject с комментарием; REJECT — с `reason_code`.

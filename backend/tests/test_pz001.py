@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import jsonschema
@@ -13,7 +14,7 @@ from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.extractors.number import PageToken
 from kontur.application.protocol import assemble_protocol, finding_to_schema
 from kontur.application.review import review
-from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
+from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage, DocumentRef
 from kontur.domain.state_machines import Actor
 from kontur.domain.status_map import on_the_wire
 from kontur.domain.statuses import Completeness, FindingStatus, ProcessState
@@ -187,6 +188,54 @@ def test_ocr_reads_disagree_gives_abstain(rule: dict[str, object]) -> None:
     assert result.finding.evidence_group_id is None
 
 
+def test_package_default_pd_and_unstamped_rd_compare(rule: dict[str, object]) -> None:
+    pd = replace(
+        _document(DocStage.PD),
+        approval_basis=ApprovalBasis.PACKAGE_DEFAULT,
+    )
+    rd = replace(_document(DocStage.RD), approval_status=ApprovalStatus.UNKNOWN)
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: StagePage(
+                document=pd,
+                tokens=_line("Площадь", "застройки", "1250,5"),
+            ),
+            DocStage.RD: StagePage(
+                document=rd,
+                tokens=_line("Площадь", "застройки", "1100"),
+            ),
+        },
+        completeness=_completeness(),
+    )
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.evidence_group is not None
+    bases = [item.document.approval_basis for item in result.evidence_group.fragments]
+    assert ApprovalBasis.PACKAGE_DEFAULT in bases
+
+
+def test_not_approved_mark_blocks_comparison(rule: dict[str, object]) -> None:
+    pd = replace(_document(DocStage.PD), approval_status=ApprovalStatus.NOT_APPROVED)
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: StagePage(
+                document=pd,
+                tokens=_line("Площадь", "застройки", "1250,5"),
+            ),
+            DocStage.RD: StagePage(
+                document=_document(DocStage.RD),
+                tokens=_line("Площадь", "застройки", "1100"),
+            ),
+        },
+        completeness=_completeness(),
+    )
+    assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert "не утв" in result.finding.rationale
+
+
 def test_unapproved_revision_does_not_compare(rule: dict[str, object]) -> None:
     result = _run(
         rule,
@@ -201,7 +250,10 @@ def test_unapproved_revision_does_not_compare(rule: dict[str, object]) -> None:
 def test_pool_rejects_page_that_is_not_approved_head(rule: dict[str, object]) -> None:
     """RT-2709-08 в слайсе: в страницах черновик, в пуле есть утверждённый предшественник."""
 
-    draft = _document(DocStage.PD, approved=False)
+    draft = replace(
+        _document(DocStage.PD, approved=False),
+        approval_status=ApprovalStatus.NOT_APPROVED,
+    )
     head = DocumentRef(
         file_id="file-pd-approved",
         file_hash=HASH,

@@ -68,10 +68,29 @@ class TestBasicResolution:
         assert result.status is ResolveStatus.CLARIFICATION_REQUIRED
         assert result.resolved is None
 
-    def test_unknown_approval_gives_clarification_required(self) -> None:
+    def test_single_unknown_pd_is_package_default(self) -> None:
+        from kontur.domain.models import ApprovalBasis
+
         doc = _doc("pd-v1", approval=ApprovalStatus.UNKNOWN)
         result = resolve_revision([doc], DocStage.PD)
-        assert result.status is ResolveStatus.CLARIFICATION_REQUIRED
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.resolved is not None
+        assert result.resolved.document.approval_status is ApprovalStatus.APPROVED
+        assert result.resolved.document.approval_basis is ApprovalBasis.PACKAGE_DEFAULT
+
+    def test_two_unknown_pd_revisions_need_clarification(self) -> None:
+        first = _doc("pd-v1", approval=ApprovalStatus.UNKNOWN, document_code="OV-1")
+        second = _doc("pd-v2", approval=ApprovalStatus.UNKNOWN, document_code="OV-1")
+        with pytest.raises(RevisionConflict, match="pd-v1"):
+            resolve_revision([first, second], DocStage.PD)
+
+    def test_rd_without_stamp_resolves(self) -> None:
+        doc = _doc("rd-v1", stage=DocStage.RD, approval=ApprovalStatus.UNKNOWN)
+        result = resolve_revision([doc], DocStage.RD)
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.resolved is not None
+        assert result.resolved.document.approval_status is ApprovalStatus.UNKNOWN
+        assert result.resolved.document.file_id == "rd-v1"
 
     def test_stage_filter_ignores_other_stages(self) -> None:
         rd_doc = _doc("rd-v1", stage=DocStage.RD)
@@ -127,12 +146,15 @@ class TestRevisionChain:
         assert result.resolved is not None
         assert result.resolved.document.file_id == "pd-v1"
 
-    def test_unknown_approval_also_does_not_become_baseline(self) -> None:
+    def test_unknown_successor_becomes_package_default_head(self) -> None:
+        from kontur.domain.models import ApprovalBasis
+
         v1 = _doc("pd-v1", approval=ApprovalStatus.APPROVED, successor="pd-v2")
         v2 = _doc("pd-v2", approval=ApprovalStatus.UNKNOWN, predecessor="pd-v1")
         result = resolve_revision([v1, v2], DocStage.PD)
         assert result.resolved is not None
-        assert result.resolved.document.file_id == "pd-v1"
+        assert result.resolved.document.file_id == "pd-v2"
+        assert result.resolved.document.approval_basis is ApprovalBasis.PACKAGE_DEFAULT
 
     def test_three_version_chain_resolves_to_latest(self) -> None:
         v1 = _doc("pd-v1", approval_date=date(2024, 1, 1), successor="pd-v2")

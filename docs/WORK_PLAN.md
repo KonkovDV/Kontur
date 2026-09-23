@@ -148,7 +148,7 @@ OIDC/JWKS; TLS termination; production backup/DR; 132/132 экстрактора
 | Шаг брифа | Состояние |
 |---|---|
 | Свести coverage в README и `GH_SITUATION` | Сделано: 44 / 83 / 1 / 4, совпадает с `coverage_snapshot.json` |
-| Новые источники `approval_status` | Не включены. `approval_basis` пишется только для `TITLE_BLOCK` и `INSPECTOR_SELECT`. Индекс и «В производство работ» остаются `UNPROVEN`. Gold 0/6. См. ADR-0013 |
+| Новые источники `approval_status` | Индекс, «В производство работ» и экспертиза остаются не-утверждением. Одна ПД без «не утв.» — `PACKAGE_DEFAULT` (ADR-0014). |
 | `ocr_text` → `AVAILABLE` | Не делать. SILVER n=3013, gate_i_low≈0.426. В коде `MEASURED`, гейт I открыт |
 | Три вопроса организатору | Текст вопросов 20–22 есть. Отправка — действие человека |
 

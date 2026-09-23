@@ -4,6 +4,9 @@
 // Шлюз не имеет права изменять finding_status (ADR-0001).
 
 import express from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import pino from "pino";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
@@ -13,6 +16,10 @@ const app = express();
 const CORE_URL = process.env.KONTUR_CORE_URL ?? "http://localhost:8000";
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_BATCH_BYTES = 200 * 1024 * 1024;
+const PROXY_TIMEOUT_MS = Number(process.env.KONTUR_PROXY_TIMEOUT_MS ?? 600_000);
+const webRoot =
+  process.env.KONTUR_WEB_ROOT ??
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "web");
 
 // Структурированный лог по ТЗ п. 13: timestamp, level, service, message,
 // request_id, user_id.
@@ -37,16 +44,27 @@ app.use((req, res, next) => {
   next();
 });
 
-// TODO(L0): антивирусная проверка до передачи в ядро.
 // RBAC — в Python-ядре (presentation/rbac.py); шлюз не пишет finding_status.
+// Express срезает префикс монтирования. Ядро ждёт полный путь /api/v1/...
 app.use(
   "/api/v1",
   createProxyMiddleware({
     target: CORE_URL,
     changeOrigin: true,
+    proxyTimeout: PROXY_TIMEOUT_MS,
+    timeout: PROXY_TIMEOUT_MS,
+    pathRewrite: (requestPath) =>
+      requestPath.startsWith("/api/v1") ? requestPath : `/api/v1${requestPath}`,
   }),
 );
 
+if (fs.existsSync(webRoot)) {
+  app.use(express.static(webRoot));
+}
+
 app.listen(process.env.PORT ?? 3000, () => {
-  log.info({ core: CORE_URL, MAX_FILE_BYTES, MAX_BATCH_BYTES }, "gateway started");
+  log.info(
+    { core: CORE_URL, MAX_FILE_BYTES, MAX_BATCH_BYTES, webRoot },
+    "gateway started",
+  );
 });

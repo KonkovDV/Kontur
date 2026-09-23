@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "generated_on": "2026-09-23",
-  "export_git_sha": "e9b3e5eeb7f0e33113195b8c6e3c0039c3dd8463",
+  "export_git_sha": "5cf372ac661480ecd16474b1e22301da85289af9",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -11,91 +11,13 @@
   "closes_gate_k": false,
   "closes_gate_l": false,
   "hidden_test_contents_inspected": false,
-  "pr_118_lesson": {
-    "summary": "PR #118 (влит 23.09) исправил галлюцинации ИИ в GH_AGENT_BUS.md.",
-    "corrections": [
-      {
-        "wrong": "file_sha256() живёт в intake.py",
-        "correct": "file_sha256() живёт в kontur.infrastructure.pdfium_tokens",
-        "lesson": "Никогда не писать import-путь без проверки grep/get_file_contents"
-      },
-      {
-        "wrong": "create_scanner_pdf() существует как helper",
-        "correct": "create_scanner_pdf не существует",
-        "lesson": "Не изобретать helper имена без верификации"
-      },
-      {
-        "wrong": "Тест embedded через FPDFDoc_GetAttachmentCount + pytest.skip",
-        "correct": "Тест embedded не писать вообще: пайплайн не читает /EmbeddedFile (GAP-EMB)",
-        "lesson": "Если GAP задокументирован — не писать тест. GAP-EMB: ни тест, ни pytest.skip."
-      },
-      {
-        "wrong": "runner_id=0 + непустой run_id = CI зелёный",
-        "correct": "runner_id=0 и steps=[] = раннер не назначался. CI нет.",
-        "lesson": "CI green = completed + success + runner_id != 0 + steps не []"
-      },
-      {
-        "wrong": "create_or_update_file content= base64_string",
-        "correct": "create_or_update_file content= обычный текст. Инструмент сам кодирует в base64.",
-        "lesson": "Тот же сбой, что #108–#111. Никогда не передавать base64 в content=."
-      },
-      {
-        "wrong": "export_git_sha должен указывать на HEAD (сам на себя)",
-        "correct": "export_git_sha = предыдущий коммит. Файл не может ссылаться на себя.",
-        "lesson": "SHA коммита включает содержимое файла. Отставание на 1 коммит — структурное."
-      },
-      {
-        "wrong": "Блокер #84: false-positive на ИД-0001, ГИП-РД, Согласовано",
-        "correct": "ROLE_OVERRIDE ловит 'you are now', 'act as a', 'ты теперь', 'притворись'. Аббревиатуры АЭК не ловятся.",
-        "lesson": "Блокер для #84 — нужна локальная реализация + живые PDF-сессии."
-      },
-      {
-        "wrong": "Изобретать описания строк KNOWN_GAPS.md по памяти",
-        "correct": "Читать файл через get_file_contents ?ref=<коммит-до-порчи>",
-        "lesson": "Перед восстановлением повреждённого файла — всегда читать его из git history."
-      }
-    ]
-  },
-  "gap_84_architecture": {
-    "summary": "scan_tokens_for_injection() вызывается из _pages_from_blobs после flatten_tokens. Результат пишется в DocumentPassport.injection_clean и PipelineReport.injection_clean_by_file_id. Статус находки и approval не меняются. #84 не закрыт: нет VLM и нет запрета класть текст страницы в system prompt.",
-    "module": "backend/src/kontur/infrastructure/injection_scan.py",
-    "function": "scan_tokens_for_injection",
-    "signature": "scan_tokens_for_injection(tokens: Sequence[PageToken]) -> InjectionScanResult",
-    "call_site": {
-      "file": "backend/src/kontur/application/process_pipeline.py",
-      "function": "_pages_from_blobs",
-      "after_line": "tokens = flatten_tokens(document)",
-      "stored_as": "quality.injection_clean и PipelineReport.injection_clean_by_file_id"
-    },
-    "scanner_properties": {
-      "window_size": 5,
-      "patterns": [
-        "INSTRUCTION_OVERRIDE (EN+RU)",
-        "ROLE_OVERRIDE: 'you are now', 'act as a', '\u0442\u044b \u0442\u0435\u043f\u0435\u0440\u044c', '\u043f\u0440\u0438\u0442\u0432\u043e\u0440\u0438\u0441\u044c'",
-        "PROMPT_LEAK (EN)"
-      ],
-      "safe_default": "is_clean=True (никогда не бросает исключение — пайплайн не падает)",
-      "false_positive_note": "Аббревиатуры АЭК (ИД-0001, ГИП-РД, Согласовано) паттернами НЕ ловятся."
-    },
-    "still_open_for_issue_84": [
-      "Текст страницы не должен попадать в system prompt. Вызов сканера это не гарантирует.",
-      "VLM не подключён. Не добавлять INJECTION_DETECTED как finding_status.",
-      "Живой CI: runner_id=0 и steps=[] не считать прогоном."
-    ]
-  },
-  "academic_synthesis_2026": {
-    "source_doc": "docs/RESEARCH_OSINT_2026.md",
-    "key_conclusions": [
-      {"claim": "Печатный текст: плато OCR", "arxiv": "arXiv:2608.17012 WildHandBench", "impact": "Bake-off ради двух читателей"},
-      {"claim": "Трассируемость — слабое место VLM", "arxiv": "arXiv:2608.02149 DocTrace", "impact": "evidence_group с координатами"},
-      {"claim": "Подсчёт объектов проваливается", "arxiv": "arXiv:2607.07615 ABACUS", "impact": "14 правил → extractor_missing"},
-      {"claim": "Чертежи требуют вектора", "arxiv": "arXiv:2608.06244 PolarSym", "impact": "вектор PDF/DWG-экспорт"},
-      {"claim": "Норма как данные", "arxiv": "arXiv:2607.21883 ARCHER", "impact": "Kontur data/matrix/rules/ совпадает"},
-      {"claim": "PDF как недоверенный ввод", "arxiv": "OWASP LLM; arXiv:2609.22712", "impact": "scan_tokens_for_injection — обязательная стадия (GAP-INJ-SCAN)"}
-    ]
-  },
-  "allowlist_object_ids": ["OBJ-NOVOSLOBODSKAYA", "OBJ-TYUMENSKAYA-5-GOLD-SEED"],
-  "hidden_test_object_ids": ["OBJ-RECHNIKOV-7-7"],
+  "allowlist_object_ids": [
+    "OBJ-NOVOSLOBODSKAYA",
+    "OBJ-TYUMENSKAYA-5-GOLD-SEED"
+  ],
+  "hidden_test_object_ids": [
+    "OBJ-RECHNIKOV-7-7"
+  ],
   "work_plan_steps": {
     "0_http_pipeline": "landed",
     "1_ocr_in_request": "code_landed_gate_i_open",
@@ -106,46 +28,15 @@
     "6_contest_vertical_slice": "inspector_etalon_landed_gates_open"
   },
   "open_gaps": [
-    "RT-2609-21",
+    "GAP-CAP-OCR",
     "GAP-OCR-ROT",
     "GAP-STAMP",
-    "GAP-DWG",
     "GAP-IOS4-VAL",
+    "RT-2609-21",
     "GAP-FREE-SEARCH",
-    "GAP-CAP-OCR",
-    "GAP-SPLIT",
-    "GAP-ETALON-UI",
-    "GAP-EMB",
-    "GAP-INJ-SCAN"
+    "GAP-DWG",
+    "GAP-SPLIT"
   ],
-  "draft_prs": [
-    {
-      "number": 115,
-      "branch": "feat/adversarial-pdf-pack",
-      "head": "7ec43b74220c12cedc8af2145958de8162f3281c",
-      "title": "tests(adversarial): RT-C-ext / RT-B-ext via real PDF bytes + intake/visual pipeline calls",
-      "tests": 13,
-      "status": "draft",
-      "relates_to": "#80",
-      "closes": null,
-      "ci_runner": "runner_id=0 — not a real run; do not treat as green CI",
-      "note": "All 13 tests call real pipeline functions. GAP-EMB added to KNOWN_GAPS.md on this branch. Do not merge until live runner passes."
-    }
-  ],
-  "extractor_triage_complete": {
-    "note": "All 83 extractor_missing rules have documented triage decisions.",
-    "triage_docs": [
-      "data/matrix/family_triage.json",
-      "data/matrix/class_ladder_triage.json",
-      "data/matrix/number_family_triage.json"
-    ],
-    "blockers_by_family": {
-      "number_55": ["drawing_measurement","per_element_table","object_counting","area_from_polygon","layered_composite","multi_field_number","zone_geometry","slope_from_geometry","schedule_chart","daylight_calculation"],
-      "presence_11": ["graphic","spatial_count","mixed"],
-      "enum_9": ["two_sided_tolerance","composite_value","multi_field_number","unordered_category","inverted_ladder","feature_set","no_ladder"],
-      "exact_field_8": ["graphic","text_composite"]
-    }
-  },
   "coverage_counts": {
     "advisory": 1,
     "executable": 44,
@@ -165,7 +56,7 @@
     "ocr_text_MEASURED_below_gate"
   ],
   "do_not": [
-    "Merge leftover OCR branches (PR #54, 2ddc2b3)",
+    "Merge leftover OCR branches (PR #54, 2ddc2b3 one-line ocr_tesseract.py)",
     "Open TEST_HIDDEN / РАЗМЕЧЕННЫЙ_TEST__213 / Rechnikov for thresholds",
     "Set ocr_text AVAILABLE without GOLD Wilson",
     "Close GAP-IOS4-VAL on 15 gold rows or SILVER CA",
@@ -174,6 +65,7 @@
     "Treat static JWT public key as production OIDC/JWKS",
     "Open ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip or TEST_HIDDEN answers for thresholds",
     "Treat participant package without answers v2.0 as frozen val",
+    "Treat object 10_Полярная_25_СОШ1100к7 as frozen val or matrix gold",
     "Write CONFIRMED_VIOLATION from the automaton or LLM",
     "Guess non-gold RD_ID_MIXED as RD+ID",
     "Treat GOST Согласовано/ГИП header as approved etalon",
@@ -183,17 +75,7 @@
     "Require kind=materialized or assembled=true on TZ protocol JSON",
     "Treat broker confirm or inbox RECEIVED as process SYNCED / Rin ACK",
     "Do not add OIDC/TLS/RabbitMQ 4.x/observability instead of contest slice",
-    "Treat inspector-selected etalon as stamp evidence or close gate J",
-    "Remove draft from PR #115 before live CI runner passes",
-    "Add Closes #80 to PR #115",
-    "Assert triage done and promote extractor_missing without new extractors",
-    "Write import paths or helper names without verifying via get_file_contents",
-    "Pass base64 string as content= to create_or_update_file (tool encodes itself — same bug as #108–#111)",
-    "Write a test for GAP-EMB (/EmbeddedFile): do not write this test at all, pytest.skip also not acceptable",
-    "Write a test for any documented GAP without pytest.skip at top with the GAP id as reason",
-    "Close issue #84 from cloud: requires local agent + live PDF sessions for integration test",
-    "Claim academic SOTA metrics as Kontur metrics without frozen val and Wilson 95% CI",
-    "Invent KNOWN_GAPS.md row descriptions from memory: always read original from git history before restoring"
+    "Treat inspector-selected etalon as stamp evidence or close gate J"
   ],
   "commands": {
     "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",
@@ -207,30 +89,41 @@
     "gold_inventory": "data/dataset/gold_inventory.json",
     "gold_evidence_files": "data/dataset/gold_evidence_files.json",
     "coverage_snapshot": "data/matrix/coverage_snapshot.json",
-    "extractor_families": "data/matrix/extractor_families.json",
-    "family_triage": "data/matrix/family_triage.json",
-    "class_ladder_triage": "data/matrix/class_ladder_triage.json",
-    "number_family_triage": "data/matrix/number_family_triage.json",
+    "index_stats": "data/dataset/train_public_index_stats.json",
+    "train_public_engineering": "data/dataset/train_public_engineering.json",
+    "train_public_pred": "data/dataset/train_public_pred.jsonl",
     "work_plan": "docs/WORK_PLAN.md",
     "known_gaps": "docs/KNOWN_GAPS.md",
     "performance": "docs/PERFORMANCE.md",
     "gate_l_runbook": "docs/GATE_L_RUNBOOK.md",
     "pr_queue": "docs/PR_QUEUE.md",
+    "organizer_gold": "docs/ORGANIZER_GOLD.md",
+    "dataset_package": "docs/DATASET_PACKAGE.md",
+    "questions_to_organizer": "docs/QUESTIONS_TO_ORGANIZER.md",
+    "train_public_module": "backend/src/kontur/evaluation/train_public.py",
+    "ocr_pilot_module": "backend/src/kontur/evaluation/ocr_pilot.py",
+    "tz_scorecard": "data/dataset/tz_scorecard.json",
+    "extractor_families": "data/matrix/extractor_families.json",
+    "family_triage": "data/matrix/family_triage.json",
+    "class_ladder_triage": "data/matrix/class_ladder_triage.json",
+    "number_family_triage": "data/matrix/number_family_triage.json",
     "research_osint": "docs/RESEARCH_OSINT_2026.md",
+    "extractor_family_triage": "docs/EXTRACTOR_FAMILY_TRIAGE.md",
+    "class_ladder_triage_doc": "docs/CLASS_LADDER_TRIAGE.md",
+    "number_family_triage_doc": "docs/NUMBER_FAMILY_TRIAGE.md",
+    "gh_situation": "docs/GH_SITUATION_2026_09_21.md",
     "gh_agent_bus": "docs/GH_AGENT_BUS.md",
-    "adversarial_pdf_tests": "backend/tests/adversarial/test_adversarial_pdf_pack.py",
-    "injection_scan": "backend/src/kontur/infrastructure/injection_scan.py",
-    "process_pipeline": "backend/src/kontur/application/process_pipeline.py"
+    "submission_pack": "docs/SUBMISSION_PACK.md",
+    "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
+    "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md",
+    "adr_0011": "docs/adr/0011-sync-lifecycle-and-manual-retry.md",
+    "adr_0012": "docs/adr/0012-transactional-inbox.md"
   },
-  "leftover_refs_do_not_merge": ["feat/ocr-gate-i-crop3x-oem1", "feat/ocr-300dpi-step2-verifying"],
-  "repo_visibility": "public",
-  "decisions_2026_09_23": {
-    "source": "запись сессии 16.09 и доска оценивания; вопросы 20–22 не отправлены",
-    "hidden_test": "карантин сохраняется",
-    "approval_policy": "ADR-0013 действует; смена эталона ПД — отдельный ADR",
-    "license": "Apache-2.0"
-  },
-  "index_stats_present": false,
+  "leftover_refs_do_not_merge": [
+    "feat/ocr-gate-i-crop3x-oem1",
+    "feat/ocr-300dpi-step2-verifying"
+  ],
+  "index_stats_present": true,
   "verdict_echo": {
     "frozen_validation_corpus_for_132": false,
     "closes_gate_j": false

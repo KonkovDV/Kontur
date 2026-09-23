@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import multiprocessing
+import os
 import time
 from collections.abc import Callable
 from functools import partial
@@ -22,6 +23,18 @@ T = TypeVar("T")
 DEFAULT_PDF_PARSE_TIMEOUT_S = 30.0
 _JOIN_S = 2.0
 _POLL_S = 0.05
+
+
+def pdf_parse_timeout_s() -> float:
+    """Лимит разбора. Пакетный прогон задаёт KONTUR_PDF_PARSE_TIMEOUT_S."""
+
+    raw = os.environ.get("KONTUR_PDF_PARSE_TIMEOUT_S")
+    if raw is None or not raw.strip():
+        return DEFAULT_PDF_PARSE_TIMEOUT_S
+    value = float(raw)
+    if value <= 0:
+        raise ValueError("KONTUR_PDF_PARSE_TIMEOUT_S должен быть положительным")
+    return value
 
 
 class PdfParseTimeoutError(TimeoutError):

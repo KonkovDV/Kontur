@@ -100,6 +100,87 @@ paths:
               schema: { $ref: "#/components/schemas/ProcessStatus" }
         "404": { description: Процесс не найден }
 
+  /processes/{process_id}/documents:
+    get:
+      summary: Документы процесса — стадия, шифр, утверждение, актуальность
+      operationId: getProcessDocuments
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          description: Список загруженных файлов
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [process_id, documents]
+                properties:
+                  process_id: { type: string }
+                  documents:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - file_id
+                        - filename
+                        - doc_stage
+                        - approval_status
+                        - approval_basis
+                        - actuality
+                      properties:
+                        file_id: { type: string }
+                        filename: { type: string }
+                        doc_stage: { type: string, enum: [PD, RD, ID] }
+                        section: { type: ["string", "null"] }
+                        cipher: { type: ["string", "null"] }
+                        revision: { type: ["string", "null"] }
+                        approval_status:
+                          type: string
+                          enum: [APPROVED, NOT_APPROVED, UNKNOWN]
+                        approval_basis:
+                          type: string
+                          enum: [TITLE_BLOCK, INSPECTOR_SELECT, PACKAGE_DEFAULT, UNPROVEN]
+                        actuality:
+                          type: string
+                          enum: [CURRENT, SUPERSEDED, CLARIFICATION_REQUIRED, UNREADABLE]
+        "404": { description: Процесс не найден }
+
+  /processes/{process_id}/files/{file_id}/pages/{page}.png:
+    get:
+      summary: PNG страницы файла, целиком или по bbox
+      operationId: getFilePagePng
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters:
+        - { $ref: "#/components/parameters/ProcessId" }
+        - name: file_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: page
+          in: path
+          required: true
+          description: Номер страницы с 1
+          schema: { type: integer, minimum: 1 }
+        - name: bbox
+          in: query
+          required: false
+          description: "лево,низ,право,верх в [0;1], ось Y вверх"
+          schema: { type: string }
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          description: Растр страницы
+          content:
+            image/png:
+              schema:
+                type: string
+                contentMediaType: image/png
+        "400": { description: bbox не разобран }
+        "404": { description: Процесс, файл или страница не найдены }
+
   /processes/{process_id}/protocol:
     get:
       summary: Протокол проверки (структура по Приложению 2 ТЗ)
