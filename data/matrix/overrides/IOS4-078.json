@@ -21,7 +21,17 @@
     "regex": "(\\d{2,}(?:[.,]\\d+)?\\s*[×xх]\\s*\\d{2,}(?:[.,]\\d+)?)",
     "anchors": ["сечение воздуховода", "воздуховод", "вытяжная вентиляция"],
     "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit", "multiply_dimensions"],
-    "dual_read_required": true
+    "dual_read_required": true,
+    "params": {
+      "angle_deg": 2,
+      "min_overlap": 0.6,
+      "min_length_pt": 20,
+      "gap_min_pt": 2,
+      "gap_max_pt": 60,
+      "stamp_y": 0.85,
+      "read_tolerance_rel": 0.02,
+      "label_max_norm": 0.08
+    }
   },
   "comparator": {
     "operator": "ge",

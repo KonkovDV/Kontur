@@ -604,7 +604,7 @@ def evaluate_rule(
             )
         if dual_req and number_hit.extraction.second_read_agrees is not True:
             disagree = (
-                "два замера зазора не совпали"
+                "два чтения сечения не совпали"
                 if extractor_type == "geometry"
                 else "два чтения числа не совпали"
             )
