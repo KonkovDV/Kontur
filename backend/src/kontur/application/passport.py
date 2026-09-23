@@ -87,6 +87,7 @@ class DocumentPassport:
     extraction_confidence: float | None = None
     needs_clarification: bool = False
     clarification_reason: str | None = None
+    injection_clean: bool | None = None
 
     def to_schema(self) -> dict[str, object]:
         stage = self.doc_stage.value if self.doc_stage is not None else "UNKNOWN"
@@ -101,6 +102,8 @@ class DocumentPassport:
             quality["media_box"] = list(self.media_box)
         if self.crop_box is not None:
             quality["crop_box"] = list(self.crop_box)
+        if self.injection_clean is not None:
+            quality["injection_clean"] = self.injection_clean
         payload: dict[str, object] = {
             "file_id": self.file_id,
             "file_hash": self.file_hash,
@@ -245,6 +248,7 @@ def read_passport(
     crop_box: tuple[float, ...] | None = None,
     object_id: str | None = None,
     text_render_agreement: bool | None = None,
+    injection_clean: bool | None = None,
 ) -> DocumentPassport:
     """Прочитать паспорт. Не заполняет шифр из имени файла."""
 
@@ -320,6 +324,7 @@ def read_passport(
         crop_box=crop_box,
         has_embedded_text=has_text,
         text_render_agreement=text_render_agreement,
+        injection_clean=injection_clean,
         extraction_confidence=confidence,
         needs_clarification=needs,
         clarification_reason=reason,

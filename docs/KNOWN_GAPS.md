@@ -15,7 +15,7 @@
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
 | GAP-ETALON-UI | инспекторский SELECT_REVISION есть в API, в UI кнопки назначения эталона нет | двухпанельный viewer (#76) не закрывает J; POST `.../revisions/{file_id}/select` | конкурсный срез |
 | GAP-EMB | Вложения PDF `/EmbeddedFile` | Пайплайн их не читает. Тест на `FPDFDoc_GetAttachmentCount` не писать | #80 |
-| GAP-INJ-SCAN | `scan_tokens_for_injection` не вызывается из `_pages_from_blobs` после `flatten_tokens` | Импорта в `process_pipeline.py` нет. Схема без вызова не закрывает #84 | #84 |
+| GAP-INJ-SCAN | Сканер инъекций вызывается после `flatten_tokens` и пишет `injection_clean` | Статус находки не меняется. Текст страницы не инструкция. #84 не закрыт: нет VLM и нет system prompt | #84 |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
 `put_finding` по `evidence_group_id`. Очередь после рестарта — `process_findings`,
