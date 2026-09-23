@@ -111,6 +111,19 @@ export function fragmentByRole(
   return card.evidence_group?.fragments.find((item) => item.role === role);
 }
 
+export const STAGE_PANES = ["PD", "RD", "ID"] as const;
+
+export type StagePane = (typeof STAGE_PANES)[number];
+
+export function fragmentByStage(
+  card: EvidenceCard,
+  stage: StagePane,
+): FragmentView | undefined {
+  return card.evidence_group?.fragments.find(
+    (item) => item.document.doc_stage === stage,
+  );
+}
+
 export function formatBBox(bbox: BBox): string {
   const fmt = (value: number) => value.toFixed(3);
   return `${fmt(bbox.x0)}, ${fmt(bbox.y0)} → ${fmt(bbox.x1)}, ${fmt(bbox.y1)}`;

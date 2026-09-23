@@ -21,7 +21,7 @@ export function EvidencePane({ title, role, fragment }: PaneProps) {
   const bbox = polygon && polygon.length >= 3 ? bboxFromPolygon(polygon) : null;
   const missing = fragment === undefined;
   return (
-    <section className="pane evidence-pane" aria-label={role}>
+    <section className="pane evidence-pane" aria-label={title} data-role={role}>
       <h2>{title}</h2>
       {missing ? (
         <p className="missing-hint">Нет фрагмента: отсутствие доказательства, не нарушение.</p>
