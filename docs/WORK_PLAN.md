@@ -48,8 +48,10 @@ OSINT / bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2
 Срез на `main`: `ocr_tesseract.py` заполняет пустые raster-страницы
 при наличии Tesseract; `evaluate_rule` зовёт **region-crop** как независимый
 второй источник для `dual_read_required`. `ocr_text` остаётся `UNAVAILABLE`.
-Harness: `make ocr-pilot` (Docker + Tesseract). SILVER, без Речникова;
-нижняя граница Wilson ниже порога приёмки. `ocr_text` остаётся `UNAVAILABLE`.
+Harness: `make ocr-pilot` (Docker + Tesseract). SILVER, без Речникова.
+Локальный прогон 23.09.2026: n=5935, gate_i_low≈0.434.
+Повтор на `OBJ-VIOLATION-EXAMPLES` после замены двойников: n=3013, gate_i_low≈0.426.
+Оба ниже порога приёмки. `ocr_text` остаётся `UNAVAILABLE`.
 
 | | |
 |---|---|
@@ -137,7 +139,7 @@ OIDC/JWKS; TLS termination; production backup/DR; 132/132 экстрактора
 
 Календарь ниже повторяет дни брифа. Числа покрытия сверены со снимком 23.09, не с текстом брифа: **44** executable, **83** extractor_missing, **1** advisory, **4** source_missing. README и `GH_SITUATION_2026_09_21.md` показывают те же 44 / 83 / 1 / 4. Гейты I, J, K и L открыты. При конфликте брифа с `AGENTS.md` или с неотвеченным вопросом 20–22 остаётся инвариант. Вопросы сформулированы в `QUESTIONS_TO_ORGANIZER.md` и не отправлены: репозиторий не пишет, что они ушли.
 
-Политика утверждения — [ADR-0013](adr/0013-approval-sources-pending-written-answer.md). Gold TRAIN_PUBLIC остаётся 0/6, пока у ПД F0171 нет заполненной графы «Утвердил» и ФИО. `ocr_text` остаётся `UNAVAILABLE`. OCR-ветки `16f3a06` и `2ddc2b3` не мержить.
+Политика утверждения — [ADR-0013](adr/0013-approval-sources-pending-written-answer.md). Gold TRAIN_PUBLIC остаётся 0/6. Даже если инспектор выберет том ПД F0171, IOS4-078 и IOS4-079 на этих PDF дают `LOW_QUALITY`: у якоря нет числа правила (сечение `A×B` или расход `м³/ч`) ни в одном окне. Шесть gold-проверок помечены как визуальная конфигурация листов, не как текстовое число. `ocr_text` остаётся `UNAVAILABLE`. OCR-ветки `16f3a06` и `2ddc2b3` не мержить. Разбор чертежа запущен: `drawing_analysis` = `DEGRADED`. На листах gold (ПД стр. 104 ↔ РД стр. 17 и ПД стр. 88 ↔ РД стр. 18) сетка PATH-штрихов сравнима, Jaccard 0.367 и 0.555. Это не кандидат и не попадание: порог под эти четыре листа не ставился, гейт I открыт.
 
 На `main` сканер инъекций ещё не вызывается. Вызов после `flatten_tokens` и поле `injection_clean` — открытый [PR #120](https://github.com/KonkovDV/Kontur/pull/120). Вердикт он не меняет. `Closes #84` не ставить.
 

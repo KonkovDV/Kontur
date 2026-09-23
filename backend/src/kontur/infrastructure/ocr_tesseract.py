@@ -12,11 +12,14 @@
 from __future__ import annotations
 
 import functools
+import os
+import re
 import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from importlib import import_module
 from io import BytesIO
+from pathlib import Path
 
 from kontur.application.extractors.number import PageToken
 from kontur.domain.coordinates import PageFrame, to_normalized
@@ -31,14 +34,68 @@ MIN_WORD_CONF = 40.0
 REGION_PAD_FRAC = 0.15
 REGION_PAD_PT = 8.0
 _TESSERACT_LANGS = ("rus+eng", "eng")
+# PSM 7 на узкой строке часто возвращает пусто. Следующий режим — только тогда.
+_PSM_IF_EMPTY: dict[int, tuple[int, ...]] = {7: (13, 6)}
+# Ниже этой высоты кроп растягивается до цели. 40 px заданы до замера, не подбором.
+_SHORT_LINE_PX = 32
+_TARGET_LINE_PX = 40
+_CYRILLIC = re.compile(r"[А-Яа-яЁё]")
+_WORD = re.compile(r"\S+")
+_WORD_CORE = re.compile(r"^(\W*)(.*?)(\W*)$")
+_LATIN_LOOKALIKES = str.maketrans(
+    {
+        "A": "А",
+        "B": "В",
+        "C": "С",
+        "E": "Е",
+        "H": "Н",
+        "K": "К",
+        "M": "М",
+        "O": "О",
+        "P": "Р",
+        "T": "Т",
+        "X": "Х",
+        "a": "а",
+        "c": "с",
+        "e": "е",
+        "o": "о",
+        "p": "р",
+        "x": "х",
+        "y": "у",
+    }
+)
+# Целиком, не побуквенно: A не похожа на И, но Tesseract так читает «ИНН».
+_INN_AS_LATIN = frozenset({"AHH", "HHH", "NHH"})
 
 UserRegion = tuple[float, float, float, float]
+
+
+def _ensure_tesseract_runtime() -> None:
+    """Найти бинарник и rus, если оболочка ещё не подхватила пользовательский PATH.
+
+    Не меняет capabilities и не подменяет системный tessdata в CI.
+    """
+
+    if shutil.which("tesseract") is None:
+        program_files = os.environ.get("PROGRAMFILES", r"C:\Program Files")
+        candidate = Path(program_files) / "Tesseract-OCR" / "tesseract.exe"
+        if candidate.is_file():
+            os.environ["PATH"] = str(candidate.parent) + os.pathsep + os.environ.get("PATH", "")
+    if os.environ.get("TESSDATA_PREFIX"):
+        return
+    local_app = os.environ.get("LOCALAPPDATA", "")
+    if not local_app:
+        return
+    local = Path(local_app) / "kontur" / "tessdata"
+    if (local / "rus.traineddata").is_file() and (local / "eng.traineddata").is_file():
+        os.environ["TESSDATA_PREFIX"] = str(local)
 
 
 @functools.lru_cache(maxsize=1)
 def tesseract_available() -> bool:
     """PATH + импорт pytesseract. Не прогон пилота и не capabilities."""
 
+    _ensure_tesseract_runtime()
     if shutil.which("tesseract") is None:
         return False
     try:
@@ -90,6 +147,51 @@ def expand_user_region(polygon: Polygon, frame: PageFrame) -> UserRegion | None:
     if right <= left or top <= bottom:
         return None
     return (left, bottom, right, top)
+
+
+def _has_cyrillic(text: str) -> bool:
+    return _CYRILLIC.search(text) is not None
+
+
+def _fold_word(word: str) -> str:
+    match = _WORD_CORE.match(word)
+    if match is None:
+        return word
+    prefix, core, suffix = match.group(1), match.group(2), match.group(3)
+    if core.upper() in _INN_AS_LATIN and core.isascii():
+        return f"{prefix}ИНН{suffix}"
+    return f"{prefix}{core.translate(_LATIN_LOOKALIKES)}{suffix}"
+
+
+def fold_latin_lookalikes(text: str) -> str:
+    """Латинские двойники → кириллица, если слово или сосед уже русские.
+
+    Слово из одной латиницы без русского соседа не трогается: шифр, ID, ГОСТ.
+    Цифры не входят в таблицу замены.
+    """
+
+    words = list(_WORD.finditer(text))
+    if not words:
+        return text
+    chars = list(text)
+    for index, match in enumerate(words):
+        word = match.group()
+        prev_cyr = index > 0 and _has_cyrillic(words[index - 1].group())
+        next_cyr = index + 1 < len(words) and _has_cyrillic(words[index + 1].group())
+        if not _has_cyrillic(word) and not prev_cyr and not next_cyr:
+            continue
+        folded = _fold_word(word)
+        chars[match.start() : match.end()] = list(folded)
+    return "".join(chars)
+
+
+def fold_token_texts(texts: Sequence[str]) -> tuple[str, ...]:
+    """Та же замена по соседним токенам. Пробел внутри токена не ожидается."""
+
+    folded = fold_latin_lookalikes(" ".join(texts)).split(" ")
+    if len(folded) != len(texts):
+        return tuple(texts)
+    return tuple(folded)
 
 
 def tokens_from_tesseract_payload(
@@ -147,7 +249,10 @@ def tokens_from_tesseract_payload(
                 engine=ExtractionEngine.OCR,
             )
         )
-    return tuple(out)
+    if not out:
+        return ()
+    folded = fold_token_texts([token.text for token in out])
+    return tuple(replace(token, text=text) for token, text in zip(out, folded, strict=True))
 
 
 class PageImageCache:
@@ -238,18 +343,44 @@ def ocr_image_bytes(data: bytes, *, psm: int = 7) -> str:
         image = open_image(BytesIO(data))
     except (OSError, ValueError):
         return ""
+    image = _upscale_short_crop(image)
     tess_error = getattr(pytesseract, "TesseractError", RuntimeError)
     to_string = getattr(pytesseract, "image_to_string", None)
     if to_string is None:
         return ""
-    for lang in _TESSERACT_LANGS:
-        try:
-            text = to_string(image, lang=lang, config=f"--psm {psm}")
-        except tess_error:
-            continue
-        if isinstance(text, str) and text.strip():
-            return text.strip()
+    for current in (psm, *_PSM_IF_EMPTY.get(psm, ())):
+        for lang in _TESSERACT_LANGS:
+            try:
+                text = to_string(image, lang=lang, config=f"--psm {current}")
+            except (tess_error, UnicodeError, OSError):
+                continue
+            if isinstance(text, str) and text.strip():
+                return fold_latin_lookalikes(text.strip())
     return ""
+
+
+def _upscale_short_crop(image: object) -> object:
+    """Строка ниже 32 px → высота 40. Без бинаризации."""
+
+    size = _image_size(image)
+    if size is None:
+        return image
+    width, height = size
+    if height <= 0 or height >= _SHORT_LINE_PX:
+        return image
+    resize = getattr(image, "resize", None)
+    if resize is None:
+        return image
+    try:
+        pillow = import_module("PIL.Image")
+    except ImportError:
+        return image
+    resampling = getattr(getattr(pillow, "Resampling", pillow), "LANCZOS", 1)
+    new_width = max(1, int(round(width * _TARGET_LINE_PX / height)))
+    try:
+        return resize((new_width, _TARGET_LINE_PX), resampling)
+    except (TypeError, ValueError):
+        return image
 
 
 def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocumentTokens:
@@ -389,7 +520,7 @@ def _image_to_data(
                 config=f"--psm {psm}",
                 output_type=dict_type,
             )
-        except tess_error:
+        except (tess_error, UnicodeError, OSError):
             continue
         if isinstance(payload, dict) and payload.get("text"):
             return payload

@@ -63,6 +63,30 @@ def _completeness_no_rd() -> dict[DocStage, Completeness]:
     }
 
 
+def test_drawing_label_without_rule_number_stays_low_quality() -> None:
+    """Подпись чертежа без числа правила не становится кандидатом, даже если штамп утверждён."""
+
+    for code, pd_words, rd_words in (
+        ("IOS4-078", ("Венткамера",), ("план", "ОВ")),
+        (
+            "IOS4-079",
+            ("приточная", "установка", "П", "19"),
+            ("Венткамера", "012"),
+        ),
+    ):
+        rule = _REGISTRY.get(code)
+        pages = {
+            DocStage.PD: _page(DocStage.PD, code, *pd_words),
+            DocStage.RD: _page(DocStage.RD, code, *rd_words),
+        }
+        result = evaluate_rule(
+            rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness()
+        )
+        assert result.finding.finding_status is FindingStatus.LOW_QUALITY
+        assert result.finding.finding_status is not FindingStatus.CANDIDATE
+        assert result.finding.evidence_group_id is None
+
+
 def test_ios4_078_is_executable() -> None:
     rule = _REGISTRY.get("IOS4-078")
     assert rule["coverage"] == "executable"
