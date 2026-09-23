@@ -36,7 +36,8 @@ For every new test function:
 
 - [ ] Calls real pipeline function (no mock, no raw `hashlib`)
 - [ ] No `pytest.skip` on the assertion path
-- [ ] No `FPDFDoc_GetAttachmentCount` (GAP-EMB; skip at top with reason or omit)
+- [ ] No `FPDFDoc_GetAttachmentCount` — GAP-EMB: do not write this test at all
+- [ ] For any other documented GAP: `pytest.skip` at top with the GAP identifier as reason
 - [ ] Assertions are specific (`assert a and b`, not `assert True` or `a or b`)
 - [ ] Overlay: both objects at same `(x, y)`; rotation: `page.set_rotation(90)`
 - [ ] Injection phrase fits 200×200 pt page before `assert tokens`
