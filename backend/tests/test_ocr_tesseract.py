@@ -253,6 +253,38 @@ def test_ocr_module_does_not_fork_character_accuracy() -> None:
     assert callable(metrics.wilson)
 
 
+def test_empty_single_line_psm_falls_back_to_raw_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (8, 8), "white").save(buffer, format="PNG")
+    seen: list[str] = []
+
+    class _Tess:
+        TesseractError = RuntimeError
+
+        @staticmethod
+        def image_to_string(_image: object, lang: str, config: str) -> str:
+            seen.append(f"{lang} {config}")
+            if "--psm 13" in config and lang == "rus+eng":
+                return "внутригородская"
+            return ""
+
+    monkeypatch.setattr(ocr_tesseract, "tesseract_available", lambda: True)
+
+    def _import(name: str) -> object:
+        if name == "pytesseract":
+            return _Tess
+        return __import__(name, fromlist=["*"])
+
+    monkeypatch.setattr(ocr_tesseract, "import_module", _import)
+    assert ocr_tesseract.ocr_image_bytes(buffer.getvalue()) == "внутригородская"
+    assert any("--psm 13" in item for item in seen)
+    assert not any("--psm 6" in item for item in seen)
+
+
 def test_ocr_render_scale_is_300_dpi() -> None:
     assert ocr_tesseract.OCR_RENDER_DPI == 300.0
     assert ocr_tesseract.PDF_USER_DPI == 72.0

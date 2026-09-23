@@ -73,6 +73,10 @@ PSM 7→6→8 (первый непустой). Корпус тот же, SILVER 
 mean_ca≈0.760, tz_low≈0.581, gate_i_low≈0.538. Доля строк над порогом упала;
 в `ocr_tesseract.py` на `main` этот пайплайн не влит. `GAP-CAP-OCR` открыт.
 
+Локальный прогон 23.09.2026, Tesseract 5.4, `rus+eng`, PSM 7 и при пустом ответе PSM 13, затем 6.
+Корпус тот же SILVER, n=5935, без Речникова. mean_ca≈0.731, tz_low≈0.477, gate_i_low≈0.434.
+`tz_met=false`, `closes_gate_i=false`. Это не GOLD и не смена `ocr_text`.
+
 ## Артефакты гейта I
 
 | Файл | Назначение |

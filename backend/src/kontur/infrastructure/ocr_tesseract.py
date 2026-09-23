@@ -12,11 +12,13 @@
 from __future__ import annotations
 
 import functools
+import os
 import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from importlib import import_module
 from io import BytesIO
+from pathlib import Path
 
 from kontur.application.extractors.number import PageToken
 from kontur.domain.coordinates import PageFrame, to_normalized
@@ -31,14 +33,38 @@ MIN_WORD_CONF = 40.0
 REGION_PAD_FRAC = 0.15
 REGION_PAD_PT = 8.0
 _TESSERACT_LANGS = ("rus+eng", "eng")
+# PSM 7 на узкой строке часто возвращает пусто. Следующий режим — только тогда.
+_PSM_IF_EMPTY: dict[int, tuple[int, ...]] = {7: (13, 6)}
 
 UserRegion = tuple[float, float, float, float]
+
+
+def _ensure_tesseract_runtime() -> None:
+    """Найти бинарник и rus, если оболочка ещё не подхватила пользовательский PATH.
+
+    Не меняет capabilities и не подменяет системный tessdata в CI.
+    """
+
+    if shutil.which("tesseract") is None:
+        program_files = os.environ.get("PROGRAMFILES", r"C:\Program Files")
+        candidate = Path(program_files) / "Tesseract-OCR" / "tesseract.exe"
+        if candidate.is_file():
+            os.environ["PATH"] = str(candidate.parent) + os.pathsep + os.environ.get("PATH", "")
+    if os.environ.get("TESSDATA_PREFIX"):
+        return
+    local_app = os.environ.get("LOCALAPPDATA", "")
+    if not local_app:
+        return
+    local = Path(local_app) / "kontur" / "tessdata"
+    if (local / "rus.traineddata").is_file() and (local / "eng.traineddata").is_file():
+        os.environ["TESSDATA_PREFIX"] = str(local)
 
 
 @functools.lru_cache(maxsize=1)
 def tesseract_available() -> bool:
     """PATH + импорт pytesseract. Не прогон пилота и не capabilities."""
 
+    _ensure_tesseract_runtime()
     if shutil.which("tesseract") is None:
         return False
     try:
@@ -242,13 +268,14 @@ def ocr_image_bytes(data: bytes, *, psm: int = 7) -> str:
     to_string = getattr(pytesseract, "image_to_string", None)
     if to_string is None:
         return ""
-    for lang in _TESSERACT_LANGS:
-        try:
-            text = to_string(image, lang=lang, config=f"--psm {psm}")
-        except tess_error:
-            continue
-        if isinstance(text, str) and text.strip():
-            return text.strip()
+    for current in (psm, *_PSM_IF_EMPTY.get(psm, ())):
+        for lang in _TESSERACT_LANGS:
+            try:
+                text = to_string(image, lang=lang, config=f"--psm {current}")
+            except (tess_error, UnicodeError, OSError):
+                continue
+            if isinstance(text, str) and text.strip():
+                return text.strip()
     return ""
 
 
@@ -389,7 +416,7 @@ def _image_to_data(
                 config=f"--psm {psm}",
                 output_type=dict_type,
             )
-        except tess_error:
+        except (tess_error, UnicodeError, OSError):
             continue
         if isinstance(payload, dict) and payload.get("text"):
             return payload

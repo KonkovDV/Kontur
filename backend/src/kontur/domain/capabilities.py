@@ -103,13 +103,14 @@ def live_kit() -> tuple[Capability, ...]:
 
 
 def declared_capabilities() -> tuple[Capability, ...]:
-    """Честный снимок: вектор жив; OCR, чертёж и LLM в запросе не стоят."""
+    """Векторный текст жив. Штрихи листа читаются, но не измеряют сечение.
+    OCR и LLM в запросе не стоят."""
 
     return (
         describe("vector_text", CapStatus.AVAILABLE),
         describe("ocr_text", CapStatus.UNAVAILABLE),
         describe("ocr_tables", CapStatus.UNAVAILABLE),
-        describe("drawing_analysis", CapStatus.UNAVAILABLE),
+        describe("drawing_analysis", CapStatus.DEGRADED),
         describe("llm_advisory", CapStatus.UNAVAILABLE),
     )
 
@@ -131,6 +132,7 @@ def capabilities_payload() -> dict[str, object]:
         "health": engine_health_summary(declared),
         "note": (
             "overall считается по живому пути (векторный текст). "
-            "UNAVAILABLE у OCR/чертежа — явный пробел, не тихий успех."
+            "OCR остаётся UNAVAILABLE. drawing_analysis DEGRADED: "
+            "сетка штрихов листа читается и не закрывает гейт I."
         ),
     }
