@@ -285,6 +285,43 @@ def test_empty_single_line_psm_falls_back_to_raw_line(monkeypatch: pytest.Monkey
     assert not any("--psm 6" in item for item in seen)
 
 
+def test_latin_lookalikes_fold_only_near_cyrillic() -> None:
+    assert ocr_tesseract.fold_latin_lookalikes("номер AHH организации") == "номер ИНН организации"
+    assert ocr_tesseract.fold_latin_lookalikes("дом CTP. далее") == "дом СТР. далее"
+    assert ocr_tesseract.fold_latin_lookalikes("ID") == "ID"
+    assert ocr_tesseract.fold_latin_lookalikes("GOST 12345") == "GOST 12345"
+
+
+def test_short_crop_is_scaled_to_40px(monkeypatch: pytest.MonkeyPatch) -> None:
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (80, 16), "white").save(buffer, format="PNG")
+    seen: list[tuple[int, int]] = []
+
+    class _Tess:
+        TesseractError = RuntimeError
+
+        @staticmethod
+        def image_to_string(image: object, lang: str, config: str) -> str:
+            size = getattr(image, "size", (0, 0))
+            seen.append((int(size[0]), int(size[1])))
+            return "12" if lang == "rus+eng" and "--psm 7" in config else ""
+
+    monkeypatch.setattr(ocr_tesseract, "tesseract_available", lambda: True)
+
+    def _import(name: str) -> object:
+        if name == "pytesseract":
+            return _Tess
+        return __import__(name, fromlist=["*"])
+
+    monkeypatch.setattr(ocr_tesseract, "import_module", _import)
+    assert ocr_tesseract.ocr_image_bytes(buffer.getvalue()) == "12"
+    assert seen[0][1] == 40
+
+
 def test_ocr_render_scale_is_300_dpi() -> None:
     assert ocr_tesseract.OCR_RENDER_DPI == 300.0
     assert ocr_tesseract.PDF_USER_DPI == 72.0

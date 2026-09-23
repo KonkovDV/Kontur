@@ -49,8 +49,9 @@ OSINT / bake-off кандидаты: [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2
 при наличии Tesseract; `evaluate_rule` зовёт **region-crop** как независимый
 второй источник для `dual_read_required`. `ocr_text` остаётся `UNAVAILABLE`.
 Harness: `make ocr-pilot` (Docker + Tesseract). SILVER, без Речникова.
-Локальный прогон 23.09.2026: n=5935, gate_i_low≈0.434, ниже порога приёмки.
-`ocr_text` остаётся `UNAVAILABLE`.
+Локальный прогон 23.09.2026: n=5935, gate_i_low≈0.434.
+Повтор на `OBJ-VIOLATION-EXAMPLES` после замены двойников: n=3013, gate_i_low≈0.426.
+Оба ниже порога приёмки. `ocr_text` остаётся `UNAVAILABLE`.
 
 | | |
 |---|---|
