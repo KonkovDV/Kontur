@@ -223,6 +223,13 @@
     "process_pipeline": "backend/src/kontur/application/process_pipeline.py"
   },
   "leftover_refs_do_not_merge": ["feat/ocr-gate-i-crop3x-oem1", "feat/ocr-300dpi-step2-verifying"],
+  "repo_visibility": "public",
+  "decisions_2026_09_23": {
+    "source": "запись сессии 16.09 и доска оценивания; вопросы 20–22 не отправлены",
+    "hidden_test": "карантин сохраняется",
+    "approval_policy": "ADR-0013 действует; смена эталона ПД — отдельный ADR",
+    "license": "Apache-2.0"
+  },
   "index_stats_present": false,
   "verdict_echo": {
     "frozen_validation_corpus_for_132": false,

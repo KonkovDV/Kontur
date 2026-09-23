@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -102,6 +103,53 @@ def test_hash_archives_still_pending_for_open_files(tmp_path: Path) -> None:
     (tmp_path / "10_Полярная_16.tar").write_bytes(b"x")
     with pytest.raises(NotImplementedError, match="Gate A"):
         hash_archives(tmp_path)
+
+
+_HIDDEN_OBJECT = "OBJ-RECHNIKOV-7-7"
+_CHECK_KEYS = frozenset(
+    {
+        "parameter_code",
+        "expected_label",
+        "violation_label",
+        "gold_label",
+        "finding_status",
+        "checks",
+        "label",
+    }
+)
+
+
+def _hidden_check_hits(node: object, path: str = "$") -> list[str]:
+    hits: list[str] = []
+    if isinstance(node, dict):
+        object_id = node.get("object_id")
+        if object_id == _HIDDEN_OBJECT and _CHECK_KEYS.intersection(node):
+            hits.append(path)
+        for key, value in node.items():
+            hits.extend(_hidden_check_hits(value, f"{path}.{key}"))
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            hits.extend(_hidden_check_hits(value, f"{path}[{index}]"))
+    return hits
+
+
+def test_no_hidden_object_checks_in_dataset() -> None:
+    """Карантинный идентификатор допустим в списках политики.
+
+    Недопустимы проверки и метки этого объекта: строки jsonl и объекты
+    с кодом параметра, статусом находки или ожидаемой меткой.
+    """
+
+    root = REPO_ROOT / "data" / "dataset"
+    offenders: list[str] = []
+    for path in sorted(root.rglob("*")):
+        if path.suffix.lower() == ".jsonl" and _HIDDEN_OBJECT in path.read_text(encoding="utf-8"):
+            offenders.append(str(path.relative_to(REPO_ROOT)))
+        elif path.suffix.lower() == ".json":
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            for hit in _hidden_check_hits(payload):
+                offenders.append(f"{path.relative_to(REPO_ROOT)}:{hit}")
+    assert offenders == []
 
 
 def test_no_dataset_files_are_committed() -> None:
