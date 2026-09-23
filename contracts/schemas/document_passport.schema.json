@@ -34,6 +34,10 @@
           "type": ["boolean", "null"],
           "description": "false означает расхождение видимого и текстового слоя: автоматическая находка блокируется как событие безопасности."
         },
+        "injection_clean": {
+          "type": "boolean",
+          "description": "false: в токенах страницы найден шаблон инъекции. Текст остаётся данными, статус находки не меняется."
+        },
         "damaged_pages": { "type": "integer" },
         "handwritten_ratio": { "type": ["number", "null"] }
       }

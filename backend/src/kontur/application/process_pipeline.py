@@ -10,7 +10,7 @@ CONFIRMED_VIOLATION / NEGATIVE_VERIFIED.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.passport import read_passport
@@ -26,6 +26,7 @@ from kontur.infrastructure.ocr_tesseract import (
     tesseract_available,
 )
 from kontur.infrastructure.pdf_guard import PdfParseTimeoutError, run_pdf_parse_sync
+from kontur.infrastructure.injection_scan import scan_tokens_for_injection
 from kontur.infrastructure.pdfium_tokens import PdfDocumentTokens, extract_pdf_bytes, flatten_tokens
 
 
@@ -45,6 +46,7 @@ class PipelineReport:
     pages_built: int
     stamp_by_file_id: Mapping[str, ApprovalStatus]
     evidence_groups: tuple[EvidenceGroup, ...] = ()
+    injection_clean_by_file_id: Mapping[str, bool] = field(default_factory=dict)
 
 
 def _is_pdf(filename: str) -> bool:
@@ -74,10 +76,16 @@ def _pages_from_blobs(
     blobs: Mapping[str, bytes],
     *,
     inspector_approved_file_ids: frozenset[str] = frozenset(),
-) -> tuple[dict[DocStage, StagePage], tuple[str, ...], dict[str, ApprovalStatus]]:
+) -> tuple[
+    dict[DocStage, StagePage],
+    tuple[str, ...],
+    dict[str, ApprovalStatus],
+    dict[str, bool],
+]:
     pages: dict[DocStage, StagePage] = {}
     errors: list[str] = []
     stamps: dict[str, ApprovalStatus] = {}
+    injection_clean: dict[str, bool] = {}
     for item in files:
         if not _is_pdf(item.filename):
             continue
@@ -92,6 +100,7 @@ def _pages_from_blobs(
             continue
         document = _maybe_ocr(document, raw)
         tokens = flatten_tokens(document)
+        injection_clean_flag = scan_tokens_for_injection(tokens).is_clean
         last = document.pages[-1]
         passport = read_passport(
             tokens,
@@ -101,9 +110,11 @@ def _pages_from_blobs(
             pages=len(document.pages),
             layer_kind=document.layer_kind,
             rotate=last.frame.rotate,
+            injection_clean=injection_clean_flag,
         )
         stamp = passport.approval_status
         stamps[item.file_id] = stamp
+        injection_clean[item.file_id] = injection_clean_flag
         ref = _document_ref(
             item,
             passport.document_code,
@@ -122,7 +133,7 @@ def _pages_from_blobs(
             frames=tuple(page.frame for page in document.pages),
             render_cache=cache,
         )
-    return pages, tuple(errors), stamps
+    return pages, tuple(errors), stamps, injection_clean
 
 
 def run_process_pipeline(
@@ -140,7 +151,7 @@ def run_process_pipeline(
     codes = source.all_codes()
     if len(codes) != EXPECTED_PARAM_COUNT:
         raise ValueError(f"матрица {len(codes)} правил, ожидалось {EXPECTED_PARAM_COUNT}")
-    pages, parse_errors, stamps = _pages_from_blobs(
+    pages, parse_errors, stamps, injection_clean = _pages_from_blobs(
         files,
         blobs,
         inspector_approved_file_ids=inspector_approved_file_ids,
@@ -167,6 +178,7 @@ def run_process_pipeline(
         pages_built=len(pages),
         stamp_by_file_id=stamps,
         evidence_groups=tuple(groups),
+        injection_clean_by_file_id=injection_clean,
     )
     assert_machine_only(report.findings)
     return report

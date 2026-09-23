@@ -57,15 +57,15 @@
     ]
   },
   "gap_84_architecture": {
-    "summary": "scan_tokens_for_injection() объявлен в kontur.infrastructure.injection_scan, но не вызывается из пути разбора страниц.",
+    "summary": "scan_tokens_for_injection() вызывается из _pages_from_blobs после flatten_tokens. Результат пишется в DocumentPassport.injection_clean и PipelineReport.injection_clean_by_file_id. Статус находки и approval не меняются. #84 не закрыт: нет VLM и нет запрета класть текст страницы в system prompt.",
     "module": "backend/src/kontur/infrastructure/injection_scan.py",
     "function": "scan_tokens_for_injection",
     "signature": "scan_tokens_for_injection(tokens: Sequence[PageToken]) -> InjectionScanResult",
-    "missing_call_site": {
+    "call_site": {
       "file": "backend/src/kontur/application/process_pipeline.py",
       "function": "_pages_from_blobs",
       "after_line": "tokens = flatten_tokens(document)",
-      "reason_not_called": "import injection_scan отсутствует в process_pipeline.py"
+      "stored_as": "quality.injection_clean и PipelineReport.injection_clean_by_file_id"
     },
     "scanner_properties": {
       "window_size": 5,
@@ -77,17 +77,11 @@
       "safe_default": "is_clean=True (никогда не бросает исключение — пайплайн не падает)",
       "false_positive_note": "Аббревиатуры АЭК (ИД-0001, ГИП-РД, Согласовано) паттернами НЕ ловятся."
     },
-    "why_cloud_cannot_fix": [
-      "Нужна локальная реализация: добавить import и вызов, запустить CI, живые сессии для интеграционного теста.",
-      "Нет доступа к пайплайновому окружению для реального запуска без локального runner."
-    ],
-    "fix_outline_for_local_agent": {
-      "step_1": "from kontur.infrastructure.injection_scan import scan_tokens_for_injection",
-      "step_2": "После flatten_tokens: result = scan_tokens_for_injection(tokens)",
-      "step_3": "if not result.is_clean: log warning с result.injection_type + result.matched_pattern",
-      "step_4": "Токены помечаются data_only — не прерываем пайплайн (fail-open)",
-      "step_5": "Тест: inject ROLE_OVERRIDE в мок-токены → InjectionScanResult.is_clean == False"
-    }
+    "still_open_for_issue_84": [
+      "Текст страницы не должен попадать в system prompt. Вызов сканера это не гарантирует.",
+      "VLM не подключён. Не добавлять INJECTION_DETECTED как finding_status.",
+      "Живой CI: runner_id=0 и steps=[] не считать прогоном."
+    ]
   },
   "academic_synthesis_2026": {
     "source_doc": "docs/RESEARCH_OSINT_2026.md",

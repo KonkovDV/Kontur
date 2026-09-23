@@ -265,7 +265,7 @@ CI на SHA зелёный, только если для job `backend` этог�
 | [#77](https://github.com/KonkovDV/Kontur/issues/77) Gate K | открыт, P0, нужен человек и `files/` | не закрывать рекордером |
 | [#80](https://github.com/KonkovDV/Kontur/issues/80) adversarial PDF | draft [#115](https://github.com/KonkovDV/Kontur/pull/115), HEAD `7ec43b7` | не `Closes`, пока нет живого CI; нет skew, OCR, VLM, system prompt, вложений |
 | [#83](https://github.com/KonkovDV/Kontur/issues/83) GAP-SPLIT | открыт, после RC freeze | не заменять `NotImplementedError` заглушкой `evidence_group_id`; `source_id` — file_id эталона |
-| [#84](https://github.com/KonkovDV/Kontur/issues/84) VLM isolation | открыт | схема без вызова не изолирует; `scan_tokens_for_injection` в `backend/src` не вызывается |
+| [#84](https://github.com/KonkovDV/Kontur/issues/84) VLM isolation | открыт | сканер вызывается из `_pages_from_blobs` и пишет `injection_clean`; статус находки не меняется; #84 не закрывать без VLM и запрета класть текст страницы в system prompt |
 | [#81](https://github.com/KonkovDV/Kontur/issues/81) branch protection | GitHub Free private → API 403 | не строить процесс на rulesets |
 | [#86](https://github.com/KonkovDV/Kontur/issues/86) срез 21.09 | исторический, 29/103 | не брать оттуда текущее покрытие |
 | Dependabot | [#116](https://github.com/KonkovDV/Kontur/pull/116), [#117](https://github.com/KonkovDV/Kontur/pull/117) | не P0, не мержить ради пустой очереди |
