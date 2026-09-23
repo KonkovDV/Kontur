@@ -186,7 +186,7 @@ CI на SHA зелёный, только если для job `backend` этог�
 
 ❌ `CONFIRMED_VIOLATION` от автомата или LLM. Автомат выдаёт только `CANDIDATE`.
 
-❌ `ocr_text=AVAILABLE` без GOLD Wilson. Ставить только `UNAVAILABLE`, пока нет n≥16 золотых строк.
+❌ `ocr_text=AVAILABLE` без GOLD Wilson. Живой статус — `MEASURED`, пока нет n≥16 золотых строк.
 
 ❌ Monkeypatch `ProcessRecord` в import-time (PR #61). Не возвращать.
 

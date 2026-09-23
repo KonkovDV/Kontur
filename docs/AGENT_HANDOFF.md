@@ -42,9 +42,9 @@ HEAD смотреть `git rev-parse origin/main`.
 
 ## Что уже на `main`
 
-Шаги 0–2 плана: HTTP-пайплайн, OCR fail-closed (`ocr_text` = `UNAVAILABLE`), очередь READY→VERIFYING→COMPLETED.
+Шаги 0–2 плана: HTTP-пайплайн, OCR `ocr_text` = `MEASURED` (гейт I открыт), очередь READY→VERIFYING→COMPLETED.
 Шаг 3: harness `train_public.py`, gold MIXED→RD только для файлов из `gold_evidence_files.json`.
-Прогон: `n_read=2` (F0171+F0201), стадии PD+RD, `hits=0`, `gold_finding_status` = `CLARIFICATION_REQUIRED` («PD: эталон без признака утверждения»).
+Снимок `train_public_engineering.json` от 19.09: `n_read=2`, `hits=0`, обе строки `CLARIFICATION_REQUIRED` («PD: эталон без признака утверждения»). После ADR-0014 этот файл заново не прогонялся.
 F0201: заполненная графа «Утвердил» + ФИО → `APPROVED`. F0171: обложка тома, в штампе нет «утв.»/«Утвердил»+ФИО. Заголовок «Согласовано» не эталон.
 Гейт J открыт. Wilson 6/6 всё равно ниже порога (нужно n≥16).
 `GAP-K6-P95` закрыт живым k6 на GHA (100 VU × 60 с, n=6000, p95=18,26 мс). Это не production SLA.

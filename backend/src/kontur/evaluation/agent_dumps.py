@@ -302,7 +302,11 @@ def build_tz_scorecard(
             "unmet",
             f"executable={executable} extractor_missing={missing}",
         ),
-        _scorecard_item("http_vector_pipeline", "partial", "L1-L7 upload; OCR UNAVAILABLE"),
+        _scorecard_item(
+            "http_vector_pipeline",
+            "partial",
+            "L1-L7 upload; ocr_text MEASURED, gate I open",
+        ),
         _scorecard_item(
             "protocol_atomic_materialization",
             "partial",
@@ -317,7 +321,7 @@ def build_tz_scorecard(
         _scorecard_item("split_finding", "unmet", "GAP-SPLIT NotImplementedError"),
     ]
     acceptance_items = [
-        _scorecard_item("gold_ocr", "unmet", "ocr_text UNAVAILABLE; SILVER is not GOLD"),
+        _scorecard_item("gold_ocr", "unmet", "ocr_text MEASURED; SILVER is not GOLD"),
         _scorecard_item("frozen_val_132", "unmet", "no frozen val; 6 gold positives < n=16"),
         _scorecard_item("gate_i", "unmet", "GAP-CAP-OCR / GAP-IOS4-VAL open"),
         _scorecard_item("gate_j", "unmet", "closes_gate_j false"),

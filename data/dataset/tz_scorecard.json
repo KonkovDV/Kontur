@@ -31,7 +31,7 @@
       {
         "id": "http_vector_pipeline",
         "state": "partial",
-        "detail": "L1-L7 upload; OCR UNAVAILABLE"
+        "detail": "L1-L7 upload; ocr_text MEASURED, gate I open"
       },
       {
         "id": "protocol_atomic_materialization",
@@ -58,7 +58,7 @@
       {
         "id": "gold_ocr",
         "state": "unmet",
-        "detail": "ocr_text UNAVAILABLE; SILVER is not GOLD"
+        "detail": "ocr_text MEASURED; SILVER is not GOLD"
       },
       {
         "id": "frozen_val_132",

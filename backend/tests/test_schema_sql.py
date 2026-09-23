@@ -74,7 +74,7 @@ def test_schema_freezes_process_state_and_finalization_invariants() -> None:
     assert "process_violation_requires_human" in sql
     assert "audit_log_process_ts" in sql
     assert "processes_object_state" in sql
-    assert "parse_attempts BETWEEN 0 AND 3" in sql
+    assert "parse_attempts BETWEEN 0 AND 8" in sql
     assert "sync_attempts BETWEEN 0 AND 4" in sql
     assert "finalized_needs_human" in sql
     assert "sync_only_after_finalize" in sql

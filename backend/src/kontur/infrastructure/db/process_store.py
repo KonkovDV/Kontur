@@ -27,7 +27,7 @@ from kontur.domain.statuses import (
 )
 from kontur.infrastructure.db.audit_store import AuditEvent, PostgresAuditStore
 
-MAX_PARSE_ATTEMPTS = 3
+MAX_PARSE_ATTEMPTS = 8
 MAX_SYNC_ATTEMPTS = 4
 
 
@@ -116,7 +116,7 @@ def validate_snapshot(snapshot: ProcessSnapshot) -> None:
     if not snapshot.process_id.strip() or not snapshot.object_id.strip():
         raise ValueError("process_id и object_id обязательны")
     if not 0 <= snapshot.parse_attempts <= MAX_PARSE_ATTEMPTS:
-        raise ValueError("parse_attempts вне 0..3")
+        raise ValueError(f"parse_attempts вне 0..{MAX_PARSE_ATTEMPTS}")
     if not 0 <= snapshot.sync_attempts <= MAX_SYNC_ATTEMPTS:
         raise ValueError("sync_attempts вне 0..4")
     if snapshot.process_state is ProcessState.FINALIZED:
