@@ -253,13 +253,42 @@ def test_ocr_module_does_not_fork_character_accuracy() -> None:
     assert callable(metrics.wilson)
 
 
+class _FakeImage:
+    def __init__(self, size: tuple[int, int]) -> None:
+        self.size = size
+
+    def resize(self, size: tuple[int, int], _resample: object) -> _FakeImage:
+        return _FakeImage(size)
+
+
+def _patch_ocr_image(
+    monkeypatch: pytest.MonkeyPatch,
+    size: tuple[int, int],
+    reader: object,
+) -> None:
+    """Подмена Pillow: в CI нет пакета PIL, контракт OCR всё равно проверяется."""
+
+    class _Pillow:
+        class Resampling:
+            LANCZOS = 1
+
+        @staticmethod
+        def open(_data: object) -> _FakeImage:
+            return _FakeImage(size)
+
+    monkeypatch.setattr(ocr_tesseract, "tesseract_available", lambda: True)
+
+    def _import(name: str) -> object:
+        if name == "pytesseract":
+            return reader
+        if name == "PIL.Image":
+            return _Pillow
+        raise AssertionError(name)
+
+    monkeypatch.setattr(ocr_tesseract, "import_module", _import)
+
+
 def test_empty_single_line_psm_falls_back_to_raw_line(monkeypatch: pytest.MonkeyPatch) -> None:
-    from io import BytesIO
-
-    from PIL import Image
-
-    buffer = BytesIO()
-    Image.new("RGB", (8, 8), "white").save(buffer, format="PNG")
     seen: list[str] = []
 
     class _Tess:
@@ -272,15 +301,8 @@ def test_empty_single_line_psm_falls_back_to_raw_line(monkeypatch: pytest.Monkey
                 return "внутригородская"
             return ""
 
-    monkeypatch.setattr(ocr_tesseract, "tesseract_available", lambda: True)
-
-    def _import(name: str) -> object:
-        if name == "pytesseract":
-            return _Tess
-        return __import__(name, fromlist=["*"])
-
-    monkeypatch.setattr(ocr_tesseract, "import_module", _import)
-    assert ocr_tesseract.ocr_image_bytes(buffer.getvalue()) == "внутригородская"
+    _patch_ocr_image(monkeypatch, (8, 8), _Tess)
+    assert ocr_tesseract.ocr_image_bytes(b"png") == "внутригородская"
     assert any("--psm 13" in item for item in seen)
     assert not any("--psm 6" in item for item in seen)
 
@@ -293,12 +315,6 @@ def test_latin_lookalikes_fold_only_near_cyrillic() -> None:
 
 
 def test_short_crop_is_scaled_to_40px(monkeypatch: pytest.MonkeyPatch) -> None:
-    from io import BytesIO
-
-    from PIL import Image
-
-    buffer = BytesIO()
-    Image.new("RGB", (80, 16), "white").save(buffer, format="PNG")
     seen: list[tuple[int, int]] = []
 
     class _Tess:
@@ -310,16 +326,9 @@ def test_short_crop_is_scaled_to_40px(monkeypatch: pytest.MonkeyPatch) -> None:
             seen.append((int(size[0]), int(size[1])))
             return "12" if lang == "rus+eng" and "--psm 7" in config else ""
 
-    monkeypatch.setattr(ocr_tesseract, "tesseract_available", lambda: True)
-
-    def _import(name: str) -> object:
-        if name == "pytesseract":
-            return _Tess
-        return __import__(name, fromlist=["*"])
-
-    monkeypatch.setattr(ocr_tesseract, "import_module", _import)
-    assert ocr_tesseract.ocr_image_bytes(buffer.getvalue()) == "12"
-    assert seen[0][1] == 40
+    _patch_ocr_image(monkeypatch, (80, 16), _Tess)
+    assert ocr_tesseract.ocr_image_bytes(b"png") == "12"
+    assert seen[0] == (200, 40)
 
 
 def test_ocr_render_scale_is_300_dpi() -> None:
