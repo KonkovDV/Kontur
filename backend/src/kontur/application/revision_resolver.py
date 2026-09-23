@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
+from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage, DocumentRef
 
 
 def _same_document_identity(left: DocumentRef, right: DocumentRef) -> bool:
@@ -85,6 +85,24 @@ def overlay_inspector_approval(
     if inspector_selected:
         return ApprovalStatus.APPROVED
     return stamp
+
+
+def approval_with_basis(
+    stamp: ApprovalStatus,
+    basis: ApprovalBasis,
+    *,
+    inspector_selected: bool,
+) -> tuple[ApprovalStatus, ApprovalBasis]:
+    """Выбор инспектора меняет basis только если штамп сам не доказал утверждение."""
+
+    status = overlay_inspector_approval(stamp, inspector_selected=inspector_selected)
+    if (
+        inspector_selected
+        and stamp is ApprovalStatus.UNKNOWN
+        and status is ApprovalStatus.APPROVED
+    ):
+        return status, ApprovalBasis.INSPECTOR_SELECT
+    return status, basis
 
 
 def resolve_revision(

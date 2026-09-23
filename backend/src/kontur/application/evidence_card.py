@@ -32,6 +32,7 @@ def document_ref_to_schema(ref: DocumentRef) -> dict[str, object]:
         "document_code": ref.document_code,
         "revision": ref.revision,
         "approval_status": ref.approval_status.value,
+        "approval_basis": ref.approval_basis.value,
     }
     if ref.discipline is not None:
         payload["discipline"] = ref.discipline
