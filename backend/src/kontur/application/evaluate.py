@@ -2,6 +2,7 @@
 
 Слайс исполняет:
   числовые  : extractor.type=number  + операторы из NUMERIC_OPERATORS
+  обмер     : extractor.type=geometry + те же операторы (пара штрихов × масштаб)
   текстовые : extractor.type=enum    + операторы из STRING_OPERATORS | SET_OPERATORS
               extractor.type=text_regex + те же операторы
 
@@ -21,6 +22,7 @@ from kontur.application.comparators import (
     Comparison,
     compare_values,
 )
+from kontur.application.extractors.geometry import extract_duct_width
 from kontur.application.extractors.number import (
     NumberHit,
     PageToken,
@@ -341,13 +343,13 @@ def evaluate_rule(
     else:
         valid_operators = _TEXT_OPERATORS if is_text else NUMERIC_OPERATORS
 
-    if extractor_type not in ("number", *_TEXT_EXTRACTOR_TYPES):
+    if extractor_type not in ("number", "geometry", *_TEXT_EXTRACTOR_TYPES):
         return _halt(
             rule,
             Stage.L6_MATRIX,
             FindingStatus.CLARIFICATION_REQUIRED,
-                f"слайс исполняет extractor.type=number/enum/text_regex/exact_field/presence, "
-                f"получено {extractor_type!r}",
+            "слайс исполняет extractor.type=number/geometry/enum/text_regex/exact_field/presence, "
+            f"получено {extractor_type!r}",
         )
     if not isinstance(comparator, dict) or operator not in valid_operators:
         return _halt(
@@ -581,24 +583,43 @@ def evaluate_rule(
                 prior=identity_ok,
                 missing_stage=stage,
             )
-        number_hit = extract_number(stage_page.tokens, rule)
+        if extractor_type == "geometry":
+            number_hit, detail = extract_duct_width(
+                stage_page.tokens,
+                stage_page.pdf_bytes,
+                stage_page.frames,
+                rule,
+            )
+            missing = detail
+        else:
+            number_hit = extract_number(stage_page.tokens, rule)
+            missing = "якорь или число не найдены"
         if number_hit is None:
             return _halt(
                 rule,
                 Stage.L2_EXTRACTION,
                 _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
-                f"{stage.value}: якорь или число не найдены",
+                f"{stage.value}: {missing}",
                 prior=identity_ok,
             )
         if dual_req and number_hit.extraction.second_read_agrees is not True:
+            disagree = (
+                "два замера зазора не совпали"
+                if extractor_type == "geometry"
+                else "два чтения числа не совпали"
+            )
             return _halt(
                 rule,
                 Stage.L2_EXTRACTION,
                 _mapped(rule, "reads_disagree", FindingStatus.ABSTAIN),
-                f"{stage.value}: два чтения числа не совпали",
+                f"{stage.value}: {disagree}",
                 prior=identity_ok,
             )
-        if dual_req and _ocr_region_agrees(number_hit, stage_page, rule) is False:
+        if (
+            extractor_type != "geometry"
+            and dual_req
+            and _ocr_region_agrees(number_hit, stage_page, rule) is False
+        ):
             return _halt(
                 rule,
                 Stage.L2_EXTRACTION,

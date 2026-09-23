@@ -46,7 +46,7 @@ Adversarial: RT-A…RT-I закрыты регрессией. Дубль нах�
 | GAP-ALL-OPERATORS | Все 12 операторов (delta, ge, lt, range, class_not_lower, present, …) | f08932d |
 | GAP-GATE-H | Гейт H: ≥20 исполняемых правил (18×PZ + SPZU-024 + AR-041 = 20/20) | f08932d…406e97c |
 | GAP-ENUM-EXTRACTOR | text/enum экстрактор; KR-055 и PZ-015/021/022/023 executable | 4a10ce8 |
-| GAP-IOS4 | IOS4-078/079: number-экстрактор, synthetic E2E | overrides + compile |
+| GAP-IOS4 | IOS4-078/079 остаются `number`. Тип `geometry` меряет пару штрихов в оценке и не включён в матрицу | synthetic |
 | GAP-RT-G | Дубль находки в процессе: `put_finding` по evidence_group_id | runtime.py |
 | GAP-PROCESS-FINDINGS | Находки, файлы и комплектность переживают смену workspace; Postgres пишет `process_findings` / `process_files` | schema.sql |
 | GAP-EDIT | Журнал REVIEW/FINALIZE/UNFINALIZE в `audit_log` и GET `/audit` | audit_store.py |

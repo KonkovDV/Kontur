@@ -31,9 +31,19 @@ class Segment:
         return math.hypot(self.x1 - self.x0, self.y1 - self.y0)
 
 
+DEFAULT_ANGLE_DEG = 2.0
+DEFAULT_MIN_OVERLAP = 0.6
+DEFAULT_MIN_LENGTH_PT = 20.0
+DEFAULT_GAP_MIN_PT = 2.0
+DEFAULT_GAP_MAX_PT = 60.0
+DEFAULT_READ_TOLERANCE_REL = 0.02
+
+
 @dataclass(frozen=True, slots=True)
 class DuctPair:
     gap_pt: float
+    reverse_gap_pt: float
+    span_pt: float
     width_mm: float
     polygon: Polygon
 
@@ -46,6 +56,22 @@ def width_mm(gap_pt: float, scale_denominator: int) -> float:
     if gap_pt <= 0:
         raise ValueError("зазор штрихов должен быть > 0")
     return gap_pt * PT_TO_MM * scale_denominator
+
+
+def gaps_agree(primary: float, reverse: float, *, tolerance_rel: float) -> bool:
+    """Два замера зазора. Расхождение больше допуска — не усредняем."""
+
+    if primary <= 0 or tolerance_rel < 0:
+        return False
+    return abs(primary - reverse) / primary <= tolerance_rel
+
+
+def choose_pair(pairs: list[DuctPair]) -> DuctPair | None:
+    """Самый длинный прогон. При равенстве — более узкий зазор. Пороги не подбираются по золоту."""
+
+    if not pairs:
+        return None
+    return max(pairs, key=lambda item: (item.span_pt, -item.gap_pt))
 
 
 def pair_parallel(
@@ -64,7 +90,7 @@ def pair_parallel(
     found: list[DuctPair] = []
     for index, left in enumerate(usable):
         for right in usable[index + 1 :]:
-            gap = _gap_if_parallel(
+            measured = _gap_if_parallel(
                 left,
                 right,
                 angle_deg=angle_deg,
@@ -72,11 +98,14 @@ def pair_parallel(
                 gap_min_pt=gap_min_pt,
                 gap_max_pt=gap_max_pt,
             )
-            if gap is None:
+            if measured is None:
                 continue
+            gap, reverse, span = measured
             found.append(
                 DuctPair(
                     gap_pt=gap,
+                    reverse_gap_pt=reverse,
+                    span_pt=span,
                     width_mm=width_mm(gap, scale_denominator),
                     polygon=_quad(left, right),
                 )
@@ -133,7 +162,7 @@ def _gap_if_parallel(
     min_overlap: float,
     gap_min_pt: float,
     gap_max_pt: float,
-) -> float | None:
+) -> tuple[float, float, float] | None:
     dir_x, dir_y = _direction(left)
     other_x, other_y = _direction(right)
     dot = abs(dir_x * other_x + dir_y * other_y)
@@ -142,12 +171,18 @@ def _gap_if_parallel(
         return None
     mid_x = (right.x0 + right.x1) / 2
     mid_y = (right.y0 + right.y1) / 2
-    gap = abs((mid_x - left.x0) * dir_y - (mid_y - left.y0) * dir_x)
+    gap = _line_distance(mid_x, mid_y, left)
     if gap < gap_min_pt or gap > gap_max_pt:
         return None
     if _overlap_ratio(left, right, dir_x, dir_y) < min_overlap:
         return None
-    return gap
+    reverse = _line_distance((left.x0 + left.x1) / 2, (left.y0 + left.y1) / 2, right)
+    return gap, reverse, min(left.length, right.length)
+
+
+def _line_distance(px: float, py: float, segment: Segment) -> float:
+    dir_x, dir_y = _direction(segment)
+    return abs((px - segment.x0) * dir_y - (py - segment.y0) * dir_x)
 
 
 def _project(segment: Segment, dir_x: float, dir_y: float) -> tuple[float, float]:

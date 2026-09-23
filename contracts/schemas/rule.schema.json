@@ -84,6 +84,20 @@
           "type": "boolean",
           "default": false,
           "description": "true для критических чисел и шифров: расхождение двух чтений даёт ABSTAIN."
+        },
+        "geometry_params": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Пороги обмера штрихов. Задаются до прогона, не подбираются по золотым строкам.",
+          "properties": {
+            "angle_deg": { "type": "number" },
+            "min_overlap": { "type": "number" },
+            "min_length_pt": { "type": "number" },
+            "gap_min_pt": { "type": "number" },
+            "gap_max_pt": { "type": "number" },
+            "stamp_y": { "type": "number" },
+            "read_tolerance_rel": { "type": "number" }
+          }
         }
       }
     },
