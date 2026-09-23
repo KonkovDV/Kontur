@@ -1,6 +1,6 @@
 # Handoff для следующего ИИ
 
-Срез **21.09.2026**. Бриф для ИИ с GitHub: [`GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md).
+Срез **23.09.2026**. Бриф для ИИ с GitHub: [`GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md).
 Несколько ИИ на одном репо: [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md).
 HEAD смотреть `git rev-parse origin/main`.
 Машиночитаемый пакет — не scorecard приёмки. Гейты I/J/K **открыты**.
@@ -10,7 +10,7 @@ HEAD смотреть `git rev-parse origin/main`.
 **Freeze инфры до 29.09:** не добавлять OIDC/TLS/RabbitMQ 4.x/observability/УКЭП/РиН
 без sandbox. Critical path — конкурсный вертикальный срез (evidence UI, Gate K,
 пять правил), не транспорт. Issues [#75](https://github.com/KonkovDV/Kontur/issues/75)–[#84](https://github.com/KonkovDV/Kontur/issues/84).
-Открытых продуктовых PR нет. Weekly Dependabot (#85) — не P0, не мержить ради
+Открытых продуктовых PR нет; draft PR #115 (не снимать draft). Weekly Dependabot (#85) — не P0, не мержить ради
 «только main», пока не зелёный и пока не решено, нужны ли auto-update PR до подачи.
 На origin рабочая линия — `main`. OCR-хвосты `16f3a06` / `2ddc2b3` не мержить.
 
@@ -18,7 +18,7 @@ HEAD смотреть `git rev-parse origin/main`.
 
 1. [`AGENTS.md`](../AGENTS.md) — инварианты 1–14.
 2. [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md) — claim на issue до правок.
-3. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json) — гейты, запреты, команды.
+3. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json) — гейты, запреты, команды, draft_prs, extractor_triage_complete.
 4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 44 / 83 / 1 / 4 из 132.
 4a. [`data/matrix/family_triage.json`](../data/matrix/family_triage.json) и [`docs/EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) — поштучное решение по 28 правилам семейств `exact_field` / `presence`: какой вид доказательства нужен и почему графика не стала текстом.
 4b. [`data/matrix/class_ladder_triage.json`](../data/matrix/class_ladder_triage.json) и [`docs/CLASS_LADDER_TRIAGE.md`](CLASS_LADDER_TRIAGE.md) — разбор 23 «классоподобных» правил: 5 переведены в `executable` через `enum` + `class_not_lower`, 13 осознанно оставлены `extractor_missing` с указанием причины (инвертированная лестница, набор признаков, таблица, допуск в обе стороны).
@@ -50,7 +50,7 @@ HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/RO
 Триаж семейств `exact_field` / `presence`: AR-052, POS-087, POD-091, ZU-130
 переведены в `executable` (закрытые текстовые шаблоны, фикстуры на
 AUTO_NO_DIFFERENCE / CANDIDATE / MISSING_EVIDENCE / LOW_QUALITY / ABSTAIN),
-POD-095 — `advisory` (`presence` не способен выдать CANDIDATE), OOS-098…101 —
+POD-095 — `advisory` (`presence` не способен выдать CANDIDATE), OOS-098…0101 —
 `source_missing` (АИС «ОСИГ», РНИС, «Мобильный КПТС», ГРОО вне пакета ПД/РД/ИД).
 `_downgrade_for_coverage` в `evaluate.py` понижает CANDIDATE до `low_quality`
 для `advisory` / `source_missing` / `not_applicable`. Gate J не закрыт.
@@ -65,7 +65,7 @@ application-слое, JSON пишется в той же транзакции, �
 расхождение — конфликт. Без `connection.transaction()` финализация отклоняется.
 PR #65 влит: advisory lock объекта, `FOR UPDATE` процесса/находок/протоколов,
 `payload_sha256`, `integration_outbox` PENDING, ADR-0009. Live Postgres: retry
-идемпотентен, гонка version fail-closed, outbox `SKIP LOCKED`. Crash-before-commit
+идемпотенен, гонка version fail-closed, outbox `SKIP LOCKED`. Crash-before-commit
 нет. Outbox relay (ADR-0010) публикует в брокер с confirms и паузами 1/5/15 мин;
 это не РиН и не exactly-once. HTTP по-прежнему inline L1–L7. PR #66 закрыт красным
 (FK `objects.id`); правка на `main`. PR #67 влит: отдельный `outbox-relay`
@@ -90,12 +90,16 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
 не гейт K. Пакет сдачи #79: `docs/SUBMISSION_PACK.md`,
 `python scripts/export_submission_pack.py`. Backlog GitHub:
 #76 evidence UI, #77 Gate K,
-#80 adversarial PDF, #81 branch protection (GitHub Free private → 403),
-#82 family extractors (триаж 28 правил сделан, геометрия открыта), #83 split,
+#80 adversarial PDF (**Draft PR #115**: 13 тестов, ветка `feat/adversarial-pdf-pack`
+HEAD `7ec43b7`; не снимать draft до живого CI-раннера; `Closes #80` не ставить;
+`runner_id=0` = не настоящий CI-прогон),
+#81 branch protection (GitHub Free private → 403),
+#82 family extractors (**все 83 `extractor_missing` разобраны** по трём триаж-док.; новых правил без геометрии нет), #83 split,
 #84 VLM isolation.
+GAP-EMB добавлен в `docs/KNOWN_GAPS.md` на ветке `feat/adversarial-pdf-pack` (commit `7ec43b7`).
 
 Поставка 20.09.2026: в `files/` есть `ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0`
-(checksums 18/18) и распакованный объект `10_Полярная_25_СОШ1100к7` (~20,9 ГБ,
+(checksums 18/18) и распакованный объект `10_Полярная_25_СОШ±1100к7` (~20,9 ГБ,
 ПД/РД/ИД, без gold). Нет frozen val, GOLD OCR, объектов 11–18, SHA исходных
 `.tar`, утверждённого ПД для F0171. Объект 10 не TRAIN_PUBLIC и не закрывает
 гейт J. Закрытый zip организатора и `РАЗМЕЧЕННЫЙ_TEST__213` не открывать для порогов.
@@ -118,6 +122,8 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
 - Требовать `payload.kind = materialized` или `assembled=true` в JSON ТЗ:
   `protocol.schema.json` с `additionalProperties: false` такие поля не содержит
   (ADR-0009). Guard выгрузки — `PROTOCOL_FINALIZED` + hex `payload_sha256`.
+- Снимать draft PR #115 до живого CI-раннера; `runner_id=0` — не настоящий прогон.
+- Переводить `extractor_missing` в `executable` без нового экстрактора: все 83 разобраны, блокер документирован.
 
 ## Следующие слайсы
 
@@ -146,7 +152,9 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
    расход НПВ). Операторы и допуски не менялись, менялся только экстрактор.
    Остальные 51 требуют обмера по чертежу, подсчёта объектов, площади по контуру
    или таблицы по элементам — коды причин в `number_family_triage.json`.
-   Из 83 `extractor_missing` теперь разобрано 89 правил суммарно по трём триажам.
+   **Все 83 `extractor_missing` полностью разобраны по трём триаж-документам.
+   Без новых экстракторов (`geometry`, `object_counting`, `per_element_table`,
+   `semantic_candidate`) переводить правила в `executable` нельзя.**
 5. `split()` (GAP-SPLIT) до демо.
 6. Sandbox РиН, HTTP `submitted/confirmed/ambiguous` и бизнес-ACK → `SYNCED` — нет.
 7. JWKS/OIDC, TLS 1.3, антивирус, observability — **freeze** до подачи.
