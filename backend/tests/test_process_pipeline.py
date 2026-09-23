@@ -5,6 +5,7 @@ from __future__ import annotations
 from test_pdf_tokens import ascii_pdf, empty_pdf
 
 from kontur.application.document_catalog import CatalogFile, build_document_catalog
+from kontur.application.evaluate import stage_candidates
 from kontur.application.process_pipeline import (
     PipelineFile,
     _pages_from_blobs,
@@ -185,7 +186,8 @@ def test_distinct_ciphers_do_not_become_revision_conflict_of_one_chain() -> None
         blobs,
         inspector_approved_file_ids=frozenset({"f-pz"}),
     )
-    assert DocStage.PD not in pages
+    pd_heads = stage_candidates(pages, DocStage.PD)
+    assert {page.document.file_id for page in pd_heads} == {"f-pz", "f-ar"}
     assert stamps["f-pz"] is ApprovalStatus.UNKNOWN
     assert stamps["f-ar"] is ApprovalStatus.UNKNOWN
     report = run_process_pipeline(
@@ -196,9 +198,8 @@ def test_distinct_ciphers_do_not_become_revision_conflict_of_one_chain() -> None
         inspector_approved_file_ids=frozenset({"f-pz"}),
     )
     finding = next(item for item in report.findings if item.rule_code == "PZ-001")
-    assert finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
-    assert "не цепочка одного шифра" in finding.rationale
-    assert "11111-PZ" in finding.rationale
+    assert "не цепочка одного шифра" not in finding.rationale
+    assert finding.source_id != "f-ar"
     assert FindingStatus.CONFIRMED_VIOLATION not in {
         item.finding_status for item in report.findings
     }
@@ -209,7 +210,8 @@ def test_distinct_ciphers_do_not_become_revision_conflict_of_one_chain() -> None
         ),
         inspector_approved_file_ids=frozenset({"f-pz"}),
     )
-    assert {row["actuality"] for row in rows} == {"CLARIFICATION_REQUIRED"}
+    by_id = {row["file_id"]: row["actuality"] for row in rows}
+    assert by_id == {"f-pz": "CURRENT", "f-ar": "CURRENT"}
 
 
 def test_inspector_select_picks_the_earlier_file_not_the_last() -> None:

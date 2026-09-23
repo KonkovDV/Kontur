@@ -215,6 +215,38 @@ def test_package_default_pd_and_unstamped_rd_compare(rule: dict[str, object]) ->
     assert ApprovalBasis.PACKAGE_DEFAULT in bases
 
 
+def test_pz001_binds_pz_cipher_not_ar_sheet(rule: dict[str, object]) -> None:
+    pz = replace(_document(DocStage.PD), file_id="f-pz", document_code="11111-PZ")
+    ar = replace(_document(DocStage.PD), file_id="f-ar", document_code="22222-AR")
+    rd = _document(DocStage.RD)
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: (
+                StagePage(
+                    document=ar,
+                    tokens=_line("Площадь", "застройки", "9999"),
+                ),
+                StagePage(
+                    document=pz,
+                    tokens=_line("Площадь", "застройки", "1250,5"),
+                ),
+            ),
+            DocStage.RD: StagePage(
+                document=rd,
+                tokens=_line("Площадь", "застройки", "1100"),
+            ),
+        },
+        completeness=_completeness(),
+        revision_pool=[ar, pz, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.source_id == "f-pz"
+    assert result.finding.expected_value == 1250.5
+    assert FindingStatus.CONFIRMED_VIOLATION is not result.finding.finding_status
+
+
 def test_not_approved_mark_blocks_comparison(rule: dict[str, object]) -> None:
     pd = replace(_document(DocStage.PD), approval_status=ApprovalStatus.NOT_APPROVED)
     result = evaluate_rule(
