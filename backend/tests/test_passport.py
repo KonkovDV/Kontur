@@ -159,6 +159,28 @@ def test_utverdil_with_full_name_is_approved() -> None:
     assert passport.approval_date is None
 
 
+def test_volume_stamp_gip_surname_without_utverdil_stays_unproven() -> None:
+    """Макет штампа тома ПД: роли ГИП/ГАП/Разраб. и фамилия, без графы «Утвердил»."""
+
+    passport = _read(
+        _tok("Изм.", 0.10, 0.87),
+        _tok("Подпись", 0.31, 0.87),
+        _tok("Дата", 0.38, 0.87),
+        _tok("ГИП", 0.10, 0.89),
+        _tok("Сердюков", 0.20, 0.89),
+        _tok("ГАП", 0.10, 0.90),
+        _tok("Кузнецова", 0.20, 0.90),
+        _tok("Разраб.", 0.10, 0.92),
+        _tok("Артюхов", 0.20, 0.92),
+        _tok("Н.контроль", 0.10, 0.94),
+        _tok("Сердюков", 0.20, 0.94),
+        _tok("Стадия", 0.75, 0.89),
+        _tok("П", 0.77, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_basis is ApprovalBasis.UNPROVEN
+
+
 def test_production_stamp_is_not_an_approval_basis() -> None:
     passport = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82),
