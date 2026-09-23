@@ -132,7 +132,7 @@ def test_filled_utverdil_on_later_sheet_is_approved() -> None:
     passport = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82, page=1),
         _tok("Утвердил", 0.08, 0.92, page=6),
-        _tok("Сердюков Р.С.", 0.22, 0.92, page=6),
+        _tok("Иванов И.И.", 0.22, 0.92, page=6),
         _tok("08.04.2024", 0.40, 0.92, page=6),
     )
     assert passport.approval_status is ApprovalStatus.APPROVED
@@ -143,7 +143,7 @@ def test_filled_utverdil_on_later_sheet_is_approved() -> None:
 def test_inline_utverdil_with_person_is_approved() -> None:
     passport = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82),
-        _tok("Утвердил: Сердюков Р.С. 08.04.2024", 0.08, 0.90),
+        _tok("Утвердил: Иванов И.И. 08.04.2024", 0.08, 0.90),
     )
     assert passport.approval_status is ApprovalStatus.APPROVED
     assert str(passport.approval_date) == "2024-04-08"
@@ -153,7 +153,7 @@ def test_utverdil_with_full_name_is_approved() -> None:
     passport = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82),
         _tok("Утвердил", 0.08, 0.90),
-        _tok("Сердюков Роман Сергеевич", 0.22, 0.90),
+        _tok("Иванов Иван Иванович", 0.22, 0.90),
     )
     assert passport.approval_status is ApprovalStatus.APPROVED
     assert passport.approval_date is None
@@ -167,13 +167,13 @@ def test_volume_stamp_gip_surname_without_utverdil_stays_unproven() -> None:
         _tok("Подпись", 0.31, 0.87),
         _tok("Дата", 0.38, 0.87),
         _tok("ГИП", 0.10, 0.89),
-        _tok("Сердюков", 0.20, 0.89),
+        _tok("Иванов", 0.20, 0.89),
         _tok("ГАП", 0.10, 0.90),
-        _tok("Кузнецова", 0.20, 0.90),
+        _tok("Петрова", 0.20, 0.90),
         _tok("Разраб.", 0.10, 0.92),
-        _tok("Артюхов", 0.20, 0.92),
+        _tok("Сидоров", 0.20, 0.92),
         _tok("Н.контроль", 0.10, 0.94),
-        _tok("Сердюков", 0.20, 0.94),
+        _tok("Иванов", 0.20, 0.94),
         _tok("Стадия", 0.75, 0.89),
         _tok("П", 0.77, 0.90),
     )
@@ -196,7 +196,7 @@ def test_soglasovano_header_on_later_sheet_is_not_approved() -> None:
         _tok("шифр: 12345-PZ", 0.08, 0.82, page=1),
         _tok("Согласовано", 0.02, 0.90, page=2),
         _tok("ГИП", 0.08, 0.92, page=2),
-        _tok("Сердюков Р.С.", 0.22, 0.92, page=2),
+        _tok("Иванов И.И.", 0.22, 0.92, page=2),
     )
     assert passport.approval_status is ApprovalStatus.UNKNOWN
     assert passport.approval_basis is ApprovalBasis.UNPROVEN
