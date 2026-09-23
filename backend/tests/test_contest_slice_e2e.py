@@ -247,10 +247,14 @@ def test_pdf_pipeline_missing_rd_is_not_violation() -> None:
 
 
 @needs_font
-def test_pdf_pipeline_without_stamp_needs_clarification() -> None:
+def test_pdf_pipeline_without_stamp_still_compares() -> None:
+    """Одна ПД без штампа — эталон комплекта, не остановка на L4."""
+
     report = _pipeline(_sheet(_PD_VALUES, stamp=False), _sheet(_RD_CANDIDATE, stamp=False))
+    assert report.stamp_by_file_id["f-pd"] is ApprovalStatus.UNKNOWN
     for finding in contest_findings(report.findings).values():
-        assert finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+        assert finding.finding_status is FindingStatus.CANDIDATE
+        assert finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
 
 @needs_font

@@ -14,6 +14,14 @@ select {
   font: inherit;
 }
 
+.demo-banner {
+  margin: 0;
+  padding: 0.45rem 1rem;
+  background: #f4e4b3;
+  color: #3d3208;
+  font-weight: 600;
+}
+
 .workspace {
   display: grid;
   gap: 1rem;

@@ -438,7 +438,16 @@ def evaluate_rule(
                 )
     else:
         for stage, page in pages.items():
-            if page.document.approval_status is not ApprovalStatus.APPROVED:
+            approval = page.document.approval_status
+            if approval is ApprovalStatus.NOT_APPROVED:
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    f"{stage.value}: редакция помечена «не утв.»",
+                    prior=identity_ok,
+                )
+            if stage is DocStage.PD and approval is not ApprovalStatus.APPROVED:
                 return _halt(
                     rule,
                     Stage.L4_REVISION,

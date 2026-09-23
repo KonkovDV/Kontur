@@ -5,10 +5,11 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, Header, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, Form, Header, Query, Request, UploadFile
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
+from kontur.application.document_catalog import CatalogFile, build_document_catalog
 from kontur.application.evidence_card import build_evidence_card
 from kontur.application.intake import (
     MAX_BATCH_BYTES,
@@ -31,6 +32,7 @@ from kontur.infrastructure.db.process_store import (
     TransactionUnavailableError,
 )
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
+from kontur.infrastructure.pdfium_page import PageRenderError, parse_bbox, render_page_png
 from kontur.presentation.auth import actor_from_roles, parse_bearer
 from kontur.presentation.rbac import (
     AuthenticationRequiredError,
@@ -361,6 +363,65 @@ def get_status(
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     return record.to_status()
+
+
+@app.get("/api/v1/processes/{process_id}/documents", response_model=None)
+def get_documents(
+    process_id: str,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    _subject, _granted, object_id = _require("getProcessDocuments", authorization)
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    items = [
+        CatalogFile(
+            file_id=item.file_id,
+            file_hash=item.file_hash,
+            filename=item.filename,
+            doc_stage=item.doc_stage,
+            content=record.blobs[item.file_id],
+        )
+        for item in record.files
+        if item.file_id in record.blobs
+    ]
+    return {
+        "process_id": process_id,
+        "documents": build_document_catalog(
+            items,
+            inspector_approved_file_ids=frozenset(record.inspector_approved_file_ids),
+        ),
+    }
+
+
+@app.get(
+    "/api/v1/processes/{process_id}/files/{file_id}/pages/{page}.png",
+    response_model=None,
+)
+def get_file_page_png(
+    process_id: str,
+    file_id: str,
+    page: int,
+    authorization: Annotated[str | None, Header()] = None,
+    bbox: Annotated[str | None, Query()] = None,
+) -> Response | JSONResponse:
+    _subject, _granted, object_id = _require("getFilePagePng", authorization)
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    raw = record.blobs.get(file_id)
+    if raw is None or not any(item.file_id == file_id for item in record.files):
+        return JSONResponse(status_code=404, content={"detail": "файл не найден"})
+    try:
+        box = parse_bbox(bbox)
+        png = render_page_png(raw, page, box)
+    except PageRenderError as exc:
+        missing = str(exc).startswith("страница")
+        return JSONResponse(
+            status_code=404 if missing else 400,
+            content={"detail": str(exc)},
+        )
+    return Response(content=png, media_type="image/png")
 
 
 @app.get("/api/v1/processes/{process_id}/protocol", response_model=None)

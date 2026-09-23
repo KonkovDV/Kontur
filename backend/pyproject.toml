@@ -17,6 +17,7 @@ dependencies = [
     "pyyaml>=6.0",
     "python-multipart>=0.0.12",
     "PyJWT[crypto]>=2.9,<3",
+    "Pillow>=10",
 ]
 
 [project.optional-dependencies]

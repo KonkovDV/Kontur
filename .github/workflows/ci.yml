@@ -114,13 +114,14 @@ jobs:
 
           docker compose config --quiet
           docker compose -f docker-compose.yml -f docker-compose.offline.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.demo.yml config --quiet
           docker compose config --format json > /tmp/compose-base.json
           docker compose -f docker-compose.yml -f docker-compose.offline.yml \
             config --format json > /tmp/compose-offline.json
 
           cat > /tmp/expected-compose-limits.json <<'JSON'
           {
-            "core": {"mem_limit": 2147483648, "cpus": 2.0, "pids_limit": 256},
+            "core": {"mem_limit": 8589934592, "cpus": 8, "pids_limit": 256},
             "gateway": {"mem_limit": 268435456, "cpus": 0.5, "pids_limit": 128},
             "outbox-relay": {"mem_limit": 402653184, "cpus": 0.5, "pids_limit": 128},
             "inbox-consumer": {"mem_limit": 402653184, "cpus": 0.5, "pids_limit": 128},
@@ -137,7 +138,7 @@ jobs:
               def limits:
                 with_entries(.value |= {
                   mem_limit: (.mem_limit | tonumber),
-                  cpus: .cpus,
+                  cpus: (.cpus | tonumber),
                   pids_limit: .pids_limit
                 });
               (.services | keys | sort) == ($expected[0] | keys | sort)
@@ -265,6 +266,7 @@ jobs:
 
           wait_for_health http://127.0.0.1:8000/api/v1/healthz
           wait_for_health http://127.0.0.1:3000/healthz
+          wait_for_health http://127.0.0.1:3000/api/v1/healthz
 
           assert_container core
           assert_container gateway

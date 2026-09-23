@@ -4,8 +4,7 @@
 документации по матрице из 132 контролируемых параметров.
 Задача №10, Мосгосстройнадзор.
 
-Репозиторий **приватный**. Стратегия, Red Team, вопросы организатору и черновик
-матрицы не предназначены для публичного зеркала.
+Репозиторий публичный. Лицензия кода — Apache-2.0.
 
 **Вход:** PDF, DOCX, XML. **Выход:** протокол с карточками доказательств и
 решением инспектора. **Ядро продукта:** не распознавание текста, а
@@ -28,7 +27,8 @@
 - Комплектность на проводе — `PD_UPLOADED` / `RD_PARTIAL` / `ID_MISSING`.
   Процесс — `COMPLETED` / `FINALIZED`. Протокол — `VERIFICATION_COMPLETED` /
   `PROTOCOL_FINALIZED`. Это проекции, не одна простыня статусов (ADR-0005).
-- Устаревшая или неутверждённая редакция **не может** быть эталоном.
+- Явная пометка «не утв.» не может быть эталоном. Одна ПД в комплекте без
+  этой пометки — эталон с основанием `PACKAGE_DEFAULT` (ADR-0014).
 - Пороги раздела 14 ТЗ (Character Accuracy ≥0,95; Exact Match ≥0,90; связка
   ≥0,95; локализация ≥0,95 при IoU≥0,50; Precision ≥0,90; Recall ≥0,80;
   F1 ≥0,85; FPR ≤0,10) — это **минимумы приёмки, а не заявленный результат**.
@@ -40,9 +40,9 @@
 
 ## Состояние
 
-Срез 21.09.2026: только зелёный `main`. Гейты I/J/K **открыты**.
+Срез 23.09.2026. Гейты I/J/K/L **открыты**.
 Coverage: 44 executable / 83 extractor_missing / 1 advisory / 4 source_missing из 132 объявленных.
-OCR `UNAVAILABLE`. Frozen val нет. РиН ACK нет. Freeze инфры до 29.09.
+OCR `MEASURED`: движок есть, порог не взят. Frozen val нет. РиН ACK нет. Freeze инфры до 29.09.
 
 Полный бриф для ИИ с GitHub: [`docs/GH_SITUATION_2026_09_21.md`](docs/GH_SITUATION_2026_09_21.md),
 шина нескольких агентов: [`docs/GH_AGENT_BUS.md`](docs/GH_AGENT_BUS.md),
@@ -62,16 +62,31 @@ data/           Матрица 132, нормативный реестр, рее�
 docs/           ADR, план, трассируемость ТЗ, Red Team, вопросы организатору
 ```
 
-## Старт
+## Старт за пять минут
 
-```bash
-python -m venv .venv
-. .venv/bin/activate                 # Windows: .venv\Scripts\activate
+Нужны Docker Compose v2 и свободные порты на `127.0.0.1`: `3000` (интерфейс и API),
+`8000` (ядро), `5432`, `6379`, `5672`, `9000`. GNU make не нужен.
+GPU не нужен: в образ не входит драйвер NVIDIA.
+
+```text
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+```
+
+Открыть http://127.0.0.1:3000 . Проверка ядра через шлюз:
+http://127.0.0.1:3000/api/v1/healthz . На учебном стенде плашка «учебный стенд»
+и токен `inspector-1@OBJ-DEMO-COLD-START/INSPECTOR`. Это не учётная запись
+продакшена. Документы организатора на стенд не класть.
+
+Без сети после того, как образы уже скачаны:
+[`docker-compose.offline.yml`](docker-compose.offline.yml) и
+[`docs/DEMO_COLD_START.md`](docs/DEMO_COLD_START.md).
+
+Проверка кода без Docker, из корня репозитория:
+
+```text
 pip install -e "backend[dev]"
 pytest backend/tests -q
-ruff check backend scripts && mypy --strict backend/src
-python scripts/check_contracts.py && python scripts/check_claims.py
-docker compose up -d                 # postgres, redis, rabbitmq, minio
+python scripts/check_claims.py
 ```
 
 ## Документы

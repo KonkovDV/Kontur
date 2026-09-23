@@ -84,7 +84,7 @@
         },
         "approval_basis": {
           "type": "string",
-          "enum": ["TITLE_BLOCK", "INSPECTOR_SELECT", "UNPROVEN"]
+          "enum": ["TITLE_BLOCK", "INSPECTOR_SELECT", "PACKAGE_DEFAULT", "UNPROVEN"]
         },
         "approval_date": { "type": "string", "format": "date" },
         "sheet": { "type": "string" },

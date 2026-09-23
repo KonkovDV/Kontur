@@ -26,6 +26,8 @@ const REASON_CODES = [
 type ReasonCode = (typeof REASON_CODES)[number];
 
 const DEMO_CARDS = demoCards as EvidenceCard[];
+const DEMO_BANNER = import.meta.env.VITE_DEMO_BANNER ?? "";
+const DEMO_TOKEN = import.meta.env.VITE_DEMO_TOKEN ?? "";
 
 function qualityOf(status: string): FindingQuality | null {
   if (status === "CANDIDATE" || status === "MISSING_EVIDENCE") {
@@ -142,6 +144,21 @@ export function App() {
   }
 
   useEffect(() => {
+    if (!DEMO_TOKEN) return;
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const headers = new Headers(init?.headers);
+      if (!headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${DEMO_TOKEN}`);
+      }
+      return original(input, { ...init, headers });
+    };
+    return () => {
+      window.fetch = original;
+    };
+  }, []);
+
+  useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (!inSession || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target;
@@ -164,6 +181,7 @@ export function App() {
 
   return (
     <main className="workspace">
+      {DEMO_BANNER ? <p className="demo-banner">{DEMO_BANNER}</p> : null}
       <header className="workspace__header">
         <div>
           <h1>Инспектор ИИ</h1>

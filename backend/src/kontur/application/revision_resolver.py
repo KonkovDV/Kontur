@@ -1,8 +1,8 @@
-"""Резолвер актуальной утверждённой редакции (Gate E, ТЗ п. 9.1, ADR-0003).
+"""Резолвер актуальной редакции (Gate E, ТЗ п. 9.1, ADR-0014).
 
-Эталон — только последняя утверждённая редакция. Неутверждённая, даже если
-она новее, в пул не входит. Конфликт, цикл или отсутствие признака
-утверждения — `CLARIFICATION_REQUIRED`, без сравнения.
+ПД без явного «не утв.» — эталон комплекта, если голова шифра одна.
+РД и ИД не требуют графы «Утвердил». `NOT_APPROVED` в пул не входит.
+Несколько голов или цикл — `CLARIFICATION_REQUIRED`, без сравнения.
 
 Резолвер не пишет `finding_status` сравнения: успешный выбор эталона — это
 не «расхождения нет».
@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 
 from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage, DocumentRef
@@ -64,8 +64,22 @@ class RevisionResolution:
     conflict_reason: str | None = None
 
 
-def _is_approved(doc: DocumentRef) -> bool:
-    return doc.approval_status is ApprovalStatus.APPROVED
+def _eligible(doc: DocumentRef) -> bool:
+    """В пул головы входит всё, кроме явного «не утв.»."""
+
+    return doc.approval_status is not ApprovalStatus.NOT_APPROVED
+
+
+def package_etalon(doc: DocumentRef) -> DocumentRef:
+    """Единственная голова ПД без штампа — эталон комплекта, не TITLE_BLOCK."""
+
+    if doc.doc_stage is DocStage.PD and doc.approval_status is ApprovalStatus.UNKNOWN:
+        return replace(
+            doc,
+            approval_status=ApprovalStatus.APPROVED,
+            approval_basis=ApprovalBasis.PACKAGE_DEFAULT,
+        )
+    return doc
 
 
 def overlay_inspector_approval(
@@ -115,9 +129,10 @@ def resolve_revision(
 
     1. Только документы нужной стадии.
     2. При `anchor` — только та же identity (шифр, лист, раздел).
-    3. Только APPROVED — неутверждённые в пул голов не попадают.
-    4. Голова: approved без successor_file_id либо successor не approved.
-    5. Несколько голов или цикл — RevisionConflict.
+    3. `NOT_APPROVED` в пул голов не попадает. ПД без штампа остаётся кандидатом.
+    4. Голова: нет successor в пуле пригодных редакций.
+    5. Одна голова ПД без штампа получает `PACKAGE_DEFAULT`.
+    6. Несколько голов или цикл — RevisionConflict.
     """
 
     stage_docs = [item for item in documents if item.doc_stage is stage]
@@ -139,35 +154,34 @@ def resolve_revision(
             conflict_reason=f"нет документов стадии {stage.value}",
         )
 
-    approved = [item for item in stage_docs if _is_approved(item)]
-    if not approved:
+    eligible = [item for item in stage_docs if _eligible(item)]
+    if not eligible:
         return RevisionResolution(
             status=ResolveStatus.CLARIFICATION_REQUIRED,
             resolved=None,
             conflict_reason=(
-                f"нет утверждённых редакций для {stage.value}"
-                f" ({len(stage_docs)} неутверждённых)"
+                f"нет редакции без явного «не утв.» для {stage.value}"
+                f" ({len(stage_docs)} отклонено)"
             ),
         )
 
-    approved_ids: frozenset[str] = frozenset(item.file_id for item in approved)
+    eligible_ids: frozenset[str] = frozenset(item.file_id for item in eligible)
     heads = [
         item
-        for item in approved
-        if item.successor_file_id is None or item.successor_file_id not in approved_ids
+        for item in eligible
+        if item.successor_file_id is None or item.successor_file_id not in eligible_ids
     ]
     if len(heads) == 0:
-        ids = ", ".join(item.file_id for item in approved)
+        ids = ", ".join(item.file_id for item in eligible)
         raise RevisionConflict(f"цикл в графе редакций для {stage.value}: {ids}")
     if len(heads) > 1:
         ids = ", ".join(item.file_id for item in heads)
         raise RevisionConflict(
-            f"несколько утверждённых редакций без однозначного successor"
-            f" для {stage.value}: {ids}"
+            f"несколько редакций без однозначного successor для {stage.value}: {ids}"
         )
     return RevisionResolution(
         status=ResolveStatus.RESOLVED,
-        resolved=ResolvedRevision(document=heads[0], is_stale=False),
+        resolved=ResolvedRevision(document=package_etalon(heads[0]), is_stale=False),
     )
 
 
@@ -184,7 +198,7 @@ def check_stale_revision(
     return any(
         item.doc_stage is candidate.doc_stage
         and item.file_id != candidate.file_id
-        and _is_approved(item)
+        and _eligible(item)
         and item.predecessor_file_id == candidate.file_id
         for item in all_documents
     )
