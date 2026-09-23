@@ -49,6 +49,8 @@ services:
       - minio:/data
 
   core:
+    # Стенд жюри: 8 CPU и 8 ГБ. Раннер GitHub имеет 4 CPU, поэтому CI
+    # задаёт KONTUR_CORE_CPUS=2 и контейнер там стартует.
     mem_limit: ${KONTUR_CORE_MEM_LIMIT:-8g}
     cpus: ${KONTUR_CORE_CPUS:-8}
     pids_limit: 256

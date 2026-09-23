@@ -168,6 +168,7 @@ jobs:
       KONTUR_JWT_ALGORITHM: RS256
       KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
       KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+      KONTUR_CORE_CPUS: "2"
     steps:
       - uses: actions/checkout@v4
       - name: Build core image
@@ -197,6 +198,7 @@ jobs:
       KONTUR_JWT_ALGORITHM: RS256
       KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
       KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+      KONTUR_CORE_CPUS: "2"
     steps:
       - uses: actions/checkout@v4
       - name: Build gateway image
@@ -223,6 +225,7 @@ jobs:
       KONTUR_JWT_ALGORITHM: RS256
       KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
       KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+      KONTUR_CORE_CPUS: "2"
     steps:
       - uses: actions/checkout@v4
       - name: Build and start core and gateway
