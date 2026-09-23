@@ -30,6 +30,14 @@ class ApprovalStatus(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class ApprovalBasis(StrEnum):
+    """Откуда взялся approval_status. Не источник вердикта о нарушении."""
+
+    TITLE_BLOCK = "TITLE_BLOCK"
+    INSPECTOR_SELECT = "INSPECTOR_SELECT"
+    UNPROVEN = "UNPROVEN"
+
+
 class EvidenceRole(StrEnum):
     EXPECTED = "expected"
     ACTUAL = "actual"
@@ -51,6 +59,7 @@ class DocumentRef:
     document_code: str
     revision: str
     approval_status: ApprovalStatus
+    approval_basis: ApprovalBasis = ApprovalBasis.UNPROVEN
     discipline: str | None = None
     approval_date: date | None = None
     sheet: str | None = None

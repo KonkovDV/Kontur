@@ -208,6 +208,33 @@ class TestStaleRevision:
         assert check_stale_revision(doc, [doc]) is False
 
 
+def test_inspector_select_records_basis_only_when_stamp_is_unproven() -> None:
+    from kontur.application.revision_resolver import approval_with_basis
+    from kontur.domain.models import ApprovalBasis
+
+    status, basis = approval_with_basis(
+        ApprovalStatus.UNKNOWN,
+        ApprovalBasis.UNPROVEN,
+        inspector_selected=True,
+    )
+    assert status is ApprovalStatus.APPROVED
+    assert basis is ApprovalBasis.INSPECTOR_SELECT
+    status, basis = approval_with_basis(
+        ApprovalStatus.APPROVED,
+        ApprovalBasis.TITLE_BLOCK,
+        inspector_selected=True,
+    )
+    assert status is ApprovalStatus.APPROVED
+    assert basis is ApprovalBasis.TITLE_BLOCK
+    status, basis = approval_with_basis(
+        ApprovalStatus.NOT_APPROVED,
+        ApprovalBasis.TITLE_BLOCK,
+        inspector_selected=True,
+    )
+    assert status is ApprovalStatus.NOT_APPROVED
+    assert basis is ApprovalBasis.TITLE_BLOCK
+
+
 def test_inspector_overlay_does_not_override_not_approved() -> None:
     from kontur.application.revision_resolver import overlay_inspector_approval
 

@@ -14,7 +14,7 @@
 | GAP-CAP-OCR | OCR/таблицы/чертёж объявлены `UNAVAILABLE` в capabilities | region-crop dual-read в коде; Docker SILVER-замер порог не берёт; нет GOLD | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
 | GAP-ETALON-UI | инспекторский SELECT_REVISION есть в API, в UI кнопки назначения эталона нет | двухпанельный viewer (#76) не закрывает J; POST `.../revisions/{file_id}/select` | конкурсный срез |
-| GAP-EMB | PDF с вложенными файлами (/EmbeddedFile) | `PdfDocumentTokens` разбирает только текстовый/растровый слой; вложения игнорируются | тест не писать |
+| GAP-EMB | Вложения PDF `/EmbeddedFile` | Пайплайн их не читает. Тест на `FPDFDoc_GetAttachmentCount` не писать | #80 |
 | GAP-INJ-SCAN | Сканер инъекций вызывается после `flatten_tokens` и пишет `injection_clean` | Статус находки не меняется. Текст страницы не инструкция. #84 не закрыт: нет VLM и нет system prompt | #84 |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
