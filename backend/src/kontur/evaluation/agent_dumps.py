@@ -177,6 +177,7 @@ def build_handoff(
             "Claim no branch protection after ruleset main-pr-and-ci 23890545",
             "Treat Gate K recorder mass-confirm as live review API",
             "Guess revision order from ред. N without successor",
+            "Guess bare 1200 is millimetres without a unit suffix",
             "Treat runner_id=0 or empty steps as green CI",
         ],
         "commands": {

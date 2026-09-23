@@ -370,6 +370,8 @@ gh run view RUN_ID --json status,conclusion,workflowName
 7. Не оставлять в шине «draft #115» и открытые Dependabot #116/#117 после
    влития #128. Adversarial-пакет не закрывает #80.
 8. Не угадывать порядок редакций по «ред. 1 / ред. 2» без successor.
+   Не угадывать, что голое число `1200` — миллиметры: перевод мм→м только
+   при явном суффиксе. Площадь (`мм²`, `500×300`) не масштабировать как длину.
 9. Не перекрашивать 83 `extractor_missing`. Не ставить `ocr_text=AVAILABLE`.
 10. `export_agent_dumps.py` не гонять до 28.09; `export_git_sha` отстаёт нарочно.
     Не править руками `train_public_engineering.json`.

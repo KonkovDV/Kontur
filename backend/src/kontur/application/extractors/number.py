@@ -15,7 +15,12 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from kontur.application.normalize import fold_label, parse_number
+from kontur.application.normalize import (
+    fold_label,
+    length_unit_of_match,
+    parse_number,
+    scale_length_to_target,
+)
 from kontur.domain.geometry import reading_key, union_rect_polygon, y_overlap
 from kontur.domain.models import Extraction, ExtractionEngine, Polygon
 
@@ -149,9 +154,24 @@ def parse_number_from_text(text: str, rule: dict[str, object]) -> float | None:
     if not matches:
         return None
     try:
-        return parse_number(_captured_number(matches[0]), _steps(rule))
+        value = parse_number(_captured_number(matches[0]), _steps(rule))
     except ValueError:
         return None
+    return scale_length_to_target(
+        value,
+        source_unit=length_unit_of_match(text, matches[0]),
+        target_unit=_target_unit(rule),
+    )
+
+
+def _target_unit(rule: dict[str, object]) -> str | None:
+    comparator = rule.get("comparator")
+    if isinstance(comparator, dict):
+        raw = comparator.get("unit_target")
+        if isinstance(raw, str) and raw.strip():
+            return raw
+    unit = rule.get("unit")
+    return unit if isinstance(unit, str) and unit.strip() else None
 
 
 def extract_number(tokens: Sequence[PageToken], rule: dict[str, object]) -> NumberHit | None:
@@ -171,13 +191,23 @@ def extract_number(tokens: Sequence[PageToken], rule: dict[str, object]) -> Numb
     if not matches:
         return None
     steps = _steps(rule)
-    primary_raw = _captured_number(matches[0])
-    secondary_raw = _captured_number(matches[-1])
+    target = _target_unit(rule)
+
+    def _scaled(match: re.Match[str]) -> float:
+        raw = _captured_number(match)
+        value = parse_number(raw, steps)
+        return scale_length_to_target(
+            value,
+            source_unit=length_unit_of_match(text, match),
+            target_unit=target,
+        )
+
     try:
-        primary = parse_number(primary_raw, steps)
-        secondary = parse_number(secondary_raw, steps)
+        primary = _scaled(matches[0])
+        secondary = _scaled(matches[-1])
     except ValueError:
         return None
+    primary_raw = _captured_number(matches[0])
     covering = [item for item in window if item.text.strip()]
     source = union_rect_polygon(tuple(item.polygon_source for item in covering))
     norm = union_rect_polygon(tuple(item.polygon_norm for item in covering))
