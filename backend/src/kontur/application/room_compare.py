@@ -30,8 +30,9 @@ class RoomSpot:
 
 @dataclass(frozen=True, slots=True)
 class RoomDiff:
-    """candidate — признак есть в ПД и нет в РД. suspicion — помещение только в РД.
-    match — признак совпал. abstain — пара слишком разная или номер двоится.
+    """candidate — признак есть в ПД и нет в РД.
+    suspicion — признак или номер есть только на одной стороне.
+    abstain — номер двоится на листе или различий больше порога правила.
     """
 
     kind: str
