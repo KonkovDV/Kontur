@@ -17,7 +17,7 @@
 | GAP-ETALON-UI | кнопка «Назначить эталоном» есть на живом экране комплекта | POST `.../revisions/{file_id}/select` только из READY; штамп «не утв.» не перекрывается. Gate J открыт | конкурсный срез |
 | GAP-EMB | Вложения PDF `/EmbeddedFile` | Пайплайн их не читает. Тест на `FPDFDoc_GetAttachmentCount` не писать | #80 |
 | GAP-INJ-SCAN | Сканер инъекций вызывается после `flatten_tokens` и пишет `injection_clean` | Статус находки не меняется. Текст страницы не инструкция. #84 не закрыт: нет VLM и нет system prompt | #84 |
-| GAP-PROTOCOL-PDF | PDF протокола | WeasyPrint требует pango/harfbuzz в образе. DOCX и XML отдаются. PDF — 501, не пустой файл | Приложение 2 |
+| GAP-PROTOCOL-PDF | PDF протокола | закрыт: reportlab и шрифт DejaVu/Arial, тот же провод, что DOCX. WeasyPrint не используется | Приложение 2 |
 
 Adversarial: RT-A…RT-I закрыты регрессией. Дубль находки в процессе закрыт
 `put_finding` по `evidence_group_id`. Очередь после рестарта — `process_findings`,

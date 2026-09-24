@@ -14,7 +14,9 @@ RUN apt-get update \
 WORKDIR /app
 COPY backend/pyproject.toml ./
 COPY backend/src ./src
+COPY contracts ./contracts
 COPY data/matrix ./data/matrix
+COPY data/dataset/gold_inventory.json ./data/dataset/gold_inventory.json
 RUN pip install --no-cache-dir -e . "pytesseract>=0.3.10" "Pillow>=10"
 
 # Create the runtime identity only after privileged package installation. Keep

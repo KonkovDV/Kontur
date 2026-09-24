@@ -9,7 +9,7 @@ IMAGES=(
   "postgres:16-alpine"
   "redis:7-alpine"
   "rabbitmq:3.13-management-alpine"
-  "minio/minio:RELEASE.2024-09-13T20-26-02Z"
+  "bitnamilegacy/minio:2025.7.23-debian-12-r5"
 )
 
 echo "==> Pulling images for offline use..."
@@ -26,5 +26,8 @@ for IMG in "${IMAGES[@]}"; do
 done
 
 echo ""
+echo "==> Building core and gateway for offline use..."
+docker compose build core gateway
+
 echo "==> All images pulled. Offline mode ready."
 echo "    Run: make offline-up"

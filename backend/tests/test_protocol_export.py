@@ -1,4 +1,4 @@
-"""DOCX и XML протокола из того же провода, что JSON. PDF честно отсутствует."""
+"""DOCX, XML и PDF протокола из того же провода, что JSON."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import pytest
 from docx import Document
 from fastapi.testclient import TestClient
 
-from kontur.application.protocol_export import ProtocolPdfUnavailable, render_pdf
+from kontur.application.protocol_export import render_pdf
 from kontur.application.runtime import ProcessWorkspace
 from kontur.presentation.api import app
 
@@ -54,9 +54,24 @@ def test_docx_and_xml_follow_the_json_wire(monkeypatch: pytest.MonkeyPatch) -> N
     assert "upload_status" in text
     assert "evidence_cards" in text
     assert "AUTO_NO_DIFFERENCE" not in text
-    assert pdf.status_code == 501
-    body = pdf.json()
-    assert "GAP-PROTOCOL-PDF" in body["detail"]
-    assert "gap" not in body
-    with pytest.raises(ProtocolPdfUnavailable, match="GAP-PROTOCOL-PDF"):
-        render_pdf({})
+    assert pdf.status_code == 200
+    assert pdf.content.startswith(b"%PDF")
+    assert b"AUTO_NO_DIFFERENCE" not in pdf.content
+    direct = render_pdf(
+        {
+            "protocol_id": "p-1",
+            "object_id": "obj-1",
+            "status": "VERIFICATION_COMPLETED",
+            "scenario": "matrix",
+            "violation_count": 0,
+            "upload_status": {"pd": "PD_UPLOADED", "rd": "RD_MISSING", "id": "ID_MISSING"},
+            "sections": {name: [] for name in (
+                "completeness",
+                "candidates",
+                "confirmed",
+                "negative_verified",
+                "suspicions",
+            )},
+        }
+    )
+    assert direct.startswith(b"%PDF")

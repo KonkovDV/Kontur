@@ -97,7 +97,7 @@ services:
       KONTUR_JWT_ALGORITHM: ${KONTUR_JWT_ALGORITHM:-RS256}
       KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY}
       KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
-      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-30}
+      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,6 +107,7 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    restart: unless-stopped
     ports: ["127.0.0.1:8000:8000"]
 
   outbox-relay:
@@ -180,7 +181,31 @@ services:
     environment:
       KONTUR_CORE_URL: http://core:8000
     depends_on: [core]
-    ports: ["127.0.0.1:3000:3000"]
+    restart: unless-stopped
+    ports: ["${KONTUR_BIND:-127.0.0.1}:3000:3000"]
+
+  package-runner:
+    profiles: ["runner"]
+    mem_limit: ${KONTUR_CORE_MEM_LIMIT:-8g}
+    cpus: ${KONTUR_CORE_CPUS:-8}
+    pids_limit: 256
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
+    volumes:
+      - ${KONTUR_PACKAGE_INPUT:-./input}:/input:ro
+      - ${KONTUR_PACKAGE_OUT:-./out}:/out
+    entrypoint: ["python", "-m", "kontur.cli.run_package", "--input", "/input", "--out", "/out"]
+    network_mode: none
 
 volumes:
   pgdata:
