@@ -8,10 +8,10 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from kontur.application.extractors.number import PageToken
-from kontur.domain.models import Polygon
+from kontur.domain.models import ExtractionEngine, Polygon
 
 _REQUIRED = ("room_regex", "feature_regex", "bind_radius", "pair_jaccard_min", "max_differences")
 
@@ -20,8 +20,12 @@ _REQUIRED = ("room_regex", "feature_regex", "bind_radius", "pair_jaccard_min", "
 class RoomSpot:
     room: str
     page: int
+    room_polygon_source: Polygon
     room_polygon: Polygon
+    feature_polygon_source: Polygon | None
     feature_polygon: Polygon | None
+    engine: ExtractionEngine
+    feature_engine: ExtractionEngine | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,14 +76,13 @@ def compare_room_tokens(
     max_diff = _as_int(settings["max_differences"])
     pd_pages = _pages(pd_tokens, room_re, feature_re, radius)
     rd_pages = _pages(rd_tokens, room_re, feature_re, radius)
-    if not pd_pages or not rd_pages:
-        return ()
-    pairs = _pair(pd_pages, rd_pages, jaccard_min)
-    if not pairs:
-        return ()
-    out: list[RoomDiff] = []
-    for pd_rooms, rd_rooms in pairs:
-        out.extend(_pair_diffs(pd_rooms, rd_rooms, max_diff))
+    abstains, pd_clean = _without_duplicates(pd_pages)
+    rd_abstains, rd_clean = _without_duplicates(rd_pages)
+    out = list(abstains)
+    out.extend(rd_abstains)
+    if pd_clean and rd_clean:
+        for pd_rooms, rd_rooms in _pair(pd_clean, rd_clean, jaccard_min):
+            out.extend(_pair_diffs(pd_rooms, rd_rooms, max_diff))
     return tuple(out)
 
 
@@ -101,6 +104,69 @@ def _center(polygon: Polygon) -> tuple[float, float]:
     return (sum(xs) / len(xs), sum(ys) / len(ys))
 
 
+def _inner(pattern: re.Pattern[str]) -> str:
+    body = pattern.pattern
+    if body.startswith("^"):
+        body = body[1:]
+    if body.endswith("$"):
+        body = body[:-1]
+    return body
+
+
+def _pieces(text: str, pattern: re.Pattern[str]) -> tuple[str, ...]:
+    """Целый номер или склейка номеров без мусора. «500×300» не режется."""
+
+    stripped = text.strip()
+    if pattern.fullmatch(stripped):
+        return (stripped,)
+    body = _inner(pattern)
+    part = re.compile(body)
+
+    def walk(rest: str) -> tuple[str, ...] | None:
+        if not rest:
+            return ()
+        for end in range(1, len(rest) + 1):
+            piece = rest[:end]
+            if part.fullmatch(piece) is None:
+                continue
+            tail = walk(rest[end:])
+            if tail is not None:
+                return (piece, *tail)
+        return None
+
+    parts = walk(stripped)
+    if parts is None or len(parts) < 2:
+        return ()
+    return parts
+
+
+def _expand(
+    tokens: Sequence[PageToken],
+    room_re: re.Pattern[str],
+    feature_re: re.Pattern[str],
+) -> list[PageToken]:
+    expanded: list[PageToken] = []
+    for token in tokens:
+        parts = _pieces(token.text, room_re) or _pieces(token.text, feature_re)
+        expanded.extend(replace(token, text=part) for part in parts)
+    return expanded
+
+
+def _without_duplicates(
+    pages: Mapping[int, Mapping[str, RoomSpot]],
+) -> tuple[tuple[RoomDiff, ...], dict[int, Mapping[str, RoomSpot]]]:
+    abstains: list[RoomDiff] = []
+    clean: dict[int, Mapping[str, RoomSpot]] = {}
+    for number, rooms in pages.items():
+        if "__duplicate__" in rooms:
+            abstains.append(
+                RoomDiff("abstain", "", None, None, "номер помещения повторяется на листе")
+            )
+            continue
+        clean[number] = rooms
+    return tuple(abstains), clean
+
+
 def _pages(
     tokens: Sequence[PageToken],
     room_re: re.Pattern[str],
@@ -112,25 +178,40 @@ def _pages(
         by_page.setdefault(token.page, []).append(token)
     pages: dict[int, dict[str, RoomSpot]] = {}
     for page, items in by_page.items():
-        rooms = [item for item in items if room_re.fullmatch(item.text.strip())]
-        features = [item for item in items if feature_re.fullmatch(item.text.strip())]
+        expanded = _expand(items, room_re, feature_re)
+        rooms = [item for item in expanded if room_re.fullmatch(item.text.strip())]
+        features = [item for item in expanded if feature_re.fullmatch(item.text.strip())]
         counts: dict[str, int] = {}
         for item in rooms:
             counts[item.text.strip()] = counts.get(item.text.strip(), 0) + 1
         if any(count > 1 for count in counts.values()):
-            pages[page] = {}
-            pages[page]["__duplicate__"] = RoomSpot(
-                "__duplicate__", page, rooms[0].polygon_norm, None
-            )
+            pages[page] = {
+                "__duplicate__": RoomSpot(
+                    "__duplicate__",
+                    page,
+                    rooms[0].polygon_source,
+                    rooms[0].polygon_norm,
+                    None,
+                    None,
+                    rooms[0].engine,
+                )
+            }
             continue
         bound: dict[str, RoomSpot] = {}
         for item in rooms:
-            feature_poly = _nearest_feature(item, features, radius)
+            feature = _nearest_feature(item, features, radius)
+            feature_source = None if feature is None else feature.polygon_source
+            feature_norm = None if feature is None else feature.polygon_norm
+            feature_engine = None if feature is None else feature.engine
             bound[item.text.strip()] = RoomSpot(
                 item.text.strip(),
                 page,
+                item.polygon_source,
                 item.polygon_norm,
-                feature_poly,
+                feature_source,
+                feature_norm,
+                item.engine,
+                feature_engine,
             )
         if bound:
             pages[page] = bound
@@ -141,7 +222,7 @@ def _nearest_feature(
     room: PageToken,
     features: Sequence[PageToken],
     radius: float,
-) -> Polygon | None:
+) -> PageToken | None:
     origin = _center(room.polygon_norm)
     best: PageToken | None = None
     best_dist = radius
@@ -160,7 +241,7 @@ def _nearest_feature(
             ambiguous = True
     if best is None or ambiguous:
         return None
-    return best.polygon_norm
+    return best
 
 
 def _pair(
@@ -179,8 +260,6 @@ def _pair(
                 continue
             rd_ids = {key for key in rd_rooms if key != "__duplicate__"}
             score = _jaccard(pd_ids, rd_ids)
-            if "__duplicate__" in pd_rooms or "__duplicate__" in rd_rooms:
-                score = 1.0
             if score >= best_score:
                 best_score = score
                 best_no = rd_no
@@ -216,7 +295,6 @@ def _pair_diffs(
     pd_ids = set(pd_rooms)
     rd_ids = set(rd_rooms)
     diffs: list[RoomDiff] = []
-    quiet = 0
     for room in sorted(pd_ids & rd_ids):
         pd_spot = pd_rooms[room]
         rd_spot = rd_rooms[room]
@@ -230,8 +308,16 @@ def _pair_diffs(
                     f"помещение {room}: признак есть в ПД и нет в РД",
                 )
             )
-        else:
-            quiet += 1
+        elif rd_spot.feature_polygon is not None and pd_spot.feature_polygon is None:
+            diffs.append(
+                RoomDiff(
+                    "suspicion",
+                    room,
+                    pd_spot,
+                    rd_spot,
+                    f"помещение {room}: признак есть в РД и нет в ПД",
+                )
+            )
     for room in sorted(rd_ids - pd_ids):
         diffs.append(
             RoomDiff(
@@ -242,8 +328,17 @@ def _pair_diffs(
                 f"помещение {room}: есть в РД и нет в ПД",
             )
         )
-    only_pd = len(pd_ids - rd_ids)
-    if len(diffs) + only_pd > max_diff:
+    for room in sorted(pd_ids - rd_ids):
+        diffs.append(
+            RoomDiff(
+                "suspicion",
+                room,
+                pd_rooms[room],
+                None,
+                f"помещение {room}: есть в ПД и нет в РД",
+            )
+        )
+    if len(diffs) > max_diff:
         return (
             RoomDiff(
                 "abstain",
