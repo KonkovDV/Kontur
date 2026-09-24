@@ -1,0 +1,1057 @@
+# Сгенерировано scripts/export_openapi_30.py из contracts/openapi.yaml.
+# Канонический контракт — OpenAPI 3.1.0. Этот файл — даунконверт 3.0.3
+# для валидаторов ТЗ п. 1.3. Правки вносить в contracts/openapi.yaml.
+openapi: 3.0.3
+info:
+  title: Инспектор ИИ
+  version: 0.1.0-skeleton
+  description: 'Сверка ПД/РД/ИД по матрице 132 параметров. Асинхронная pull-модель: загрузка возвращает process_id, результат забирается по запросу. CONFIRMED_VIOLATION присваивает только инспектор. Имя продукта в интерфейсе — «Инспектор ИИ» (ТЗ п. 1.1). Кодовая линия репозитория — Контур. Даунконверт для валидаторов OpenAPI 3.0: contracts/openapi-3.0.yaml.
+
+    '
+servers:
+- url: /api/v1
+security:
+- bearerAuth: []
+paths:
+  /healthz:
+    get:
+      summary: Жив ли процесс ядра
+      operationId: healthz
+      security: []
+      responses:
+        '200':
+          description: Процесс отвечает
+  /system/capabilities:
+    get:
+      summary: Честный снимок слоёв извлечения
+      description: 'overall — живой путь (сейчас векторный текст). Отсутствующие OCR, таблицы и разбор чертежа перечислены явно: тишина не считается успехом. LLM/VLM — advisory и не валят комплект.
+
+        '
+      operationId: getSystemCapabilities
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          description: Снимок возможностей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemCapabilities'
+  /documents/upload:
+    post:
+      summary: Загрузка пакета документов (инкрементальная дозагрузка до финализации)
+      operationId: uploadDocuments
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - object_id
+              - files
+              properties:
+                object_id:
+                  type: string
+                process_id:
+                  type: string
+                  description: Указывается при дозагрузке в существующий процесс
+                doc_stage:
+                  type: string
+                  enum:
+                  - PD
+                  - RD
+                  - ID
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                    x-content-media-type: application/octet-stream
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '202':
+          description: Принято в обработку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadAccepted'
+        '400':
+          $ref: '#/components/responses/Rejected'
+        '409':
+          description: Протокол финализирован, дозагрузка запрещена
+        '413':
+          description: Превышен лимит файла (50 МБ) или пакета (200 МБ)
+        '415':
+          description: Неподдерживаемый формат файла (перечень — application.intake)
+  /processes/{process_id}/status:
+    get:
+      summary: Статус обработки (целевой p95 ≤200 мс)
+      operationId: getProcessStatus
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessStatus'
+        '404':
+          description: Процесс не найден
+  /processes/{process_id}/documents:
+    get:
+      summary: Документы процесса — стадия, шифр, утверждение, актуальность
+      operationId: getProcessDocuments
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          description: Список загруженных файлов
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - process_id
+                - documents
+                properties:
+                  process_id:
+                    type: string
+                  documents:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - file_id
+                      - filename
+                      - doc_stage
+                      - approval_status
+                      - approval_basis
+                      - actuality
+                      properties:
+                        file_id:
+                          type: string
+                        filename:
+                          type: string
+                        doc_stage:
+                          type: string
+                          enum:
+                          - PD
+                          - RD
+                          - ID
+                        section:
+                          type: string
+                          nullable: true
+                        cipher:
+                          type: string
+                          nullable: true
+                        revision:
+                          type: string
+                          nullable: true
+                        approval_status:
+                          type: string
+                          enum:
+                          - APPROVED
+                          - NOT_APPROVED
+                          - UNKNOWN
+                        approval_basis:
+                          type: string
+                          enum:
+                          - TITLE_BLOCK
+                          - INSPECTOR_SELECT
+                          - PACKAGE_DEFAULT
+                          - UNPROVEN
+                        actuality:
+                          type: string
+                          enum:
+                          - CURRENT
+                          - SUPERSEDED
+                          - CLARIFICATION_REQUIRED
+                          - UNREADABLE
+        '404':
+          description: Процесс не найден
+  /processes/{process_id}/findings:
+    get:
+      summary: Находки процесса по статусу, без текста страницы
+      operationId: listProcessFindings
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          description: Список находок для экрана инспектора
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - process_id
+                - findings
+                properties:
+                  process_id:
+                    type: string
+                  findings:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - finding_id
+                      - rule_code
+                      - finding_status
+                      - section
+                      properties:
+                        finding_id:
+                          type: string
+                        rule_code:
+                          type: string
+                        finding_status:
+                          type: string
+                        section:
+                          type: string
+                          description: Раздел матрицы правила. Нет правила — null, из шифра файла не выводится.
+                          nullable: true
+                        rationale:
+                          type: string
+                        evidence_group_id:
+                          type: string
+                          nullable: true
+        '404':
+          description: Процесс не найден
+  /processes/{process_id}/files/{file_id}/pages/{page}.png:
+    get:
+      summary: PNG страницы файла, целиком или по bbox
+      operationId: getFilePagePng
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      - name: file_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: page
+        in: path
+        required: true
+        description: Номер страницы с 1
+        schema:
+          type: integer
+          minimum: 1
+      - name: bbox
+        in: query
+        required: false
+        description: лево,низ,право,верх в [0;1], ось Y вверх
+        schema:
+          type: string
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          description: Растр страницы
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+                x-content-media-type: image/png
+        '400':
+          description: bbox не разобран
+        '404':
+          description: Процесс
+          файл или страница не найдены: null
+  /processes/{process_id}/protocol:
+    get:
+      summary: Протокол проверки (структура по Приложению 2 ТЗ)
+      operationId: getProtocol
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      - name: version
+        in: query
+        schema:
+          type: integer
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: ./schemas/protocol.schema.json
+        '404':
+          description: Процесс не найден или протокол ещё не собран
+  /processes/{process_id}/protocol.docx:
+    get:
+      summary: Протокол в DOCX
+      description: Те же разделы, что у JSON. AUTO_NO_DIFFERENCE не входит. Это не копия образца организатора.
+      operationId: getProtocolDocx
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Процесс не найден или протокол ещё не собран
+  /processes/{process_id}/protocol.xml:
+    get:
+      summary: Протокол в XML
+      description: Проверяется contracts/schemas/protocol-export.xsd.
+      operationId: getProtocolXml
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/xml:
+              schema:
+                type: string
+        '404':
+          description: Процесс не найден или протокол ещё не собран
+  /processes/{process_id}/protocol.pdf:
+    get:
+      summary: Протокол в PDF
+      description: Те же разделы, что у JSON. Шрифт DejaVu в образе. 501 только если шрифт недоступен.
+      operationId: getProtocolPdf
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Процесс не найден или протокол ещё не собран
+        '501':
+          description: Шрифт PDF недоступен
+          пустой файл не отдаётся: null
+  /processes/{process_id}/audit:
+    get:
+      summary: Журнал действий текущего процесса
+      description: 'События процесса (REVIEW, START_VERIFICATION, COMPLETE_VERIFICATION, FINALIZE, UNFINALIZE, SELECT_REVISION). С Postgres они пишутся в audit_log и возвращаются при загрузке процесса. Стенд только в памяти теряет журнал вместе с процессом. GAP-EDIT для пути с БД закрыт.
+
+        '
+      operationId: getAuditLog
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLog'
+        '404':
+          description: Процесс не найден
+  /processes/{process_id}/findings/{finding_id}/evidence-card:
+    get:
+      summary: Карточка доказательства (две панели, не протокол ТЗ)
+      description: 'Экран инспектора: фрагменты expected/actual, документ и редакция, страница, polygon (bbox производный), raw и normalized/unit, rule+tolerance, disagreement, решение инспектора, audit. Не сериализует AUTO_NO_DIFFERENCE отдельно от находки. Не закрывает Gate K. Группы живут в памяти процесса; после рестарта Postgres без тел фрагментов карточка вернёт evidence_group=null.
+
+        '
+      operationId: getEvidenceCard
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      - $ref: '#/components/parameters/FindingId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: ./schemas/evidence_card.schema.json
+        '404':
+          description: Процесс или находка не найдены
+  /findings/{finding_id}/review:
+    post:
+      summary: Решение инспектора по атомарной находке
+      operationId: reviewFinding
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      parameters:
+      - name: finding_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewDecision'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: ./schemas/finding.schema.json
+        '409':
+          description: Недопустимый переход состояния
+        '422':
+          description: Отсутствует reason_code при отклонении
+  /processes/{process_id}/verify:
+    post:
+      summary: Открыть очередь верификации
+      description: 'Человек переводит процесс READY → VERIFYING. Автомат и администратор очередь не открывают. Это не финализация протокола.
+
+        '
+      operationId: startVerification
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - inspector_id
+              properties:
+                inspector_id:
+                  type: string
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessStatus'
+        '404':
+          description: Процесс не найден
+        '409':
+          description: Не READY или вызывающий не инспектор
+  /processes/{process_id}/complete:
+    post:
+      summary: Закрыть очередь верификации
+      description: 'Человек переводит VERIFYING → COMPLETED после обработки всех CANDIDATE и SUSPICION. Не FINALIZED: финализация — отдельный POST /finalize.
+
+        '
+      operationId: completeVerification
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - inspector_id
+              properties:
+                inspector_id:
+                  type: string
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessStatus'
+        '404':
+          description: Процесс не найден
+        '409':
+          description: Есть необработанные кандидаты
+          не VERIFYING или не инспектор: null
+  /processes/{process_id}/finalize:
+    post:
+      summary: Финализация протокола
+      description: 'Разрешена только человеку и только после обработки всех CANDIDATE и SUSPICION. CLARIFICATION_REQUIRED — допустимый способ закрыть кандидата (п. 9.3). MISSING_EVIDENCE выводится отдельным перечнем.
+
+        '
+      operationId: finalizeProtocol
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - inspector_id
+              properties:
+                inspector_id:
+                  type: string
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessStatus'
+        '409':
+          description: Есть необработанные кандидаты или вызывающий не инспектор
+  /processes/{process_id}/unfinalize:
+    post:
+      summary: Отмена финализации супервизором
+      description: 'Только из PROTOCOL_FINALIZED / FINALIZED, только супервизор, только с причиной. Результат — COMPLETED, новая версия протокола и запись аудита (ADR-0005).
+
+        '
+      operationId: unfinalizeProtocol
+      x-required-roles:
+      - SUPERVISOR
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - inspector_id
+              - reason
+              properties:
+                inspector_id:
+                  type: string
+                reason:
+                  type: string
+                  minLength: 1
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessStatus'
+        '409':
+          description: Не FINALIZED или вызывающий не супервизор
+  /processes/{process_id}/revisions/{file_id}/select:
+    post:
+      summary: Инспектор назначает загруженный файл эталоном редакции
+      description: 'Человек подтверждает, что файл — последняя применимая утверждённая редакция для сравнения. Автомат и администратор не вызывают операцию. Штамп «не утв.» нельзя перекрыть. «ГИП» и пустая графа «Утвердил» сами по себе эталоном не становятся. После выбора матрица пересчитывается; CONFIRMED_VIOLATION не пишется. Из READY и из VERIFYING, пока по находкам нет решений инспектора. Это не закрытие гейта J и не замена штампа.
+
+        '
+      operationId: selectRevision
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      - $ref: '#/components/parameters/FileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - inspector_id
+              - comment
+              properties:
+                inspector_id:
+                  type: string
+                comment:
+                  type: string
+                  minLength: 1
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessStatus'
+        '404':
+          description: Процесс или файл не найден
+        '409':
+          description: Не READY
+          финализирован: null
+          штамп NOT_APPROVED или нет содержимого: null
+  /demo/kit:
+    post:
+      summary: Загрузить синтетический учебный комплект
+      description: 'Только при KONTUR_ALLOW_INSECURE_DEV_AUTH=true. Четыре векторных PDF: черновик ПД, утверждённая ПД, РД и ИД. Эталон не назначается. Без флага ответ 404. Это не пакет организатора и не скрытый тест.
+
+        '
+      operationId: loadDemoKit
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          description: Процесс создан, инспектор назначает эталон сам
+        '404':
+          description: Учебный режим выключен
+        '503':
+          description: Нет шрифта с кириллицей
+  /inspection/{process_id}:
+    post:
+      summary: Поставить финальный протокол в очередь выгрузки
+      description: 'Только при PROTOCOL_FINALIZED. Инспектор ставит mock-очередь: состояние становится PENDING_SYNC, внешний РиН не вызывается и ACK нет. Повторы 1, 5 и 15 минут конечны.
+
+        '
+      operationId: syncInspection
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncState'
+        '409':
+          description: Протокол не финализирован
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'JWT проверяется только с одним настроенным асимметричным алгоритмом: RS256 с RSA-ключом либо ES256 с ключом P-256. Валидируются подпись, iss, aud, exp, nbf, непустой sub и массив roles с ролями INSPECTOR / SUPERVISOR / ADMIN. Операции, привязанные к объекту, дополнительно требуют непустой object_id в токене, совпадающий с объектом запроса; несовпадение запрещает доступ. GET /healthz публичен. GET /system/capabilities требует JWT, но не требует object_id. Администратор не подтверждает нарушения и не финализирует протокол (ADR-0001), отмена финализации — только супервизор (п. 9.3).
+
+        '
+  parameters:
+    ProcessId:
+      name: process_id
+      in: path
+      required: true
+      schema:
+        type: string
+    FileId:
+      name: file_id
+      in: path
+      required: true
+      schema:
+        type: string
+    FindingId:
+      name: finding_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Аутентификация не пройдена — JWT отсутствует, недействителен или не прошёл проверку обязательных claims
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: JWT действителен, но роль, object_id или требование инспектора не допускают операцию
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Rejected:
+      description: Файл или пакет отклонён
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RejectionReason'
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+      - detail
+      properties:
+        detail:
+          type: string
+      additionalProperties: false
+    UploadAccepted:
+      type: object
+      required:
+      - process_id
+      - accepted
+      - rejected
+      properties:
+        process_id:
+          type: string
+        accepted:
+          type: array
+          items:
+            type: object
+            required:
+            - file_id
+            - file_hash
+            properties:
+              file_id:
+                type: string
+              file_hash:
+                type: string
+                pattern: ^[a-f0-9]{64}$
+        rejected:
+          type: array
+          items:
+            $ref: '#/components/schemas/RejectionReason'
+    RejectionReason:
+      type: object
+      required:
+      - reason_code
+      - message
+      properties:
+        file_name:
+          type: string
+        reason_code:
+          type: string
+          enum:
+          - UNSUPPORTED_FORMAT
+          - CORRUPTED_FILE
+          - FILE_TOO_LARGE
+          - BATCH_LIMIT_EXCEEDED
+          - ANTIVIRUS_REJECTED
+          - ENCRYPTED_FILE
+          - PROCESSING_TIMEOUT
+          - UNSAFE_FILENAME
+        message:
+          type: string
+    ProcessStatus:
+      type: object
+      required:
+      - process_id
+      - process_state
+      - completeness
+      - sync_state
+      - versions
+      properties:
+        process_id:
+          type: string
+        process_state:
+          type: string
+          enum:
+          - PENDING
+          - PARSING
+          - READY
+          - VERIFYING
+          - COMPLETED
+          - FINALIZED
+        scenario:
+          type: string
+          enum:
+          - FULL
+          - PD_RD_ONLY
+          - PD_ID_ONLY
+          - RD_ID_ONLY
+          - SINGLE_ONLY
+          - PARTIALLY_LOADED
+        completeness:
+          type: object
+          required:
+          - pd
+          - rd
+          - id
+          description: 'Буквальные статусы п. 9.1. Внутри домена хранится UPLOADED/PARTIAL/MISSING и проецируется через tz_upload_status.
+
+            '
+          properties:
+            pd:
+              type: string
+              enum:
+              - PD_UPLOADED
+              - PD_PARTIAL
+              - PD_MISSING
+            rd:
+              type: string
+              enum:
+              - RD_UPLOADED
+              - RD_PARTIAL
+              - RD_MISSING
+            id:
+              type: string
+              enum:
+              - ID_UPLOADED
+              - ID_PARTIAL
+              - ID_MISSING
+        protocol_status:
+          type: string
+          description: Проекция п. 9.3. COMPLETED→VERIFICATION_COMPLETED, FINALIZED→PROTOCOL_FINALIZED.
+          enum:
+          - READY
+          - VERIFYING
+          - VERIFICATION_COMPLETED
+          - PROTOCOL_FINALIZED
+        counters:
+          type: object
+          description: candidates и confirmed считаются раздельно; в число нарушений входит только confirmed
+          properties:
+            candidates:
+              type: integer
+            confirmed_violations:
+              type: integer
+            negative_verified:
+              type: integer
+            missing_evidence:
+              type: integer
+            clarification_required:
+              type: integer
+            suspicions:
+              type: integer
+        sync_state:
+          $ref: '#/components/schemas/SyncState'
+        versions:
+          $ref: '#/components/schemas/Versions'
+    SyncState:
+      type: string
+      enum:
+      - NOT_REQUESTED
+      - PENDING_SYNC
+      - SYNCING
+      - SYNCED
+      - RETRY_WAIT
+      - FAILED_TERMINAL
+    Versions:
+      type: object
+      required:
+      - matrix_version
+      - model_version
+      - dataset_version
+      - input_manifest_hash
+      - git_sha
+      properties:
+        matrix_version:
+          type: string
+        model_version:
+          type: string
+        dataset_version:
+          type: string
+        input_manifest_hash:
+          type: string
+        git_sha:
+          type: string
+    SystemCapabilities:
+      type: object
+      required:
+      - overall
+      - kit_blocked
+      - engines
+      - health
+      properties:
+        overall:
+          type: string
+          enum:
+          - AVAILABLE
+          - DEGRADED
+          - UNAVAILABLE
+          description: Статус живого пути извлечения, не «все слои зелёные».
+        kit_blocked:
+          type: boolean
+        note:
+          type: string
+        engines:
+          type: array
+          items:
+            type: object
+            required:
+            - name
+            - status
+            - affects_verdict
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+                enum:
+                - AVAILABLE
+                - DEGRADED
+                - UNAVAILABLE
+              affects_verdict:
+                type: boolean
+        health:
+          type: object
+          required:
+          - healthy
+          - degraded
+          - failed
+          - skipped
+          properties:
+            healthy:
+              type: array
+              items:
+                type: string
+            degraded:
+              type: array
+              items:
+                type: string
+            failed:
+              type: array
+              items:
+                type: string
+            skipped:
+              type: array
+              items:
+                type: string
+    AuditLog:
+      type: object
+      required:
+      - process_id
+      - events
+      properties:
+        process_id:
+          type: string
+        events:
+          type: array
+          items:
+            type: object
+            required:
+            - actor_id
+            - action
+            - payload
+            properties:
+              actor_id:
+                type: string
+              action:
+                type: string
+              payload:
+                type: object
+                additionalProperties: true
+    ReviewDecision:
+      type: object
+      required:
+      - action
+      - inspector_id
+      - comment
+      properties:
+        action:
+          type: string
+          enum:
+          - CONFIRM
+          - REJECT
+          - REQUEST_CLARIFICATION
+          description: 'SPLIT составного кандидата — отдельная операция (ещё не реализована). Не смешивается с атомарным решением.
+
+            '
+        inspector_id:
+          type: string
+        reason_code:
+          type: string
+          description: Обязателен при REJECT
+          enum:
+          - WRONG_REVISION_SELECTED
+          - APPROVED_CHANGE_EXISTS
+          - OCR_ERROR
+          - LINKAGE_ERROR
+          - PARAMETER_NOT_APPLICABLE
+          - SOURCE_QUALITY
+          - OTHER
+        comment:
+          type: string
+          minLength: 1
+          description: Обязателен при CONFIRM, REJECT и REQUEST_CLARIFICATION (ТЗ п. 9.3)
