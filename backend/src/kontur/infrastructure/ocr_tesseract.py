@@ -409,7 +409,11 @@ def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocu
     Одна страница остаётся в этом процессе.
     """
 
-    if not tesseract_available() or not raster_pages_need_ocr(document):
+    from kontur.infrastructure.ocr_rapid import weights_ready
+
+    if not raster_pages_need_ocr(document):
+        return document
+    if not tesseract_available() and not weights_ready():
         return document
     targets = [page for page in document.pages if _needs_ocr(page)]
     filled: dict[int, tuple[PageToken, ...]] = {}
@@ -512,13 +516,18 @@ def _crop_to_region(image: object | None, frame: PageFrame, region: UserRegion) 
 
 
 def _ocr_pdf_page(pdf_page: object, page: PdfPageTokens) -> tuple[PageToken, ...]:
-    try:
-        pytesseract = import_module("pytesseract")
-    except ImportError:
-        return ()
     image = _render_pil(pdf_page)
     size = _image_size(image)
     if image is None or size is None:
+        return ()
+    from kontur.infrastructure.ocr_rapid import rapid_page_tokens
+
+    rapid = rapid_page_tokens(image, page, size)
+    if rapid:
+        return rapid
+    try:
+        pytesseract = import_module("pytesseract")
+    except ImportError:
         return ()
     payload = _image_to_data(pytesseract, image, psm=6)
     if payload is None:

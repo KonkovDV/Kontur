@@ -12,7 +12,7 @@
 | GAP-IOS4-VAL | Recall критических на frozen val не измерен | документы TRAIN_PUBLIC есть; frozen val на 132/106 нет (6 матричных позитивов, Wilson 6/6 ниже порога); gold-evidence: F0171 PD + F0201 MIXED-as-RD, 0/6 из‑за L4 (ПД без заполненной графы «Утвердил»); harness в `backend/tests/test_frozen_val.py` | гейт J |
 | GAP-FREE-SEARCH | Free-search живёт реестром `MATRIX_GAP`, не правилом матрицы | нет артефакта ответа организатора, добавлять 133-е правило нельзя | вопрос организатору |
 | GAP-CAP-OCR | OCR `MEASURED`, таблицы `UNAVAILABLE`, чертёж `DEGRADED` | SILVER n=3013, gate_i_low≈0.426, порог 0.97 не взят. Не GOLD. Гейт I открыт | гейт I |
-| GAP-OCR-RASTER | Нет человечески проверенного эталона страниц без текстового слоя | Пилот SILVER — это PDF_TEXT_LAYER. Подписи растра не выдумывать. `cyrillic_PP-OCRv5_mobile_rec` не в основных зависимостях. `ocr_text` остаётся `MEASURED` | гейт I |
+| GAP-OCR-RASTER | Нет человечески проверенного эталона страниц без текстового слоя | Пилот SILVER — это PDF_TEXT_LAYER. Подписи растра не выдумывать. В образ ядра на сборке кладутся веса eslav PP-OCRv5 ONNX со сверкой SHA-256; без каталога остаётся Tesseract. `ocr_text` остаётся `MEASURED` | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
 | GAP-ETALON-UI | кнопка «Назначить эталоном» есть на живом экране комплекта | POST `.../revisions/{file_id}/select` только из READY; штамп «не утв.» не перекрывается. Gate J открыт | конкурсный срез |
 | GAP-EMB | Вложения PDF `/EmbeddedFile` | Пайплайн их не читает. Тест на `FPDFDoc_GetAttachmentCount` не писать | #80 |

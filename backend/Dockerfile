@@ -11,6 +11,9 @@ RUN apt-get update \
         tesseract-ocr-rus \
         tesseract-ocr-eng \
         fonts-dejavu-core \
+        libgomp1 \
+        libglib2.0-0 \
+        libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -19,7 +22,14 @@ COPY backend/src ./src
 COPY contracts ./contracts
 COPY data/matrix ./data/matrix
 COPY data/dataset/gold_inventory.json ./data/dataset/gold_inventory.json
-RUN pip install --no-cache-dir -e . "pytesseract>=0.3.10" "Pillow>=10"
+COPY scripts/fetch_ocr_weights.py /tmp/fetch_ocr_weights.py
+RUN pip install --no-cache-dir -e ".[ocr]" \
+    && python /tmp/fetch_ocr_weights.py \
+        --lock /app/src/kontur/infrastructure/ocr_weights.lock.json \
+        --dest /opt/kontur/ocr \
+        --fetch \
+    && rm /tmp/fetch_ocr_weights.py
+ENV KONTUR_OCR_WEIGHTS=/opt/kontur/ocr
 
 # Create the runtime identity only after privileged package installation. Keep
 # /app root-owned: the application may write only to explicitly mounted paths
