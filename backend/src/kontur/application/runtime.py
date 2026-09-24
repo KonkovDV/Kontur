@@ -36,6 +36,7 @@ from kontur.domain.statuses import (
     Scenario,
     SyncState,
 )
+from kontur.evaluation.submission_pack import build_input_manifest
 from kontur.infrastructure.db.process_store import (
     FileRecord,
     MemoryProcessStore,
@@ -153,6 +154,13 @@ class ProcessRecord:
                 "git_sha": self.git_sha,
             },
         }
+
+
+def _manifest_hash(record: ProcessRecord) -> str:
+    files = [
+        {"file_id": item.file_id, "file_hash": item.file_hash} for item in record.files
+    ]
+    return str(build_input_manifest(files)["manifest_hash"])
 
 
 class ProcessWorkspace:
@@ -314,7 +322,7 @@ class ProcessWorkspace:
         record.files.append(item)
         record.completeness[item.doc_stage] = Completeness.UPLOADED
         record.scenario = detect_scenario(record.completeness)
-        record.input_manifest_hash = item.file_hash if len(record.files) == 1 else "pending"
+        record.input_manifest_hash = _manifest_hash(record)
         self._persist(record)
         return True
 
@@ -326,6 +334,7 @@ class ProcessWorkspace:
     def run_matrix_pipeline(self, record: ProcessRecord) -> PipelineReport:
         """L1–L7 по загруженным PDF. Успех прогона → READY, не FINALIZED."""
 
+        record.input_manifest_hash = _manifest_hash(record)
         report = run_process_pipeline(
             object_id=record.object_id,
             completeness=record.completeness,

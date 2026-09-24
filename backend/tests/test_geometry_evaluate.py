@@ -196,6 +196,7 @@ def test_live_ios4_rule_stays_number() -> None:
     extractor = rule["extractor"]
     assert isinstance(extractor, dict)
     assert extractor["type"] == "number"
+    assert isinstance(extractor["room_compare"], dict)
     assert rule["coverage"] == "executable"
     params = extractor["params"]
     assert isinstance(params, dict)

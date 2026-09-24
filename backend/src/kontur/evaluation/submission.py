@@ -267,11 +267,15 @@ def location_from_group(group: EvidenceGroup) -> str:
     """Ключ организатора: номер помещения или конструктивный элемент, иначе «объект».
 
     Стадия, шифр, редакция, лист и страница лежат в evidence, не в location.
-    Отдельного поля помещения во фрагменте пока нет, поэтому ключ — «объект».
+    Номер помещения берётся из normalized_value вида «помещение N». Иначе ключ — «объект».
     """
 
     if not group.fragments:
         raise ValueError(f"{group.evidence_group_id}: нет фрагментов для локализации")
+    for fragment in group.fragments:
+        value = fragment.extracted.normalized_value
+        if isinstance(value, str) and value.startswith("помещение "):
+            return value
     return "объект"
 
 

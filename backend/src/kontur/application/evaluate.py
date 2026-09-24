@@ -44,6 +44,7 @@ from kontur.application.revision_resolver import (
     resolve_heads_by_identity,
     resolve_revision,
 )
+from kontur.application.room_compare import RoomDiff, RoomSpot, compare_room_tokens, room_settings
 from kontur.application.scenarios import CompletenessMap, status_for_missing_stage
 from kontur.domain.coordinates import PageFrame
 from kontur.domain.geometry import polygon_in_unit_square
@@ -55,6 +56,8 @@ from kontur.domain.models import (
     EvidenceFragment,
     EvidenceGroup,
     EvidenceRole,
+    Extraction,
+    ExtractionEngine,
     Finding,
 )
 from kontur.domain.statuses import (
@@ -111,6 +114,7 @@ class RuleEvaluation:
     evidence_group: EvidenceGroup | None
     stages: tuple[StageResult, ...]
     missing_stage: DocStage | None = None
+    also: tuple[RuleEvaluation, ...] = ()
 
 
 def _mapped(rule: dict[str, object], key: str, default: FindingStatus) -> FindingStatus:
@@ -460,6 +464,156 @@ def _ocr_region_agrees(hit: NumberHit, page: StagePage, rule: dict[str, object])
     return primary == value
 
 
+def _room_rule(
+    rule: dict[str, object],
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
+    object_id: str,
+) -> RuleEvaluation:
+    settings = room_settings(rule)
+    if settings is None:
+        return _halt(
+            rule,
+            Stage.L6_MATRIX,
+            FindingStatus.CLARIFICATION_REQUIRED,
+            "room_compare без порогов в правиле",
+        )
+    pd = pages.get(DocStage.PD)
+    rd = pages.get(DocStage.RD)
+    if not isinstance(pd, StagePage) or not isinstance(rd, StagePage):
+        return _halt(
+            rule,
+            Stage.L4_REVISION,
+            FindingStatus.CLARIFICATION_REQUIRED,
+            "room_compare ждёт одну голову ПД и одну голову РД",
+        )
+    diffs = compare_room_tokens(pd.tokens, rd.tokens, settings)
+    if not diffs:
+        return _halt(
+            rule,
+            Stage.L2_EXTRACTION,
+            _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+            "номера помещений на паре листов не сопоставились",
+        )
+    built = tuple(_room_evaluation(rule, diff, pd, rd, object_id) for diff in diffs)
+    first, *rest = built
+    return replace(first, also=tuple(rest))
+
+
+def _room_evaluation(
+    rule: dict[str, object],
+    diff: RoomDiff,
+    pd: StagePage,
+    rd: StagePage,
+    object_id: str,
+) -> RuleEvaluation:
+    status = {
+        "candidate": FindingStatus.CANDIDATE,
+        "suspicion": FindingStatus.SUSPICION,
+        "match": FindingStatus.AUTO_NO_DIFFERENCE,
+        "abstain": FindingStatus.ABSTAIN,
+    }[diff.kind]
+    if status is FindingStatus.ABSTAIN:
+        return _halt(rule, Stage.L5_PAIRING, status, diff.rationale)
+    label = f"помещение {diff.room}"
+    fragments: list[EvidenceFragment] = []
+    group_id = f"{object_id}:{rule['code']}:{diff.room}:{diff.kind}"
+    if diff.pd is not None:
+        fragments.append(
+            _room_fragment(
+                group_id,
+                "pd-room",
+                EvidenceRole.EXPECTED,
+                pd.document,
+                diff.pd,
+                label,
+            )
+        )
+        if diff.pd.feature_polygon is not None:
+            fragments.append(
+                _room_fragment(
+                    group_id,
+                    "pd-feature",
+                    EvidenceRole.CONTEXT,
+                    pd.document,
+                    diff.pd,
+                    label,
+                    polygon=diff.pd.feature_polygon,
+                )
+            )
+    if diff.rd is not None:
+        fragments.append(
+            _room_fragment(
+                group_id,
+                "rd-room",
+                EvidenceRole.ACTUAL,
+                rd.document,
+                diff.rd,
+                label,
+            )
+        )
+    group = EvidenceGroup(
+        evidence_group_id=group_id,
+        object_id=object_id,
+        rule_code=str(rule["code"]),
+        matrix_version=str(rule["matrix_version"]),
+        fragments=tuple(fragments),
+        resolved_revisions=(pd.document, rd.document),
+    )
+    kind = DisagreementKind.VALUE_DELTA if status is FindingStatus.CANDIDATE else None
+    finding = Finding(
+        finding_id=str(uuid4()),
+        rule_code=str(rule["code"]),
+        finding_status=status,
+        review_priority=_priority(rule),
+        matrix_version=str(rule["matrix_version"]),
+        rule_version="0.1.0",
+        model_version="none",
+        evidence_group_id=group_id,
+        expected_value=(
+            label if diff.pd is not None and diff.pd.feature_polygon is not None else None
+        ),
+        actual_value=None if status is FindingStatus.CANDIDATE else label,
+        rationale=diff.rationale,
+        source_id=pd.document.file_id,
+        evidence_refs=tuple(item.fragment_id for item in fragments),
+        disagreement_kind=kind,
+    )
+    _assert_machine_status(status)
+    return RuleEvaluation(finding=finding, evidence_group=group, stages=())
+
+
+def _room_fragment(
+    group_id: str,
+    suffix: str,
+    role: EvidenceRole,
+    document: DocumentRef,
+    spot: object,
+    label: str,
+    *,
+    polygon: object | None = None,
+) -> EvidenceFragment:
+    assert isinstance(spot, RoomSpot)
+    chosen = spot.room_polygon if polygon is None else polygon
+    assert isinstance(chosen, tuple)
+    return EvidenceFragment(
+        fragment_id=f"{group_id}-{suffix}",
+        role=role,
+        document=document,
+        page=spot.page,
+        polygon_source=chosen,
+        polygon_norm=chosen,
+        extracted=Extraction(
+            raw_token=spot.room,
+            engine=ExtractionEngine.VECTOR,
+            engine_version="room-compare-0",
+            confidence=1.0,
+            normalized_value=label,
+            grounded_in_source_tokens=True,
+            second_read_agrees=True,
+        ),
+    )
+
+
 def evaluate_rule(
     rule: dict[str, object],
     *,
@@ -481,7 +635,7 @@ def evaluate_rule(
     else:
         valid_operators = _TEXT_OPERATORS if is_text else NUMERIC_OPERATORS
 
-    if extractor_type not in ("number", "geometry", *_TEXT_EXTRACTOR_TYPES):
+    if extractor_type not in ("number", "geometry", "room_compare", *_TEXT_EXTRACTOR_TYPES):
         return _halt(
             rule,
             Stage.L6_MATRIX,
@@ -631,6 +785,9 @@ def evaluate_rule(
                     f"{stage.value}: эталон без признака утверждения",
                     prior=identity_ok,
                 )
+
+    if extractor_type == "room_compare":
+        return _room_rule(rule, pages, object_id)
 
     dual_req = _dual_read_required(rule)
 

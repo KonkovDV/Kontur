@@ -187,6 +187,30 @@ def test_attach_file_is_idempotent_on_hash_and_stage() -> None:
     assert record.has_file("a" * 64, DocStage.RD) is True
     assert record.has_file("b" * 64, DocStage.PD) is False
     assert len(record.files) == 2
+    assert record.input_manifest_hash != "pending"
+
+
+def test_manifest_hash_matches_canonical_manifest() -> None:
+    from kontur.evaluation.submission_pack import build_input_manifest
+
+    workspace = ProcessWorkspace()
+    record = workspace.create("obj-hash", _completeness())
+    rows = []
+    for index, stage in enumerate((DocStage.PD, DocStage.RD, DocStage.ID, DocStage.PD)):
+        digest = f"{index:064x}"
+        file_id = f"file-{index}"
+        rows.append({"file_id": file_id, "file_hash": digest})
+        assert workspace.attach_file(
+            record,
+            AcceptedFile(
+                file_id=file_id,
+                file_hash=digest,
+                filename=f"{index}.pdf",
+                doc_stage=stage,
+                size_bytes=8,
+            ),
+        )
+    assert record.input_manifest_hash == build_input_manifest(rows)["manifest_hash"]
 
 
 def test_files_completeness_and_audit_survive_new_workspace() -> None:

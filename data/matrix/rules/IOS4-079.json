@@ -39,6 +39,13 @@
   },
   "extractor": {
     "type": "number",
+    "room_compare": {
+      "room_regex": "^(?:\\d{3}|0\\d{2}\\.\\d)$",
+      "feature_regex": "^(?:П|приточ\\w*)$",
+      "bind_radius": 0.08,
+      "pair_jaccard_min": 0.5,
+      "max_differences": 8
+    },
     "regex": "(\\d[\\d\\s]*(?:[.,]\\d+)?)\\s*(?:м[³3]/ч|м3/ч|куб\\.?\\s*м/ч)",
     "anchors": [
       "приточная установка",

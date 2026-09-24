@@ -256,15 +256,18 @@ def run_process_pipeline(
             revision_pool=revision_pool,
             inspector_selected_file_ids=inspector_approved_file_ids,
         )
-        finding = result.finding
-        if finding.finding_status in HUMAN_ONLY_STATUSES:
-            raise RuntimeError(f"{code}: автомат записал {finding.finding_status.value}")
-        findings.append(replace(finding, finding_id=f"pipe-{code}"))
-        if result.evidence_group is not None:
-            groups.append(result.evidence_group)
+        batch = (result, *result.also)
+        for index, item in enumerate(batch):
+            finding = item.finding
+            if finding.finding_status in HUMAN_ONLY_STATUSES:
+                raise RuntimeError(f"{code}: автомат записал {finding.finding_status.value}")
+            suffix = "" if index == 0 else f"-{index}"
+            findings.append(replace(finding, finding_id=f"pipe-{code}{suffix}"))
+            if item.evidence_group is not None:
+                groups.append(item.evidence_group)
     report = PipelineReport(
         findings=tuple(findings),
-        rules_evaluated=len(findings),
+        rules_evaluated=len(codes),
         parse_errors=parse_errors,
         pages_built=_count_built_pages(pages),
         stamp_by_file_id=stamps,
