@@ -23,7 +23,7 @@ from io import BytesIO
 from pathlib import Path
 
 from kontur.application.extractors.number import PageToken
-from kontur.domain.coordinates import PageFrame, to_normalized
+from kontur.domain.coordinates import PageFrame, polygons_from_view_pixels, to_normalized, to_source
 from kontur.domain.geometry import bbox_from_polygon
 from kontur.domain.models import ExtractionEngine, Polygon
 from kontur.infrastructure.pdfium_tokens import PdfDocumentTokens, PdfPageTokens
@@ -126,12 +126,9 @@ def _open_pdf(data: bytes) -> object | None:
 
 
 def raster_pages_need_ocr(document: PdfDocumentTokens) -> bool:
-    """Пустой растр с rotate=0. Поворот — GAP-OCR-ROT, не тихий bbox."""
+    """Пустой растр, включая /Rotate. Повторный проход — если прямой OCR пуст."""
 
-    return any(
-        page.layer_kind == "raster" and not page.tokens and page.frame.rotate == 0
-        for page in document.pages
-    )
+    return any(_needs_ocr(page) for page in document.pages)
 
 
 def expand_user_region(polygon: Polygon, frame: PageFrame) -> UserRegion | None:
@@ -232,15 +229,23 @@ def tokens_from_tesseract_payload(
         height = _field_float(payload, "height", index)
         if width <= 0 or height <= 0:
             continue
-        x0 = box_left + (left / img_w) * box_w
-        x1 = box_left + ((left + width) / img_w) * box_w
-        y1 = box_top - (top / img_h) * box_h
-        y0 = box_top - ((top + height) / img_h) * box_h
-        polygon: Polygon = ((x0, y0), (x1, y0), (x1, y1), (x0, y1))
-        try:
-            polygon_norm = to_normalized(polygon, page.frame)
-        except ValueError:
-            continue
+        if region is None:
+            mapped = polygons_from_view_pixels(
+                left, top, left + width, top + height, image_size, page.frame
+            )
+            if mapped is None:
+                continue
+            polygon, polygon_norm = mapped
+        else:
+            x0 = box_left + (left / img_w) * box_w
+            x1 = box_left + ((left + width) / img_w) * box_w
+            y1 = box_top - (top / img_h) * box_h
+            y0 = box_top - ((top + height) / img_h) * box_h
+            polygon = ((x0, y0), (x1, y0), (x1, y1), (x0, y1))
+            try:
+                polygon_norm = to_normalized(polygon, page.frame)
+            except ValueError:
+                continue
         out.append(
             PageToken(
                 text=text,
@@ -399,7 +404,7 @@ def _ocr_job(data: bytes, page: PdfPageTokens) -> tuple[PageToken, ...]:
 
 
 def _needs_ocr(page: PdfPageTokens) -> bool:
-    return page.layer_kind == "raster" and not page.tokens and page.frame.rotate == 0
+    return page.layer_kind == "raster" and not page.tokens
 
 
 def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocumentTokens:
@@ -515,11 +520,21 @@ def _crop_to_region(image: object | None, frame: PageFrame, region: UserRegion) 
     return cropped
 
 
-def _ocr_pdf_page(pdf_page: object, page: PdfPageTokens) -> tuple[PageToken, ...]:
-    image = _render_pil(pdf_page)
-    size = _image_size(image)
-    if image is None or size is None:
-        return ()
+def unrotate_norm(nx: float, ny: float, quarter_ccw: int) -> tuple[float, float]:
+    """Точка кадра, повёрнутого против часовой на quarter*90, в исходном кадре."""
+
+    if quarter_ccw == 0:
+        return (nx, ny)
+    if quarter_ccw == 1:
+        return (1.0 - ny, nx)
+    if quarter_ccw == 2:
+        return (1.0 - nx, 1.0 - ny)
+    if quarter_ccw == 3:
+        return (ny, 1.0 - nx)
+    raise ValueError(f"четверть {quarter_ccw} не из 0..3")
+
+
+def _ocr_image(image: object, page: PdfPageTokens, size: tuple[int, int]) -> tuple[PageToken, ...]:
     from kontur.infrastructure.ocr_rapid import rapid_page_tokens
 
     rapid = rapid_page_tokens(image, page, size)
@@ -533,6 +548,82 @@ def _ocr_pdf_page(pdf_page: object, page: PdfPageTokens) -> tuple[PageToken, ...
     if payload is None:
         return ()
     return tokens_from_tesseract_payload(payload, page, size)
+
+
+def _view_page(page: PdfPageTokens, size: tuple[int, int]) -> PdfPageTokens:
+    width, height = float(size[0]), float(size[1])
+    frame = PageFrame(media=(0.0, 0.0, width, height), crop=(0.0, 0.0, width, height), rotate=0)
+    return replace(page, frame=frame, tokens=())
+
+
+def _remap_turn(
+    tokens: tuple[PageToken, ...],
+    quarter_ccw: int,
+    page: PdfPageTokens,
+) -> tuple[PageToken, ...]:
+    mapped: list[PageToken] = []
+    for token in tokens:
+        points: list[tuple[float, float]] = []
+        for nx, ny in token.polygon_norm:
+            ux, uy = unrotate_norm(nx, ny, quarter_ccw)
+            if ux < -1e-6 or uy < -1e-6 or ux > 1.0 + 1e-6 or uy > 1.0 + 1e-6:
+                points = []
+                break
+            points.append((min(1.0, max(0.0, ux)), min(1.0, max(0.0, uy))))
+        if len(points) < 3:
+            continue
+        norm: Polygon = tuple(points)
+        mapped.append(
+            replace(
+                token,
+                polygon_norm=norm,
+                polygon_source=to_source(norm, page.frame),
+                page=page.page,
+            )
+        )
+    return tuple(mapped)
+
+
+def _ocr_turned_image(image: object, page: PdfPageTokens) -> tuple[PageToken, ...]:
+    """90/180/270, если прямой кадр пуст. /Rotate уже учтён рендером и сюда не входит."""
+
+    try:
+        pillow = import_module("PIL.Image")
+    except ImportError:
+        return ()
+    transpose = getattr(pillow, "Transpose", None)
+    turn = getattr(image, "transpose", None)
+    if transpose is None or turn is None:
+        return ()
+    best: tuple[PageToken, ...] = ()
+    for quarter, operation in (
+        (1, transpose.ROTATE_90),
+        (2, transpose.ROTATE_180),
+        (3, transpose.ROTATE_270),
+    ):
+        try:
+            turned = turn(operation)
+        except (TypeError, ValueError, OSError):
+            continue
+        turned_size = _image_size(turned)
+        if turned_size is None:
+            continue
+        found = _ocr_image(turned, _view_page(page, turned_size), turned_size)
+        mapped = _remap_turn(found, quarter, page)
+        if len(mapped) > len(best):
+            best = mapped
+    return best
+
+
+def _ocr_pdf_page(pdf_page: object, page: PdfPageTokens) -> tuple[PageToken, ...]:
+    image = _render_pil(pdf_page)
+    size = _image_size(image)
+    if image is None or size is None:
+        return ()
+    tokens = _ocr_image(image, page, size)
+    if tokens or page.frame.rotate != 0:
+        return tokens
+    return _ocr_turned_image(image, page)
 
 
 def _image_size(image: object) -> tuple[int, int] | None:

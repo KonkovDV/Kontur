@@ -83,6 +83,34 @@ def to_normalized(polygon: Polygon, frame: PageFrame) -> Polygon:
     return result
 
 
+def polygons_from_view_pixels(
+    left: float,
+    top: float,
+    right: float,
+    bottom: float,
+    image_size: tuple[int, int],
+    frame: PageFrame,
+) -> tuple[Polygon, Polygon] | None:
+    """Пиксели кадра pdfium → polygon источника и [0;1].
+
+    ``page.render`` уже применяет ``/Rotate``: ось X вправо, Y вниз,
+    размер кадра — видимая страница. Доля пикселя и есть polygon_norm.
+    """
+
+    img_w, img_h = image_size
+    if img_w <= 0 or img_h <= 0 or right <= left or bottom <= top:
+        return None
+    polygon_norm = (
+        (left / img_w, top / img_h),
+        (right / img_w, top / img_h),
+        (right / img_w, bottom / img_h),
+        (left / img_w, bottom / img_h),
+    )
+    if not polygon_in_unit_square(polygon_norm):
+        return None
+    return to_source(polygon_norm, frame), polygon_norm
+
+
 def to_source(polygon_norm: Polygon, frame: PageFrame) -> Polygon:
     """[0;1], Y вниз → user space PDF."""
 
