@@ -423,6 +423,27 @@ export function LiveWorkspace({ token }: Props) {
     }
   }
 
+  async function queueRinMock() {
+    if (!processId || status?.process_state !== "FINALIZED") return;
+    setBusy(true);
+    setError("");
+    try {
+      const queued = await readJson<string>(
+        await fetch(`/api/v1/inspection/${processId}`, { method: "POST" }),
+      );
+      await refresh(processId);
+      setProtocolNote(
+        queued === "PENDING_SYNC"
+          ? "Протокол в очереди выгрузки. ACK РиН нет."
+          : `Состояние выгрузки: ${queued}. ACK РиН нет.`,
+      );
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "очередь РиН не принята");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function downloadClicks() {
     if (startedAt === null || decisions.length === 0) return;
     const payload: UsabilityExport = buildUsabilityExport(
@@ -722,6 +743,17 @@ export function LiveWorkspace({ token }: Props) {
             onClick={() => void finalizeProtocol()}
           >
             Собрать и скачать протокол
+          </button>
+          <button
+            type="button"
+            disabled={
+              busy ||
+              status?.process_state !== "FINALIZED" ||
+              status.sync_state !== "NOT_REQUESTED"
+            }
+            onClick={() => void queueRinMock()}
+          >
+            Передать в РиН (mock)
           </button>
           {protocolNote ? <p>{protocolNote}</p> : null}
           {audit.length > 0 ? (
