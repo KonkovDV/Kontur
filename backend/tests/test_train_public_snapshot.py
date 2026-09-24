@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_committed_train_public_snapshot_stays_blocked_at_l4() -> None:
+def test_committed_train_public_snapshot_is_low_quality_without_anchor() -> None:
     report = json.loads(
         (ROOT / "data" / "dataset" / "train_public_engineering.json").read_text(
             encoding="utf-8"
@@ -24,12 +24,14 @@ def test_committed_train_public_snapshot_stays_blocked_at_l4() -> None:
         "RD",
     ]
     assert report["gold_finding_status"] == {
-        "IOS4-078": "CLARIFICATION_REQUIRED",
-        "IOS4-079": "CLARIFICATION_REQUIRED",
+        "IOS4-078": "LOW_QUALITY",
+        "IOS4-079": "LOW_QUALITY",
     }
     rationale = report["gold_finding_rationale"]
-    assert rationale["IOS4-078"] == "PD: эталон без признака утверждения"
-    assert rationale["IOS4-079"] == "PD: эталон без признака утверждения"
+    assert rationale["IOS4-078"] == "PD: якорь или число не найдены"
+    assert rationale["IOS4-079"] == "PD: якорь или число не найдены"
+    assert report["observed_at"] == "2026-09-24"
+    assert "closes_gate_j=false" in report["why_zero_hits"]
 
 
 def test_committed_predictions_are_zero_of_six() -> None:

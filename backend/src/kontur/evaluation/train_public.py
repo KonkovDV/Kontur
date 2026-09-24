@@ -741,6 +741,59 @@ def _dokumentatsia_dirs(package: Path) -> tuple[Path, ...]:
     return tuple(found)
 
 
+def engineering_document(
+    report: Mapping[str, object], *, observed_at: str
+) -> dict[str, object]:
+    """Обёртка снимка. Числа и статусы берутся из отчёта прогона, не из текста."""
+
+    status = report.get("gold_finding_status")
+    rationale = report.get("gold_finding_rationale")
+    bits: list[str] = []
+    if isinstance(status, dict) and isinstance(rationale, dict):
+        for code in ("IOS4-078", "IOS4-079"):
+            bits.append(f"{code}: {status.get(code)} ({rationale.get(code)})")
+    why = (
+        "Выгрузка python -m kontur.evaluation.train_public. "
+        f"n_read={report.get('n_read')}, hits={report.get('hits')} "
+        f"из {report.get('n_gold_matrix')}. "
+        + " ".join(bits)
+        + ". closes_gate_j=false. Не порог ТЗ."
+    )
+    document: dict[str, object] = {
+        "schema_version": "1.0.0",
+        "observed_at": observed_at,
+        "source": "python -m kontur.evaluation.train_public",
+        "in_git": True,
+        "purpose": (
+            "Инженерный снимок gold_evidence_mixed_as_rd на TRAIN_PUBLIC. "
+            "Не frozen val, не порог ТЗ."
+        ),
+        "pred_jsonl": "data/dataset/train_public_pred.jsonl",
+        "why_zero_hits": why,
+    }
+    document.update(report)
+    document["why_zero_hits"] = why
+    return document
+
+
+def write_engineering_snapshot(
+    report: Mapping[str, object],
+    pred_text: str,
+    dataset_dir: Path,
+    *,
+    observed_at: str,
+) -> None:
+    """Пишет снимок только из отчёта прогона. Ручная правка чисел не нужна."""
+
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    payload = engineering_document(report, observed_at=observed_at)
+    (dataset_dir / "train_public_engineering.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (dataset_dir / "train_public_pred.jsonl").write_text(pred_text, encoding="utf-8")
+
+
 def main() -> int:
     """CLI. Всегда пишет closes_gate_j=false. Не печатает «гейт закрыт»."""
 

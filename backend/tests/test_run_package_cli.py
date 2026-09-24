@@ -110,3 +110,23 @@ def test_field_and_page_rows_pass_the_package_timeout(tmp_path: Path, monkeypatc
     _field_row(item, b"%PDF", "a" * 64, "OBJ-PACK-TIMEOUT")
     assert _page_rows(item, b"%PDF", "OBJ-PACK-TIMEOUT") == []
     assert seen == [600.0, 600.0]
+
+
+def test_pages_text_writes_words_with_bbox_and_engine(tmp_path: Path) -> None:
+    source = tmp_path / "in"
+    out = tmp_path / "out"
+    _write_kit(source, "OBJ-PACK-PAGES")
+    report = run_directory(source, out, pages_text=True)
+    assert report["failures"] == []
+    path = out / "pages_text_OBJ-PACK-PAGES.jsonl"
+    rows = [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert rows
+    for row in rows:
+        assert set(row) >= {"object_id", "file_id", "page", "text", "bbox", "engine"}
+        assert row["engine"] in {"vector", "ocr"}
+        assert len(row["bbox"]) == 4
+        assert row["text"].strip()
