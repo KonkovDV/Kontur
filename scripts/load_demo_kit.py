@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import os
 import sys
-import urllib.error
-import urllib.request
+
+import httpx
 
 
 def main() -> int:
@@ -15,19 +15,19 @@ def main() -> int:
         "KONTUR_DEMO_TOKEN",
         "inspector-1@OBJ-DEMO-COLD-START/INSPECTOR",
     )
-    request = urllib.request.Request(
-        f"{base}/api/v1/demo/kit",
-        method="POST",
-        headers={"Authorization": f"Bearer {token}"},
-    )
     try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            payload = json.load(response)
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        print(detail, file=sys.stderr)
+        response = httpx.post(
+            f"{base}/api/v1/demo/kit",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=120,
+        )
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        print(exc, file=sys.stderr)
+        if isinstance(exc, httpx.HTTPStatusError):
+            print(exc.response.text, file=sys.stderr)
         return 1
-    print(json.dumps(payload, ensure_ascii=False))
+    print(json.dumps(response.json(), ensure_ascii=False))
     return 0
 
 
