@@ -20,7 +20,7 @@
 | pytest | 9.1.1 | MIT |
 | ruff | 0.16.3 | MIT |
 
-`rapidocr-onnxruntime` объявлен в extra `ocr` и в этой среде не установлен. В ядро он не входит, пока отдельно не выбран.
+`rapidocr` и `onnxruntime` стоят в extra `ocr` и в образ ядра попадают на сборке вместе с весами PP-OCRv5 (детектор, классификатор поворота строки, распознаватель eslav) по `ocr_weights.lock.json`. Код RapidOCR — Apache-2.0, ONNX Runtime — MIT. Веса — конвертация моделей PaddleOCR (Apache-2.0, авторские права на модель у Baidu). В рантайме они не скачиваются. `ocr_text` остаётся `MEASURED`.
 
 ## Образ ядра
 

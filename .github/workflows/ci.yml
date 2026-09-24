@@ -187,6 +187,7 @@ jobs:
             touch /dev/shm/container-core-write-test
             rm /dev/shm/container-core-write-test
             tesseract --version >/dev/null
+            python -c '\''from kontur.infrastructure.ocr_rapid import weights_ready; assert weights_ready()'\''
             python -c '\''from kontur.infrastructure.pdf_guard import run_pdf_parse_sync; result = run_pdf_parse_sync(len, b"kontur", timeout_s=10); assert result == 6, result'\''
           '
 
