@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
+from io import BytesIO
 
 import pytest
+from docx import Document
 from fastapi.testclient import TestClient
 
 from kontur.application.protocol_export import ProtocolPdfUnavailable, render_pdf
@@ -33,6 +34,20 @@ def test_docx_and_xml_follow_the_json_wire(monkeypatch: pytest.MonkeyPatch) -> N
     assert docx.status_code == 200
     assert docx.content.startswith(b"PK")
     assert b"AUTO_NO_DIFFERENCE" not in docx.content
+    document = Document(BytesIO(docx.content))
+    headings = [paragraph.text for paragraph in document.paragraphs]
+    for title in (
+        "Статус загрузки документов",
+        "Тип проверки",
+        "Комплектность",
+        "Кандидаты",
+        "Подтверждённые нарушения",
+        "Нарушение не подтверждено",
+        "Подозрения",
+        "Карточки доказательств",
+    ):
+        assert title in headings
+    assert len(document.tables) == 6
     assert xml.status_code == 200
     text = xml.content.decode("utf-8")
     assert "check_type" in text
@@ -40,6 +55,8 @@ def test_docx_and_xml_follow_the_json_wire(monkeypatch: pytest.MonkeyPatch) -> N
     assert "evidence_cards" in text
     assert "AUTO_NO_DIFFERENCE" not in text
     assert pdf.status_code == 501
-    assert "GAP-PROTOCOL-PDF" in json.dumps(pdf.json(), ensure_ascii=False)
+    body = pdf.json()
+    assert "GAP-PROTOCOL-PDF" in body["detail"]
+    assert "gap" not in body
     with pytest.raises(ProtocolPdfUnavailable, match="GAP-PROTOCOL-PDF"):
         render_pdf({})

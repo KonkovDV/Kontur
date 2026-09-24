@@ -35,7 +35,11 @@ from kontur.evaluation.inventory import QuarantineViolation, is_quarantined, req
 from kontur.evaluation.submission import build_check, build_submission
 from kontur.evaluation.submission_pack import build_input_manifest
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
-from kontur.infrastructure.pdf_guard import PdfParseTimeoutError, run_pdf_parse_sync
+from kontur.infrastructure.pdf_guard import (
+    PdfParseTimeoutError,
+    pdf_parse_timeout_s,
+    run_pdf_parse_sync,
+)
 from kontur.infrastructure.pdfium_tokens import extract_pdf_bytes, file_sha256, flatten_tokens
 
 FILE_TIMEOUT_S = 600.0
@@ -269,6 +273,7 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
     cipher = None
     revision = None
     sheet = None
+    parse_error = None
     try:
         document = run_pdf_parse_sync(extract_pdf_bytes, raw)
         tokens = flatten_tokens(document)
@@ -286,8 +291,9 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
         cipher = passport.document_code
         revision = passport.revision
         sheet = passport.sheet
-    except (PdfParseTimeoutError, ValueError, OSError):
+    except (PdfParseTimeoutError, ValueError, OSError) as exc:
         cipher = None
+        parse_error = str(exc)
     return {
         "object_id": object_id,
         "file_id": item.file_id,
@@ -296,6 +302,7 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
         "revision": revision,
         "sheet": sheet,
         "room": None,
+        "parse_error": parse_error,
     }
 
 
@@ -459,6 +466,7 @@ def run_object(
 def run_directory(source: Path, out_dir: Path, *, pages_text: bool = False) -> dict[str, object]:
     """Разобрать вход и записать пакет. Не подтверждает находки."""
 
+    _ensure_file_timeout()
     root = require_path_open(source)
     if not root.is_dir():
         raise ValueError(f"{root}: не каталог")
@@ -493,7 +501,7 @@ def run_directory(source: Path, out_dir: Path, *, pages_text: bool = False) -> d
         "closes_gate_k": False,
         "closes_gate_l": False,
         "mode": mode,
-        "file_timeout_seconds": FILE_TIMEOUT_S,
+        "file_timeout_seconds": pdf_parse_timeout_s(),
         "versions": {
             "git_sha": git_sha(repo_root()),
             "matrix_version": registry.matrix_version,
