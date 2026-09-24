@@ -45,6 +45,22 @@ def test_long_windows_path_is_readable(tmp_path: Path) -> None:
     assert _read_bytes(plain) == b"%PDF-1.4 long"
 
 
+def test_docx_in_stage_folder_is_reported(tmp_path: Path) -> None:
+    source = tmp_path / "in" / "OBJ-OFFICE" / "ПД"
+    source.mkdir(parents=True)
+    (source / "sheet.pdf").write_bytes(cyrillic_pdf((("шифр: 1-PZ", 20.0, 20.0),)))
+    (source / "smeta.docx").write_bytes(b"PK\x03\x04")
+    report = run_directory(source.parent.parent, tmp_path / "out")
+    written = report["objects"]
+    assert len(written) == 1
+    row = written[0]
+    assert isinstance(row, dict)
+    errors = row["parse_errors"]
+    assert isinstance(errors, list)
+    assert any("UNSUPPORTED_FORMAT" in item and ".docx" in item for item in errors)
+    assert row["n_files"] == 2
+
+
 def test_folder_package_writes_schema_valid_draft(tmp_path: Path) -> None:
     source = tmp_path / "in"
     out = tmp_path / "out"
