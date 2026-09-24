@@ -287,9 +287,10 @@ paths:
     get:
       summary: Журнал действий текущего процесса
       description: >
-        События MemoryAudit этого процесса (REVIEW, START_VERIFICATION,
-        COMPLETE_VERIFICATION, FINALIZE, UNFINALIZE, SELECT_REVISION).
-        Это не таблица user_action_log: после рестарта журнал пуст (GAP-EDIT).
+        События процесса (REVIEW, START_VERIFICATION, COMPLETE_VERIFICATION,
+        FINALIZE, UNFINALIZE, SELECT_REVISION). С Postgres они пишутся в
+        audit_log и возвращаются при загрузке процесса. Стенд только в памяти
+        теряет журнал вместе с процессом. GAP-EDIT для пути с БД закрыт.
       operationId: getAuditLog
       x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
       parameters: [{ $ref: "#/components/parameters/ProcessId" }]
@@ -472,7 +473,8 @@ paths:
         редакция для сравнения. Автомат и администратор не вызывают операцию.
         Штамп «не утв.» нельзя перекрыть. «ГИП» и пустая графа «Утвердил»
         сами по себе эталоном не становятся. После выбора матрица
-        пересчитывается; CONFIRMED_VIOLATION не пишется. Только из READY.
+        пересчитывается; CONFIRMED_VIOLATION не пишется. Из READY и из
+        VERIFYING, пока по находкам нет решений инспектора.
         Это не закрытие гейта J и не замена штампа.
       operationId: selectRevision
       x-required-roles: [INSPECTOR, SUPERVISOR]
