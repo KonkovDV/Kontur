@@ -44,6 +44,7 @@ REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "uploadDocuments": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "getSystemCapabilities": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProcessStatus": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
+    "loadDemoKit": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "getProcessDocuments": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "listProcessFindings": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getFilePagePng": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),

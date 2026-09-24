@@ -276,6 +276,27 @@ export function LiveWorkspace({ token }: Props) {
     }
   }
 
+  async function loadTutorialKit() {
+    setBusy(true);
+    setError("");
+    setCard(null);
+    setActiveId(null);
+    setPageImages({});
+    try {
+      const receipt = await readJson<{ process_id: string; note: string }>(
+        await fetch("/api/v1/demo/kit", { method: "POST" }),
+      );
+      setProcessId(receipt.process_id);
+      setProtocolNote(receipt.note);
+      if (startedAt === null) setStartedAt(new Date());
+      await refresh(receipt.process_id);
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "учебный комплект не загружен");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function assignEtalon(fileId: string) {
     if (!processId || etalonComment.trim() === "") return;
     setBusy(true);
@@ -475,6 +496,10 @@ export function LiveWorkspace({ token }: Props) {
         <button type="button" disabled={busy} onClick={() => void uploadKit()}>
           {busy ? "Считаю комплект…" : "Загрузить комплект"}
         </button>
+        <button type="button" disabled={busy} onClick={() => void loadTutorialKit()}>
+          Учебный комплект
+        </button>
+        {protocolNote ? <p>{protocolNote}</p> : null}
         <label>
           Открыть уже загруженный процесс
           <input

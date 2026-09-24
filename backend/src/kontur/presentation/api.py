@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Annotated
 from uuid import uuid4
 
@@ -25,6 +26,7 @@ from kontur.domain.models import DocStage, Finding
 from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError, protocol_status
 from kontur.domain.statuses import Completeness, ProcessState, ReasonCode
+from kontur.evaluation.demo_kit import DRAFT_FILE_ID, ETALON_FILE_ID, install_demo_kit
 from kontur.infrastructure.access_control import AccessDeniedError, check_object_access
 from kontur.infrastructure.db.process_store import (
     ProtocolConflictError,
@@ -33,7 +35,7 @@ from kontur.infrastructure.db.process_store import (
 )
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
 from kontur.infrastructure.pdfium_page import PageRenderError, parse_bbox, render_page_png
-from kontur.presentation.auth import actor_from_roles, parse_bearer
+from kontur.presentation.auth import _is_true, actor_from_roles, parse_bearer
 from kontur.presentation.rbac import (
     AuthenticationRequiredError,
     PermissionDeniedError,
@@ -363,6 +365,30 @@ def get_status(
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
     return record.to_status()
+
+
+@app.post("/api/v1/demo/kit", response_model=None)
+def load_demo_kit(
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    """Синтетические ПД/РД/ИД. Только учебный токен. Эталон не назначается."""
+
+    if not _is_true(os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH")):
+        return JSONResponse(status_code=404, content={"detail": "учебный комплект выключен"})
+    _subject, _granted, caller_object_id = _require("loadDemoKit", authorization)
+    if caller_object_id is None:
+        return JSONResponse(status_code=403, content={"detail": "access denied"})
+    try:
+        record = install_demo_kit(_workspace(), caller_object_id)
+    except FileNotFoundError as exc:
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
+    return {
+        "process_id": record.process_id,
+        "object_id": record.object_id,
+        "etalon_file_id": ETALON_FILE_ID,
+        "draft_file_id": DRAFT_FILE_ID,
+        "note": "Две редакции ПД. Эталон назначает инспектор, файл f-pd.",
+    }
 
 
 @app.get("/api/v1/processes/{process_id}/documents", response_model=None)
