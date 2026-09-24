@@ -466,13 +466,13 @@ paths:
 
   /inspection/{process_id}:
     post:
-      summary: Передача результатов во внешнюю ИС (целевая — ИАИС «РиН»)
+      summary: Поставить финальный протокол в очередь выгрузки
       description: >
-        Разрешена только при PROTOCOL_FINALIZED. Передаются только
-        подтверждённые инспектором записи с версиями протокола, матрицы,
-        модели и реестром входных файлов. До 3 повторов: 1, 5, 15 минут.
+        Только при PROTOCOL_FINALIZED. Инспектор ставит mock-очередь:
+        состояние становится PENDING_SYNC, внешний РиН не вызывается и ACK нет.
+        Повторы 1, 5 и 15 минут конечны.
       operationId: syncInspection
-      x-required-roles: [SUPERVISOR, ADMIN]
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
       parameters: [{ $ref: "#/components/parameters/ProcessId" }]
       responses:
         "401": { $ref: "#/components/responses/Unauthorized" }

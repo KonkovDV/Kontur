@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 from pdf_fixtures import contest_slice_font
@@ -58,3 +60,133 @@ def test_demo_kit_loads_four_files_and_leaves_etalon_to_the_inspector(
     }
     pz = next(item for item in listed if item["rule_code"] == "PZ-001")
     assert pz["finding_status"] == "CLARIFICATION_REQUIRED"
+
+
+def _review(
+    client: TestClient,
+    finding_id: str,
+    action: str,
+    comment: str,
+    reason_code: str | None = None,
+) -> dict[str, object]:
+    body: dict[str, object] = {
+        "action": action,
+        "inspector_id": "inspector-1",
+        "comment": comment,
+    }
+    if reason_code is not None:
+        body["reason_code"] = reason_code
+    response = client.post(
+        f"/api/v1/findings/{finding_id}/review",
+        headers=TOKEN,
+        json=body,
+    )
+    assert response.status_code == 200, response.text
+    payload: dict[str, object] = response.json()
+    return payload
+
+
+@needs_font
+def test_demo_kit_review_finalize_and_queue_rin_without_ack(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Д2.5: эталон, два подтверждения, один отказ, протокол, очередь без ACK."""
+
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    from kontur.application.runtime import ProcessWorkspace
+
+    app.state.workspace = ProcessWorkspace()
+    client = TestClient(app)
+    loaded = client.post("/api/v1/demo/kit", headers=TOKEN)
+    assert loaded.status_code == 200
+    process_id = loaded.json()["process_id"]
+
+    early = client.post(f"/api/v1/inspection/{process_id}", headers=TOKEN)
+    assert early.status_code == 409
+
+    selected = client.post(
+        f"/api/v1/processes/{process_id}/revisions/f-pd/select",
+        headers=TOKEN,
+        json={
+            "inspector_id": "inspector-1",
+            "comment": "эталон — лист со штампом Утвердил",
+        },
+    )
+    assert selected.status_code == 200
+
+    listed = client.get(
+        f"/api/v1/processes/{process_id}/findings", headers=TOKEN
+    ).json()["findings"]
+    by_rule = {item["rule_code"]: item for item in listed}
+    open_codes = {
+        item["rule_code"]
+        for item in listed
+        if item["finding_status"] in {"CANDIDATE", "SUSPICION"}
+    }
+    assert open_codes == {"PZ-001", "KR-055", "AR-041"}
+
+    confirmed_area = _review(
+        client,
+        str(by_rule["PZ-001"]["finding_id"]),
+        "CONFIRM",
+        "площадь РД меньше утверждённой ПД",
+    )
+    assert confirmed_area["finding_status"] == "CONFIRMED_VIOLATION"
+    confirmed_concrete = _review(
+        client,
+        str(by_rule["KR-055"]["finding_id"]),
+        "CONFIRM",
+        "класс бетона РД не совпал с ПД",
+    )
+    assert confirmed_concrete["finding_status"] == "CONFIRMED_VIOLATION"
+    rejected = _review(
+        client,
+        str(by_rule["AR-041"]["finding_id"]),
+        "REJECT",
+        "ширина проема согласована отдельным листом",
+        "APPROVED_CHANGE_EXISTS",
+    )
+    assert rejected["finding_status"] == "NEGATIVE_VERIFIED"
+
+    completed = client.post(
+        f"/api/v1/processes/{process_id}/complete",
+        headers=TOKEN,
+        json={"inspector_id": "inspector-1"},
+    )
+    assert completed.status_code == 200, completed.text
+    assert completed.json()["process_state"] == "COMPLETED"
+    assert completed.json()["counters"]["candidates"] == 0
+    assert completed.json()["counters"]["confirmed_violations"] == 2
+
+    finalized = client.post(
+        f"/api/v1/processes/{process_id}/finalize",
+        headers=TOKEN,
+        json={"inspector_id": "inspector-1"},
+    )
+    assert finalized.status_code == 200
+    assert finalized.json()["process_state"] == "FINALIZED"
+    assert finalized.json()["sync_state"] == "NOT_REQUESTED"
+
+    protocol = client.get(f"/api/v1/processes/{process_id}/protocol", headers=TOKEN)
+    assert protocol.status_code == 200
+    body = protocol.json()
+    dumped = json.dumps(body, ensure_ascii=False)
+    assert "AUTO_NO_DIFFERENCE" not in dumped
+    assert body["violation_count"] == 2
+
+    journal = client.get(f"/api/v1/processes/{process_id}/audit", headers=TOKEN)
+    assert journal.status_code == 200
+    actions = [event["action"] for event in journal.json()["events"]]
+    assert actions.count("REVIEW") == 3
+    assert "COMPLETE_VERIFICATION" in actions
+    assert "FINALIZE" in actions
+
+    queued = client.post(f"/api/v1/inspection/{process_id}", headers=TOKEN)
+    assert queued.status_code == 202
+    assert queued.json() == "PENDING_SYNC"
+    status = client.get(f"/api/v1/processes/{process_id}/status", headers=TOKEN)
+    assert status.status_code == 200
+    assert status.json()["sync_state"] == "PENDING_SYNC"
+    again = client.post(f"/api/v1/inspection/{process_id}", headers=TOKEN)
+    assert again.status_code == 202
+    assert again.json() != "SYNCED"
