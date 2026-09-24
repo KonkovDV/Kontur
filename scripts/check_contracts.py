@@ -21,7 +21,7 @@ OPENAPI_30 = ROOT / "contracts" / "openapi-3.0.yaml"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "backend" / "src"))
-from export_openapi_30 import render_openapi_30  # noqa: E402
+from export_openapi_30 import render_openapi_30, same_yaml_text  # noqa: E402
 
 from kontur.application.intake import (  # noqa: E402
     EXTRA_REJECTION_CODES,
@@ -298,7 +298,9 @@ def main() -> int:
     spec = yaml.safe_load(OPENAPI.read_text(encoding="utf-8"))
     problems.extend(validate_openapi(spec))
     rendered = render_openapi_30(spec)
-    if not OPENAPI_30.is_file() or OPENAPI_30.read_text(encoding="utf-8") != rendered:
+    if not OPENAPI_30.is_file() or not same_yaml_text(
+        OPENAPI_30.read_text(encoding="utf-8"), rendered
+    ):
         problems.append("contracts/openapi-3.0.yaml расходится с даунконвертом 3.1")
     else:
         spec_30 = yaml.safe_load(rendered)

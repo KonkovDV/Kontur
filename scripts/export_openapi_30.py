@@ -45,6 +45,14 @@ def render_openapi_30(spec: dict[str, object]) -> str:
     return HEADER + body
 
 
+def same_yaml_text(left: str, right: str) -> bool:
+    """Сравнить дамп, не отличая CRLF рабочего дерева от LF в git."""
+
+    return left.replace("\r\n", "\n").replace("\r", "\n") == right.replace("\r\n", "\n").replace(
+        "\r", "\n"
+    )
+
+
 def _walk(node: object) -> None:
     if isinstance(node, dict):
         media = node.pop("contentMediaType", None)
@@ -73,7 +81,7 @@ def main() -> int:
         return 1
     text = render_openapi_30(spec)
     if "--check" in sys.argv:
-        if not TARGET.is_file() or TARGET.read_text(encoding="utf-8") != text:
+        if not TARGET.is_file() or not same_yaml_text(TARGET.read_text(encoding="utf-8"), text):
             print("openapi-3.0.yaml расходится с даунконвертом")
             return 1
         print("openapi-3.0.yaml совпадает с даунконвертом")
