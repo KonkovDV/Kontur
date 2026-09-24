@@ -3,7 +3,8 @@
 `python -m kontur.cli.run_package --input <dir> --out <dir>`
 
 Режимы входа: `files_index.jsonl` либо папки `<объект>/{ПД|РД|ИД}`.
-Берутся все PDF объекта. `RD_ID_MIXED` не угадывается. Скрытый тест
+Берутся все PDF объекта. `RD_ID_MIXED` становится РД только по метке «РД»
+в имени или шифре и ИД по «АОСР» на первой странице. Скрытый тест
 пропускается. Автомат не пишет CONFIRMED_VIOLATION. AUTO_NO_DIFFERENCE
 на провод протокола не попадает. Гейты I/J/K/L этим модулем не закрываются.
 """
@@ -17,6 +18,7 @@ import re
 import sys
 import time
 from collections.abc import Mapping, Sequence
+from importlib import import_module
 from pathlib import Path
 
 import jsonschema  # type: ignore[import-untyped]
@@ -54,6 +56,8 @@ _STAGE_NAMES: dict[str, DocStage] = {
     "ид": DocStage.ID,
 }
 _UNMAPPED_STAGE = frozenset({"rd_id_mixed", "unknown", "mixed"})
+_MIXED_STAGE = frozenset({"rd_id_mixed", "mixed"})
+_RD_MARK = re.compile(r"(?<!\w)рд(?!\w)")
 _SLUG = re.compile(r'[<>:"/\\|?*\s]+')
 
 
@@ -72,6 +76,48 @@ def _stage_token(raw: str) -> DocStage | None:
     if tail in _STAGE_NAMES:
         return _STAGE_NAMES[tail]
     return None
+
+
+def _has_rd_mark(text: str) -> bool:
+    return _RD_MARK.search(text.casefold()) is not None
+
+
+def _first_page_text(path: Path) -> str:
+    """Текст первой страницы. Ошибка чтения не роняет весь комплект."""
+
+    try:
+        pdfium = import_module("pypdfium2")
+        document = pdfium.PdfDocument(_read_bytes(path))
+    except (OSError, RuntimeError, ValueError):
+        return ""
+    try:
+        if len(document) < 1:
+            return ""
+        page = document[0]
+        textpage = page.get_textpage()
+        try:
+            return str(textpage.get_text_bounded() or "")
+        finally:
+            textpage.close()
+            page.close()
+    except (OSError, RuntimeError, ValueError):
+        return ""
+    finally:
+        document.close()
+
+
+def _stage_from_mixed(path: Path, cipher: str) -> tuple[DocStage | None, str]:
+    """РД по метке в имени или шифре. ИД по «АОСР» на листе 1. Иначе не стадия."""
+
+    if _has_rd_mark(path.name) or _has_rd_mark(cipher):
+        return DocStage.RD, "filename_or_cipher_rd"
+    try:
+        page = _first_page_text(path)
+    except OSError:
+        return None, "page1_unreadable"
+    if "аоср" in page.casefold():
+        return DocStage.ID, "page1_aosr"
+    return None, "no_rd_or_aosr"
 
 
 def _inside(root: Path, candidate: Path) -> Path:
@@ -179,10 +225,11 @@ def _pdfs_in_object(folder: Path) -> list[PackageFile]:
 
 def discover_index(
     root: Path, index: Path
-) -> tuple[dict[str, list[PackageFile]], list[dict[str, str]]]:
-    """Строки индекса. MIXED и UNKNOWN пропускаются, стадия не угадывается."""
+) -> tuple[dict[str, list[PackageFile]], list[dict[str, str]], list[dict[str, str]]]:
+    """Строки индекса. MIXED становится РД или ИД только по явной метке."""
 
     skipped: list[dict[str, str]] = []
+    resolutions: list[dict[str, str]] = []
     grouped: dict[str, list[PackageFile]] = {}
     used: dict[str, set[str]] = {}
     require_path_open(index)
@@ -201,7 +248,9 @@ def discover_index(
             continue
         stage_raw = str(payload.get("stage") or payload.get("doc_stage") or "")
         stage = _stage_token(stage_raw)
-        if stage is None:
+        folded_stage = stage_raw.strip().casefold().replace(" ", "")
+        mixed = stage is None and folded_stage in _MIXED_STAGE
+        if stage is None and not mixed:
             skipped.append(
                 {
                     "object_id": object_id,
@@ -211,6 +260,10 @@ def discover_index(
                 }
             )
             continue
+        cipher = " ".join(
+            str(payload.get(key) or "")
+            for key in ("document_code", "cipher", "code", "filename")
+        )
         relative = str(
             payload.get("source_relative_path")
             or payload.get("path")
@@ -229,6 +282,30 @@ def discover_index(
         if is_quarantined(path) or not path.is_file():
             skipped.append({"object_id": object_id, "reason": "missing_file", "line": str(number)})
             continue
+        if mixed:
+            stage, basis = _stage_from_mixed(path, cipher)
+            if stage is None:
+                skipped.append(
+                    {
+                        "object_id": object_id,
+                        "reason": "unmapped_stage",
+                        "stage": stage_raw,
+                        "stage_basis": basis,
+                        "line": str(number),
+                    }
+                )
+                continue
+            resolutions.append(
+                {
+                    "object_id": object_id,
+                    "file_id": str(payload.get("file_id") or "").strip() or path.stem,
+                    "from_stage": stage_raw,
+                    "stage": stage.value,
+                    "stage_basis": basis,
+                    "line": str(number),
+                }
+            )
+        assert stage is not None
         digest = file_sha256(_read_bytes(path))
         file_id = str(payload.get("file_id") or "").strip() or path.stem
         bucket = used.setdefault(object_id, set())
@@ -237,7 +314,7 @@ def discover_index(
         else:
             bucket.add(file_id)
         grouped.setdefault(object_id, []).append(PackageFile(file_id, stage, path))
-    return grouped, skipped
+    return grouped, skipped, resolutions
 
 
 def _schema_validator(schema_name: str) -> Draft202012Validator:
@@ -509,8 +586,9 @@ def run_directory(source: Path, out_dir: Path, *, pages_text: bool = False) -> d
         raise ValueError(f"{root}: не каталог")
     out_dir.mkdir(parents=True, exist_ok=True)
     index = _index_path(root)
+    resolutions: list[dict[str, str]] = []
     if index is not None:
-        grouped, skipped = discover_index(root, index)
+        grouped, skipped, resolutions = discover_index(root, index)
         mode = "files_index"
     else:
         grouped, skipped = discover_folders(root)
@@ -548,6 +626,7 @@ def run_directory(source: Path, out_dir: Path, *, pages_text: bool = False) -> d
         },
         "objects": objects,
         "skipped": skipped,
+        "stage_resolutions": resolutions,
         "failures": failures,
     }
     _write_json(out_dir / "run_manifest.json", report)

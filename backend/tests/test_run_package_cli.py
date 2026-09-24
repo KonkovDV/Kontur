@@ -155,6 +155,56 @@ def test_index_skips_mixed_stage(tmp_path: Path) -> None:
     assert documents["files"][0]["file_hash"] == digest
 
 
+def test_mixed_stage_becomes_rd_or_id_only_with_a_mark(tmp_path: Path) -> None:
+    source = tmp_path / "in"
+    source.mkdir()
+    sheet = cyrillic_pdf((("лист", 20.0, 40.0),))
+    aosr = cyrillic_pdf((("АОСР №1", 20.0, 40.0),))
+    (source / "АНО-150321-1-РД-ОВ1.pdf").write_bytes(sheet)
+    (source / "plain.pdf").write_bytes(sheet)
+    (source / "act.pdf").write_bytes(aosr)
+    rows = [
+        {
+            "object_id": "OBJ-PACK-MIXED",
+            "file_id": "rd-ov",
+            "stage": "RD_ID_MIXED",
+            "path": "АНО-150321-1-РД-ОВ1.pdf",
+        },
+        {
+            "object_id": "OBJ-PACK-MIXED",
+            "file_id": "by-cipher",
+            "stage": "RD_ID_MIXED",
+            "document_code": "АНО-1-РД-ВК",
+            "path": "plain.pdf",
+        },
+        {
+            "object_id": "OBJ-PACK-MIXED",
+            "file_id": "act-1",
+            "stage": "RD_ID_MIXED",
+            "path": "act.pdf",
+        },
+    ]
+    (source / "files_index.jsonl").write_text(
+        "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "out"
+    report = run_directory(source, out)
+    assert report["failures"] == []
+    assert report["skipped"] == []
+    documents = json.loads((out / "documents_OBJ-PACK-MIXED.json").read_text(encoding="utf-8"))
+    stages = {item["file_id"]: item["doc_stage"] for item in documents["files"]}
+    assert stages == {"rd-ov": "RD", "by-cipher": "RD", "act-1": "ID"}
+    resolutions = report["stage_resolutions"]
+    assert isinstance(resolutions, list)
+    basis = {str(item["file_id"]): str(item["stage_basis"]) for item in resolutions}
+    assert basis == {
+        "rd-ov": "filename_or_cipher_rd",
+        "by-cipher": "filename_or_cipher_rd",
+        "act-1": "page1_aosr",
+    }
+
+
 def test_field_and_page_rows_pass_the_package_timeout(tmp_path: Path, monkeypatch) -> None:
     seen: list[float] = []
 
