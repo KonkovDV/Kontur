@@ -64,6 +64,24 @@ def test_folder_package_writes_schema_valid_draft(tmp_path: Path) -> None:
     assert manifest["file_timeout_seconds"] == 600
 
 
+def test_run_manifest_uses_image_sha_without_git(tmp_path: Path, monkeypatch) -> None:
+    sha = "a" * 40
+    monkeypatch.setenv("KONTUR_GIT_SHA", sha)
+    from kontur.evaluation.agent_dumps import git_sha
+
+    monkeypatch.setattr(
+        "kontur.cli.run_package.git_sha",
+        lambda _root=None: git_sha(tmp_path),
+    )
+    source = tmp_path / "in"
+    out = tmp_path / "out"
+    _write_kit(source, "OBJ-PACK-SHA")
+    report = run_directory(source, out)
+    assert report["failures"] == []
+    manifest = json.loads((out / "run_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["versions"]["git_sha"] == sha
+
+
 def test_index_skips_mixed_stage(tmp_path: Path) -> None:
     source = tmp_path / "in"
     source.mkdir()

@@ -27,6 +27,7 @@ done
 
 echo ""
 echo "==> Building core and gateway for offline use..."
+export KONTUR_GIT_SHA="$(git rev-parse HEAD)"
 docker compose build core gateway
 
 echo "==> All images pulled. Offline mode ready."

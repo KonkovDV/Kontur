@@ -80,6 +80,8 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
     command: uvicorn kontur.presentation.api:app --host 0.0.0.0 --port 8000
     user: "10001:10001"
     read_only: true
@@ -98,6 +100,7 @@ services:
       KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY}
       KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
       KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
+      KONTUR_GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
     depends_on:
       postgres:
         condition: service_healthy
@@ -192,6 +195,8 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
     user: "10001:10001"
     read_only: true
     tmpfs:
@@ -201,6 +206,7 @@ services:
       - no-new-privileges:true
     environment:
       KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
+      KONTUR_GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
     volumes:
       - ${KONTUR_PACKAGE_INPUT:-./input}:/input:ro
       - ${KONTUR_PACKAGE_OUT:-./out}:/out
