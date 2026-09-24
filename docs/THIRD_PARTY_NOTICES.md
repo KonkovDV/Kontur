@@ -39,4 +39,4 @@
 
 ## Образы compose
 
-PostgreSQL, Redis, RabbitMQ и MinIO в `docker-compose.yml` — чужие образы. Их тексты лицензий в этот репозиторий не копируются.
+PostgreSQL, Redis, RabbitMQ и MinIO в `docker-compose.yml` — чужие образы. Их тексты лицензий в этот репозиторий не копируются. Образ `minio/minio` на Docker Hub удалён; стенд берёт архивный `bitnamilegacy/minio`. Бинарник MinIO внутри него — GNU AGPL-3.0 и остаётся отдельным контейнером, в код Apache-2.0 он не входит.

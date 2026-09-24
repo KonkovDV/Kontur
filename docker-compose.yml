@@ -9,6 +9,11 @@ services:
       POSTGRES_USER: kontur
       POSTGRES_PASSWORD: kontur
     ports: ["127.0.0.1:5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kontur -d kontur"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/src/kontur/infrastructure/db/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
@@ -20,6 +25,11 @@ services:
     pids_limit: 128
     # Кеш парсинга по хешу файла (ТЗ п. 9.1, шаг 5). Не durable queue.
     ports: ["127.0.0.1:6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -32,21 +42,32 @@ services:
       RABBITMQ_DEFAULT_PASS: kontur
     # Quorum-очередь relay: at-least-once; event_id — ключ будущего inbox/dedup.
     ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     volumes:
       - rabbitmq:/var/lib/rabbitmq
 
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    # Docker Hub удалил minio/minio (404). Quay без логина отвечает 401.
+    # Архивный образ Bitnami сам поднимает MinIO от uid 1001.
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
     mem_limit: 512m
     cpus: 1.0
     pids_limit: 256
-    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: kontur
       MINIO_ROOT_PASSWORD: kontur-dev-secret
     ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     volumes:
-      - minio:/data
+      - minio:/bitnami/minio/data
 
   core:
     # Пакет жюри с хоста, не смена command сервиса:
@@ -76,8 +97,17 @@ services:
       KONTUR_JWT_ALGORITHM: ${KONTUR_JWT_ALGORITHM:-RS256}
       KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY}
       KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
-      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-30}
-    depends_on: [postgres, redis, rabbitmq, minio]
+      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
     ports: ["127.0.0.1:8000:8000"]
 
   outbox-relay:
@@ -100,7 +130,11 @@ services:
       KONTUR_OUTBOX_POLL_SECONDS: ${KONTUR_OUTBOX_POLL_SECONDS:-1}
       KONTUR_OUTBOX_ERROR_SECONDS: ${KONTUR_OUTBOX_ERROR_SECONDS:-5}
       KONTUR_AMQP_TIMEOUT_SECONDS: ${KONTUR_AMQP_TIMEOUT_SECONDS:-10}
-    depends_on: [postgres, rabbitmq]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   inbox-consumer:
@@ -123,7 +157,11 @@ services:
       KONTUR_AMQP_URL: amqp://kontur:kontur@rabbitmq:5672/
       KONTUR_INBOX_EMPTY_SECONDS: ${KONTUR_INBOX_EMPTY_SECONDS:-1}
       KONTUR_INBOX_ERROR_SECONDS: ${KONTUR_INBOX_ERROR_SECONDS:-5}
-    depends_on: [postgres, rabbitmq]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   gateway:
@@ -143,7 +181,31 @@ services:
     environment:
       KONTUR_CORE_URL: http://core:8000
     depends_on: [core]
-    ports: ["127.0.0.1:3000:3000"]
+    restart: unless-stopped
+    ports: ["${KONTUR_BIND:-127.0.0.1}:3000:3000"]
+
+  package-runner:
+    profiles: ["runner"]
+    mem_limit: ${KONTUR_CORE_MEM_LIMIT:-8g}
+    cpus: ${KONTUR_CORE_CPUS:-8}
+    pids_limit: 256
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
+    volumes:
+      - ${KONTUR_PACKAGE_INPUT:-./input}:/input:ro
+      - ${KONTUR_PACKAGE_OUT:-./out}:/out
+    entrypoint: ["python", "-m", "kontur.cli.run_package", "--input", "/input", "--out", "/out"]
+    network_mode: none
 
 volumes:
   pgdata:

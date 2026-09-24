@@ -6,6 +6,42 @@
 
 Репозиторий публичный. Лицензия кода — Apache-2.0.
 
+## Для жюри
+
+Локальный запуск. GPU и драйвер NVIDIA в образ не входят. CPU-режим допустим.
+
+```text
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+```
+
+Интерфейс: http://127.0.0.1:3000 . На сервере жюри, чтобы открыть его с другой
+машины: `KONTUR_BIND=0.0.0.0`. Базы, RabbitMQ и MinIO остаются на 127.0.0.1.
+Для скорости на сервере жюри: `KONTUR_CORE_CPUS=24` и `KONTUR_CORE_MEM_LIMIT=64g`.
+Проверка: http://127.0.0.1:3000/api/v1/healthz . Плашка «учебный стенд», токен
+`inspector-1@OBJ-DEMO-COLD-START/INSPECTOR`. Кнопка «Учебный комплект» кладёт
+синтетические ПД, РД и ИД. Документы организатора на стенд не класть.
+
+Пакетный прогон внутри образа (каталоги `input` и `out` рядом с compose;
+`out` должен быть доступен на запись uid 10001):
+
+```text
+docker compose --profile runner run --rm package-runner
+```
+
+Команда читает `/input` и пишет в `/out` файлы `submission_*.json`,
+`protocol_*.json`, `documents_*.json`, `fields_*.jsonl` и `run_manifest.json`.
+Инспектор находки не подтверждает. Счёт:
+
+```text
+python -m kontur.cli.score --submissions <каталог>
+```
+
+печатает n и 95% CI и не объявляет порог ТЗ взятым.
+
+Ограничение покрытия: 44 executable / 83 extractor_missing / 1 advisory /
+4 source_missing из 132. OCR — `MEASURED`. PDF, DOCX и XML протокола
+собираются из одного JSON. РиН — mock, ACK нет.
+
 **Вход:** PDF, DOCX, XML. **Выход:** протокол с карточками доказательств и
 решением инспектора. **Ядро продукта:** не распознавание текста, а
 доказательная цепочка `актуальная редакция → доказательное извлечение →
@@ -104,8 +140,7 @@ python -m kontur.cli.score --submissions <каталог>
 не назначается стадией. Скрытый тест пропускается. Таймаут разбора PDF
 в этой команде — 600 с на файл, если `KONTUR_PDF_PARSE_TIMEOUT_S` не задан.
 Пример раскладки: [`examples/demo_package/README.md`](examples/demo_package/README.md).
-С экрана инспектора тот же протокол скачивается как DOCX и XML.
-PDF нет: [`docs/KNOWN_GAPS.md`](docs/KNOWN_GAPS.md), `GAP-PROTOCOL-PDF`.
+С экрана инспектора тот же протокол скачивается как DOCX, XML и PDF.
 
 ## Документы
 

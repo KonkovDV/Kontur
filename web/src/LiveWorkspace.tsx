@@ -461,11 +461,7 @@ export function LiveWorkspace({ token }: Props) {
         throw new Error(body.detail ?? "файл протокола не собран");
       }
       saveBlob(`protocol-${processId}.${kind}`, await response.blob());
-      setProtocolNote(
-        kind === "pdf"
-          ? "PDF не ожидается."
-          : `Скачан protocol.${kind}. Подтверждений РиН нет.`,
-      );
+      setProtocolNote(`Скачан protocol.${kind}. Подтверждений РиН нет.`);
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "файл протокола не собран");
     } finally {
@@ -818,7 +814,7 @@ export function LiveWorkspace({ token }: Props) {
           <button type="button" disabled={busy || !processId} onClick={() => void downloadProtocol("pdf")}>
             Скачать PDF
           </button>
-          <p>PDF протокола нет: GAP-PROTOCOL-PDF. DOCX и XML собираются из того же JSON.</p>
+          <p>DOCX, XML и PDF собираются из того же JSON. Подтверждений РиН нет.</p>
           <button
             type="button"
             disabled={

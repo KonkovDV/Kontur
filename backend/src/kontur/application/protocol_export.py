@@ -1,4 +1,7 @@
-"""DOCX и XML протокола из провода ТЗ. PDF в образе нет (GAP-PROTOCOL-PDF).
+"""DOCX, XML и PDF протокола из провода ТЗ.
+
+PDF собирает reportlab. Шрифт DejaVu в образе, на Windows — Arial.
+WeasyPrint не используется.
 
 Текст разделов наш. Образец Приложения 2 организатора сюда не копируется.
 AUTO_NO_DIFFERENCE на этот провод не попадает.
@@ -8,10 +11,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from io import BytesIO
+from pathlib import Path
 from xml.etree import ElementTree as ET
 
 from docx import Document
 from lxml import etree  # type: ignore[import-untyped]
+from reportlab.pdfbase import pdfmetrics  # type: ignore[import-untyped]
+from reportlab.pdfbase.ttfonts import TTFont  # type: ignore[import-untyped]
+from reportlab.pdfgen import canvas  # type: ignore[import-untyped]
 
 from kontur.evaluation.agent_dumps import repo_root
 
@@ -185,9 +192,71 @@ def render_xml(protocol: Mapping[str, object]) -> bytes:
     return raw
 
 
-def render_pdf(_protocol: Mapping[str, object]) -> bytes:
-    """PDF не собирается: в образе нет pango/harfbuzz для WeasyPrint."""
-
-    raise ProtocolPdfUnavailable(
-        "PDF протокола нет (GAP-PROTOCOL-PDF): WeasyPrint не установлен в образе"
+def _pdf_font() -> str:
+    candidates = (
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path(r"C:\Windows\Fonts\arial.ttf"),
     )
+    for path in candidates:
+        if path.is_file():
+            if "KonturSans" not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont("KonturSans", str(path)))
+            return "KonturSans"
+    return "Helvetica"
+
+
+def render_pdf(protocol: Mapping[str, object]) -> bytes:
+    """PDF из той же модели, что DOCX: разделы, строки, карточки."""
+
+    font = _pdf_font()
+    buffer = BytesIO()
+    sheet = canvas.Canvas(buffer)
+    sheet.setFont(font, 11)
+    y = 800
+
+    def line(text: str, size: int = 11) -> None:
+        nonlocal y
+        if y < 48:
+            sheet.showPage()
+            y = 800
+        sheet.setFont(font, size)
+        sheet.drawString(40, y, text[:180])
+        y -= 16
+
+    line("Протокол проверки", 16)
+    line(f"Объект: {_text(protocol.get('object_id'))}")
+    line(f"Протокол: {_text(protocol.get('protocol_id'))}")
+    line(f"Статус протокола: {_text(protocol.get('status'))}")
+    line("Статус загрузки документов", 14)
+    pd, rd, identity = _upload(protocol)
+    line(f"ПД {pd}  РД {rd}  ИД {identity}")
+    line("Тип проверки", 14)
+    line(_text(protocol.get("scenario")))
+    for name in TABLES:
+        line(_TITLES[name], 14)
+        for row in _rows(protocol, name):
+            line(
+                f"{_text(row.get('finding_id'))}  {_text(row.get('rule_code'))}  "
+                f"{_text(row.get('finding_status'))}"
+            )
+    line("Карточки доказательств", 14)
+    cards = 0
+    for name in TABLES:
+        for row in _rows(protocol, name):
+            cards += 1
+            line(f"{_text(row.get('rule_code'))} / {_text(row.get('finding_id'))}")
+            line(_text(row.get("rationale")))
+            refs = row.get("evidence_refs")
+            if isinstance(refs, list):
+                for ref in refs:
+                    line(f"Доказательство: {_text(ref)}")
+    if cards == 0:
+        line("Карточек нет.")
+    line(f"Число нарушений: {_text(protocol.get('violation_count'))}")
+    sheet.save()
+    payload = buffer.getvalue()
+    if not payload.startswith(b"%PDF"):
+        raise ProtocolPdfUnavailable("PDF протокола не собран")
+    if _FORBIDDEN.encode() in payload:
+        raise ValueError(f"{_FORBIDDEN} попал в PDF")
+    return payload

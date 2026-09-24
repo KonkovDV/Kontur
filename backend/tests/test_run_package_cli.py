@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from kontur.cli.run_package import run_directory
+from kontur.cli.run_package import PackageFile, _field_row, _page_rows, run_directory
 from kontur.domain.models import DocStage
 from kontur.evaluation.dataset_package import HIDDEN_TEST_OBJECT_IDS
 from kontur.evaluation.demo_kit import demo_sheet_files
@@ -95,3 +95,18 @@ def test_index_skips_mixed_stage(tmp_path: Path) -> None:
     )
     assert [item["file_id"] for item in documents["files"]] == ["pd-1"]
     assert documents["files"][0]["file_hash"] == digest
+
+
+def test_field_and_page_rows_pass_the_package_timeout(tmp_path: Path, monkeypatch) -> None:
+    seen: list[float] = []
+
+    def fake(_parser: object, _raw: bytes, *, timeout_s: float = 30.0) -> object:
+        seen.append(timeout_s)
+        raise ValueError("stop")
+
+    monkeypatch.setattr("kontur.cli.run_package.run_pdf_parse_sync", fake)
+    monkeypatch.setenv("KONTUR_PDF_PARSE_TIMEOUT_S", "600")
+    item = PackageFile("f-1", DocStage.PD, tmp_path / "a.pdf")
+    _field_row(item, b"%PDF", "a" * 64, "OBJ-PACK-TIMEOUT")
+    assert _page_rows(item, b"%PDF", "OBJ-PACK-TIMEOUT") == []
+    assert seen == [600.0, 600.0]

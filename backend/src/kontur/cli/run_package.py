@@ -275,7 +275,9 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
     sheet = None
     parse_error = None
     try:
-        document = run_pdf_parse_sync(extract_pdf_bytes, raw)
+        document = run_pdf_parse_sync(
+            extract_pdf_bytes, raw, timeout_s=pdf_parse_timeout_s()
+        )
         tokens = flatten_tokens(document)
         last = document.pages[-1]
         passport = read_passport(
@@ -309,7 +311,9 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
 def _page_rows(item: PackageFile, raw: bytes, object_id: str) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     try:
-        document = run_pdf_parse_sync(extract_pdf_bytes, raw)
+        document = run_pdf_parse_sync(
+            extract_pdf_bytes, raw, timeout_s=pdf_parse_timeout_s()
+        )
     except (PdfParseTimeoutError, ValueError, OSError):
         return rows
     for token in flatten_tokens(document):
