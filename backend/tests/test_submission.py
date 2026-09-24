@@ -219,7 +219,7 @@ def test_submission_payload_validates_against_organizer_schema() -> None:
     assert checks[0]["protocol_status"] == "CRITICAL"
     assert checks[0]["pd_value"] == "12.5"
     assert checks[0]["rd_value"] == "11.0"
-    assert checks[0]["location"] == "RD, 12345-RD, рев. 2, лист 7, стр. 3"
+    assert checks[0]["location"] == "объект"
     assert checks[0]["evidence"] == [
         {"stage": "PD", "file_id": "file-pd", "pdf_page_number": 7},
         {"stage": "RD", "file_id": "file-rd", "pdf_page_number": 3},

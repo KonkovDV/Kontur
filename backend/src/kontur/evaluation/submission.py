@@ -91,12 +91,6 @@ _STAGE_VALUE_KEY: dict[DocStage, str] = {
     DocStage.ID: "id_value",
 }
 
-_LOCATION_ROLE_ORDER: tuple[EvidenceRole, ...] = (
-    EvidenceRole.ACTUAL,
-    EvidenceRole.EXPECTED,
-    EvidenceRole.CONTEXT,
-)
-
 #: Роли, значения которых участвуют в сравнении и потому обязаны быть grounded.
 _COMPARED_ROLES: frozenset[EvidenceRole] = frozenset({EvidenceRole.EXPECTED, EvidenceRole.ACTUAL})
 
@@ -270,26 +264,15 @@ def evidence_from_group(group: EvidenceGroup) -> tuple[SubmissionEvidence, ...]:
 
 
 def location_from_group(group: EvidenceGroup) -> str:
-    """Человекочитаемая привязка: стадия, документ, редакция, лист, страница."""
+    """Ключ организатора: номер помещения или конструктивный элемент, иначе «объект».
 
-    for role in _LOCATION_ROLE_ORDER:
-        fragment = group.role(role)
-        if fragment is not None:
-            break
-    else:  # pragma: no cover - защищено вызывающим кодом
-        fragment = None
-    if fragment is None:
-        if not group.fragments:
-            raise ValueError(f"{group.evidence_group_id}: нет фрагментов для локализации")
-        fragment = group.fragments[0]
-    document = fragment.document
-    parts = [document.doc_stage.value, document.document_code]
-    if document.revision:
-        parts.append(f"рев. {document.revision}")
-    if document.sheet:
-        parts.append(f"лист {document.sheet}")
-    parts.append(f"стр. {fragment.page}")
-    return ", ".join(part for part in parts if part)
+    Стадия, шифр, редакция, лист и страница лежат в evidence, не в location.
+    Отдельного поля помещения во фрагменте пока нет, поэтому ключ — «объект».
+    """
+
+    if not group.fragments:
+        raise ValueError(f"{group.evidence_group_id}: нет фрагментов для локализации")
+    return "объект"
 
 
 def dual_read_required(rule: dict[str, object] | None) -> bool:
