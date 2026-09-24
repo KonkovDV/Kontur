@@ -42,6 +42,17 @@
                   <xs:sequence>
                     <xs:element name="rationale" type="xs:string" minOccurs="0"/>
                     <xs:element name="evidence_ref" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                    <xs:element name="expected_value" type="xs:string" minOccurs="0"/>
+                    <xs:element name="actual_value" type="xs:string" minOccurs="0"/>
+                    <xs:element name="delta" type="xs:string" minOccurs="0"/>
+                    <xs:element name="tolerance" type="xs:string" minOccurs="0"/>
+                    <xs:element name="file_hash" type="xs:string" minOccurs="0"/>
+                    <xs:element name="doc_stage" type="xs:string" minOccurs="0"/>
+                    <xs:element name="document_code" type="xs:string" minOccurs="0"/>
+                    <xs:element name="revision" type="xs:string" minOccurs="0"/>
+                    <xs:element name="approval_basis" type="xs:string" minOccurs="0"/>
+                    <xs:element name="page" type="xs:string" minOccurs="0"/>
+                    <xs:element name="polygon_norm" type="xs:string" minOccurs="0"/>
                   </xs:sequence>
                   <xs:attribute name="finding_id" type="xs:string" use="required"/>
                   <xs:attribute name="rule_code" type="xs:string" use="required"/>

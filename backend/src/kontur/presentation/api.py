@@ -21,6 +21,7 @@ from kontur.application.intake import (
 from kontur.application.protocol import assemble_protocol, protocol_for_http
 from kontur.application.protocol_export import (
     ProtocolPdfUnavailable,
+    cards_from_groups,
     render_docx,
     render_pdf,
     render_xml,
@@ -561,6 +562,37 @@ def get_protocol(
     return _protocol_document(process_id, authorization, "getProtocol", version)
 
 
+def _download_cards(
+    process_id: str,
+    authorization: str | None,
+    protocol: dict[str, object],
+    operation: str,
+) -> dict[str, dict[str, str]]:
+    _subject, _granted, object_id = _require(operation, authorization)
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return {}
+    registry = _rules()
+    rules: dict[str, dict[str, object]] = {}
+    sections = protocol.get("sections")
+    if isinstance(sections, dict):
+        for rows in sections.values():
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                code = row.get("rule_code")
+                if isinstance(code, str) and code not in rules:
+                    try:
+                        loaded = registry.get(code)
+                    except KeyError:
+                        continue
+                    if isinstance(loaded, dict):
+                        rules[code] = loaded
+    return cards_from_groups(protocol, record.evidence_groups, rules)
+
+
 @app.get("/api/v1/processes/{process_id}/protocol.docx", response_model=None)
 def get_protocol_docx(
     process_id: str,
@@ -570,7 +602,9 @@ def get_protocol_docx(
     if isinstance(rendered, JSONResponse):
         return rendered
     return Response(
-        content=render_docx(rendered),
+        content=render_docx(
+            rendered, _download_cards(process_id, authorization, rendered, "getProtocolDocx")
+        ),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": 'attachment; filename="protocol.docx"'},
     )
@@ -585,7 +619,9 @@ def get_protocol_xml(
     if isinstance(rendered, JSONResponse):
         return rendered
     return Response(
-        content=render_xml(rendered),
+        content=render_xml(
+            rendered, _download_cards(process_id, authorization, rendered, "getProtocolXml")
+        ),
         media_type="application/xml",
         headers={"Content-Disposition": 'attachment; filename="protocol.xml"'},
     )
@@ -600,7 +636,9 @@ def get_protocol_pdf(
     if isinstance(rendered, JSONResponse):
         return rendered
     try:
-        body = render_pdf(rendered)
+        body = render_pdf(
+            rendered, _download_cards(process_id, authorization, rendered, "getProtocolPdf")
+        )
     except ProtocolPdfUnavailable as exc:
         return JSONResponse(status_code=501, content={"detail": str(exc)})
     return Response(
