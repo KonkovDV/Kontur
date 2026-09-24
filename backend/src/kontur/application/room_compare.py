@@ -37,9 +37,11 @@ class RoomDiff:
     rationale: str
 
 
-def room_settings(rule: Mapping[str, object]) -> dict[str, object] | None:
+def room_block(rule: Mapping[str, object]) -> dict[str, object] | None:
+    """Пороги room_compare без требования type. Пусто, если блок неполный."""
+
     extractor = rule.get("extractor")
-    if not isinstance(extractor, dict) or extractor.get("type") != "room_compare":
+    if not isinstance(extractor, dict):
         return None
     raw = extractor.get("room_compare")
     if not isinstance(raw, dict):
@@ -47,6 +49,13 @@ def room_settings(rule: Mapping[str, object]) -> dict[str, object] | None:
     if any(key not in raw for key in _REQUIRED):
         return None
     return raw
+
+
+def room_settings(rule: Mapping[str, object]) -> dict[str, object] | None:
+    extractor = rule.get("extractor")
+    if not isinstance(extractor, dict) or extractor.get("type") != "room_compare":
+        return None
+    return room_block(rule)
 
 
 def compare_room_tokens(

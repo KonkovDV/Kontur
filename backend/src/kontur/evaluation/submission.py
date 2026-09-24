@@ -273,6 +273,8 @@ def location_from_group(group: EvidenceGroup) -> str:
     if not group.fragments:
         raise ValueError(f"{group.evidence_group_id}: нет фрагментов для локализации")
     for fragment in group.fragments:
+        if fragment.room_id:
+            return f"помещение {fragment.room_id}"
         value = fragment.extracted.normalized_value
         if isinstance(value, str) and value.startswith("помещение "):
             return value

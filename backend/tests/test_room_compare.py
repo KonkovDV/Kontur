@@ -107,4 +107,37 @@ def test_evaluate_puts_room_into_location() -> None:
     )
     assert result.finding.finding_status is FindingStatus.CANDIDATE
     assert result.evidence_group is not None
+    assert result.evidence_group.fragments[0].room_id == "140"
     assert location_from_group(result.evidence_group) == "помещение 140"
+
+
+def test_live_number_pass_keeps_section_and_adds_room() -> None:
+    rule = FileRuleRegistry().get("IOS4-078")
+    section = (
+        _token("сечение", 0.10, 0.80),
+        _token("воздуховода", 0.20, 0.80),
+        _token("500×300", 0.40, 0.80),
+    )
+    pd = StagePage(
+        document=_doc(DocStage.PD),
+        tokens=section + (_token("140", 0.20, 0.20), _token("В", 0.23, 0.20)),
+    )
+    rd = StagePage(
+        document=_doc(DocStage.RD),
+        tokens=section + (_token("140", 0.20, 0.20),),
+    )
+    result = evaluate_rule(
+        rule,
+        object_id="OBJ-ROOM",
+        pages={DocStage.PD: pd, DocStage.RD: rd},
+        completeness={
+            DocStage.PD: Completeness.UPLOADED,
+            DocStage.RD: Completeness.UPLOADED,
+            DocStage.ID: Completeness.MISSING,
+        },
+    )
+    rooms = [item for item in result.also if item.finding.finding_status is FindingStatus.CANDIDATE]
+    assert rooms
+    assert rooms[0].evidence_group is not None
+    assert rooms[0].evidence_group.fragments[0].room_id == "140"
+    assert location_from_group(rooms[0].evidence_group) == "помещение 140"
