@@ -45,7 +45,7 @@ HEAD смотреть `git rev-parse origin/main`.
 Шаги 0–2 плана: HTTP-пайплайн, OCR `ocr_text` = `MEASURED` (гейт I открыт), очередь READY→VERIFYING→COMPLETED.
 Шаг 3: harness `train_public.py`, gold MIXED→RD только для файлов из `gold_evidence_files.json`.
 Снимок `train_public_engineering.json` от 24.09 (выгрузка `python -m kontur.evaluation.train_public`): `n_read=2`, `hits=0`, IOS4-078 и IOS4-079 — `LOW_QUALITY` («PD: якорь или число не найдены»). Это не CANDIDATE и не закрытие гейта J.
-IOS4-078 и IOS4-079 исполняют два прохода: `number` и `room_pass`. Пороги room_compare прежние, по gold не подбирались. Номер помещения пишется в `EvidenceFragment.room_id`, и тогда `location` = «помещение N»; иначе «объект». Прогон gold после этого прохода ещё не делался.
+IOS4-078 и IOS4-079 исполняют два прохода: `number` и `room_pass`. Пороги room_compare прежние, по gold не подбирались. Номер помещения пишется в `EvidenceFragment.room_id`, и тогда `location` = «помещение N»; иначе «объект». Прогон gold после этого прохода ещё не делался. Помещение только в ПД и признак только в РД дают `SUSPICION`, а не тишину. Повтор номера на листе — `ABSTAIN` и не забирает чужой лист. Склейка режется, только если токен целиком состоит из номеров правила.
 F0201: заполненная графа «Утвердил» + ФИО → `APPROVED`. F0171: обложка тома, в штампе нет «утв.»/«Утвердил»+ФИО. Заголовок «Согласовано» не эталон.
 Гейт J открыт. Wilson 6/6 всё равно ниже порога (нужно n≥16).
 `GAP-K6-P95` закрыт живым k6 на GHA (100 VU × 60 с, n=6000, p95=18,26 мс). Это не production SLA.

@@ -63,7 +63,6 @@ from kontur.domain.models import (
     EvidenceGroup,
     EvidenceRole,
     Extraction,
-    ExtractionEngine,
     Finding,
 )
 from kontur.domain.statuses import (
@@ -594,7 +593,7 @@ def _room_evaluation(
                     pd.document,
                     diff.pd,
                     label,
-                    polygon=diff.pd.feature_polygon,
+                    feature=True,
                 )
             )
     if diff.rd is not None:
@@ -647,21 +646,28 @@ def _room_fragment(
     spot: object,
     label: str,
     *,
-    polygon: object | None = None,
+    feature: bool = False,
 ) -> EvidenceFragment:
     assert isinstance(spot, RoomSpot)
-    chosen = spot.room_polygon if polygon is None else polygon
-    assert isinstance(chosen, tuple)
+    if feature:
+        source = spot.feature_polygon_source
+        norm = spot.feature_polygon
+        engine = spot.feature_engine or spot.engine
+    else:
+        source = spot.room_polygon_source
+        norm = spot.room_polygon
+        engine = spot.engine
+    assert isinstance(source, tuple) and isinstance(norm, tuple)
     return EvidenceFragment(
         fragment_id=f"{group_id}-{suffix}",
         role=role,
         document=document,
         page=spot.page,
-        polygon_source=chosen,
-        polygon_norm=chosen,
+        polygon_source=source,
+        polygon_norm=norm,
         extracted=Extraction(
             raw_token=spot.room,
-            engine=ExtractionEngine.VECTOR,
+            engine=engine,
             engine_version="room-compare-0",
             confidence=1.0,
             normalized_value=label,

@@ -5,7 +5,7 @@ from __future__ import annotations
 from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.extractors.number import PageToken
 from kontur.application.room_compare import compare_room_tokens
-from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
+from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, ExtractionEngine
 from kontur.domain.statuses import Completeness, FindingStatus
 from kontur.evaluation.submission import location_from_group
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
@@ -85,15 +85,67 @@ def test_same_tokens_do_not_depend_on_calling_twice() -> None:
     assert [item.kind for item in first] == [item.kind for item in second] == ["match"]
 
 
-def test_evaluate_puts_room_into_location() -> None:
+def test_room_only_on_pd_is_suspicion() -> None:
+    pd = (
+        _token("101", 0.2, 0.2),
+        _token("В", 0.23, 0.2),
+        _token("104", 0.4, 0.4),
+    )
+    rd = (_token("101", 0.2, 0.2), _token("В", 0.23, 0.2))
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert any(item.kind == "suspicion" and item.room == "104" for item in diffs)
+
+
+def test_feature_only_on_rd_is_suspicion() -> None:
+    pd = (_token("101", 0.2, 0.2),)
+    rd = (_token("101", 0.2, 0.2), _token("В", 0.23, 0.2))
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert any(item.kind == "suspicion" and item.room == "101" for item in diffs)
+
+
+def test_duplicate_does_not_steal_another_sheet() -> None:
+    pd = (
+        _token("101", 0.2, 0.2, page=1),
+        _token("101", 0.6, 0.6, page=1),
+        _token("201", 0.2, 0.2, page=2),
+        _token("В", 0.23, 0.2, page=2),
+        _token("202", 0.5, 0.5, page=2),
+    )
+    rd = (
+        _token("201", 0.2, 0.2, page=5),
+        _token("202", 0.5, 0.5, page=5),
+        _token("101", 0.2, 0.2, page=9),
+    )
+    diffs = compare_room_tokens(pd, rd, _settings())
+    kinds = {item.room: item.kind for item in diffs}
+    assert kinds["201"] == "candidate"
+    assert any(item.kind == "abstain" for item in diffs)
+
+
+def test_glued_room_token_splits_and_section_does_not() -> None:
+    pd = (_token("001.1001.1", 0.2, 0.2), _token("500×300", 0.5, 0.5))
+    rd = (_token("001.1", 0.2, 0.2),)
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert any(item.kind == "abstain" for item in diffs)
+    assert all(item.room != "500" for item in diffs)
+    assert all(item.room != "300" for item in diffs)
+
+
+def test_fragment_keeps_source_polygon_and_ocr_engine() -> None:
     rule = dict(FileRuleRegistry().get("IOS4-078"))
     extractor = dict(rule["extractor"])  # type: ignore[arg-type]
     extractor["type"] = "room_compare"
     rule["extractor"] = extractor
-    pd = StagePage(
-        document=_doc(DocStage.PD),
-        tokens=(_token("140", 0.2, 0.2), _token("В", 0.23, 0.2)),
+    source = ((10.0, 20.0), (30.0, 20.0), (30.0, 40.0), (10.0, 40.0))
+    norm = _box(0.2, 0.2)
+    room = PageToken(
+        text="140",
+        page=1,
+        polygon_source=source,
+        polygon_norm=norm,
+        engine=ExtractionEngine.OCR,
     )
+    pd = StagePage(document=_doc(DocStage.PD), tokens=(room, _token("В", 0.23, 0.2)))
     rd = StagePage(document=_doc(DocStage.RD), tokens=(_token("140", 0.2, 0.2),))
     result = evaluate_rule(
         rule,
@@ -109,6 +161,10 @@ def test_evaluate_puts_room_into_location() -> None:
     assert result.evidence_group is not None
     assert result.evidence_group.fragments[0].room_id == "140"
     assert location_from_group(result.evidence_group) == "помещение 140"
+    fragment = result.evidence_group.fragments[0]
+    assert fragment.polygon_source == source
+    assert fragment.polygon_norm == norm
+    assert fragment.extracted.engine is ExtractionEngine.OCR
 
 
 def test_live_number_pass_keeps_section_and_adds_room() -> None:
