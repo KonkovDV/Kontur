@@ -459,8 +459,8 @@ class ProcessWorkspace:
         record = self._items[process_id]
         if record.process_state is ProcessState.FINALIZED:
             raise TransitionError("протокол финализирован, выбор редакции запрещён")
-        if record.process_state is not ProcessState.READY:
-            raise TransitionError("выбор эталона только из READY")
+        if record.process_state not in {ProcessState.READY, ProcessState.VERIFYING}:
+            raise TransitionError("выбор эталона только из READY или VERIFYING")
         if any(item.inspector_decision is not None for item in record.findings.values()):
             raise TransitionError("очередь уже содержит решения инспектора")
         match = next((item for item in record.files if item.file_id == file_id), None)

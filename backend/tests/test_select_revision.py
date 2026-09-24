@@ -110,3 +110,30 @@ def test_select_revision_refuses_machine_and_non_ready() -> None:
         raise AssertionError("expected TransitionError")
     except TransitionError as exc:
         assert "инспектора" in str(exc)
+
+
+def test_select_revision_allowed_while_verifying() -> None:
+    pd = ascii_pdf("PD sheet")
+    workspace = ProcessWorkspace()
+    record = workspace.create("obj-verifying", _seed_completeness())
+    _attach(workspace, record.process_id, file_id="f-pd", stage=DocStage.PD, payload=pd)
+    workspace.run_matrix_pipeline(record)
+    workspace.start_verification(record.process_id, INSPECTOR)
+    assert record.process_state is ProcessState.VERIFYING
+    workspace.select_revision(record.process_id, "f-pd", actor=INSPECTOR, comment=COMMENT)
+    assert record.process_state is ProcessState.VERIFYING
+    assert "f-pd" in record.inspector_approved_file_ids
+
+
+def test_select_revision_refuses_completed() -> None:
+    pd = ascii_pdf("PD sheet")
+    workspace = ProcessWorkspace()
+    record = workspace.create("obj-done", _seed_completeness())
+    _attach(workspace, record.process_id, file_id="f-pd", stage=DocStage.PD, payload=pd)
+    workspace.run_matrix_pipeline(record)
+    record.process_state = ProcessState.COMPLETED
+    try:
+        workspace.select_revision(record.process_id, "f-pd", actor=INSPECTOR, comment=COMMENT)
+        raise AssertionError("expected TransitionError")
+    except TransitionError as exc:
+        assert "VERIFYING" in str(exc)
