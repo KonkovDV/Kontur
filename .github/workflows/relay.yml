@@ -15,7 +15,7 @@ jobs:
       KONTUR_JWT_PUBLIC_KEY: unused-for-compose-validation
       KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate compose contracts
         run: |
           docker compose config --quiet
