@@ -16,6 +16,7 @@ import functools
 import os
 import re
 import shutil
+import sys
 import tempfile
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ProcessPoolExecutor
@@ -560,7 +561,8 @@ def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocu
     if not tesseract_available() and not weights_ready():
         return document
     targets = [page for page in document.pages if _needs_ocr(page)]
-    if len(targets) < 2:
+    # На Windows пул внутри дочернего разбора оставляет процессы и даёт WinError 1450.
+    if len(targets) < 2 or sys.platform == "win32":
         filled = _fill_pages_here(data, targets)
     else:
         filled = _fill_with_pool(data, targets)

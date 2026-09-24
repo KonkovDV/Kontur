@@ -6,6 +6,7 @@ CA и Wilson живут в evaluation.metrics (z=1.96). Дублировать �
 
 from __future__ import annotations
 
+import sys
 from dataclasses import replace
 
 import pytest
@@ -384,6 +385,10 @@ def test_ocr_pool_receives_a_file_path(monkeypatch: pytest.MonkeyPatch) -> None:
     first = _raster_page()
     document = PdfDocumentTokens(file_hash="a" * 64, pages=(first, replace(first, page=2)))
     filled = fill_empty_raster_pages(document, b"%PDF-pool")
+    if sys.platform == "win32":
+        assert workers == []
+        assert filled.pages[0].tokens == ()
+        return
     assert workers[0] >= 1
     assert len(seen) == 2
     assert all(isinstance(item, str) and item.endswith(".pdf") for item in seen)
