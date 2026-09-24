@@ -19,6 +19,12 @@ from kontur.application.intake import (
     evaluate_batch,
 )
 from kontur.application.protocol import assemble_protocol, protocol_for_http
+from kontur.application.protocol_export import (
+    ProtocolPdfUnavailable,
+    render_docx,
+    render_pdf,
+    render_xml,
+)
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.capabilities import capabilities_payload
@@ -489,13 +495,13 @@ def get_file_page_png(
     return Response(content=png, media_type="image/png")
 
 
-@app.get("/api/v1/processes/{process_id}/protocol", response_model=None)
-def get_protocol(
+def _protocol_document(
     process_id: str,
+    authorization: str | None,
+    operation: str,
     version: int | None = None,
-    authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, object] | JSONResponse:
-    _subject, _granted, object_id = _require("getProtocol", authorization)
+    _subject, _granted, object_id = _require(operation, authorization)
     record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
@@ -544,6 +550,64 @@ def get_protocol(
         input_manifest_hash=record.input_manifest_hash,
     )
     return protocol_for_http(payload)
+
+
+@app.get("/api/v1/processes/{process_id}/protocol", response_model=None)
+def get_protocol(
+    process_id: str,
+    version: int | None = None,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    return _protocol_document(process_id, authorization, "getProtocol", version)
+
+
+@app.get("/api/v1/processes/{process_id}/protocol.docx", response_model=None)
+def get_protocol_docx(
+    process_id: str,
+    authorization: Annotated[str | None, Header()] = None,
+) -> Response:
+    rendered = _protocol_document(process_id, authorization, "getProtocolDocx")
+    if isinstance(rendered, JSONResponse):
+        return rendered
+    return Response(
+        content=render_docx(rendered),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": 'attachment; filename="protocol.docx"'},
+    )
+
+
+@app.get("/api/v1/processes/{process_id}/protocol.xml", response_model=None)
+def get_protocol_xml(
+    process_id: str,
+    authorization: Annotated[str | None, Header()] = None,
+) -> Response:
+    rendered = _protocol_document(process_id, authorization, "getProtocolXml")
+    if isinstance(rendered, JSONResponse):
+        return rendered
+    return Response(
+        content=render_xml(rendered),
+        media_type="application/xml",
+        headers={"Content-Disposition": 'attachment; filename="protocol.xml"'},
+    )
+
+
+@app.get("/api/v1/processes/{process_id}/protocol.pdf", response_model=None)
+def get_protocol_pdf(
+    process_id: str,
+    authorization: Annotated[str | None, Header()] = None,
+) -> Response:
+    rendered = _protocol_document(process_id, authorization, "getProtocolPdf")
+    if isinstance(rendered, JSONResponse):
+        return rendered
+    try:
+        body = render_pdf(rendered)
+    except ProtocolPdfUnavailable as exc:
+        return JSONResponse(status_code=501, content={"detail": str(exc)})
+    return Response(
+        content=body,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="protocol.pdf"'},
+    )
 
 
 @app.get("/api/v1/processes/{process_id}/audit", response_model=None)
