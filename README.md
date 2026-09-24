@@ -133,8 +133,10 @@ python -m kontur.cli.score --submissions <каталог>
 
 `run_package` читает либо `files_index.jsonl`, либо папки `<объект>/{ПД|РД|ИД}`
 и пишет `submission_*.json`, `protocol_*.json`, `documents_*.json`,
-`fields_*.jsonl` и `run_manifest.json`. `score` считает эти submission
-по публичному gold: матрица и свободный поиск отдельно, с n и 95% CI.
+`fields_*.jsonl` и `run_manifest.json`. Флаг `--pages-text` добавляет
+`pages_text_<объект>.jsonl`: текст, bbox и `engine` (`vector` или `ocr`).
+`score` считает эти submission по публичному gold: матрица и свободный поиск
+отдельно, с n и 95% CI.
 Порог ТЗ эта команда не объявляет взятым. Это черновик: инспектор находки
 не подтверждает, `violation_count` остаётся 0, ACK РиН нет. `RD_ID_MIXED`
 не назначается стадией. Скрытый тест пропускается. Таймаут разбора PDF

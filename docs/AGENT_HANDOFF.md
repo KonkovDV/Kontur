@@ -34,7 +34,7 @@ HEAD смотреть `git rev-parse origin/main`.
 5. [`data/dataset/gold_inventory.json`](../data/dataset/gold_inventory.json) — публичный gold ≠ frozen val.
 6. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
 7. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
-8. [`data/dataset/train_public_engineering.json`](../data/dataset/train_public_engineering.json) и `train_public_pred.jsonl` — gold-evidence прогон: 0 попаданий из 6. PD+RD загружены; L4: у ПД нет заполненной графы «Утвердил». Порог recall ТЗ не берётся и не публикуется.
+8. [`data/dataset/train_public_engineering.json`](../data/dataset/train_public_engineering.json) и `train_public_pred.jsonl` — gold-evidence прогон 24.09: 0 попаданий из 6. PD+RD загружены. IOS4-078 и IOS4-079 — `LOW_QUALITY` («PD: якорь или число не найдены»). Порог ТЗ не берётся и не публикуется.
 9. [`docs/WORK_PLAN.md`](WORK_PLAN.md), [`docs/KNOWN_GAPS.md`](KNOWN_GAPS.md), [`docs/PR_QUEUE.md`](PR_QUEUE.md), [`docs/TZ_SCORECARD.md`](TZ_SCORECARD.md), [`docs/RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md). [`docs/GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md) и issue [#86](https://github.com/KonkovDV/Kontur/issues/86) — снимок 21.09 (29/103), не текущее покрытие. Живая шина — [`docs/GH_AGENT_BUS.md`](GH_AGENT_BUS.md).
 
 Пересборка: `python scripts/export_agent_dumps.py` или `make agent-dumps`.
@@ -44,7 +44,7 @@ HEAD смотреть `git rev-parse origin/main`.
 
 Шаги 0–2 плана: HTTP-пайплайн, OCR `ocr_text` = `MEASURED` (гейт I открыт), очередь READY→VERIFYING→COMPLETED.
 Шаг 3: harness `train_public.py`, gold MIXED→RD только для файлов из `gold_evidence_files.json`.
-Снимок `train_public_engineering.json` от 19.09: `n_read=2`, `hits=0`, обе строки `CLARIFICATION_REQUIRED` («PD: эталон без признака утверждения»). После ADR-0014 этот файл заново не прогонялся.
+Снимок `train_public_engineering.json` от 24.09 (выгрузка `python -m kontur.evaluation.train_public`): `n_read=2`, `hits=0`, IOS4-078 и IOS4-079 — `LOW_QUALITY` («PD: якорь или число не найдены»). Это не CANDIDATE и не закрытие гейта J.
 F0201: заполненная графа «Утвердил» + ФИО → `APPROVED`. F0171: обложка тома, в штампе нет «утв.»/«Утвердил»+ФИО. Заголовок «Согласовано» не эталон.
 Гейт J открыт. Wilson 6/6 всё равно ниже порога (нужно n≥16).
 `GAP-K6-P95` закрыт живым k6 на GHA (100 VU × 60 с, n=6000, p95=18,26 мс). Это не production SLA.
