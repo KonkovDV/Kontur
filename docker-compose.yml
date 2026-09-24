@@ -36,7 +36,11 @@ services:
       - rabbitmq:/var/lib/rabbitmq
 
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    # Docker Hub удалил minio/minio (404). Quay без логина отвечает 401.
+    # Тот же сервер MinIO из архивного образа Bitnami, каталог данных /data.
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    entrypoint: ["/opt/bitnami/minio/bin/minio"]
+    user: "0:0"
     mem_limit: 512m
     cpus: 1.0
     pids_limit: 256
