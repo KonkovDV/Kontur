@@ -2,8 +2,8 @@
 
 pdfium и Tesseract-render живут не в потоке API: по истечении лимита процесс
 terminate/kill, а не «подождём поток». Тишина не считается успехом:
-PdfParseTimeoutError. Имя `process_id` в исключении не используем — это
-идентификатор процесса сверки, не PID.
+PdfParseTimeoutError. Две повторные попытки только на таймаут. Имя
+`process_id` в исключении не используем — это идентификатор процесса сверки, не PID.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ T = TypeVar("T")
 DEFAULT_PDF_PARSE_TIMEOUT_S = 30.0
 _JOIN_S = 2.0
 _POLL_S = 0.05
+_PARSE_ATTEMPTS = 3
 
 
 def pdf_parse_timeout_s() -> float:
@@ -73,6 +74,22 @@ def run_pdf_parse_sync(
 ) -> T:
     if timeout_s <= 0:
         raise ValueError("timeout_s должен быть положительным")
+    error: PdfParseTimeoutError | None = None
+    for _attempt in range(_PARSE_ATTEMPTS):
+        try:
+            return _parse_once(parser, data, timeout_s=timeout_s)
+        except PdfParseTimeoutError as exc:
+            error = exc
+    assert error is not None
+    raise error
+
+
+def _parse_once(
+    parser: Callable[[bytes], T],
+    data: bytes,
+    *,
+    timeout_s: float,
+) -> T:
     ctx = multiprocessing.get_context("spawn")
     parent, child = ctx.Pipe(duplex=False)
     proc = ctx.Process(

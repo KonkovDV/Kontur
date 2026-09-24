@@ -60,7 +60,13 @@ def test_parser_exception_propagates() -> None:
         run_pdf_parse_sync(_raises, b"x", timeout_s=15.0)
 
 
-def test_timeout_error_has_no_process_id() -> None:
+def test_timeout_is_retried_twice_then_raised() -> None:
+    started = time.perf_counter()
+    with pytest.raises(PdfParseTimeoutError, match="превысил"):
+        run_pdf_parse_sync(_slow, b"pdf", timeout_s=0.2)
+    elapsed = time.perf_counter() - started
+    assert elapsed >= 0.5
+    assert elapsed < 3.0
     with pytest.raises(PdfParseTimeoutError) as caught:
         run_pdf_parse_sync(_slow, b"pdf", timeout_s=0.2)
     assert not hasattr(caught.value, "process_id")
