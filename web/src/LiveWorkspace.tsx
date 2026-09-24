@@ -44,6 +44,7 @@ type FindingRow = {
   finding_id: string;
   rule_code: string;
   finding_status: string;
+  section: string | null;
   rationale: string;
   evidence_group_id: string | null;
 };
@@ -77,6 +78,12 @@ function bandOf(status: string): Band {
   if (CLOSED.has(status)) return "closed";
   if (OPEN.has(status)) return "open";
   return "unchecked";
+}
+
+function queueRank(status: string): number {
+  if (status === "CANDIDATE") return 0;
+  if (status === "SUSPICION") return 1;
+  return 2;
 }
 
 function reviewable(status: string): boolean {
@@ -156,6 +163,7 @@ export function LiveWorkspace({ token }: Props) {
   const [findings, setFindings] = useState<FindingRow[]>([]);
   const [status, setStatus] = useState<ProcessStatus | null>(null);
   const [band, setBand] = useState<Band>("open");
+  const [sectionFilter, setSectionFilter] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [card, setCard] = useState<EvidenceCard | null>(null);
   const [pageImages, setPageImages] = useState<Partial<Record<StagePane, string>>>({});
@@ -170,7 +178,17 @@ export function LiveWorkspace({ token }: Props) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const visible = findings.filter((item) => bandOf(item.finding_status) === band);
+  const sections = [
+    ...new Set(findings.flatMap((item) => (item.section ? [item.section] : []))),
+  ].sort((left, right) => left.localeCompare(right, "ru"));
+  const visible = findings
+    .filter((item) => bandOf(item.finding_status) === band)
+    .filter((item) => sectionFilter === "" || item.section === sectionFilter)
+    .sort(
+      (left, right) =>
+        queueRank(left.finding_status) - queueRank(right.finding_status) ||
+        left.rule_code.localeCompare(right.rule_code, "ru"),
+    );
   const counts = {
     open: findings.filter((item) => bandOf(item.finding_status) === "open").length,
     closed: findings.filter((item) => bandOf(item.finding_status) === "closed").length,
@@ -641,6 +659,20 @@ export function LiveWorkspace({ token }: Props) {
               Не проверялось {counts.unchecked}
             </button>
           </div>
+          <label>
+            Раздел матрицы
+            <select
+              value={sectionFilter}
+              onChange={(event) => setSectionFilter(event.target.value)}
+            >
+              <option value="">все</option>
+              {sections.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
           <ul className="finding-list">
             {visible.map((item) => (
               <li key={item.finding_id}>
@@ -649,7 +681,8 @@ export function LiveWorkspace({ token }: Props) {
                   className={item.finding_id === activeId ? "is-active" : undefined}
                   onClick={() => void openFinding(item.finding_id)}
                 >
-                  {item.rule_code} · {item.finding_status}
+                  {item.rule_code}
+                  {item.section ? ` · ${item.section}` : ""} · {item.finding_status}
                   {item.rationale ? ` · ${item.rationale}` : ""}
                 </button>
               </li>
