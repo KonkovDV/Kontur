@@ -3,9 +3,19 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-from kontur.cli.run_package import PackageFile, _field_row, _page_rows, run_directory
+import pytest
+
+from kontur.cli.run_package import (
+    PackageFile,
+    _extended_path,
+    _field_row,
+    _page_rows,
+    _read_bytes,
+    run_directory,
+)
 from kontur.domain.models import DocStage
 from kontur.evaluation.dataset_package import HIDDEN_TEST_OBJECT_IDS
 from kontur.evaluation.demo_kit import demo_sheet_files
@@ -19,6 +29,20 @@ def _write_kit(root: Path, object_id: str) -> None:
         folder = root / object_id / folders[stage]
         folder.mkdir(parents=True, exist_ok=True)
         (folder / f"{file_id}.pdf").write_bytes(payload)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="MAX_PATH только на Windows")
+def test_long_windows_path_is_readable(tmp_path: Path) -> None:
+    leaf = "d" * 80
+    folder = tmp_path
+    for _ in range(4):
+        folder = folder / leaf
+    target = _extended_path(folder / "sheet.pdf")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"%PDF-1.4 long")
+    plain = Path(str(target)[4:])
+    assert len(str(plain)) > 260
+    assert _read_bytes(plain) == b"%PDF-1.4 long"
 
 
 def test_folder_package_writes_schema_valid_draft(tmp_path: Path) -> None:
