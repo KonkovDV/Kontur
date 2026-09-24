@@ -205,6 +205,32 @@ def test_mixed_stage_becomes_rd_or_id_only_with_a_mark(tmp_path: Path) -> None:
     }
 
 
+def test_unmapped_folder_uses_the_same_mark(tmp_path: Path) -> None:
+    source = tmp_path / "in" / "OBJ-PACK-FOLDER"
+    (source / "ПД").mkdir(parents=True)
+    mixed = source / "Рабочая и исполнительная документация"
+    mixed.mkdir()
+    (source / "ПД" / "pd.pdf").write_bytes(cyrillic_pdf((("лист", 20.0, 40.0),)))
+    (mixed / "АНО-1-РД-ОВ1.pdf").write_bytes(cyrillic_pdf((("лист", 20.0, 40.0),)))
+    (mixed / "act.pdf").write_bytes(cyrillic_pdf((("АОСР №1", 20.0, 40.0),)))
+    (mixed / "note.pdf").write_bytes(cyrillic_pdf((("лист", 20.0, 40.0),)))
+    out = tmp_path / "out"
+    report = run_directory(source.parent, out)
+    assert report["mode"] == "folders"
+    assert report["failures"] == []
+    documents = json.loads((out / "documents_OBJ-PACK-FOLDER.json").read_text(encoding="utf-8"))
+    stages = {item["filename"]: item["doc_stage"] for item in documents["files"]}
+    assert stages == {"pd.pdf": "PD", "АНО-1-РД-ОВ1.pdf": "RD", "act.pdf": "ID"}
+    skipped = report["skipped"]
+    assert isinstance(skipped, list)
+    note = [
+        item
+        for item in skipped
+        if item.get("file") == "note.pdf" and item.get("stage_basis") == "no_rd_or_aosr"
+    ]
+    assert note
+
+
 def test_field_and_page_rows_pass_the_package_timeout(tmp_path: Path, monkeypatch) -> None:
     seen: list[float] = []
 

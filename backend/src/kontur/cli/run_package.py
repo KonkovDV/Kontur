@@ -173,17 +173,22 @@ def _unique_id(stem: str, used: set[str], digest: str) -> str:
     return suffixed
 
 
-def discover_folders(root: Path) -> tuple[dict[str, list[PackageFile]], list[dict[str, str]]]:
-    """Папки стадий. Скрытый объект не открывается."""
+def discover_folders(
+    root: Path,
+) -> tuple[dict[str, list[PackageFile]], list[dict[str, str]], list[dict[str, str]]]:
+    """Папки стадий. Каталог без токена стадии режется той же меткой, что MIXED."""
 
     skipped: list[dict[str, str]] = []
+    resolutions: list[dict[str, str]] = []
     objects: dict[str, list[PackageFile]] = {}
 
     def take(object_id: str, folder: Path) -> None:
         if is_hidden_test_object(object_id):
             skipped.append({"object_id": object_id, "reason": "hidden_test"})
             return
-        files = _pdfs_in_object(folder)
+        files, extra_skipped, extra_resolved = _pdfs_in_object(object_id, folder)
+        skipped.extend(extra_skipped)
+        resolutions.extend(extra_resolved)
         if files:
             objects[object_id] = files
 
@@ -194,33 +199,76 @@ def discover_folders(root: Path) -> tuple[dict[str, list[PackageFile]], list[dic
     if staged_children:
         for child in staged_children:
             take(child.name, child)
-        return objects, skipped
+        return objects, skipped, resolutions
     if _has_stage_dir(root):
         take(root.name, root)
-    return objects, skipped
+    return objects, skipped, resolutions
 
 
 def _has_stage_dir(folder: Path) -> bool:
     return any(path.is_dir() and _stage_token(path.name) is not None for path in folder.iterdir())
 
 
-def _pdfs_in_object(folder: Path) -> list[PackageFile]:
+def _pdfs_in_object(
+    object_id: str, folder: Path
+) -> tuple[list[PackageFile], list[dict[str, str]], list[dict[str, str]]]:
     used: set[str] = set()
     found: list[PackageFile] = []
+    skipped: list[dict[str, str]] = []
+    resolutions: list[dict[str, str]] = []
     for stage_dir in sorted(path for path in folder.iterdir() if path.is_dir()):
-        stage = _stage_token(stage_dir.name)
-        if stage is None or is_quarantined(stage_dir):
+        if is_quarantined(stage_dir):
             continue
+        stage = _stage_token(stage_dir.name)
         for path in sorted(stage_dir.rglob("*")):
             if not path.is_file() or is_quarantined(path):
                 continue
             suffix = path.suffix.lower()
             if suffix not in {".pdf", ".docx", ".xml"}:
                 continue
+            basis = ""
+            file_stage = stage
+            resolved_here = False
+            if file_stage is None:
+                if suffix != ".pdf":
+                    skipped.append(
+                        {
+                            "object_id": object_id,
+                            "reason": "unmapped_stage",
+                            "stage": stage_dir.name,
+                            "stage_basis": "no_rd_or_aosr",
+                            "file": path.name,
+                        }
+                    )
+                    continue
+                file_stage, basis = _stage_from_mixed(path, "")
+                if file_stage is None:
+                    skipped.append(
+                        {
+                            "object_id": object_id,
+                            "reason": "unmapped_stage",
+                            "stage": stage_dir.name,
+                            "stage_basis": basis,
+                            "file": path.name,
+                        }
+                    )
+                    continue
+                resolved_here = True
+                resolutions.append(
+                    {
+                        "object_id": object_id,
+                        "file_id": path.stem,
+                        "from_stage": stage_dir.name,
+                        "stage": file_stage.value,
+                        "stage_basis": basis,
+                    }
+                )
             digest = file_sha256(_read_bytes(path))
             file_id = _unique_id(path.stem, used, digest)
-            found.append(PackageFile(file_id, stage, path))
-    return found
+            if resolved_here:
+                resolutions[-1]["file_id"] = file_id
+            found.append(PackageFile(file_id, file_stage, path))
+    return found, skipped, resolutions
 
 
 def discover_index(
@@ -591,7 +639,7 @@ def run_directory(source: Path, out_dir: Path, *, pages_text: bool = False) -> d
         grouped, skipped, resolutions = discover_index(root, index)
         mode = "files_index"
     else:
-        grouped, skipped = discover_folders(root)
+        grouped, skipped, resolutions = discover_folders(root)
         mode = "folders"
     registry = FileRuleRegistry()
     objects: list[dict[str, object]] = []
