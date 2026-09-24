@@ -6,6 +6,7 @@
 
 Ошибка, таймаут, поворот ≠ 0, нет pytesseract — исходные токены без
 исключения. Пустой результат — статусы качества, не violation.
+eslav и Tesseract читают кроп по отдельности: нет ответа — не голос.
 Растр для Tesseract — 300 dpi (scale = 300/72 относительно PDF user space).
 """
 
@@ -330,6 +331,115 @@ def ocr_region_crop(
         layer_kind="raster",
     )
     return tokens_from_tesseract_payload(payload, stub, size, region=region)
+
+
+def ocr_region_eslav(
+    data: bytes,
+    *,
+    page_number: int,
+    frame: PageFrame,
+    polygon: Polygon,
+    cache: PageImageCache | None = None,
+) -> tuple[PageToken, ...]:
+    """eslav на том же кропе, что и Tesseract. Нет весов — пусто, не ошибка."""
+
+    from kontur.infrastructure.ocr_rapid import rapid_page_tokens, weights_ready
+
+    if not weights_ready() or frame.rotate != 0:
+        return ()
+    region = expand_user_region(polygon, frame)
+    if region is None:
+        return ()
+    store = cache if cache is not None else PageImageCache(data)
+    image = store.page_image(page_number)
+    cropped = _crop_to_region(image, frame, region)
+    if cropped is None:
+        return ()
+    size = _image_size(cropped)
+    if size is None:
+        return ()
+    width, height = size
+    stub = PdfPageTokens(
+        page=page_number,
+        frame=PageFrame(
+            media=(0.0, 0.0, float(width), float(height)),
+            crop=(0.0, 0.0, float(width), float(height)),
+            rotate=0,
+        ),
+        tokens=(),
+        has_embedded_text=False,
+        layer_kind="raster",
+    )
+    rapid = rapid_page_tokens(cropped, stub, size)
+    if not rapid:
+        return ()
+    return rapid
+
+
+def _bottom_band(image: object | None) -> object | None:
+    size = _image_size(image)
+    if size is None or image is None:
+        return None
+    width, height = size
+    if height < 8:
+        return None
+    top = int(height * 0.72)
+    crop = getattr(image, "crop", None)
+    if crop is None:
+        return None
+    try:
+        band: object = crop((0, top, width, height))
+    except (TypeError, ValueError):
+        return None
+    return band
+
+
+def stamp_cipher_reads(data: bytes, page_count: int) -> tuple[str, ...]:
+    """Шифры нижней полосы последней страницы отдельно от eslav и Tesseract.
+
+    Нет весов eslav — пустой кортеж: векторный шифр не оспаривается.
+    Движок без шифра по regex в кортеж не входит.
+    """
+
+    from kontur.application.passport import cipher_from_text
+    from kontur.infrastructure.ocr_rapid import rapid_page_tokens, weights_ready
+
+    if page_count < 1 or not weights_ready() or not tesseract_available():
+        return ()
+    band = _bottom_band(PageImageCache(data).page_image(page_count))
+    size = _image_size(band)
+    if band is None or size is None:
+        return ()
+    width, height = size
+    stub = PdfPageTokens(
+        page=page_count,
+        frame=PageFrame(
+            media=(0.0, 0.0, float(width), float(height)),
+            crop=(0.0, 0.0, float(width), float(height)),
+            rotate=0,
+        ),
+        tokens=(),
+        has_embedded_text=False,
+        layer_kind="raster",
+    )
+    found: list[str] = []
+    rapid = rapid_page_tokens(band, stub, size)
+    if rapid:
+        code = cipher_from_text(" ".join(item.text for item in rapid))
+        if code:
+            found.append(code)
+    try:
+        pytesseract = import_module("pytesseract")
+    except ImportError:
+        return tuple(found)
+    payload = _image_to_data(pytesseract, band, psm=6)
+    if payload is None:
+        return tuple(found)
+    tokens = tokens_from_tesseract_payload(payload, stub, size)
+    code = cipher_from_text(" ".join(item.text for item in tokens))
+    if code:
+        found.append(code)
+    return tuple(found)
 
 
 def ocr_image_bytes(data: bytes, *, psm: int = 7) -> str:

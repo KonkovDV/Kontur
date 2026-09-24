@@ -39,6 +39,7 @@ from kontur.infrastructure.ocr_tesseract import (
     PageImageCache,
     fill_empty_raster_pages,
     raster_pages_need_ocr,
+    stamp_cipher_reads,
     tesseract_available,
 )
 from kontur.infrastructure.pdf_guard import (
@@ -147,6 +148,7 @@ def _pages_from_blobs(
             layer_kind=document.layer_kind,
             rotate=last.frame.rotate,
             injection_clean=injection_clean_flag,
+            alternate_ciphers=stamp_cipher_reads(raw, len(document.pages)),
         )
         stamp = passport.approval_status
         stamps[item.file_id] = stamp
