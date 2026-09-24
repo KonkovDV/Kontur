@@ -58,9 +58,9 @@ def compare_room_tokens(
 
     room_re = re.compile(str(settings["room_regex"]))
     feature_re = re.compile(str(settings["feature_regex"]))
-    radius = float(settings["bind_radius"])  # type: ignore[arg-type]
-    jaccard_min = float(settings["pair_jaccard_min"])  # type: ignore[arg-type]
-    max_diff = int(settings["max_differences"])  # type: ignore[arg-type]
+    radius = _as_float(settings["bind_radius"])
+    jaccard_min = _as_float(settings["pair_jaccard_min"])
+    max_diff = _as_int(settings["max_differences"])
     pd_pages = _pages(pd_tokens, room_re, feature_re, radius)
     rd_pages = _pages(rd_tokens, room_re, feature_re, radius)
     if not pd_pages or not rd_pages:
@@ -72,6 +72,18 @@ def compare_room_tokens(
     for pd_rooms, rd_rooms in pairs:
         out.extend(_pair_diffs(pd_rooms, rd_rooms, max_diff))
     return tuple(out)
+
+
+def _as_float(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise TypeError(f"ожидалось число, получено {value!r}")
+    return float(value)
+
+
+def _as_int(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"ожидалось целое, получено {value!r}")
+    return value
 
 
 def _center(polygon: Polygon) -> tuple[float, float]:
