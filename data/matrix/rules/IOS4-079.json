@@ -38,7 +38,7 @@
     }
   },
   "extractor": {
-    "type": "room_compare",
+    "type": "number",
     "room_compare": {
       "room_regex": "^(?:\\d{3}|0\\d{2}\\.\\d)$",
       "feature_regex": "^(?:П|приточ\\w*)$",

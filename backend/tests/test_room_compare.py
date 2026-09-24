@@ -86,7 +86,10 @@ def test_same_tokens_do_not_depend_on_calling_twice() -> None:
 
 
 def test_evaluate_puts_room_into_location() -> None:
-    rule = FileRuleRegistry().get("IOS4-078")
+    rule = dict(FileRuleRegistry().get("IOS4-078"))
+    extractor = dict(rule["extractor"])  # type: ignore[arg-type]
+    extractor["type"] = "room_compare"
+    rule["extractor"] = extractor
     pd = StagePage(
         document=_doc(DocStage.PD),
         tokens=(_token("140", 0.2, 0.2), _token("В", 0.23, 0.2)),
