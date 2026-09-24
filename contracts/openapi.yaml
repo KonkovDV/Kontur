@@ -169,11 +169,14 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [finding_id, rule_code, finding_status]
+                      required: [finding_id, rule_code, finding_status, section]
                       properties:
                         finding_id: { type: string }
                         rule_code: { type: string }
                         finding_status: { type: string }
+                        section:
+                          type: ["string", "null"]
+                          description: Раздел матрицы правила. Нет правила — null, из шифра файла не выводится.
                         rationale: { type: string }
                         evidence_group_id: { type: ["string", "null"] }
         "404": { description: Процесс не найден }

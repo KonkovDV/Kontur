@@ -60,6 +60,53 @@ def test_demo_kit_loads_four_files_and_leaves_etalon_to_the_inspector(
     }
     pz = next(item for item in listed if item["rule_code"] == "PZ-001")
     assert pz["finding_status"] == "CLARIFICATION_REQUIRED"
+    assert pz["section"] == "ПЗ"
+    kr = next(item for item in listed if item["rule_code"] == "KR-055")
+    assert kr["section"] == "КР"
+    ar = next(item for item in listed if item["rule_code"] == "AR-041")
+    assert ar["section"] == "АР"
+
+
+def test_findings_list_does_not_guess_section_from_the_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    from kontur.application.runtime import ProcessWorkspace
+    from kontur.domain.models import DocStage, Finding
+    from kontur.domain.statuses import Completeness, ReviewPriority
+
+    app.state.workspace = ProcessWorkspace()
+    record = app.state.workspace.create(
+        "OBJ-DEMO-COLD-START",
+        {
+            DocStage.PD: Completeness.UPLOADED,
+            DocStage.RD: Completeness.MISSING,
+            DocStage.ID: Completeness.MISSING,
+        },
+    )
+    app.state.workspace.put_finding(
+        record.process_id,
+        Finding(
+            finding_id="f-unknown",
+            evidence_group_id="eg-unknown",
+            rule_code="ZZ-999",
+            finding_status=FindingStatus.CANDIDATE,
+            review_priority=ReviewPriority.HIGH,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+            rationale="код вне матрицы",
+        ),
+    )
+    client = TestClient(app)
+    listed = client.get(
+        f"/api/v1/processes/{record.process_id}/findings",
+        headers=TOKEN,
+    )
+    assert listed.status_code == 200
+    row = listed.json()["findings"][0]
+    assert row["rule_code"] == "ZZ-999"
+    assert row["section"] is None
 
 
 def _review(

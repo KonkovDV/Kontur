@@ -437,12 +437,26 @@ def list_findings(
                 "finding_id": item.finding_id,
                 "rule_code": item.rule_code,
                 "finding_status": item.finding_status.value,
+                "section": _matrix_section(item.rule_code),
                 "rationale": item.rationale,
                 "evidence_group_id": item.evidence_group_id,
             }
             for item in record.findings.values()
         ],
     }
+
+
+def _matrix_section(rule_code: str) -> str | None:
+    """Раздел из JSON правила. Неизвестный код не превращается в раздел по префиксу."""
+
+    try:
+        rule = _rules().get(rule_code)
+    except KeyError:
+        return None
+    section = rule.get("section")
+    if isinstance(section, str) and section.strip():
+        return section.strip()
+    return None
 
 
 @app.get(
