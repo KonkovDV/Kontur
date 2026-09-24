@@ -49,6 +49,8 @@ services:
       - minio:/data
 
   core:
+    # Пакет жюри с хоста, не смена command сервиса:
+    # python -m kontur.cli.run_package --input <dir> --out <dir>
     # Стенд жюри: 8 CPU и 8 ГБ. Раннер GitHub имеет 4 CPU, поэтому CI
     # задаёт KONTUR_CORE_CPUS=2 и контейнер там стартует.
     mem_limit: ${KONTUR_CORE_MEM_LIMIT:-8g}
