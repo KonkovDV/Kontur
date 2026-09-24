@@ -141,6 +141,11 @@ def validate_openapi(spec: dict[str, object]) -> list[str]:
             problems.append(f"{label} без inspector_id в теле запроса")
     if "/processes/{process_id}/unfinalize" not in spec["paths"]:
         problems.append("нет POST unfinalize")
+    pdf = spec["paths"]["/processes/{process_id}/protocol.pdf"]["get"]["responses"]
+    if "200" not in pdf:
+        problems.append("protocol.pdf: рабочий ответ должен быть 200, не 501")
+    if "501" in pdf and "200" not in pdf:
+        problems.append("protocol.pdf: 501 описан вместо рабочего PDF")
 
     rejection_enum = set(components["RejectionReason"]["properties"]["reason_code"]["enum"])
     if rejection_enum != {member.value for member in RejectionReason}:

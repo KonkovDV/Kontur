@@ -268,16 +268,20 @@ paths:
 
   /processes/{process_id}/protocol.pdf:
     get:
-      summary: PDF протокола не собран
-      description: GAP-PROTOCOL-PDF. Ответ 501, пустой PDF не отдаётся.
+      summary: Протокол в PDF
+      description: Те же разделы, что у JSON. Шрифт DejaVu в образе. 501 только если шрифт недоступен.
       operationId: getProtocolPdf
       x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
       parameters: [{ $ref: "#/components/parameters/ProcessId" }]
       responses:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "501": { description: PDF в образе нет }
+        "200":
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
         "404": { description: Процесс не найден или протокол ещё не собран }
+        "501": { description: Шрифт PDF недоступен, пустой файл не отдаётся }
 
   /processes/{process_id}/audit:
     get:

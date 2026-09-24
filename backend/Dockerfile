@@ -1,7 +1,9 @@
 FROM python:3.12-slim
 
 # Закрытый контур: без обращений к внешним сервисам в рантайме.
-ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+# .git в образ не копируется: SHA передаётся на сборке.
+ARG GIT_SHA=unspecified
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 KONTUR_GIT_SHA=${GIT_SHA}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

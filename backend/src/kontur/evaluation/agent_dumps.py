@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import re
 from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
@@ -47,20 +49,35 @@ def index_stats_path(root: Path | None = None) -> Path:
     return (root or repo_root()) / "data" / "dataset" / "train_public_index_stats.json"
 
 
+_COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
+
+
+def _sha_from_env() -> str:
+    """SHA, зашитый в образ. .git в контейнер жюри не копируется."""
+
+    for key in ("KONTUR_GIT_SHA", "GITHUB_SHA"):
+        pinned = os.environ.get(key, "").strip().lower()
+        if _COMMIT_SHA.fullmatch(pinned):
+            return pinned
+    return ""
+
+
 def git_sha(root: Path | None = None) -> str:
-    """SHA HEAD без subprocess. Пустая строка, если .git недоступен."""
+    """SHA HEAD без subprocess. В образе без .git — KONTUR_GIT_SHA."""
 
     git_dir = (root or repo_root()) / ".git"
     head = git_dir / "HEAD"
-    if not head.is_file():
-        return ""
-    text = head.read_text(encoding="utf-8").strip()
-    if text.startswith("ref:"):
-        ref = git_dir / text.split(" ", 1)[1].strip()
-        if ref.is_file():
-            return ref.read_text(encoding="utf-8").strip()
-        return ""
-    return text
+    if head.is_file():
+        text = head.read_text(encoding="utf-8").strip()
+        if text.startswith("ref:"):
+            ref = git_dir / text.split(" ", 1)[1].strip()
+            if ref.is_file():
+                found = ref.read_text(encoding="utf-8").strip()
+                if _COMMIT_SHA.fullmatch(found):
+                    return found
+        elif _COMMIT_SHA.fullmatch(text):
+            return text
+    return _sha_from_env()
 
 
 def build_coverage_snapshot(registry: FileRuleRegistry | None = None) -> dict[str, object]:
