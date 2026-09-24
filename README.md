@@ -91,7 +91,16 @@ ACK РиН нет.
 pip install -e "backend[dev]"
 pytest backend/tests -q
 python scripts/check_claims.py
+python -m kontur.cli.run_package --input <каталог> --out <каталог>
 ```
+
+`run_package` читает либо `files_index.jsonl`, либо папки `<объект>/{ПД|РД|ИД}`
+и пишет `submission_*.json`, `protocol_*.json`, `documents_*.json`,
+`fields_*.jsonl` и `run_manifest.json`. Это черновик: инспектор находки
+не подтверждает, `violation_count` остаётся 0, ACK РиН нет. `RD_ID_MIXED`
+не назначается стадией. Скрытый тест пропускается. Таймаут разбора PDF
+в этой команде — 600 с на файл, если `KONTUR_PDF_PARSE_TIMEOUT_S` не задан.
+Пример раскладки: [`examples/demo_package/README.md`](examples/demo_package/README.md).
 
 ## Документы
 
