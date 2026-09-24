@@ -150,6 +150,15 @@ function downloadJson(filename: string, payload: object) {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+function saveBlob(filename: string, blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 type Props = {
   token: string;
 };
@@ -436,6 +445,29 @@ export function LiveWorkspace({ token }: Props) {
       setProtocolNote("Протокол и журнал скачаны. РиН не подтверждался.");
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "протокол не собран");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function downloadProtocol(kind: "docx" | "xml" | "pdf") {
+    if (!processId) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/v1/processes/${processId}/protocol.${kind}`);
+      if (!response.ok) {
+        const body = (await response.json()) as { detail?: string };
+        throw new Error(body.detail ?? "файл протокола не собран");
+      }
+      saveBlob(`protocol-${processId}.${kind}`, await response.blob());
+      setProtocolNote(
+        kind === "pdf"
+          ? "PDF не ожидается."
+          : `Скачан protocol.${kind}. Подтверждений РиН нет.`,
+      );
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "файл протокола не собран");
     } finally {
       setBusy(false);
     }
@@ -777,6 +809,16 @@ export function LiveWorkspace({ token }: Props) {
           >
             Собрать и скачать протокол
           </button>
+          <button type="button" disabled={busy || !processId} onClick={() => void downloadProtocol("docx")}>
+            Скачать DOCX
+          </button>
+          <button type="button" disabled={busy || !processId} onClick={() => void downloadProtocol("xml")}>
+            Скачать XML
+          </button>
+          <button type="button" disabled={busy || !processId} onClick={() => void downloadProtocol("pdf")}>
+            Скачать PDF
+          </button>
+          <p>PDF протокола нет: GAP-PROTOCOL-PDF. DOCX и XML собираются из того же JSON.</p>
           <button
             type="button"
             disabled={

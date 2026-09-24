@@ -234,6 +234,51 @@ paths:
               schema: { $ref: "./schemas/protocol.schema.json" }
         "404": { description: Процесс не найден или протокол ещё не собран }
 
+  /processes/{process_id}/protocol.docx:
+    get:
+      summary: Протокол в DOCX
+      description: Те же разделы, что у JSON. AUTO_NO_DIFFERENCE не входит. Это не копия образца организатора.
+      operationId: getProtocolDocx
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema: { type: string, format: binary }
+        "404": { description: Процесс не найден или протокол ещё не собран }
+
+  /processes/{process_id}/protocol.xml:
+    get:
+      summary: Протокол в XML
+      description: Проверяется contracts/schemas/protocol-export.xsd.
+      operationId: getProtocolXml
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          content:
+            application/xml:
+              schema: { type: string }
+        "404": { description: Процесс не найден или протокол ещё не собран }
+
+  /processes/{process_id}/protocol.pdf:
+    get:
+      summary: PDF протокола не собран
+      description: GAP-PROTOCOL-PDF. Ответ 501, пустой PDF не отдаётся.
+      operationId: getProtocolPdf
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "501": { description: PDF в образе нет }
+        "404": { description: Процесс не найден или протокол ещё не собран }
+
   /processes/{process_id}/audit:
     get:
       summary: Журнал действий текущего процесса

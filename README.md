@@ -101,6 +101,8 @@ python -m kontur.cli.run_package --input <каталог> --out <каталог>
 не назначается стадией. Скрытый тест пропускается. Таймаут разбора PDF
 в этой команде — 600 с на файл, если `KONTUR_PDF_PARSE_TIMEOUT_S` не задан.
 Пример раскладки: [`examples/demo_package/README.md`](examples/demo_package/README.md).
+С экрана инспектора тот же протокол скачивается как DOCX и XML.
+PDF нет: [`docs/KNOWN_GAPS.md`](docs/KNOWN_GAPS.md), `GAP-PROTOCOL-PDF`.
 
 ## Документы
 

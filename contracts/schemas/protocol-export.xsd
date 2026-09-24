@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="protocol">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="upload_status">
+          <xs:complexType>
+            <xs:attribute name="pd" type="xs:string" use="required"/>
+            <xs:attribute name="rd" type="xs:string" use="required"/>
+            <xs:attribute name="id" type="xs:string" use="required"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="check_type" type="xs:string"/>
+        <xs:element name="tables">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="table" maxOccurs="5">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="row" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="rationale" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                        <xs:attribute name="finding_id" type="xs:string" use="required"/>
+                        <xs:attribute name="rule_code" type="xs:string" use="required"/>
+                        <xs:attribute name="finding_status" type="xs:string" use="required"/>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="name" type="xs:string" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="evidence_cards">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="card" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="rationale" type="xs:string" minOccurs="0"/>
+                    <xs:element name="evidence_ref" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                  <xs:attribute name="finding_id" type="xs:string" use="required"/>
+                  <xs:attribute name="rule_code" type="xs:string" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="violation_count" type="xs:nonNegativeInteger"/>
+      </xs:sequence>
+      <xs:attribute name="protocol_id" type="xs:string" use="required"/>
+      <xs:attribute name="object_id" type="xs:string" use="required"/>
+      <xs:attribute name="status" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
