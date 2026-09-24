@@ -59,10 +59,10 @@ def _load_submissions(folder: Path) -> list[dict[str, object]]:
     return found
 
 
-def _predictions(submissions: Sequence[Mapping[str, object]]) -> dict[tuple[str, str], str]:
+def _predictions(submissions: Sequence[Mapping[str, object]]) -> dict[tuple[str, ...], str]:
     """Одна метка на (объект, код). VIOLATION_PRESENT перекрывает более слабую."""
 
-    labels: dict[tuple[str, str], str] = {}
+    labels: dict[tuple[str, ...], str] = {}
     for document in submissions:
         object_id = str(document.get("object_id") or "")
         checks = document.get("checks")
@@ -75,15 +75,48 @@ def _predictions(submissions: Sequence[Mapping[str, object]]) -> dict[tuple[str,
             label = str(check.get("violation_label") or "")
             if not object_id or not code or not label:
                 continue
-            key = (object_id, code)
+            key: tuple[str, ...] = (object_id, code)
             if labels.get(key) == _POSITIVE:
                 continue
             labels[key] = label
     return labels
 
 
-def _localized(submissions: Sequence[Mapping[str, object]], key: tuple[str, str]) -> bool:
-    object_id, code = key
+def _predictions_by_location(
+    submissions: Sequence[Mapping[str, object]],
+) -> dict[tuple[str, ...], str]:
+    """Метка на (объект, код, location). Номер помещения из gold не выдумывается."""
+
+    labels: dict[tuple[str, ...], str] = {}
+    for document in submissions:
+        object_id = str(document.get("object_id") or "")
+        checks = document.get("checks")
+        if not isinstance(checks, list):
+            continue
+        for check in checks:
+            if not isinstance(check, dict):
+                continue
+            code = str(check.get("parameter_code") or "")
+            label = str(check.get("violation_label") or "")
+            location = str(check.get("location") or "").strip()
+            if not object_id or not code or not label or not location:
+                continue
+            key = (object_id, code, location)
+            if labels.get(key) == _POSITIVE:
+                continue
+            labels[key] = label
+    return labels
+
+
+def _gold_location(row: Mapping[str, object]) -> str | None:
+    raw = row.get("location")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    return raw.strip()
+
+
+def _localized(submissions: Sequence[Mapping[str, object]], key: tuple[str, ...]) -> bool:
+    object_id, code = key[0], key[1]
     for document in submissions:
         if str(document.get("object_id") or "") != object_id:
             continue
@@ -111,16 +144,35 @@ def _scope_rows(rows: Sequence[Mapping[str, object]], scope: str) -> list[Mappin
 
 def score_scope(
     rows: Sequence[Mapping[str, object]],
-    predictions: Mapping[tuple[str, str], str],
+    predictions: Mapping[tuple[str, ...], str],
     submissions: Sequence[Mapping[str, object]],
+    *,
+    by_location: bool = False,
 ) -> dict[str, object]:
     positives = [row for row in rows if row.get("violation_label") == _POSITIVE]
     negatives = [row for row in rows if row.get("violation_label") == "NO_VIOLATION"]
     hits = 0
     abstain = 0
     localized_hits = 0
+    unscored = 0
+    scorable_pos: list[Mapping[str, object]] = []
+    scorable_neg: list[Mapping[str, object]] = []
+
+    def row_key(row: Mapping[str, object]) -> tuple[str, ...] | None:
+        code_key = (str(row["object_id"]), str(row["parameter_code"]))
+        if not by_location:
+            return code_key
+        location = _gold_location(row)
+        if location is None:
+            return None
+        return (*code_key, location)
+
     for row in positives:
-        key = (str(row["object_id"]), str(row["parameter_code"]))
+        key = row_key(row)
+        if key is None:
+            unscored += 1
+            continue
+        scorable_pos.append(row)
         label = predictions.get(key)
         if label in _ABSTAIN or label is None:
             abstain += 1
@@ -131,7 +183,10 @@ def score_scope(
                 localized_hits += 1
     false_positives = 0
     for row in negatives:
-        key = (str(row["object_id"]), str(row["parameter_code"]))
+        key = row_key(row)
+        if key is None:
+            continue
+        scorable_neg.append(row)
         if predictions.get(key) == _POSITIVE:
             false_positives += 1
     predicted_keys = {
@@ -141,21 +196,21 @@ def score_scope(
             str(row["object_id"]) == key[0] and str(row["parameter_code"]) == key[1] for row in rows
         )
     }
-    true_keys = {
-        (str(row["object_id"]), str(row["parameter_code"]))
-        for row in positives
-    }
+    true_keys = {key for row in scorable_pos if (key := row_key(row)) is not None}
+    if by_location:
+        true_keys = {key for key in true_keys if len(key) == 3}
+        predicted_keys = {key for key in predicted_keys if len(key) == 3}
     tp_keys = predicted_keys & true_keys
     fp_keys = predicted_keys - true_keys
-    recall = wilson(hits, len(positives))
+    recall = wilson(hits, len(scorable_pos))
     precision = wilson(len(tp_keys), len(tp_keys) + len(fp_keys))
-    fpr = wilson(false_positives, len(negatives))
+    fpr = wilson(false_positives, len(scorable_neg))
     point_f1 = f1(precision.point, recall.point)
-    return {
-        "n_positive": len(positives),
+    report: dict[str, object] = {
+        "n_positive": len(scorable_pos),
         "hits": hits,
         "abstentions": abstain,
-        "n_negative": len(negatives),
+        "n_negative": len(scorable_neg) if by_location else len(negatives),
         "false_positives": false_positives,
         "localized_hits": localized_hits,
         "recall": {"point": recall.point, "low": recall.low, "high": recall.high, "n": recall.n},
@@ -171,21 +226,34 @@ def score_scope(
         "tz_precision_met": meets_threshold("precision", precision) if precision.n else False,
         "tz_fpr_met": meets_threshold("false_positive_rate", fpr) if fpr.n else False,
     }
+    if by_location:
+        report["unscored_without_location"] = unscored
+    return report
 
 
-def score_directory(folder: Path) -> dict[str, object]:
+def score_directory(folder: Path, *, match: str = "code") -> dict[str, object]:
+    if match not in {"code", "location"}:
+        raise ValueError("match: code или location")
     inventory = load_run_inventory()
     rows = _rows(inventory)
     submissions = _load_submissions(folder)
-    predictions = _predictions(submissions)
+    by_location = match == "location"
+    predictions = (
+        _predictions_by_location(submissions) if by_location else _predictions(submissions)
+    )
+    location_in_gold = any(_gold_location(row) is not None for row in rows)
     report = {
         "closes_gate_j": False,
         "corpus": "public_gold_checks",
         "not_frozen_val": True,
-        "match": "object_id+parameter_code",
-        "location_in_gold": False,
-        "matrix": score_scope(_scope_rows(rows, "MATRIX"), predictions, submissions),
-        "free_search": score_scope(_scope_rows(rows, "FREE_SEARCH"), predictions, submissions),
+        "match": "object_id+parameter_code+location" if by_location else "object_id+parameter_code",
+        "location_in_gold": location_in_gold,
+        "matrix": score_scope(
+            _scope_rows(rows, "MATRIX"), predictions, submissions, by_location=by_location
+        ),
+        "free_search": score_scope(
+            _scope_rows(rows, "FREE_SEARCH"), predictions, submissions, by_location=by_location
+        ),
     }
     return report
 
@@ -214,9 +282,10 @@ def _line(title: str, block: Mapping[str, object]) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Счёт публичного gold по submission_*.json")
     parser.add_argument("--submissions", required=True, type=Path)
+    parser.add_argument("--match", choices=("code", "location"), default="code")
     args = parser.parse_args(argv)
     try:
-        report = score_directory(args.submissions)
+        report = score_directory(args.submissions, match=args.match)
     except (ValueError, OSError, TypeError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
