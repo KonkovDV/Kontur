@@ -16,9 +16,8 @@ from importlib import import_module
 from pathlib import Path
 
 from kontur.application.extractors.number import PageToken
-from kontur.domain.coordinates import to_normalized
-from kontur.domain.geometry import bbox_from_polygon
-from kontur.domain.models import ExtractionEngine, Polygon
+from kontur.domain.coordinates import polygons_from_view_pixels
+from kontur.domain.models import ExtractionEngine
 from kontur.infrastructure.pdfium_tokens import PdfPageTokens
 
 WEIGHTS_ENV = "KONTUR_OCR_WEIGHTS"
@@ -165,21 +164,10 @@ def _token(
     top, bottom = min(ys), max(ys)
     if right <= left or bottom <= top:
         return None
-    box_left, box_bottom, box_right, box_top = page.frame.crop
-    box_w = box_right - box_left
-    box_h = box_top - box_bottom
-    if box_w <= 0 or box_h <= 0:
+    mapped = polygons_from_view_pixels(left, top, right, bottom, image_size, page.frame)
+    if mapped is None:
         return None
-    x0 = box_left + (left / img_w) * box_w
-    x1 = box_left + (right / img_w) * box_w
-    y1 = box_top - (top / img_h) * box_h
-    y0 = box_top - (bottom / img_h) * box_h
-    polygon: Polygon = ((x0, y0), (x1, y0), (x1, y1), (x0, y1))
-    try:
-        polygon_norm = to_normalized(polygon, page.frame)
-        bbox_from_polygon(polygon_norm)
-    except ValueError:
-        return None
+    polygon, polygon_norm = mapped
     return PageToken(
         text=text,
         page=page.page,

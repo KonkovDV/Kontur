@@ -17,7 +17,7 @@ from kontur.application.process_pipeline import (
 )
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.capabilities import capabilities_payload
-from kontur.domain.coordinates import PageFrame
+from kontur.domain.coordinates import PageFrame, polygons_from_view_pixels, to_source
 from kontur.domain.geometry import polygon_in_unit_square
 from kontur.domain.models import DocStage, ExtractionEngine
 from kontur.domain.statuses import Completeness, FindingStatus
@@ -28,6 +28,7 @@ from kontur.infrastructure.ocr_tesseract import (
     fill_empty_raster_pages,
     raster_pages_need_ocr,
     tokens_from_tesseract_payload,
+    unrotate_norm,
 )
 from kontur.infrastructure.pdf_guard import PdfParseTimeoutError
 from kontur.infrastructure.pdfium_tokens import (
@@ -140,11 +141,28 @@ def test_missing_tesseract_leaves_document_untouched() -> None:
     assert filled.pages[0].has_embedded_text is False
 
 
-def test_rotated_raster_is_not_an_ocr_target() -> None:
+def test_rotated_raster_is_an_ocr_target() -> None:
     page = _raster_page(rotate=90)
     document = extract_pdf_bytes(empty_pdf())
     fake = PdfDocumentTokens(file_hash=document.file_hash, pages=(page,))
-    assert raster_pages_need_ocr(fake) is False
+    assert raster_pages_need_ocr(fake) is True
+
+
+def test_view_pixels_on_rotated_frame_match_to_source() -> None:
+    frame = PageFrame(media=(0.0, 0.0, 360.0, 120.0), crop=(0.0, 0.0, 360.0, 120.0), rotate=90)
+    mapped = polygons_from_view_pixels(0.0, 0.0, 120.0, 36.0, (120, 360), frame)
+    assert mapped is not None
+    source, norm = mapped
+    assert norm[0] == pytest.approx((0.0, 0.0))
+    assert norm[2] == pytest.approx((1.0, 0.1))
+    assert source == to_source(norm, frame)
+    assert polygon_in_unit_square(norm)
+
+
+def test_unrotate_norm_inverts_quarter_turn() -> None:
+    assert unrotate_norm(0.15, 0.95, 1) == pytest.approx((0.05, 0.15))
+    assert unrotate_norm(0.8, 0.7, 2) == pytest.approx((0.2, 0.3))
+    assert unrotate_norm(0.7, 0.2, 3) == pytest.approx((0.2, 0.3))
 
 
 def test_engine_of_marks_pure_ocr_window() -> None:
