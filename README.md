@@ -75,7 +75,9 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
 Открыть http://127.0.0.1:3000 . Проверка ядра через шлюз:
 http://127.0.0.1:3000/api/v1/healthz . На учебном стенде плашка «учебный стенд»
 и токен `inspector-1@OBJ-DEMO-COLD-START/INSPECTOR`. Это не учётная запись
-продакшена. Документы организатора на стенд не класть.
+продакшена. Кнопка «Учебный комплект» или `python scripts/load_demo_kit.py`
+кладёт синтетические ПД, РД и ИД в этот объект. Эталон назначает инспектор.
+Документы организатора на стенд не класть.
 
 Без сети после того, как образы уже скачаны:
 [`docker-compose.offline.yml`](docker-compose.offline.yml) и

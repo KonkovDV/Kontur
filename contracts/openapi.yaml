@@ -447,6 +447,23 @@ paths:
         "404": { description: Процесс или файл не найден }
         "409": { description: Не READY, финализирован, штамп NOT_APPROVED или нет содержимого }
 
+  /demo/kit:
+    post:
+      summary: Загрузить синтетический учебный комплект
+      description: >
+        Только при KONTUR_ALLOW_INSECURE_DEV_AUTH=true. Четыре векторных PDF:
+        черновик ПД, утверждённая ПД, РД и ИД. Эталон не назначается.
+        Без флага ответ 404. Это не пакет организатора и не скрытый тест.
+      operationId: loadDemoKit
+      x-required-roles: [INSPECTOR, SUPERVISOR]
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          description: Процесс создан, инспектор назначает эталон сам
+        "404": { description: Учебный режим выключен }
+        "503": { description: Нет шрифта с кириллицей }
+
   /inspection/{process_id}:
     post:
       summary: Передача результатов во внешнюю ИС (целевая — ИАИС «РиН»)

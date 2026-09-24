@@ -8,6 +8,7 @@ RUN apt-get update \
         tesseract-ocr \
         tesseract-ocr-rus \
         tesseract-ocr-eng \
+        fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
