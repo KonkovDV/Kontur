@@ -64,6 +64,12 @@
           "type": "string",
           "enum": ["exact_field", "number", "enum", "set", "presence", "geometry", "semantic_candidate", "room_compare"]
         },
+        "passes": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Дополнительные проходы. number остаётся основным. room_pass добавляет атомарные находки по помещению и не подменяет число.",
+          "items": { "type": "string", "enum": ["number", "room_pass"] }
+        },
         "regex": { "type": ["string", "null"] },
         "anchors": { "type": "array", "items": { "type": "string" } },
         "normalization": {

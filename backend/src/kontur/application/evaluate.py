@@ -44,7 +44,13 @@ from kontur.application.revision_resolver import (
     resolve_heads_by_identity,
     resolve_revision,
 )
-from kontur.application.room_compare import RoomDiff, RoomSpot, compare_room_tokens, room_settings
+from kontur.application.room_compare import (
+    RoomDiff,
+    RoomSpot,
+    compare_room_tokens,
+    room_block,
+    room_settings,
+)
 from kontur.application.scenarios import CompletenessMap, status_for_missing_stage
 from kontur.domain.coordinates import PageFrame
 from kontur.domain.geometry import polygon_in_unit_square
@@ -464,6 +470,57 @@ def _ocr_region_agrees(hit: NumberHit, page: StagePage, rule: dict[str, object])
     return primary == value
 
 
+def _passes(rule: dict[str, object]) -> tuple[str, ...]:
+    extractor = rule.get("extractor")
+    if not isinstance(extractor, dict):
+        return ()
+    raw = extractor.get("passes")
+    if not isinstance(raw, list):
+        return ()
+    return tuple(item for item in raw if isinstance(item, str))
+
+
+def _room_pass_findings(
+    rule: dict[str, object],
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
+    object_id: str,
+) -> tuple[RuleEvaluation, ...]:
+    """Атомарные candidate/suspicion. Пустая пара и отказ не подменяют числовой проход."""
+
+    if "room_pass" not in _passes(rule):
+        return ()
+    settings = room_block(rule)
+    if settings is None:
+        return ()
+    pd = pages.get(DocStage.PD)
+    rd = pages.get(DocStage.RD)
+    if not isinstance(pd, StagePage) or not isinstance(rd, StagePage):
+        return ()
+    diffs = compare_room_tokens(pd.tokens, rd.tokens, settings)
+    kept = [
+        _room_evaluation(rule, diff, pd, rd, object_id)
+        for diff in diffs
+        if diff.kind in {"candidate", "suspicion"}
+    ]
+    return tuple(kept)
+
+
+def _with_room_pass(
+    result: RuleEvaluation,
+    rule: dict[str, object],
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
+    object_id: str,
+) -> RuleEvaluation:
+    extras = _room_pass_findings(rule, pages, object_id)
+    if not extras:
+        return result
+    seen = {result.finding.evidence_group_id}
+    fresh = tuple(
+        item for item in extras if item.finding.evidence_group_id not in seen
+    )
+    return replace(result, also=result.also + fresh)
+
+
 def _room_rule(
     rule: dict[str, object],
     pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
@@ -611,6 +668,7 @@ def _room_fragment(
             grounded_in_source_tokens=True,
             second_read_agrees=True,
         ),
+        room_id=spot.room,
     )
 
 
@@ -937,12 +995,17 @@ def evaluate_rule(
             number_hit = extract_number(stage_page.tokens, rule)
             missing = "якорь или число не найдены"
         if number_hit is None:
-            return _halt(
+            return _with_room_pass(
+                _halt(
+                    rule,
+                    Stage.L2_EXTRACTION,
+                    _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                    f"{stage.value}: {missing}",
+                    prior=identity_ok,
+                ),
                 rule,
-                Stage.L2_EXTRACTION,
-                _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
-                f"{stage.value}: {missing}",
-                prior=identity_ok,
+                pages,
+                object_id,
             )
         if dual_req and number_hit.extraction.second_read_agrees is not True:
             disagree = (
@@ -1047,5 +1110,10 @@ def evaluate_rule(
         fragments=fragments,
         pages=pages,
     )
-    return RuleEvaluation(finding=finding, evidence_group=group, stages=stages)
+    return _with_room_pass(
+        RuleEvaluation(finding=finding, evidence_group=group, stages=stages),
+        rule,
+        pages,
+        object_id,
+    )
 
