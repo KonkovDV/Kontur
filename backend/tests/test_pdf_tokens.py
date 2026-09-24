@@ -161,6 +161,24 @@ def test_rotated_page_polygon_lands_on_png_ink() -> None:
         dark, width, height = _dark_pixels(png, tokens[0].polygon_norm)
         assert dark >= 8
         assert (width > height) is expect_wide
+        flipped = tuple((point[0], 1.0 - point[1]) for point in tokens[0].polygon_norm)
+        dark_flipped, _, _ = _dark_pixels(png, flipped)
+        assert dark_flipped < dark
+
+
+def test_screen_overlay_keeps_polygon_y_down() -> None:
+    """Экран кладёт polygon_norm на SVG как Y вниз. Зеркало 1−y мимо краски."""
+
+    root = Path(__file__).resolve().parents[2]
+    pane = (root / "web" / "src" / "EvidencePane.tsx").read_text(encoding="utf-8")
+    evidence = (root / "web" / "src" / "evidence.ts").read_text(encoding="utf-8")
+    assert "svgPointYDown" in pane
+    assert "1 - y" not in pane
+    assert "(1 - y)" not in pane
+    start = evidence.index("export function svgPointYDown")
+    body = evidence[start : evidence.index("\n}", start) + 2]
+    assert "1 -" not in body
+    assert "y * scaleY" in body
 
 
 def test_text_outside_cropbox_is_not_a_token() -> None:

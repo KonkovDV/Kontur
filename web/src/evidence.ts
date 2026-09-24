@@ -91,6 +91,11 @@ export type BBox = {
   y1: number;
 };
 
+/** Точка SVG поверх PNG: polygon_norm и картинка оба с Y вниз, без зеркала 1−y. */
+export function svgPointYDown(x: number, y: number, scaleX = 1, scaleY = 1): string {
+  return `${x * scaleX},${y * scaleY}`;
+}
+
 export function bboxFromPolygon(polygon: Point[]): BBox {
   if (polygon.length < 3) {
     throw new Error("polygon должен содержать не меньше трёх точек");
