@@ -8,7 +8,7 @@ import pytest
 from docx import Document
 from fastapi.testclient import TestClient
 
-from kontur.application.protocol_export import render_pdf
+from kontur.application.protocol_export import render_docx, render_pdf, render_xml
 from kontur.application.runtime import ProcessWorkspace
 from kontur.presentation.api import app
 
@@ -75,3 +75,52 @@ def test_docx_and_xml_follow_the_json_wire(monkeypatch: pytest.MonkeyPatch) -> N
         }
     )
     assert direct.startswith(b"%PDF")
+
+
+def test_exports_print_expected_actual_and_fragment() -> None:
+    protocol = {
+        "protocol_id": "p-1",
+        "object_id": "obj-1",
+        "status": "VERIFICATION_COMPLETED",
+        "scenario": "FULL",
+        "violation_count": 0,
+        "upload_status": {"pd": "PD_UPLOADED", "rd": "RD_UPLOADED", "id": "ID_MISSING"},
+        "sections": {
+            "completeness": [],
+            "candidates": [
+                {
+                    "finding_id": "f-1",
+                    "rule_code": "PZ-001",
+                    "finding_status": "CANDIDATE",
+                    "rationale": "расхождение",
+                    "expected_value": "1250",
+                    "actual_value": "1100",
+                    "delta": "150",
+                }
+            ],
+            "confirmed": [],
+            "negative_verified": [],
+            "suspicions": [],
+        },
+    }
+    cards = {
+        "f-1": {
+            "file_hash": "ab" * 32,
+            "page": "2",
+            "polygon_norm": "[[[0.1, 0.2], [0.3, 0.2], [0.3, 0.4]]]",
+            "doc_stage": "PD",
+            "document_code": "KR-1",
+            "revision": "1",
+            "approval_basis": "PACKAGE_DEFAULT",
+            "tolerance": "abs 1",
+        }
+    }
+    xml = render_xml(protocol, cards).decode("utf-8")
+    assert "expected_value" in xml and "1250" in xml
+    assert "file_hash" in xml and "polygon_norm" in xml
+    document = Document(BytesIO(render_docx(protocol, cards)))
+    text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    assert "Ожидаемое: 1250" in text
+    assert "Фактическое: 1100" in text
+    assert "Полигон:" in text
+    assert render_pdf(protocol, cards).startswith(b"%PDF")

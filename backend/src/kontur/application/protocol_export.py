@@ -9,6 +9,7 @@ AUTO_NO_DIFFERENCE на этот провод не попадает.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from io import BytesIO
 from pathlib import Path
@@ -20,6 +21,7 @@ from reportlab.pdfbase import pdfmetrics  # type: ignore[import-untyped]
 from reportlab.pdfbase.ttfonts import TTFont  # type: ignore[import-untyped]
 from reportlab.pdfgen import canvas  # type: ignore[import-untyped]
 
+from kontur.domain.models import EvidenceGroup
 from kontur.evaluation.agent_dumps import repo_root
 
 TABLES: tuple[str, ...] = (
@@ -68,6 +70,91 @@ def _rows(protocol: Mapping[str, object], name: str) -> list[Mapping[str, object
     return rows
 
 
+_FACT_KEYS: tuple[tuple[str, str], ...] = (
+    ("expected_value", "Ожидаемое"),
+    ("actual_value", "Фактическое"),
+    ("delta", "Дельта"),
+    ("tolerance", "Допуск"),
+    ("file_hash", "SHA-256"),
+    ("doc_stage", "Стадия"),
+    ("document_code", "Шифр"),
+    ("revision", "Редакция"),
+    ("approval_basis", "Основание утверждения"),
+    ("page", "Страница"),
+    ("polygon_norm", "Полигон"),
+)
+
+
+def _fact_pairs(
+    row: Mapping[str, object],
+    cards: Mapping[str, Mapping[str, object]] | None,
+) -> list[tuple[str, str]]:
+    extra: Mapping[str, object] = {}
+    if cards is not None:
+        found = cards.get(_text(row.get("finding_id")))
+        if isinstance(found, Mapping):
+            extra = found
+    pairs: list[tuple[str, str]] = []
+    for key, _title in _FACT_KEYS:
+        value = extra.get(key, row.get(key))
+        if value is None or value == "":
+            continue
+        pairs.append((key, _text(value)))
+    return pairs
+
+
+def _tolerance_text(rule: Mapping[str, object] | None) -> str:
+    if not isinstance(rule, Mapping):
+        return ""
+    comparator = rule.get("comparator")
+    if not isinstance(comparator, dict):
+        return ""
+    parts: list[str] = []
+    if "tolerance_abs" in comparator:
+        parts.append(f"abs {comparator['tolerance_abs']}")
+    if "tolerance_rel" in comparator:
+        parts.append(f"rel {comparator['tolerance_rel']}")
+    return ", ".join(parts)
+
+
+def cards_from_groups(
+    protocol: Mapping[str, object],
+    groups: Mapping[str, EvidenceGroup],
+    rules: Mapping[str, Mapping[str, object]] | None = None,
+) -> dict[str, dict[str, str]]:
+    """Поля карточки, которых нет в finding.schema.json: файл, страница, полигон."""
+
+    built: dict[str, dict[str, str]] = {}
+    for name in TABLES:
+        for row in _rows(protocol, name):
+            group_id = row.get("evidence_group_id")
+            group = groups.get(group_id) if isinstance(group_id, str) else None
+            if group is None or not group.fragments:
+                continue
+            finding_id = _text(row.get("finding_id"))
+            rule = None if rules is None else rules.get(_text(row.get("rule_code")))
+            fragments = group.fragments
+            built[finding_id] = {
+                "file_hash": "; ".join(item.document.file_hash for item in fragments),
+                "doc_stage": "; ".join(item.document.doc_stage.value for item in fragments),
+                "document_code": "; ".join(item.document.document_code for item in fragments),
+                "revision": "; ".join(item.document.revision for item in fragments),
+                "approval_basis": "; ".join(
+                    item.document.approval_basis.value for item in fragments
+                ),
+                "page": "; ".join(str(item.page) for item in fragments),
+                "polygon_norm": json.dumps(
+                    [
+                        [[float(x), float(y)] for x, y in item.polygon_norm]
+                        for item in fragments
+                    ],
+                    ensure_ascii=False,
+                ),
+                "tolerance": _tolerance_text(rule),
+            }
+    return built
+
+
 def _upload(protocol: Mapping[str, object]) -> tuple[str, str, str]:
     raw = protocol.get("upload_status")
     if not isinstance(raw, dict):
@@ -75,7 +162,10 @@ def _upload(protocol: Mapping[str, object]) -> tuple[str, str, str]:
     return _text(raw.get("pd")), _text(raw.get("rd")), _text(raw.get("id"))
 
 
-def render_docx(protocol: Mapping[str, object]) -> bytes:
+def render_docx(
+    protocol: Mapping[str, object],
+    cards: Mapping[str, Mapping[str, object]] | None = None,
+) -> bytes:
     """Документ Word: статус загрузки, тип проверки, пять таблиц, карточки."""
 
     document = Document()
@@ -104,19 +194,22 @@ def render_docx(protocol: Mapping[str, object]) -> bytes:
             cells[1].text = _text(row.get("rule_code"))
             cells[2].text = _text(row.get("finding_status"))
     document.add_heading("Карточки доказательств", level=1)
-    cards = 0
+    card_count = 0
     for name in TABLES:
         for row in _rows(protocol, name):
-            cards += 1
+            card_count += 1
             document.add_paragraph(
                 f"{_text(row.get('rule_code'))} / {_text(row.get('finding_id'))}"
             )
             document.add_paragraph(_text(row.get("rationale")))
+            for key, value in _fact_pairs(row, cards):
+                title = dict(_FACT_KEYS)[key]
+                document.add_paragraph(f"{title}: {value}")
             refs = row.get("evidence_refs")
             if isinstance(refs, list):
                 for ref in refs:
                     document.add_paragraph(f"Доказательство: {_text(ref)}")
-    if cards == 0:
+    if card_count == 0:
         document.add_paragraph("Карточек нет.")
     document.add_paragraph(f"Число нарушений: {_text(protocol.get('violation_count'))}")
     buffer = BytesIO()
@@ -127,7 +220,10 @@ def render_docx(protocol: Mapping[str, object]) -> bytes:
     return payload
 
 
-def render_xml(protocol: Mapping[str, object]) -> bytes:
+def render_xml(
+    protocol: Mapping[str, object],
+    cards: Mapping[str, Mapping[str, object]] | None = None,
+) -> bytes:
     """XML по contracts/schemas/protocol-export.xsd. lxml проверяет схему."""
 
     pd, rd, identity = _upload(protocol)
@@ -159,10 +255,10 @@ def render_xml(protocol: Mapping[str, object]) -> bytes:
             rationale = _text(row.get("rationale"))
             if rationale:
                 ET.SubElement(node, "rationale").text = rationale
-    cards = ET.SubElement(root, "evidence_cards")
+    card_root = ET.SubElement(root, "evidence_cards")
     for row in card_rows:
         card = ET.SubElement(
-            cards,
+            card_root,
             "card",
             {
                 "finding_id": _text(row.get("finding_id")),
@@ -176,6 +272,8 @@ def render_xml(protocol: Mapping[str, object]) -> bytes:
         if isinstance(refs, list):
             for ref in refs:
                 ET.SubElement(card, "evidence_ref").text = _text(ref)
+        for key, value in _fact_pairs(row, cards):
+            ET.SubElement(card, key).text = value
     count = protocol.get("violation_count")
     if not isinstance(count, int) or count < 0:
         raise ValueError("violation_count")
@@ -205,7 +303,10 @@ def _pdf_font() -> str:
     return "Helvetica"
 
 
-def render_pdf(protocol: Mapping[str, object]) -> bytes:
+def render_pdf(
+    protocol: Mapping[str, object],
+    cards: Mapping[str, Mapping[str, object]] | None = None,
+) -> bytes:
     """PDF из той же модели, что DOCX: разделы, строки, карточки."""
 
     font = _pdf_font()
@@ -240,17 +341,20 @@ def render_pdf(protocol: Mapping[str, object]) -> bytes:
                 f"{_text(row.get('finding_status'))}"
             )
     line("Карточки доказательств", 14)
-    cards = 0
+    card_count = 0
     for name in TABLES:
         for row in _rows(protocol, name):
-            cards += 1
+            card_count += 1
             line(f"{_text(row.get('rule_code'))} / {_text(row.get('finding_id'))}")
             line(_text(row.get("rationale")))
+            for key, value in _fact_pairs(row, cards):
+                title = dict(_FACT_KEYS)[key]
+                line(f"{title}: {value}")
             refs = row.get("evidence_refs")
             if isinstance(refs, list):
                 for ref in refs:
                     line(f"Доказательство: {_text(ref)}")
-    if cards == 0:
+    if card_count == 0:
         line("Карточек нет.")
     line(f"Число нарушений: {_text(protocol.get('violation_count'))}")
     sheet.save()
