@@ -16,8 +16,10 @@ import functools
 import os
 import re
 import shutil
+import tempfile
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import replace
 from importlib import import_module
 from io import BytesIO
@@ -500,7 +502,7 @@ def _upscale_short_crop(image: object) -> object:
 
 
 def _ocr_job(data: bytes, page: PdfPageTokens) -> tuple[PageToken, ...]:
-    """OCR одной страницы в воркере. Документ открывается здесь, не через pickle."""
+    """OCR одной страницы. Документ открывается здесь, не через pickle."""
 
     pdf = _open_pdf(data)
     if pdf is None:
@@ -513,15 +515,42 @@ def _ocr_job(data: bytes, page: PdfPageTokens) -> tuple[PageToken, ...]:
             close()
 
 
+def _ocr_job_path(path: str, page: PdfPageTokens) -> tuple[PageToken, ...]:
+    """Та же страница, но воркер открывает файл сам: в очередь не кладётся весь PDF."""
+
+    return _ocr_job(Path(path).read_bytes(), page)
+
+
 def _needs_ocr(page: PdfPageTokens) -> bool:
     return page.layer_kind == "raster" and not page.tokens
+
+
+def _fill_pages_here(
+    data: bytes, targets: Sequence[PdfPageTokens]
+) -> dict[int, tuple[PageToken, ...]]:
+    filled: dict[int, tuple[PageToken, ...]] = {}
+    pdf = _open_pdf(data)
+    if pdf is None:
+        return {page.page: () for page in targets}
+    try:
+        for page in targets:
+            try:
+                filled[page.page] = _ocr_pdf_page(pdf[page.page - 1], page)  # type: ignore[index]
+            except (OSError, RuntimeError, ValueError, AttributeError, TypeError):
+                filled[page.page] = ()
+    finally:
+        close = getattr(pdf, "close", None)
+        if close is not None:
+            close()
+    return filled
 
 
 def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocumentTokens:
     """Заполнить пустые raster-страницы. Векторные токены не трогает.
 
-    Две и больше пустых страниц читаются пулом процессов, не больше 16.
-    Одна страница остаётся в этом процессе.
+    Две и больше пустых страниц читаются пулом. В очередь уходит путь к
+    временному файлу, не байты PDF. Крупный файл — не больше двух воркеров.
+    Сломанный пул дочитывается в этом процессе.
     """
 
     from kontur.infrastructure.ocr_rapid import weights_ready
@@ -531,30 +560,10 @@ def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocu
     if not tesseract_available() and not weights_ready():
         return document
     targets = [page for page in document.pages if _needs_ocr(page)]
-    filled: dict[int, tuple[PageToken, ...]] = {}
-    if len(targets) >= 2:
-        workers = min(os.cpu_count() or 1, 16)
-        with ProcessPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(_ocr_job, data, page): page.page for page in targets}
-            for future, number in futures.items():
-                try:
-                    filled[number] = future.result()
-                except (OSError, RuntimeError, ValueError, AttributeError, TypeError):
-                    filled[number] = ()
+    if len(targets) < 2:
+        filled = _fill_pages_here(data, targets)
     else:
-        pdf = _open_pdf(data)
-        if pdf is None:
-            return document
-        try:
-            for page in targets:
-                try:
-                    filled[page.page] = _ocr_pdf_page(pdf[page.page - 1], page)  # type: ignore[index]
-                except (OSError, RuntimeError, ValueError, AttributeError, TypeError):
-                    filled[page.page] = ()
-        finally:
-            close = getattr(pdf, "close", None)
-            if close is not None:
-                close()
+        filled = _fill_with_pool(data, targets)
     pages: list[PdfPageTokens] = []
     for page in document.pages:
         tokens = filled.get(page.page)
@@ -563,6 +572,39 @@ def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocu
         else:
             pages.append(page)
     return PdfDocumentTokens(file_hash=document.file_hash, pages=tuple(pages))
+
+
+def _fill_with_pool(
+    data: bytes, targets: Sequence[PdfPageTokens]
+) -> dict[int, tuple[PageToken, ...]]:
+    workers = min(os.cpu_count() or 1, 16)
+    if len(data) > 8_000_000:
+        workers = min(workers, 2)
+    filled: dict[int, tuple[PageToken, ...]] = {}
+    broken = False
+    handle = tempfile.NamedTemporaryFile(prefix="kontur-ocr-", suffix=".pdf", delete=False)
+    path = handle.name
+    try:
+        handle.write(data)
+        handle.close()
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(_ocr_job_path, path, page): page.page for page in targets}
+            for future, number in futures.items():
+                try:
+                    filled[number] = future.result()
+                except BrokenProcessPool:
+                    broken = True
+                    break
+                except (OSError, RuntimeError, ValueError, AttributeError, TypeError):
+                    filled[number] = ()
+    except BrokenProcessPool:
+        broken = True
+    finally:
+        Path(path).unlink(missing_ok=True)
+    if broken:
+        pending = [page for page in targets if page.page not in filled]
+        filled.update(_fill_pages_here(data, pending))
+    return filled
 
 
 def _field_float(payload: Mapping[str, Sequence[object]], name: str, index: int) -> float:

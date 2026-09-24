@@ -6,6 +6,8 @@ CA и Wilson живут в evaluation.metrics (z=1.96). Дублировать �
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from test_pdf_tokens import empty_pdf
 
@@ -353,3 +355,39 @@ def test_ocr_render_scale_is_300_dpi() -> None:
     assert ocr_tesseract.OCR_RENDER_DPI == 300.0
     assert ocr_tesseract.PDF_USER_DPI == 72.0
     assert ocr_tesseract.RENDER_SCALE == pytest.approx(300.0 / 72.0)
+
+
+def test_ocr_pool_receives_a_file_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[object] = []
+    workers: list[int] = []
+
+    class _Future:
+        def result(self) -> tuple[PageToken, ...]:
+            return ()
+
+    class _Pool:
+        def __init__(self, max_workers: int) -> None:
+            workers.append(max_workers)
+
+        def __enter__(self) -> _Pool:
+            return self
+
+        def __exit__(self, *_args: object) -> bool:
+            return False
+
+        def submit(self, _fn: object, path: object, _page: object) -> _Future:
+            seen.append(path)
+            return _Future()
+
+    monkeypatch.setattr(ocr_tesseract, "ProcessPoolExecutor", _Pool)
+    monkeypatch.setattr(ocr_tesseract, "tesseract_available", lambda: True)
+    first = _raster_page()
+    document = PdfDocumentTokens(file_hash="a" * 64, pages=(first, replace(first, page=2)))
+    filled = fill_empty_raster_pages(document, b"%PDF-pool")
+    assert workers[0] >= 1
+    assert len(seen) == 2
+    assert all(isinstance(item, str) and item.endswith(".pdf") for item in seen)
+    assert filled.pages[0].tokens == ()
+    big = b"%PDF" + b"0" * 8_000_000
+    fill_empty_raster_pages(document, big)
+    assert workers[-1] == 2
