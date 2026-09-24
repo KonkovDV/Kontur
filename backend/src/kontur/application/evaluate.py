@@ -75,6 +75,7 @@ from kontur.domain.statuses import (
 from kontur.infrastructure.ocr_tesseract import (
     PageImageCache,
     ocr_region_crop,
+    ocr_region_eslav,
     tesseract_available,
 )
 
@@ -450,23 +451,43 @@ def _ocr_region_agrees(hit: NumberHit, page: StagePage, rule: dict[str, object])
         return None
     frame = page.frames[hit.page - 1]
     cache = page.render_cache if isinstance(page.render_cache, PageImageCache) else None
-    tokens = ocr_region_crop(
-        page.pdf_bytes,
-        page_number=hit.page,
-        frame=frame,
-        polygon=hit.polygon_source,
-        cache=cache,
-    )
-    if not tokens:
-        return None
-    value = parse_number_from_text(" ".join(item.text for item in tokens), rule)
-    if value is None:
-        return None
     try:
         primary = _as_float(hit.extraction.normalized_value)
     except TypeError:
         return None
-    return primary == value
+    readings = [primary]
+    if tesseract_available():
+        tess = ocr_region_crop(
+            page.pdf_bytes,
+            page_number=hit.page,
+            frame=frame,
+            polygon=hit.polygon_source,
+            cache=cache,
+        )
+        tess_value = _crop_number(tess, rule)
+        if tess_value is not None:
+            readings.append(tess_value)
+    eslav_value = _crop_number(
+        ocr_region_eslav(
+            page.pdf_bytes,
+            page_number=hit.page,
+            frame=frame,
+            polygon=hit.polygon_source,
+            cache=cache,
+        ),
+        rule,
+    )
+    if eslav_value is not None:
+        readings.append(eslav_value)
+    if len(readings) < 2:
+        return None
+    return all(item == readings[0] for item in readings)
+
+
+def _crop_number(tokens: Sequence[PageToken], rule: dict[str, object]) -> float | None:
+    if not tokens:
+        return None
+    return parse_number_from_text(" ".join(item.text for item in tokens), rule)
 
 
 def _passes(rule: dict[str, object]) -> tuple[str, ...]:

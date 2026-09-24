@@ -208,6 +208,21 @@ def _first(pattern: re.Pattern[str], text: str) -> str | None:
     return normalize_key_field(match.group(1))
 
 
+def cipher_from_text(text: str) -> str | None:
+    """Шифр из уже прочитанного текста. Имя файла сюда не подставляется."""
+
+    return _first(_CODE, text) or _first(_CODE_BARE, text)
+
+
+def cipher_reads_agree(codes: Sequence[str | None]) -> bool | None:
+    """None — меньше двух чтений. False — два разных шифра, код не выбираем."""
+
+    present = [item for item in codes if item]
+    if len(present) < 2:
+        return None
+    return all(item == present[0] for item in present)
+
+
 def _stage_from_text(text: str, *, labeled_only: bool) -> DocStage | None:
     if labeled_only:
         match = _STAGE_LABELED.search(text)
@@ -249,6 +264,7 @@ def read_passport(
     object_id: str | None = None,
     text_render_agreement: bool | None = None,
     injection_clean: bool | None = None,
+    alternate_ciphers: Sequence[str] = (),
 ) -> DocumentPassport:
     """Прочитать паспорт. Не заполняет шифр из имени файла."""
 
@@ -262,7 +278,7 @@ def read_passport(
     full = _join(tokens)
     search = blob or full
 
-    code = _first(_CODE, search) or _first(_CODE_BARE, search)
+    code = cipher_from_text(search)
     revision = _first(_REV, search)
     sheet = _first(_SHEET, search)
     stage = _stage_from_text(search, labeled_only=True) or _stage_from_text(
@@ -271,6 +287,10 @@ def read_passport(
     name_stage = stage_from_filename(filename) if filename else None
     needs = False
     reason: str | None = None
+    if cipher_reads_agree((code, *alternate_ciphers)) is False:
+        needs = True
+        reason = "шифр vector, eslav и Tesseract не совпали"
+        code = None
     if text_render_agreement is False:
         needs = True
         reason = "текстовый слой расходится с растром: скрытый или перекрытый текст"

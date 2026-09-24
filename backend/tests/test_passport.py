@@ -65,6 +65,36 @@ def test_filename_is_not_used_as_document_code() -> None:
     assert "шифр" in passport.clarification_reason
 
 
+def test_disagreeing_cipher_reads_are_not_chosen() -> None:
+    passport = read_passport(
+        (
+            _tok("шифр: 12345-PZ", 0.08, 0.82),
+            _tok("изм. 3", 0.32, 0.82),
+            _tok("лист 2", 0.50, 0.82),
+        ),
+        file_id="file-pd",
+        file_hash=HASH,
+        pages=1,
+        alternate_ciphers=("12345-PZ", "99999-OV"),
+    )
+    assert passport.document_code is None
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason == "шифр vector, eslav и Tesseract не совпали"
+    assert passport.revision == "3"
+
+
+def test_matching_cipher_reads_keep_the_vector_code() -> None:
+    passport = read_passport(
+        (_tok("шифр: 12345-PZ", 0.08, 0.82),),
+        file_id="file-pd",
+        file_hash=HASH,
+        pages=1,
+        alternate_ciphers=("12345-PZ", "12345-PZ"),
+    )
+    assert passport.document_code == "12345-PZ"
+    assert passport.needs_clarification is False
+
+
 def test_stamp_and_filename_stage_conflict_clears_stage() -> None:
     passport = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82),

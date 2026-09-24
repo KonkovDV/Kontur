@@ -113,3 +113,30 @@ def test_empty_ocr_crop_does_not_force_abstain(monkeypatch: pytest.MonkeyPatch) 
         rule, object_id="obj-ocr-empty", pages=pages, completeness=_completeness()
     )
     assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+
+
+def test_eslav_disagreement_abstains_even_if_tesseract_matches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    poly = ((0.36, 0.40), (0.46, 0.40), (0.46, 0.44), (0.36, 0.44))
+    same = PageToken("1250,5", 1, poly, poly, engine=ExtractionEngine.OCR)
+    other = PageToken("1100", 1, poly, poly, engine=ExtractionEngine.OCR)
+    monkeypatch.setattr("kontur.application.evaluate.tesseract_available", lambda: True)
+    monkeypatch.setattr(
+        "kontur.application.evaluate.ocr_region_crop",
+        lambda *_args, **_kwargs: (same,),
+    )
+    monkeypatch.setattr(
+        "kontur.application.evaluate.ocr_region_eslav",
+        lambda *_args, **_kwargs: (other,),
+    )
+    rule = _REGISTRY.get("PZ-001")
+    cells = ("Площадь", "застройки", "1250,5")
+    pages = {
+        DocStage.PD: _page(DocStage.PD, *cells),
+        DocStage.RD: _page(DocStage.RD, *cells),
+    }
+    result = evaluate_rule(
+        rule, object_id="obj-ocr-eslav", pages=pages, completeness=_completeness()
+    )
+    assert result.finding.finding_status is FindingStatus.ABSTAIN
