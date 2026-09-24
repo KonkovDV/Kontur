@@ -62,7 +62,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["exact_field", "number", "enum", "set", "presence", "geometry", "semantic_candidate"]
+          "enum": ["exact_field", "number", "enum", "set", "presence", "geometry", "semantic_candidate", "room_compare"]
         },
         "regex": { "type": ["string", "null"] },
         "anchors": { "type": "array", "items": { "type": "string" } },
@@ -114,6 +114,19 @@
             "read_tolerance_rel": { "type": "number" },
             "label_max_norm": { "type": "number" }
           }
+        },
+        "room_compare": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Пороги сравнения помещений. Фиксируются до прогона gold, подбор только на неразмеченном объекте.",
+          "properties": {
+            "room_regex": { "type": "string" },
+            "feature_regex": { "type": "string" },
+            "bind_radius": { "type": "number" },
+            "pair_jaccard_min": { "type": "number" },
+            "max_differences": { "type": "integer" }
+          },
+          "required": ["room_regex", "feature_regex", "bind_radius", "pair_jaccard_min", "max_differences"]
         }
       }
     },

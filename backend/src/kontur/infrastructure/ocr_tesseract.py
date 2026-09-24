@@ -16,6 +16,7 @@ import os
 import re
 import shutil
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import replace
 from importlib import import_module
 from io import BytesIO
@@ -383,31 +384,66 @@ def _upscale_short_crop(image: object) -> object:
         return image
 
 
-def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocumentTokens:
-    """Заполнить пустые raster-страницы. Векторные токены не трогает."""
+def _ocr_job(data: bytes, page: PdfPageTokens) -> tuple[PageToken, ...]:
+    """OCR одной страницы в воркере. Документ открывается здесь, не через pickle."""
 
-    if not tesseract_available() or not raster_pages_need_ocr(document):
-        return document
     pdf = _open_pdf(data)
     if pdf is None:
-        return document
+        return ()
     try:
-        pages: list[PdfPageTokens] = []
-        for page in document.pages:
-            if page.layer_kind != "raster" or page.tokens or page.frame.rotate != 0:
-                pages.append(page)
-                continue
-            try:
-                tokens = _ocr_pdf_page(pdf[page.page - 1], page)  # type: ignore[index]
-            except (OSError, RuntimeError, ValueError, AttributeError, TypeError):
-                pages.append(page)
-                continue
-            pages.append(replace(page, tokens=tokens) if tokens else page)
-        return PdfDocumentTokens(file_hash=document.file_hash, pages=tuple(pages))
+        return _ocr_pdf_page(pdf[page.page - 1], page)  # type: ignore[index]
     finally:
         close = getattr(pdf, "close", None)
         if close is not None:
             close()
+
+
+def _needs_ocr(page: PdfPageTokens) -> bool:
+    return page.layer_kind == "raster" and not page.tokens and page.frame.rotate == 0
+
+
+def fill_empty_raster_pages(document: PdfDocumentTokens, data: bytes) -> PdfDocumentTokens:
+    """Заполнить пустые raster-страницы. Векторные токены не трогает.
+
+    Две и больше пустых страниц читаются пулом процессов, не больше 16.
+    Одна страница остаётся в этом процессе.
+    """
+
+    if not tesseract_available() or not raster_pages_need_ocr(document):
+        return document
+    targets = [page for page in document.pages if _needs_ocr(page)]
+    filled: dict[int, tuple[PageToken, ...]] = {}
+    if len(targets) >= 2:
+        workers = min(os.cpu_count() or 1, 16)
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(_ocr_job, data, page): page.page for page in targets}
+            for future, number in futures.items():
+                try:
+                    filled[number] = future.result()
+                except (OSError, RuntimeError, ValueError, AttributeError, TypeError):
+                    filled[number] = ()
+    else:
+        pdf = _open_pdf(data)
+        if pdf is None:
+            return document
+        try:
+            for page in targets:
+                try:
+                    filled[page.page] = _ocr_pdf_page(pdf[page.page - 1], page)  # type: ignore[index]
+                except (OSError, RuntimeError, ValueError, AttributeError, TypeError):
+                    filled[page.page] = ()
+        finally:
+            close = getattr(pdf, "close", None)
+            if close is not None:
+                close()
+    pages: list[PdfPageTokens] = []
+    for page in document.pages:
+        tokens = filled.get(page.page)
+        if tokens:
+            pages.append(replace(page, tokens=tokens))
+        else:
+            pages.append(page)
+    return PdfDocumentTokens(file_hash=document.file_hash, pages=tuple(pages))
 
 
 def _field_float(payload: Mapping[str, Sequence[object]], name: str, index: int) -> float:

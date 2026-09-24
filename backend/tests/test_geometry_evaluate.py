@@ -191,11 +191,11 @@ def test_unknown_drawing_type_is_not_executed() -> None:
     assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
 
 
-def test_live_ios4_rule_stays_number() -> None:
+def test_live_ios4_rule_compares_rooms() -> None:
     rule = FileRuleRegistry(REPO / "data" / "matrix").get("IOS4-078")
     extractor = rule["extractor"]
     assert isinstance(extractor, dict)
-    assert extractor["type"] == "number"
+    assert extractor["type"] == "room_compare"
     assert rule["coverage"] == "executable"
     params = extractor["params"]
     assert isinstance(params, dict)
