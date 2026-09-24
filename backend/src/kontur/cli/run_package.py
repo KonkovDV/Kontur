@@ -89,9 +89,25 @@ def _index_path(root: Path) -> Path | None:
     return None
 
 
+def _extended_path(path: Path) -> Path:
+    """Префикс \\\\?\\ для путей длиннее MAX_PATH. Обычный open их не видит."""
+
+    text = str(path)
+    if text.startswith("\\\\?\\"):
+        return path
+    if text.startswith("\\\\"):
+        return Path("\\\\?\\UNC\\" + text[2:])
+    return Path("\\\\?\\" + text)
+
+
 def _read_bytes(path: Path) -> bytes:
     require_path_open(path)
-    return path.read_bytes()
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        if sys.platform != "win32" or exc.errno != 2:
+            raise
+        return _extended_path(path).read_bytes()
 
 
 class PackageFile:
