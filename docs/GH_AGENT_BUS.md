@@ -372,7 +372,7 @@ gh run view RUN_ID --json status,conclusion,workflowName
    `complete` из `READY` — 409. Журнал — `GET /audit`, не только клики рекордера.
    Карточка PZ-001: PNG и polygon ПД/РД; пустая ИД — нет фрагмента. «Не утв.»
    кнопкой эталона не перекрывается. Повёрнутый лист: polygon на краске PNG.
-   #80 закрыт; VLM остаётся в #84.
+   Рамка SVG не зеркалит Y. #80 закрыт; VLM остаётся в #84.
 5. `runner_id=0` и пустые `steps` — не зелёный CI.
 6. Не писать «main без ruleset / GitHub Free private / API 403», если
    `main-pr-and-ci` активен. Не закрывать гейты I/J/K/L ruleset'ом.

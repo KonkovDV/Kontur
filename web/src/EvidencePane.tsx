@@ -1,13 +1,11 @@
 import type { EvidenceRole, FragmentView, Point } from "./evidence";
-import { bboxFromPolygon, formatBBox, formatPolygon } from "./evidence";
+import { bboxFromPolygon, formatBBox, formatPolygon, svgPointYDown } from "./evidence";
 
 const PAGE_W = 100;
 const PAGE_H = 140;
 
 function svgPoints(polygon: Point[]): string {
-  return polygon
-    .map(([x, y]) => `${x * PAGE_W},${(1 - y) * PAGE_H}`)
-    .join(" ");
+  return polygon.map(([x, y]) => svgPointYDown(x, y, PAGE_W, PAGE_H)).join(" ");
 }
 
 type PaneProps = {
@@ -18,7 +16,7 @@ type PaneProps = {
 };
 
 function overlayPoints(polygon: Point[]): string {
-  return polygon.map(([x, y]) => `${x},${1 - y}`).join(" ");
+  return polygon.map(([x, y]) => svgPointYDown(x, y)).join(" ");
 }
 
 export function EvidencePane({ title, role, fragment, pageImageUrl }: PaneProps) {
