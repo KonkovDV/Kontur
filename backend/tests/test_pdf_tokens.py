@@ -110,6 +110,59 @@ def test_tokens_stay_in_unit_square() -> None:
         assert token.page == 1
 
 
+def _dark_pixels(png: bytes, polygon: object) -> tuple[int, int, int]:
+    """Сколько тёмных пикселей внутри bbox polygon_norm и размер PNG."""
+
+    from PIL import Image
+
+    image = Image.open(io.BytesIO(png)).convert("L")
+    width, height = image.size
+    assert isinstance(polygon, tuple)
+    xs = [point[0] for point in polygon]
+    ys = [point[1] for point in polygon]
+    x0 = max(0, int(min(xs) * width))
+    x1 = min(width, int(max(xs) * width) + 1)
+    y0 = max(0, int(min(ys) * height))
+    y1 = min(height, int(max(ys) * height) + 1)
+    assert x1 > x0 and y1 > y0
+    crop = image.crop((x0, y0, x1, y1))
+    loaded = crop.load()
+    assert loaded is not None
+    dark = sum(
+        1
+        for y in range(crop.height)
+        for x in range(crop.width)
+        if loaded[x, y] < 200
+    )
+    return dark, width, height
+
+
+def test_rotated_page_polygon_lands_on_png_ink() -> None:
+    """Поворот листа: polygon_norm в [0;1] и на краске того PNG, что отдаёт экран."""
+
+    from kontur.infrastructure.pdfium_page import render_page_png
+
+    wide = dict(width=360.0, height=120.0, x=16.0, y=28.0)
+    cases = (
+        (ascii_pdf("CODE 12345-PZ", **wide), 0, True),
+        (ascii_pdf("CODE 12345-PZ", rotate=90, **wide), 90, False),
+        (ascii_pdf("CODE 12345-PZ", rotate=180, **wide), 180, True),
+        (ascii_pdf("CODE 12345-PZ", rotate=270, **wide), 270, False),
+    )
+    for data, rotate, expect_wide in cases:
+        extracted = extract_pdf_bytes(data)
+        assert extracted.pages[0].frame.rotate == rotate
+        tokens = flatten_tokens(extracted)
+        assert tokens
+        for token in tokens:
+            assert polygon_in_unit_square(token.polygon_norm)
+        png = render_page_png(data, 1)
+        assert png.startswith(b"\x89PNG")
+        dark, width, height = _dark_pixels(png, tokens[0].polygon_norm)
+        assert dark >= 8
+        assert (width > height) is expect_wide
+
+
 def test_text_outside_cropbox_is_not_a_token() -> None:
     data = ascii_pdf("SECRET", x=12, y=20, crop=(80, 80, 180, 180))
     extracted = extract_pdf_bytes(data)
