@@ -19,7 +19,7 @@ import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-import jsonschema
+import jsonschema  # type: ignore[import-untyped]
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
