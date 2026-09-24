@@ -12,7 +12,7 @@ DEMO_OBJECT_ID = "OBJ-DEMO-COLD-START"
 ETALON_FILE_ID = "f-pd"
 DRAFT_FILE_ID = "f-pd-draft"
 
-_STAMP = (("Утвердил", 20.0, 20.0), ("Иванов И.И.", 90.0, 20.0))
+_STAMP = (("Утвердил", 20.0, 20.0), ("Тестов Т.Т.", 90.0, 20.0))
 _LABEL_X = 20.0
 _VALUE_X = 200.0
 _VALUE_DY = -4.0

@@ -40,7 +40,7 @@ needs_font = pytest.mark.skipif(_FONT is None, reason="нет TTF с кирил�
 INSPECTOR = Actor("inspector-1", is_human=True)
 REPO = Path(__file__).resolve().parents[2]
 
-_STAMP = (("Утвердил", 20.0, 20.0), ("Иванов И.И.", 90.0, 20.0))
+_STAMP = (("Утвердил", 20.0, 20.0), ("Тестов Т.Т.", 90.0, 20.0))
 _LABEL_X = 20.0
 _VALUE_X = 200.0
 _VALUE_DY = -4.0
