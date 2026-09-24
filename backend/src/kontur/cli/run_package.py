@@ -165,12 +165,15 @@ def _pdfs_in_object(folder: Path) -> list[PackageFile]:
         stage = _stage_token(stage_dir.name)
         if stage is None or is_quarantined(stage_dir):
             continue
-        for pdf in sorted(stage_dir.rglob("*.pdf")):
-            if is_quarantined(pdf):
+        for path in sorted(stage_dir.rglob("*")):
+            if not path.is_file() or is_quarantined(path):
                 continue
-            digest = file_sha256(_read_bytes(pdf))
-            file_id = _unique_id(pdf.stem, used, digest)
-            found.append(PackageFile(file_id, stage, pdf))
+            suffix = path.suffix.lower()
+            if suffix not in {".pdf", ".docx", ".xml"}:
+                continue
+            digest = file_sha256(_read_bytes(path))
+            file_id = _unique_id(path.stem, used, digest)
+            found.append(PackageFile(file_id, stage, path))
     return found
 
 
@@ -290,6 +293,18 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
     revision = None
     sheet = None
     parse_error = None
+    suffix = item.path.suffix.lower()
+    if suffix in {".docx", ".xml"}:
+        return {
+            "object_id": object_id,
+            "file_id": item.file_id,
+            "doc_stage": item.stage.value,
+            "cipher": None,
+            "revision": None,
+            "sheet": None,
+            "room": None,
+            "parse_error": f"UNSUPPORTED_FORMAT: сверка читает PDF, {suffix} без разбора",
+        }
     try:
         document = run_pdf_parse_sync(
             extract_pdf_bytes, raw, timeout_s=pdf_parse_timeout_s()
@@ -325,6 +340,8 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
 
 
 def _page_rows(item: PackageFile, raw: bytes, object_id: str) -> list[dict[str, object]]:
+    if item.path.suffix.lower() in {".docx", ".xml"}:
+        return []
     rows: list[dict[str, object]] = []
     try:
         document = run_pdf_parse_sync(

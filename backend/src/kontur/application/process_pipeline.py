@@ -75,6 +75,16 @@ def _is_pdf(filename: str) -> bool:
     return filename.lower().endswith(".pdf")
 
 
+def _unparsed_office(filename: str) -> str | None:
+    """DOCX и XML принимаются на входе, но сверка их не читает."""
+
+    lower = filename.lower()
+    for suffix in (".docx", ".xml"):
+        if lower.endswith(suffix):
+            return suffix
+    return None
+
+
 def _document_ref(
     item: PipelineFile,
     passport_code: str | None,
@@ -120,6 +130,12 @@ def _pages_from_blobs(
     injection_clean: dict[str, bool] = {}
     built: list[tuple[DocumentRef, StagePage]] = []
     for item in files:
+        office = _unparsed_office(item.filename)
+        if office is not None:
+            errors.append(
+                f"{item.file_id}: UNSUPPORTED_FORMAT: сверка читает PDF, {office} без разбора"
+            )
+            continue
         if not _is_pdf(item.filename):
             continue
         raw = blobs.get(item.file_id)
