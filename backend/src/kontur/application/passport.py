@@ -26,6 +26,12 @@ _CODE = re.compile(
     re.IGNORECASE,
 )
 _CODE_BARE = re.compile(r"\b(\d{3,8}-[A-ZА-Я]{1,6}(?:-\d{1,4})?)\b", re.IGNORECASE)
+# ГОСТ 21.101 на листах комплекта: АНО/150321/1-П-АР, не имя файла.
+_CODE_DESIGNATION = re.compile(
+    r"(?<![\w/])([A-ZА-ЯЁ]{2,12}/\d{3,8}/\d{1,4}-[A-ZА-ЯЁ]{1,6}-"
+    r"[A-ZА-ЯЁ]{1,8}\d{0,4}(?:\.\d+){0,4})(?!\w)",
+    re.IGNORECASE,
+)
 _REV = re.compile(r"(?:изм\.?|ред\.?|rev\.?)\s*[:.]?\s*(\d{1,3})\b", re.IGNORECASE)
 _SHEET = re.compile(
     r"(?:лист|sheet)\s*[:.]?\s*([A-ZА-Я0-9][A-ZА-Я0-9.\-]{0,12})",
@@ -208,10 +214,38 @@ def _first(pattern: re.Pattern[str], text: str) -> str | None:
     return normalize_key_field(match.group(1))
 
 
+def _designation(text: str) -> tuple[str | None, bool]:
+    """Одно обозначение или большинство. Ничья — шифр не выбран."""
+
+    found = [normalize_key_field(item) for item in _CODE_DESIGNATION.findall(text)]
+    if not found:
+        return None, False
+    counts: dict[str, int] = {}
+    for item in found:
+        counts[item] = counts.get(item, 0) + 1
+    best = max(counts.values())
+    winners = [key for key, count in counts.items() if count == best]
+    if len(winners) == 1:
+        return winners[0], False
+    return None, True
+
+
 def cipher_from_text(text: str) -> str | None:
     """Шифр из уже прочитанного текста. Имя файла сюда не подставляется."""
 
-    return _first(_CODE, text) or _first(_CODE_BARE, text)
+    labeled = _first(_CODE, text) or _first(_CODE_BARE, text)
+    if labeled:
+        return labeled
+    code, _tie = _designation(text)
+    return code
+
+
+def cipher_is_ambiguous(text: str) -> bool:
+    """Несколько обозначений без большинства. Подписанный шифр это не спор."""
+
+    if _first(_CODE, text) or _first(_CODE_BARE, text):
+        return False
+    return _designation(text)[1]
 
 
 def cipher_reads_agree(codes: Sequence[str | None]) -> bool | None:
@@ -279,6 +313,7 @@ def read_passport(
     search = blob or full
 
     code = cipher_from_text(search)
+    ambiguous = code is None and cipher_is_ambiguous(search)
     revision = _first(_REV, search)
     sheet = _first(_SHEET, search)
     stage = _stage_from_text(search, labeled_only=True) or _stage_from_text(
@@ -309,7 +344,11 @@ def read_passport(
         stage = name_stage
     if has_text and code is None and text_render_agreement is not False:
         needs = True
-        reason = reason or "шифр в основной надписи не найден"
+        reason = reason or (
+            "несколько обозначений без большинства, шифр не выбран"
+            if ambiguous
+            else "шифр в основной надписи не найден"
+        )
     basis = ApprovalBasis.UNPROVEN
     approval, approval_date = _approval(search)
     if approval is not ApprovalStatus.UNKNOWN:
