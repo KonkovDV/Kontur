@@ -15,6 +15,7 @@ from kontur.cli.run_package import (
     _page_rows,
     _read_bytes,
     run_directory,
+    run_object,
 )
 from kontur.domain.models import DocStage
 from kontur.evaluation.dataset_package import HIDDEN_TEST_OBJECT_IDS
@@ -264,3 +265,33 @@ def test_pages_text_writes_words_with_bbox_and_engine(tmp_path: Path) -> None:
         assert row["engine"] in {"vector", "ocr"}
         assert len(row["bbox"]) == 4
         assert row["text"].strip()
+
+
+def test_one_object_failure_still_writes_the_manifest(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "in"
+    _write_kit(source, "OBJ-PACK-OK")
+    _write_kit(source, "OBJ-PACK-BAD")
+    real = run_object
+
+    def wrapped(
+        object_id: str,
+        files: object,
+        out_dir: Path,
+        *,
+        pages_text: bool,
+        registry: object,
+    ) -> dict[str, object]:
+        if object_id == "OBJ-PACK-BAD":
+            raise RuntimeError("boom")
+        return real(object_id, files, out_dir, pages_text=pages_text, registry=registry)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("kontur.cli.run_package.run_object", wrapped)
+    out = tmp_path / "out"
+    report = run_directory(source, out)
+    assert (out / "run_manifest.json").is_file()
+    failures = report["failures"]
+    objects = report["objects"]
+    assert isinstance(failures, list)
+    assert isinstance(objects, list)
+    assert failures == [{"object_id": "OBJ-PACK-BAD", "reason": "RuntimeError: boom"}]
+    assert [item["object_id"] for item in objects] == ["OBJ-PACK-OK"]
