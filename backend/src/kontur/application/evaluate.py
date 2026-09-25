@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from uuid import uuid4
@@ -150,6 +151,27 @@ def _required_stages(rule: dict[str, object]) -> tuple[DocStage, ...]:
     return tuple(DocStage(str(item)) for item in raw)
 
 
+# Марка тома ГОСТ: ОВ1 — тот же раздел, что ОВ. Голое «П» не становится «ПЗ».
+_MARK_INDEX = re.compile(r"^([A-ZА-ЯЁ]{1,8})(\d{1,4})$")
+
+
+def _mark_tokens(code: str) -> set[str]:
+    """Сегменты шифра. Хвост из цифр снимается: ОВ1 → ОВ."""
+
+    folded = code.upper().replace("_", "-")
+    if not folded:
+        return set()
+    parts = {folded}
+    for chunk in re.split(r"[-/]", folded):
+        if not chunk:
+            continue
+        parts.add(chunk)
+        indexed = _MARK_INDEX.fullmatch(chunk)
+        if indexed is not None:
+            parts.add(indexed.group(1))
+    return parts
+
+
 _KIND_LATIN: dict[str, str] = {
     "ПЗ": "PZ",
     "АР": "AR",
@@ -197,28 +219,27 @@ def _wanted_kind_tokens(rule: dict[str, object], stage: DocStage) -> frozenset[s
     if isinstance(sources, dict):
         bucket = sources.get(stage.value.lower())
         if isinstance(bucket, dict):
-            kinds = bucket.get("document_kind")
-            if isinstance(kinds, list):
-                for item in kinds:
-                    if isinstance(item, str) and item.strip():
-                        tokens.update(_kind_aliases(item))
+            for field in ("document_kind", "discipline"):
+                kinds = bucket.get(field)
+                if isinstance(kinds, list):
+                    for item in kinds:
+                        if isinstance(item, str) and item.strip():
+                            tokens.update(_kind_aliases(item))
     return frozenset(tokens)
 
 
 def _page_kind_tokens(page: StagePage) -> frozenset[str]:
-    code = page.document.document_code.upper().replace("_", "-")
-    parts = {code, *(item for item in code.split("-") if item)}
+    parts = _mark_tokens(page.document.document_code)
     if page.document.discipline:
-        parts.add(page.document.discipline.upper())
+        parts.update(_kind_aliases(page.document.discipline))
     return frozenset(parts)
 
 
 def _identity_kind_tokens(key: tuple[str, str, str]) -> frozenset[str]:
     code, _sheet, discipline = key
-    folded = code.upper().replace("_", "-")
-    parts = {folded, *(part for part in folded.split("-") if part)}
+    parts = _mark_tokens(code)
     if discipline:
-        parts.add(discipline.upper())
+        parts.update(_kind_aliases(discipline))
     return frozenset(parts)
 
 
@@ -242,7 +263,11 @@ def bind_stage_page(
     stage: DocStage,
     candidates: Sequence[StagePage],
 ) -> StagePage | str | None:
-    """Одна голова раздела правила. Чужой шифр не даёт числа и не конфликтует."""
+    """Одна голова раздела правила. Чужой шифр не даёт числа и не конфликтует.
+
+    Секция матрицы «ИОС4» в шифре тома не написана: том узнаётся по марке
+    `sources.*.discipline` (`ОВ`, и `ОВ1` как тот же раздел).
+    """
 
     if not candidates:
         return None
