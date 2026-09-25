@@ -277,3 +277,30 @@ def test_uppercase_hash_is_rejected() -> None:
 
 def test_key_fields_tuple_is_the_exact_match_contract() -> None:
     assert KEY_FIELDS == ("document_code", "revision", "sheet")
+
+
+def test_gost_designation_in_the_stamp_is_the_cipher() -> None:
+    passport = _read(_tok("АНО/150321/1-П-АР", 0.55, 0.86))
+    assert passport.document_code == "АНО/150321/1-П-АР"
+    assert passport.needs_clarification is False
+
+
+def test_repeated_designation_beats_a_single_cross_reference() -> None:
+    passport = _read(
+        _tok("АНО/150321/1-П-ПЗ1.1", 0.55, 0.82),
+        _tok("АНО/150321/1-П-ПЗ1.1", 0.55, 0.88),
+        _tok("АНО/150321/1-П-СМ11.1", 0.20, 0.84),
+    )
+    assert passport.document_code == "АНО/150321/1-П-ПЗ1.1"
+
+
+def test_tied_designations_are_not_chosen() -> None:
+    passport = _read(
+        _tok("АНО/150321/1-П-АР", 0.55, 0.82),
+        _tok("АНО/150321/1-П-КР4.1.1", 0.55, 0.88),
+    )
+    assert passport.document_code is None
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason == (
+        "несколько обозначений без большинства, шифр не выбран"
+    )
