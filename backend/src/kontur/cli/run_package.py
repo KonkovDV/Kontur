@@ -21,8 +21,7 @@ from collections.abc import Mapping, Sequence
 from importlib import import_module
 from pathlib import Path
 
-import jsonschema  # type: ignore[import-untyped]
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 from referencing import Registry, Resource
 
 from kontur.application.passport import read_passport
@@ -655,8 +654,13 @@ def run_directory(source: Path, out_dir: Path, *, pages_text: bool = False) -> d
                     registry=registry,
                 )
             )
-        except (jsonschema.ValidationError, ValueError, OSError, QuarantineViolation) as exc:
-            failures.append({"object_id": object_id, "reason": str(exc)})
+        except Exception as exc:
+            failures.append(
+                {
+                    "object_id": object_id,
+                    "reason": f"{type(exc).__name__}: {exc}"[:500],
+                }
+            )
     report: dict[str, object] = {
         "schema": RUN_SCHEMA,
         "closes_gate_i": False,
