@@ -25,6 +25,18 @@ def test_relay_has_a_separate_least_privilege_container() -> None:
     assert "/app/consume_inbox.py" in compose
 
 
+def test_package_runner_out_is_owned_before_start() -> None:
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    assert "package-out-init:" in compose
+    assert 'entrypoint: ["chown", "10001:10001", "/out"]' in compose
+    assert "cap_add: [CHOWN]" in compose
+    assert "package-runner:" in compose
+    runner = compose.split("package-runner:", 1)[1]
+    assert 'user: "10001:10001"' in runner
+    assert "package-out-init:" in runner
+    assert "service_completed_successfully" in runner
+
+
 def test_relay_is_present_in_offline_override() -> None:
     offline = (ROOT / "docker-compose.offline.yml").read_text(encoding="utf-8")
     assert "outbox-relay:" in offline
