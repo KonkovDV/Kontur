@@ -907,12 +907,16 @@ def evaluate_rule(
 
     if revision_pool is not None:
         for stage in required:
-            for volume in _volume_list(pages.get(stage)):
+            volumes = _volume_list(pages.get(stage))
+            anchors: tuple[DocumentRef | None, ...] = (
+                tuple(volume.document for volume in volumes) or (None,)
+            )
+            for anchor in anchors:
                 try:
                     resolution = resolve_revision(
                         revision_pool,
                         stage,
-                        anchor=volume.document,
+                        anchor=anchor,
                         inspector_selected_file_ids=inspector_selected_file_ids,
                     )
                 except RevisionConflict as exc:
@@ -941,8 +945,10 @@ def evaluate_rule(
                         resolution.conflict_reason or f"{stage.value}: эталон не выбран",
                         prior=identity_ok,
                     )
+                if anchor is None:
+                    continue
                 chosen = resolution.resolved.document
-                if volume.document.file_id != chosen.file_id:
+                if anchor.file_id != chosen.file_id:
                     return _halt(
                         rule,
                         Stage.L4_REVISION,

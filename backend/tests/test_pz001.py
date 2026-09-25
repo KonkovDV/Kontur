@@ -215,6 +215,40 @@ def test_package_default_pd_and_unstamped_rd_compare(rule: dict[str, object]) ->
     assert ApprovalBasis.PACKAGE_DEFAULT in bases
 
 
+def test_two_pd_without_a_head_stay_clarification(rule: dict[str, object]) -> None:
+    """Две ПД без головы — конфликт редакции, не отсутствие документа."""
+
+    draft = replace(
+        _document(DocStage.PD, approved=False),
+        file_id="f-pd-draft",
+        document_code="",
+        approval_status=ApprovalStatus.UNKNOWN,
+    )
+    approved = replace(
+        _document(DocStage.PD),
+        file_id="f-pd",
+        document_code="",
+        approval_status=ApprovalStatus.UNKNOWN,
+    )
+    rd = _document(DocStage.RD)
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.RD: StagePage(
+                document=rd,
+                tokens=_line("Площадь", "застройки", "1100"),
+            )
+        },
+        completeness=_completeness(),
+        revision_pool=[draft, approved, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert result.finding.finding_status is not FindingStatus.MISSING_EVIDENCE
+    assert result.missing_stage is None
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+
+
 def test_pz001_binds_pz_cipher_not_ar_sheet(rule: dict[str, object]) -> None:
     pz = replace(_document(DocStage.PD), file_id="f-pz", document_code="11111-PZ")
     ar = replace(_document(DocStage.PD), file_id="f-ar", document_code="22222-AR")
