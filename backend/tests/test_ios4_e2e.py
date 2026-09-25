@@ -6,6 +6,7 @@ IOS4-078: площадь A×B мм² на синтетике. Recall на frozen
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from kontur.application.evaluate import StagePage, evaluate_rule
@@ -256,3 +257,182 @@ def test_ios4_078_area_from_spaced_tokens() -> None:
     result = evaluate_rule(rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness())
     assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
     assert result.finding.expected_value == 150_000.0
+
+
+def _headed(
+    stage: DocStage,
+    file_id: str,
+    code: str,
+    words: tuple[str, ...],
+    extra: tuple[PageToken, ...] = (),
+) -> tuple[StagePage, DocumentRef]:
+    document = replace(_doc(stage, file_id), file_id=file_id, document_code=code)
+    return StagePage(document=document, tokens=_line(*words) + extra), document
+
+
+def test_ios4_binds_ov_volume_not_the_neighbouring_section() -> None:
+    """Шифр тома — марка ОВ/ОВ1, не секция матрицы ИОС4. Чужой том число не отдаёт."""
+
+    rule = _REGISTRY.get("IOS4-078")
+    pd_ov, doc_pd_ov = _headed(
+        DocStage.PD,
+        "pd-ov",
+        "АНО/150321/1-П-ОВ",
+        ("воздуховод", "сечение", "500×300", "мм"),
+        (_tok("140", 0.20, 0.20), _tok("В", 0.24, 0.20)),
+    )
+    pd_ar, doc_pd_ar = _headed(
+        DocStage.PD,
+        "pd-ar",
+        "АНО/150321/1-П-АР",
+        ("воздуховод", "сечение", "100×100", "мм"),
+    )
+    rd_ov, doc_rd_ov = _headed(
+        DocStage.RD,
+        "rd-ov",
+        "АНО/150321/1-РД-ОВ1",
+        ("воздуховод", "сечение", "400×200", "мм"),
+        (_tok("140", 0.20, 0.20),),
+    )
+    rd_kr, doc_rd_kr = _headed(
+        DocStage.RD,
+        "rd-kr",
+        "АНО/150321/1-РД-КР",
+        ("воздуховод", "сечение", "100×100", "мм"),
+    )
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: (pd_ar, pd_ov),
+            DocStage.RD: (rd_kr, rd_ov),
+        },
+        completeness=_completeness(),
+        revision_pool=[doc_pd_ar, doc_pd_ov, doc_rd_kr, doc_rd_ov],
+    )
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+    assert result.finding.source_id == "pd-ov"
+    assert result.finding.expected_value == 150_000.0
+    assert result.finding.actual_value == 80_000.0
+    assert result.evidence_group is not None
+    assert {item.document.file_id for item in result.evidence_group.fragments} == {
+        "pd-ov",
+        "rd-ov",
+    }
+    rooms = [
+        item
+        for item in result.also
+        if item.evidence_group is not None
+        and any(fragment.room_id == "140" for fragment in item.evidence_group.fragments)
+    ]
+    assert rooms
+    assert rooms[0].finding.finding_status is FindingStatus.CANDIDATE
+    assert rooms[0].finding.source_id == "pd-ov"
+    assert {
+        fragment.document.file_id for fragment in rooms[0].evidence_group.fragments
+    } == {"pd-ov", "rd-ov"}
+
+
+def test_two_ov_volumes_ask_instead_of_picking_one() -> None:
+    rule = _REGISTRY.get("IOS4-078")
+    first, doc_first = _headed(
+        DocStage.PD,
+        "pd-ov1",
+        "АНО/150321/1-П-ОВ1",
+        ("воздуховод", "сечение", "500×300", "мм"),
+    )
+    second, doc_second = _headed(
+        DocStage.PD,
+        "pd-ov2",
+        "АНО/150321/1-П-ОВ2",
+        ("воздуховод", "сечение", "100×100", "мм"),
+    )
+    rd, doc_rd = _headed(
+        DocStage.RD,
+        "rd-ov",
+        "АНО/150321/1-РД-ОВ1",
+        ("воздуховод", "сечение", "400×200", "мм"),
+    )
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={DocStage.PD: (first, second), DocStage.RD: rd},
+        completeness=_completeness(),
+        revision_pool=[doc_first, doc_second, doc_rd],
+    )
+    assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+    assert "несколько томов раздела содержат значение" in result.finding.rationale
+    assert "pd-ov1" in result.finding.rationale
+    assert "pd-ov2" in result.finding.rationale
+    assert result.also == ()
+    assert result.evidence_group is None
+
+
+def test_ios4_binds_hvac_subsection_among_other_engineering_volumes() -> None:
+    """ПД ИОС5.4 — отопление. ИОС5.1 и ВК число не отдают.
+
+    Пустой соседний том 5.4 не затирает том, где есть сечение.
+    """
+
+    rule = _REGISTRY.get("IOS4-078")
+    pd_hvac, doc_hvac = _headed(
+        DocStage.PD,
+        "pd-hvac",
+        "АНО/150321/1-П-ИОС5.4.2",
+        ("воздуховод", "сечение", "500×300", "мм"),
+        (_tok("140", 0.20, 0.20), _tok("В", 0.24, 0.20)),
+    )
+    pd_power, doc_power = _headed(
+        DocStage.PD,
+        "pd-power",
+        "АНО/150321/1-П-ИОС5.1.1",
+        ("воздуховод", "сечение", "100×100", "мм"),
+    )
+    pd_empty, doc_empty = _headed(
+        DocStage.PD,
+        "pd-hvac-empty",
+        "АНО/150321/1-П-ИОС5.4.1",
+        ("содержание", "тома"),
+    )
+    rd_ov, doc_ov = _headed(
+        DocStage.RD,
+        "rd-ov",
+        "АНО/150321/1-РД-ОВ2.1",
+        ("воздуховод", "сечение", "400×200", "мм"),
+        (_tok("140", 0.20, 0.20),),
+    )
+    rd_vk, doc_vk = _headed(
+        DocStage.RD,
+        "rd-vk",
+        "АНО/150321/1-РД-ВК",
+        ("воздуховод", "сечение", "100×100", "мм"),
+    )
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: (pd_power, pd_empty, pd_hvac),
+            DocStage.RD: (rd_vk, rd_ov),
+        },
+        completeness=_completeness(),
+        revision_pool=[doc_power, doc_empty, doc_hvac, doc_vk, doc_ov],
+    )
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+    assert result.finding.source_id == "pd-hvac"
+    assert result.finding.expected_value == 150_000.0
+    assert result.finding.actual_value == 80_000.0
+    rooms = [
+        item
+        for item in result.also
+        if item.evidence_group is not None
+        and any(fragment.room_id == "140" for fragment in item.evidence_group.fragments)
+    ]
+    assert rooms
+    assert rooms[0].finding.source_id == "pd-hvac"
+    assert {fragment.document.file_id for fragment in rooms[0].evidence_group.fragments} == {
+        "pd-hvac",
+        "rd-ov",
+    }

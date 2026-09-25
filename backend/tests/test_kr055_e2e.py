@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -175,3 +176,33 @@ def test_kr055_no_anchor_gives_low_quality(rule: dict[str, object]) -> None:
     assert result.finding.finding_status is FindingStatus.LOW_QUALITY
     assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
     assert result.finding.evidence_group_id is None
+
+
+def test_kr055_rd_head_is_kj_volume_not_ov(rule: dict[str, object]) -> None:
+    """РД правила КР — марка КЖ из sources.rd.discipline, не соседний том ОВ."""
+
+    def headed(
+        stage: DocStage, file_id: str, code: str, *words: str
+    ) -> tuple[StagePage, DocumentRef]:
+        document = replace(_doc(stage), file_id=file_id, document_code=code)
+        return StagePage(document=document, tokens=_line(*words)), document
+
+    pd_kr, doc_pd = headed(DocStage.PD, "pd-kr", "АНО/150321/1-П-КР", "Класс", "бетона", "B35")
+    pd_ar, doc_ar = headed(DocStage.PD, "pd-ar", "АНО/150321/1-П-АР", "Класс", "бетона", "B15")
+    rd_kj, doc_kj = headed(DocStage.RD, "rd-kj", "АНО/150321/1-РД-КЖ", "Класс", "бетона", "B30")
+    rd_ov, doc_ov = headed(DocStage.RD, "rd-ov", "АНО/150321/1-РД-ОВ1", "Класс", "бетона", "B10")
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={DocStage.PD: (pd_ar, pd_kr), DocStage.RD: (rd_ov, rd_kj)},
+        completeness=_completeness_pd_rd(),
+        revision_pool=[doc_ar, doc_pd, doc_ov, doc_kj],
+    )
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+    assert result.finding.source_id == "pd-kr"
+    assert result.evidence_group is not None
+    assert {item.document.file_id for item in result.evidence_group.fragments} == {
+        "pd-kr",
+        "rd-kj",
+    }

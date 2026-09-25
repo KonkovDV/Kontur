@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from uuid import uuid4
@@ -150,6 +151,36 @@ def _required_stages(rule: dict[str, object]) -> tuple[DocStage, ...]:
     return tuple(DocStage(str(item)) for item in raw)
 
 
+# Марка тома ГОСТ: ОВ2.1 — тот же раздел, что ОВ. «ПЗ» не схлопывается в «П».
+_MARK_TAIL = re.compile(r"^([A-ZА-ЯЁ]{2,8})(\d+(?:\.\d+)*)$")
+# ИОС4 в таблице разделов — отопление и вентиляция, в шифре ПД это подраздел 5.4.
+_IOS_SECTION = re.compile(r"^ИОС([1-5])$")
+
+
+def _mark_tokens(code: str) -> set[str]:
+    """Сегменты шифра. ОВ2.1 → ОВ, ИОС5.4.2 → ИОС5.4."""
+
+    folded = code.upper().replace("_", "-")
+    if not folded:
+        return set()
+    parts = {folded}
+    for chunk in re.split(r"[-/]", folded):
+        if not chunk:
+            continue
+        parts.add(chunk)
+        indexed = _MARK_TAIL.fullmatch(chunk)
+        if indexed is None:
+            continue
+        base, tail = indexed.group(1), indexed.group(2)
+        parts.add(base)
+        acc = f"{base}{tail.split('.')[0]}"
+        parts.add(acc)
+        for bit in tail.split(".")[1:]:
+            acc = f"{acc}.{bit}"
+            parts.add(acc)
+    return parts
+
+
 _KIND_LATIN: dict[str, str] = {
     "ПЗ": "PZ",
     "АР": "AR",
@@ -193,32 +224,34 @@ def _wanted_kind_tokens(rule: dict[str, object], stage: DocStage) -> frozenset[s
     section = rule.get("section")
     if isinstance(section, str) and section.strip():
         tokens.update(_kind_aliases(section))
+        ios = _IOS_SECTION.fullmatch(section.strip().upper())
+        if ios is not None:
+            tokens.add(f"ИОС5.{ios.group(1)}")
     sources = rule.get("sources")
     if isinstance(sources, dict):
         bucket = sources.get(stage.value.lower())
         if isinstance(bucket, dict):
-            kinds = bucket.get("document_kind")
-            if isinstance(kinds, list):
-                for item in kinds:
-                    if isinstance(item, str) and item.strip():
-                        tokens.update(_kind_aliases(item))
+            for field in ("document_kind", "discipline"):
+                kinds = bucket.get(field)
+                if isinstance(kinds, list):
+                    for item in kinds:
+                        if isinstance(item, str) and item.strip():
+                            tokens.update(_kind_aliases(item))
     return frozenset(tokens)
 
 
 def _page_kind_tokens(page: StagePage) -> frozenset[str]:
-    code = page.document.document_code.upper().replace("_", "-")
-    parts = {code, *(item for item in code.split("-") if item)}
+    parts = _mark_tokens(page.document.document_code)
     if page.document.discipline:
-        parts.add(page.document.discipline.upper())
+        parts.update(_kind_aliases(page.document.discipline))
     return frozenset(parts)
 
 
 def _identity_kind_tokens(key: tuple[str, str, str]) -> frozenset[str]:
     code, _sheet, discipline = key
-    folded = code.upper().replace("_", "-")
-    parts = {folded, *(part for part in folded.split("-") if part)}
+    parts = _mark_tokens(code)
     if discipline:
-        parts.add(discipline.upper())
+        parts.update(_kind_aliases(discipline))
     return frozenset(parts)
 
 
@@ -237,12 +270,27 @@ def _matching_identity_heads(
     )
 
 
+def _volume_list(
+    item: StagePage | Sequence[StagePage] | None,
+) -> tuple[StagePage, ...]:
+    if item is None:
+        return ()
+    if isinstance(item, StagePage):
+        return (item,)
+    return tuple(item)
+
+
 def bind_stage_page(
     rule: dict[str, object],
     stage: DocStage,
     candidates: Sequence[StagePage],
-) -> StagePage | str | None:
-    """Одна голова раздела правила. Чужой шифр не даёт числа и не конфликтует."""
+) -> StagePage | tuple[StagePage, ...] | str | None:
+    """Головы раздела правила. Чужой шифр не даёт числа и не конфликтует.
+
+    Секция «ИОС4» в шифре записана как подраздел ``ИОС5.4``. Марка ``ОВ2.1`` —
+    тот же раздел, что ``ОВ``. Разные тома раздела остаются все: значение
+    берётся, только если оно одно. Один и тот же шифр дважды — уточнение.
+    """
 
     if not candidates:
         return None
@@ -250,15 +298,16 @@ def bind_stage_page(
         return candidates[0]
     wanted = _wanted_kind_tokens(rule, stage)
     matched = [
-        page
-        for page in candidates
-        if wanted and not wanted.isdisjoint(_page_kind_tokens(page))
+        page for page in candidates if wanted and not wanted.isdisjoint(_page_kind_tokens(page))
     ]
     if len(matched) == 1:
         return matched[0]
     if len(matched) > 1:
-        ids = ", ".join(page.document.file_id for page in matched)
-        return f"{stage.value}: несколько голов раздела правила ({ids})"
+        codes = {page.document.document_code for page in matched}
+        if len(codes) == 1:
+            ids = ", ".join(page.document.file_id for page in matched)
+            return f"{stage.value}: несколько голов раздела правила ({ids})"
+        return tuple(matched)
     ids = ", ".join(page.document.file_id for page in candidates)
     return f"{stage.value}: нет документа раздела правила среди голов {ids}"
 
@@ -267,8 +316,8 @@ def _bind_required_pages(
     rule: dict[str, object],
     pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
     required: tuple[DocStage, ...],
-) -> dict[DocStage, StagePage] | str:
-    bound: dict[DocStage, StagePage] = {}
+) -> dict[DocStage, StagePage | tuple[StagePage, ...]] | str:
+    bound: dict[DocStage, StagePage | tuple[StagePage, ...]] = {}
     for stage in required:
         picked = bind_stage_page(rule, stage, stage_candidates(pages, stage))
         if isinstance(picked, str):
@@ -512,16 +561,19 @@ def _room_pass_findings(
     settings = room_block(rule)
     if settings is None:
         return ()
-    pd = pages.get(DocStage.PD)
-    rd = pages.get(DocStage.RD)
-    if not isinstance(pd, StagePage) or not isinstance(rd, StagePage):
+    pd_pages = _volume_list(pages.get(DocStage.PD))
+    rd_pages = _volume_list(pages.get(DocStage.RD))
+    if not pd_pages or not rd_pages:
         return ()
-    diffs = compare_room_tokens(pd.tokens, rd.tokens, settings)
-    kept = [
-        _room_evaluation(rule, diff, pd, rd, object_id)
-        for diff in diffs
-        if diff.kind in {"candidate", "suspicion"}
-    ]
+    kept: list[RuleEvaluation] = []
+    for pd in pd_pages:
+        for rd in rd_pages:
+            diffs = compare_room_tokens(pd.tokens, rd.tokens, settings)
+            kept.extend(
+                _room_evaluation(rule, diff, pd, rd, object_id)
+                for diff in diffs
+                if diff.kind in {"candidate", "suspicion"}
+            )
     return tuple(kept)
 
 
@@ -593,7 +645,10 @@ def _room_evaluation(
         return _halt(rule, Stage.L5_PAIRING, status, diff.rationale)
     label = f"помещение {diff.room}"
     fragments: list[EvidenceFragment] = []
-    group_id = f"{object_id}:{rule['code']}:{diff.room}:{diff.kind}"
+    group_id = (
+        f"{object_id}:{rule['code']}:{pd.document.file_id}:"
+        f"{rd.document.file_id}:{diff.room}:{diff.kind}"
+    )
     if diff.pd is not None:
         fragments.append(
             _room_fragment(
@@ -699,6 +754,55 @@ def _room_fragment(
     )
 
 
+def _has_extracted_value(
+    rule: dict[str, object],
+    page: StagePage,
+    extractor_type: object,
+) -> bool:
+    if extractor_type == "geometry":
+        hit, _detail = extract_duct_width(page.tokens, page.pdf_bytes, page.frames, rule)
+        return hit is not None
+    if extractor_type == "exact_field":
+        return extract_exact_field(page.tokens, rule) is not None
+    if extractor_type == "presence":
+        return extract_presence(page.tokens, rule) is not None
+    if extractor_type in _TEXT_EXTRACTOR_TYPES:
+        return extract_text(page.tokens, rule) is not None
+    if extractor_type == "number":
+        return extract_number(page.tokens, rule) is not None
+    return False
+
+
+def _single_pages(
+    pages: Mapping[DocStage, StagePage | tuple[StagePage, ...]],
+    stages: Sequence[DocStage],
+) -> dict[DocStage, StagePage]:
+    chosen: dict[DocStage, StagePage] = {}
+    for stage in stages:
+        item = pages[stage]
+        if not isinstance(item, StagePage):
+            raise RuntimeError(f"{stage.value}: сравнение ожидает одну голову тома")
+        chosen[stage] = item
+    return chosen
+
+
+def _narrow_volumes(
+    rule: dict[str, object],
+    stage: DocStage,
+    volumes: Sequence[StagePage],
+    extractor_type: object,
+) -> StagePage | str | None:
+    """Один том с значением. Два значения — не выбор. Пусто — значения нет."""
+
+    found = [page for page in volumes if _has_extracted_value(rule, page, extractor_type)]
+    if len(found) > 1:
+        ids = ", ".join(page.document.file_id for page in found)
+        return f"{stage.value}: несколько томов раздела содержат значение ({ids})"
+    if len(found) == 1:
+        return found[0]
+    return None
+
+
 def evaluate_rule(
     rule: dict[str, object],
     *,
@@ -767,21 +871,19 @@ def evaluate_rule(
                 ),
                 wanted,
             )
-            if len(matched) != 1:
-                continue
-            identity = matched[0]
-            if (
-                identity.resolution.status is not ResolveStatus.RESOLVED
-                or identity.resolution.resolved is None
-            ):
-                return _halt(
-                    rule,
-                    Stage.L4_REVISION,
-                    revision_status,
-                    identity.resolution.conflict_reason
-                    or f"{stage.value}: эталон не выбран",
-                    prior=identity_ok,
-                )
+            for identity in matched:
+                if (
+                    identity.resolution.status is not ResolveStatus.RESOLVED
+                    or identity.resolution.resolved is None
+                ):
+                    return _halt(
+                        rule,
+                        Stage.L4_REVISION,
+                        revision_status,
+                        identity.resolution.conflict_reason
+                        or f"{stage.value}: эталон не выбран",
+                        prior=identity_ok,
+                    )
     bound = _bind_required_pages(rule, pages, required)
     if isinstance(bound, str):
         return _halt(
@@ -794,93 +896,123 @@ def evaluate_rule(
     pages = bound
 
     for stage, page in pages.items():
-        if not _identity_ok(page):
-            return _halt(
-                rule,
-                Stage.L1_IDENTITY,
-                FindingStatus.CLARIFICATION_REQUIRED,
-                f"{stage.value}: нет file_id/SHA-256 или страница 0",
-            )
+        for volume in _volume_list(page):
+            if not _identity_ok(volume):
+                return _halt(
+                    rule,
+                    Stage.L1_IDENTITY,
+                    FindingStatus.CLARIFICATION_REQUIRED,
+                    f"{stage.value}: нет file_id/SHA-256 или страница 0",
+                )
 
     if revision_pool is not None:
         for stage in required:
-            try:
-                staged = pages.get(stage)
-                resolution = resolve_revision(
-                    revision_pool,
-                    stage,
-                    anchor=None if staged is None else staged.document,
-                    inspector_selected_file_ids=inspector_selected_file_ids,
-                )
-            except RevisionConflict as exc:
-                return _halt(
-                    rule,
-                    Stage.L4_REVISION,
-                    revision_status,
-                    str(exc),
-                    prior=identity_ok,
-                )
-            if resolution.status is ResolveStatus.MISSING_EVIDENCE:
-                mapped = _mapped(rule, "source_absent", FindingStatus.MISSING_EVIDENCE)
-                return _halt(
-                    rule,
-                    Stage.L4_REVISION,
-                    mapped,
-                    resolution.conflict_reason or f"{stage.value}: нет документов стадии",
-                    prior=identity_ok,
-                    missing_stage=stage,
-                )
-            if resolution.status is not ResolveStatus.RESOLVED or resolution.resolved is None:
-                return _halt(
-                    rule,
-                    Stage.L4_REVISION,
-                    revision_status,
-                    resolution.conflict_reason or f"{stage.value}: эталон не выбран",
-                    prior=identity_ok,
-                )
-            current = pages.get(stage)
-            chosen = resolution.resolved.document
-            if current is None or current.document.file_id != chosen.file_id:
-                return _halt(
-                    rule,
-                    Stage.L4_REVISION,
-                    revision_status,
-                    (
-                        f"{stage.value}: страница не последняя утверждённая редакция"
-                        f" ({chosen.file_id})"
-                    ),
-                    prior=identity_ok,
-                )
+            volumes = _volume_list(pages.get(stage))
+            anchors: tuple[DocumentRef | None, ...] = (
+                tuple(volume.document for volume in volumes) or (None,)
+            )
+            for anchor in anchors:
+                try:
+                    resolution = resolve_revision(
+                        revision_pool,
+                        stage,
+                        anchor=anchor,
+                        inspector_selected_file_ids=inspector_selected_file_ids,
+                    )
+                except RevisionConflict as exc:
+                    return _halt(
+                        rule,
+                        Stage.L4_REVISION,
+                        revision_status,
+                        str(exc),
+                        prior=identity_ok,
+                    )
+                if resolution.status is ResolveStatus.MISSING_EVIDENCE:
+                    mapped = _mapped(rule, "source_absent", FindingStatus.MISSING_EVIDENCE)
+                    return _halt(
+                        rule,
+                        Stage.L4_REVISION,
+                        mapped,
+                        resolution.conflict_reason or f"{stage.value}: нет документов стадии",
+                        prior=identity_ok,
+                        missing_stage=stage,
+                    )
+                if resolution.status is not ResolveStatus.RESOLVED or resolution.resolved is None:
+                    return _halt(
+                        rule,
+                        Stage.L4_REVISION,
+                        revision_status,
+                        resolution.conflict_reason or f"{stage.value}: эталон не выбран",
+                        prior=identity_ok,
+                    )
+                if anchor is None:
+                    continue
+                chosen = resolution.resolved.document
+                if anchor.file_id != chosen.file_id:
+                    return _halt(
+                        rule,
+                        Stage.L4_REVISION,
+                        revision_status,
+                        (
+                            f"{stage.value}: страница не последняя утверждённая редакция"
+                            f" ({chosen.file_id})"
+                        ),
+                        prior=identity_ok,
+                    )
     else:
         for stage, page in pages.items():
-            approval = page.document.approval_status
-            if approval is ApprovalStatus.NOT_APPROVED:
-                return _halt(
-                    rule,
-                    Stage.L4_REVISION,
-                    revision_status,
-                    f"{stage.value}: редакция помечена «не утв.»",
-                    prior=identity_ok,
-                )
-            if stage is DocStage.PD and approval is not ApprovalStatus.APPROVED:
-                return _halt(
-                    rule,
-                    Stage.L4_REVISION,
-                    revision_status,
-                    f"{stage.value}: эталон без признака утверждения",
-                    prior=identity_ok,
-                )
+            for volume in _volume_list(page):
+                approval = volume.document.approval_status
+                if approval is ApprovalStatus.NOT_APPROVED:
+                    return _halt(
+                        rule,
+                        Stage.L4_REVISION,
+                        revision_status,
+                        f"{stage.value}: редакция помечена «не утв.»",
+                        prior=identity_ok,
+                    )
+                if stage is DocStage.PD and approval is not ApprovalStatus.APPROVED:
+                    return _halt(
+                        rule,
+                        Stage.L4_REVISION,
+                        revision_status,
+                        f"{stage.value}: эталон без признака утверждения",
+                        prior=identity_ok,
+                    )
 
     if extractor_type == "room_compare":
         return _room_rule(rule, pages, object_id)
 
+    volume_pages = dict(pages)
     dual_req = _dual_read_required(rule)
 
     # ── ветка текстового / enum экстрактора ───────────────────────────────────
     if is_text:
         text_hits: dict[DocStage, TextHit] = {}
         for stage in required:
-            stage_page = pages.get(stage)
+            raw_page = pages.get(stage)
+            stage_page: StagePage | None
+            if isinstance(raw_page, tuple):
+                narrowed = _narrow_volumes(rule, stage, raw_page, extractor_type)
+                if isinstance(narrowed, str):
+                    return _halt(
+                        rule,
+                        Stage.L4_REVISION,
+                        revision_status,
+                        narrowed,
+                        prior=identity_ok,
+                    )
+                stage_page = narrowed
+            else:
+                stage_page = raw_page
+            if stage_page is None and isinstance(raw_page, tuple):
+                return _halt(
+                    rule,
+                    Stage.L2_EXTRACTION,
+                    _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                    f"{stage.value}: якорь или значение не найдены",
+                    prior=identity_ok,
+                )
             if stage_page is None:
                 mapped = _mapped(rule, "source_absent", FindingStatus.MISSING_EVIDENCE)
                 return _halt(
@@ -891,6 +1023,7 @@ def evaluate_rule(
                     prior=identity_ok,
                     missing_stage=stage,
                 )
+            pages[stage] = stage_page
             if extractor_type == "exact_field":
                 hit = extract_exact_field(stage_page.tokens, rule)
             elif extractor_type == "presence":
@@ -965,14 +1098,15 @@ def evaluate_rule(
             text_hits[DocStage.RD].extraction.normalized_value,
             rule,
         )
-        file_ids = tuple(pages[stage].document.file_id for stage in text_hits)
+        one = _single_pages(pages, tuple(text_hits))
+        file_ids = tuple(one[stage].document.file_id for stage in text_hits)
         group_id = comparison_key(object_id, str(rule["code"]), file_ids)
         _assert_machine_status(comparison.status)
         text_fragments = tuple(
             _fragment(
                 hit,
                 role=_STAGE_ROLE[stage],
-                document=pages[stage].document,
+                document=one[stage].document,
                 fragment_id=f"{group_id}-{stage.value}",
             )
             for stage, hit in text_hits.items()
@@ -983,14 +1117,14 @@ def evaluate_rule(
             rule_code=str(rule["code"]),
             matrix_version=str(rule["matrix_version"]),
             fragments=text_fragments,
-            resolved_revisions=tuple(pages[stage].document for stage in text_hits),
+            resolved_revisions=tuple(one[stage].document for stage in text_hits),
         )
         text_finding = _finding_from_comparison(
             rule,
             comparison,
             group_id=group_id,
             fragments=text_fragments,
-            pages=pages,
+            pages=one,
         )
         return RuleEvaluation(
             finding=text_finding, evidence_group=text_group, stages=text_stages
@@ -999,7 +1133,33 @@ def evaluate_rule(
     # ── ветка числового экстрактора (оригинальная логика) ────────────────────
     hits: dict[DocStage, NumberHit] = {}
     for stage in required:
-        stage_page = pages.get(stage)
+        raw_page = pages.get(stage)
+        if isinstance(raw_page, tuple):
+            narrowed = _narrow_volumes(rule, stage, raw_page, extractor_type)
+            if isinstance(narrowed, str):
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    narrowed,
+                    prior=identity_ok,
+                )
+            stage_page = narrowed
+        else:
+            stage_page = raw_page
+        if stage_page is None and isinstance(raw_page, tuple):
+            return _with_room_pass(
+                _halt(
+                    rule,
+                    Stage.L2_EXTRACTION,
+                    _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                    f"{stage.value}: якорь или число не найдены",
+                    prior=identity_ok,
+                ),
+                rule,
+                volume_pages,
+                object_id,
+            )
         if stage_page is None:
             mapped = _mapped(rule, "source_absent", FindingStatus.MISSING_EVIDENCE)
             return _halt(
@@ -1010,6 +1170,7 @@ def evaluate_rule(
                 prior=identity_ok,
                 missing_stage=stage,
             )
+        pages[stage] = stage_page
         if extractor_type == "geometry":
             number_hit, detail = extract_duct_width(
                 stage_page.tokens,
@@ -1031,7 +1192,7 @@ def evaluate_rule(
                     prior=identity_ok,
                 ),
                 rule,
-                pages,
+                volume_pages,
                 object_id,
             )
         if dual_req and number_hit.extraction.second_read_agrees is not True:
@@ -1111,13 +1272,14 @@ def evaluate_rule(
     if run(list(stages)) is not None:
         raise RuntimeError("каскад L1-L7 закрылся до сравнения")
 
-    file_ids = tuple(pages[stage].document.file_id for stage in hits)
+    one = _single_pages(pages, tuple(hits))
+    file_ids = tuple(one[stage].document.file_id for stage in hits)
     group_id = comparison_key(object_id, str(rule["code"]), file_ids)
     fragments = tuple(
         _fragment(
             hit,
             role=_STAGE_ROLE[stage],
-            document=pages[stage].document,
+            document=one[stage].document,
             fragment_id=f"{group_id}-{stage.value}",
         )
         for stage, hit in hits.items()
@@ -1128,19 +1290,19 @@ def evaluate_rule(
         rule_code=str(rule["code"]),
         matrix_version=str(rule["matrix_version"]),
         fragments=fragments,
-        resolved_revisions=tuple(pages[stage].document for stage in hits),
+        resolved_revisions=tuple(one[stage].document for stage in hits),
     )
     finding = _finding_from_comparison(
         rule,
         comparison,
         group_id=group_id,
         fragments=fragments,
-        pages=pages,
+        pages=one,
     )
     return _with_room_pass(
         RuleEvaluation(finding=finding, evidence_group=group, stages=stages),
         rule,
-        pages,
+        volume_pages,
         object_id,
     )
 
