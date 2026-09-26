@@ -14,6 +14,7 @@ from collections.abc import Sequence
 
 from kontur.application.extractors.drawing_scale import STAMP_Y, scale_mark
 from kontur.application.extractors.number import ENGINE_VERSION, NumberHit, PageToken
+from kontur.application.normalize import scale_length_to_target
 from kontur.domain.coordinates import PageFrame
 from kontur.domain.geometry import bbox_from_polygon
 from kontur.domain.models import Extraction, ExtractionEngine, Polygon
@@ -25,7 +26,6 @@ from kontur.infrastructure.duct_geometry import (
     DEFAULT_MIN_LENGTH_PT,
     DEFAULT_MIN_OVERLAP,
     DEFAULT_READ_TOLERANCE_REL,
-    choose_pair,
     duct_section,
     gaps_agree,
     pair_parallel,
@@ -141,13 +141,25 @@ def _nearby_label(
     return best
 
 
+def _length_target(rule: dict[str, object]) -> str | None:
+    """Единица правила. Обмер сам задаёт миллиметры, голый текст сюда не входит."""
+
+    comparator = rule.get("comparator")
+    if isinstance(comparator, dict):
+        raw = comparator.get("unit_target")
+        if isinstance(raw, str) and raw.strip():
+            return raw
+    unit = rule.get("unit")
+    return unit if isinstance(unit, str) and unit.strip() else None
+
+
 def extract_duct_width(
     tokens: Sequence[PageToken],
     pdf_bytes: bytes | None,
     frames: Sequence[PageFrame],
     rule: dict[str, object],
 ) -> tuple[NumberHit | None, str]:
-    """Ширина в мм. None и текст причины — нет масштаба, листа или пары."""
+    """Ширина в единице правила. Обмер даёт миллиметры; голый текст не переводится."""
 
     params = geometry_params(rule)
     mark = scale_mark(tokens, stamp_y=params["stamp_y"])
@@ -171,9 +183,11 @@ def extract_duct_width(
         gap_min_pt=params["gap_min_pt"],
         gap_max_pt=params["gap_max_pt"],
     )
-    chosen = choose_pair(pairs)
-    if chosen is None:
-        return None, "пара параллельных штрихов не найдена"
+    if len(pairs) != 1:
+        if not pairs:
+            return None, "пара параллельных штрихов не найдена"
+        return None, "несколько пар штрихов"
+    chosen = pairs[0]
     try:
         section = duct_section(chosen, frames[page_number - 1], page_number)
     except ValueError:
@@ -189,11 +203,17 @@ def extract_duct_width(
     )
     if label is not None and not gaps_agree(section.width_mm, label, tolerance_rel=tolerance):
         agrees = False
+    value = scale_length_to_target(
+        section.width_mm,
+        source_unit="мм",
+        target_unit=_length_target(rule),
+    )
     reverse_mm = width_mm(chosen.reverse_gap_pt, scale)
     features = {
         "gap_pt": chosen.gap_pt,
         "reverse_gap_pt": chosen.reverse_gap_pt,
         "reverse_mm": reverse_mm,
+        "measured_mm": section.width_mm,
         "scale": float(scale),
     }
     if label is not None:
@@ -201,11 +221,11 @@ def extract_duct_width(
     return (
         NumberHit(
             extraction=Extraction(
-                raw_token=f"{section.width_mm:.2f}",
+                raw_token=f"{value:.4f}",
                 engine=ExtractionEngine.VECTOR,
                 engine_version=ENGINE_VERSION,
                 confidence=0.99 if agrees else 0.4,
-                normalized_value=section.width_mm,
+                normalized_value=value,
                 unit=str(rule["unit"]) if rule.get("unit") else None,
                 grounded_in_source_tokens=True,
                 second_read_agrees=agrees,
@@ -214,7 +234,7 @@ def extract_duct_width(
             page=section.page,
             polygon_source=chosen.polygon,
             polygon_norm=section.polygon_norm,
-            window_text=f"1:{scale} {section.width_mm:.2f}",
+            window_text=f"1:{scale} {value:.4f}",
         ),
         "",
     )

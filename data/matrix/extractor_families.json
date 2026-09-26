@@ -18,10 +18,17 @@
       "not_applicable": 0,
       "source_missing": 4
     },
+    "geometry": {
+      "advisory": 0,
+      "executable": 1,
+      "extractor_missing": 0,
+      "not_applicable": 0,
+      "source_missing": 0
+    },
     "number": {
       "advisory": 0,
       "executable": 30,
-      "extractor_missing": 55,
+      "extractor_missing": 54,
       "not_applicable": 0,
       "source_missing": 0
     },
@@ -88,6 +95,15 @@
         "OOS-101"
       ]
     },
+    "geometry": {
+      "advisory": [],
+      "executable": [
+        "AR-040"
+      ],
+      "extractor_missing": [],
+      "not_applicable": [],
+      "source_missing": []
+    },
     "number": {
       "advisory": [],
       "executable": [
@@ -123,7 +139,6 @@
         "ZU-131"
       ],
       "extractor_missing": [
-        "AR-040",
         "AR-042",
         "AR-044",
         "AR-045",
@@ -204,5 +219,5 @@
       "source_missing": []
     }
   },
-  "note": "83 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
+  "note": "82 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
 }

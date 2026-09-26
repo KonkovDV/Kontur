@@ -5,7 +5,7 @@
   "unit": "м",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Снижение ширины коридора в РД/ИД менее 1.2 м (СП 1.13130).",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -26,7 +26,7 @@
     }
   },
   "extractor": {
-    "type": "number",
+    "type": "geometry",
     "regex": null,
     "anchors": [
       "Ширина магистральных эвакуационных коридоров"
@@ -35,7 +35,17 @@
       "nfc",
       "collapse_spaces"
     ],
-    "dual_read_required": true
+    "dual_read_required": true,
+    "params": {
+      "angle_deg": 2,
+      "min_overlap": 0.6,
+      "min_length_pt": 20,
+      "gap_min_pt": 2,
+      "gap_max_pt": 60,
+      "stamp_y": 0.85,
+      "read_tolerance_rel": 0.02,
+      "label_max_norm": 0.08
+    }
   },
   "comparator": {
     "operator": "ge",

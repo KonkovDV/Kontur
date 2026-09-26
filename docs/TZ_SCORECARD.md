@@ -14,7 +14,7 @@
 
 | Контур | Смысл | Сейчас |
 |---|---|---|
-| Code | Функции и автотесты | часть HTTP/матрицы/протокола; 44 executable из 132 |
+| Code | Функции и автотесты | часть HTTP/матрицы/протокола; 45 executable из 132 |
 | Acceptance | Пороги на frozen/GOLD с 95% CI | не измерены; 6 gold-позитивов < n=16 для recall |
 | Production | OIDC, TLS, AV, backup, SLA | JWT containment и hardening контейнеров; не OIDC |
 
@@ -29,4 +29,4 @@ OSINT Document AI (срез 20.09.2026, не bake-off GOLD): [`RESEARCH_OSINT_20
 Поштучный триаж семейств `exact_field` / `presence`:
 [`EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) и
 [`family_triage.json`](../data/matrix/family_triage.json). Разбивка сейчас:
-`executable` 44, `extractor_missing` 83, `advisory` 1, `source_missing` 4.
+`executable` 45, `extractor_missing` 82, `advisory` 1, `source_missing` 4.
