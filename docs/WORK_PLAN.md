@@ -52,7 +52,8 @@ Harness: `make ocr-pilot` (Docker + Tesseract). SILVER, без Речников�
 Локальный прогон 23.09.2026: n=5935, gate_i_low≈0.434.
 Повтор на `OBJ-VIOLATION-EXAMPLES` после замены двойников: n=3013, gate_i_low≈0.426.
 Повтор 26.09.2026 на полном пилоте: n=5935, толстых чёрных колец 0, coverage=1, gate_i_low≈0.438, tz_low≈0.487. Пороги 0.97 и 0.95 не взяты.
-Все три ниже порога приёмки. `ocr_text` = `MEASURED`, не `AVAILABLE`. Гейт I открыт.
+Тот же день в образе core (`KONTUR_OCR_PILOT_ENGINE`): eslav PP-OCRv5 tz_low≈0.663, gate_i_low≈0.632; Tesseract 5.5 tz_low≈0.635, gate_i_low≈0.603. Прежние локальные числа — Windows Tesseract 5.4.
+Все ниже порога приёмки. `ocr_text` = `MEASURED`, не `AVAILABLE`. Гейт I открыт.
 
 | | |
 |---|---|
@@ -150,7 +151,7 @@ OIDC/JWKS; TLS termination; production backup/DR; 132/132 экстрактора
 |---|---|
 | Свести coverage в README и `GH_SITUATION` | Сделано: 44 / 83 / 1 / 4, совпадает с `coverage_snapshot.json` |
 | Новые источники `approval_status` | Индекс, «В производство работ» и экспертиза остаются не-утверждением. ПД без сведений об утверждении — `CLARIFICATION_REQUIRED` (ADR-0015). |
-| `ocr_text` → `AVAILABLE` | Не делать. SILVER 26.09 n=5935, gate_i_low≈0.438. В коде `MEASURED`, гейт I открыт |
+| `ocr_text` → `AVAILABLE` | Не делать. SILVER 26.09 в образе core, n=5935: eslav gate_i_low≈0.632, Tesseract≈0.603. В коде `MEASURED`, гейт I открыт |
 | Три вопроса организатору | Текст вопросов 20–22 есть. Отправка — действие человека |
 
 Exit дня: цифры не расходятся; эталон не ослаблен; карантин `РАЗМЕЧЕННЫЙ_TEST__213` закрыт.
