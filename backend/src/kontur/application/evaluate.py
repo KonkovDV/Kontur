@@ -94,6 +94,7 @@ from kontur.infrastructure.ocr_tesseract import (
     ocr_region_crop,
     ocr_region_eslav,
     tesseract_available,
+    value_region_unreadable,
 )
 
 _STAGE_ROLE: dict[DocStage, EvidenceRole] = {
@@ -547,6 +548,27 @@ def _ocr_region_agrees(hit: NumberHit, page: StagePage, rule: dict[str, object])
     if len(readings) < 2:
         return None
     return all(item == readings[0] for item in readings)
+
+
+def _stamp_blocks_read(hit: object, page: StagePage) -> bool:
+    """Чёрная печать на кропе значения. Без кадра страницы проверка не запускается."""
+
+    polygon = getattr(hit, "polygon_source", None)
+    page_number = getattr(hit, "page", None)
+    if not isinstance(polygon, tuple) or not isinstance(page_number, int):
+        return False
+    if page.pdf_bytes is None or not page.frames:
+        return False
+    if page_number < 1 or page_number > len(page.frames):
+        return False
+    cache = page.render_cache if isinstance(page.render_cache, PageImageCache) else None
+    return value_region_unreadable(
+        page.pdf_bytes,
+        page_number=page_number,
+        frame=page.frames[page_number - 1],
+        polygon=polygon,
+        cache=cache,
+    )
 
 
 def _crop_number(tokens: Sequence[PageToken], rule: dict[str, object]) -> float | None:
@@ -1257,6 +1279,14 @@ def evaluate_rule(
                     f"{stage.value}: якорь или значение не найдены",
                     prior=identity_ok,
                 )
+            if _stamp_blocks_read(hit, stage_page):
+                return _halt(
+                    rule,
+                    Stage.L2_EXTRACTION,
+                    _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                    f"{stage.value}: печать поверх текста, чтение не принято, coverage=0",
+                    prior=identity_ok,
+                )
             if dual_req and hit.extraction.second_read_agrees is not True:
                 return _halt(
                     rule,
@@ -1421,6 +1451,14 @@ def evaluate_rule(
                 rule,
                 volume_pages,
                 object_id,
+            )
+        if _stamp_blocks_read(number_hit, stage_page):
+            return _halt(
+                rule,
+                Stage.L2_EXTRACTION,
+                _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                f"{stage.value}: печать поверх текста, чтение не принято, coverage=0",
+                prior=identity_ok,
             )
         if dual_req and number_hit.extraction.second_read_agrees is not True:
             disagree = (

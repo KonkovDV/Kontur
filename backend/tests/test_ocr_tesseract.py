@@ -28,6 +28,7 @@ from kontur.evaluation import metrics
 from kontur.infrastructure import ocr_tesseract
 from kontur.infrastructure.ocr_tesseract import (
     _crop_pixels,
+    achromatic_stamp_overlap,
     expand_user_region,
     fill_empty_raster_pages,
     ocr_region_crop,
@@ -464,3 +465,42 @@ def test_rotated_region_crop_returns_a_token(monkeypatch: pytest.MonkeyPatch) ->
     assert tokens
     assert tokens[0].text == "12"
     assert polygon_in_unit_square(tokens[0].polygon_norm)
+
+
+def test_text_line_with_white_margin_is_not_a_stamp() -> None:
+    from PIL import Image, ImageDraw
+
+    image = Image.new("L", (80, 40), 255)
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((16, 16, 64, 24), fill=0)
+    assert achromatic_stamp_overlap(image) is False
+
+
+def test_black_ring_over_text_is_unreadable() -> None:
+    from PIL import Image, ImageDraw
+
+    image = Image.new("L", (80, 80), 255)
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((2, 2, 77, 77), outline=0, width=6)
+    draw.rectangle((24, 30, 56, 50), fill=0)
+    assert achromatic_stamp_overlap(image) is True
+
+
+def test_thin_table_cell_is_not_a_stamp() -> None:
+    from PIL import Image, ImageDraw
+
+    image = Image.new("L", (80, 40), 255)
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((1, 1, 78, 38), outline=0, width=1)
+    draw.rectangle((16, 16, 64, 24), fill=0)
+    assert achromatic_stamp_overlap(image) is False
+
+
+def test_one_clipped_edge_is_not_a_stamp() -> None:
+    from PIL import Image, ImageDraw
+
+    image = Image.new("L", (80, 40), 255)
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 12, 8, 28), fill=0)
+    draw.rectangle((16, 16, 64, 24), fill=0)
+    assert achromatic_stamp_overlap(image) is False
