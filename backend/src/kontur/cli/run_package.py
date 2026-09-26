@@ -25,7 +25,7 @@ from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 from referencing import Registry, Resource
 
 from kontur.application.intake import accepted_unparsed_detail
-from kontur.application.passport import read_passport
+from kontur.application.passport import apply_manifest_section, read_passport
 from kontur.application.protocol import assemble_protocol, protocol_for_http
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
 from kontur.domain.geometry import bbox_from_polygon
@@ -158,10 +158,20 @@ def _read_bytes(path: Path) -> bytes:
 
 
 class PackageFile:
-    def __init__(self, file_id: str, stage: DocStage, path: Path) -> None:
+    def __init__(
+        self,
+        file_id: str,
+        stage: DocStage,
+        path: Path,
+        *,
+        manifest_section: str | None = None,
+        manifest_path: str | None = None,
+    ) -> None:
         self.file_id = file_id
         self.stage = stage
         self.path = path
+        self.manifest_section = manifest_section
+        self.manifest_path = manifest_path
 
 
 def _unique_id(stem: str, used: set[str], digest: str) -> str:
@@ -362,7 +372,15 @@ def discover_index(
             file_id = _unique_id(file_id, bucket, digest)
         else:
             bucket.add(file_id)
-        grouped.setdefault(object_id, []).append(PackageFile(file_id, stage, path))
+        grouped.setdefault(object_id, []).append(
+            PackageFile(
+                file_id,
+                stage,
+                path,
+                manifest_section=str(payload.get("section") or "").strip() or None,
+                manifest_path=relative,
+            )
+        )
     return grouped, skipped, resolutions
 
 
@@ -450,6 +468,12 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
             layer_kind=document.layer_kind,
             rotate=last.frame.rotate,
             object_id=object_id,
+        )
+        passport = apply_manifest_section(
+            passport,
+            section=item.manifest_section,
+            relative_path=item.manifest_path,
+            filename=item.path.name,
         )
         cipher = passport.document_code
         identity_code = passport.identity_code
@@ -541,6 +565,8 @@ def run_object(
                 filename=item.path.name,
                 doc_stage=item.stage,
                 size_bytes=len(raw),
+                manifest_section=item.manifest_section,
+                manifest_path=item.manifest_path,
             ),
         )
         workspace.keep_blob(record, item.file_id, raw)

@@ -19,7 +19,7 @@ from time import perf_counter
 
 from kontur.application.evaluate import StagePage, evaluate_free_search, evaluate_rule
 from kontur.application.intake import accepted_unparsed_detail
-from kontur.application.passport import read_passport
+from kontur.application.passport import apply_manifest_section, read_passport
 from kontur.application.revision_resolver import (
     ResolveStatus,
     approval_with_basis,
@@ -65,6 +65,8 @@ class PipelineFile:
     doc_stage: DocStage
     predecessor_file_id: str | None = None
     successor_file_id: str | None = None
+    manifest_section: str | None = None
+    manifest_path: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,6 +199,12 @@ def _pages_from_blobs(
             rotate=last.frame.rotate,
             injection_clean=injection_clean_flag,
             alternate_ciphers=stamp_cipher_reads(raw, len(document.pages)),
+        )
+        passport = apply_manifest_section(
+            passport,
+            section=item.manifest_section,
+            relative_path=item.manifest_path,
+            filename=item.filename,
         )
         stamp = passport.approval_status
         stamps[item.file_id] = stamp

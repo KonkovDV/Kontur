@@ -9,7 +9,7 @@ import jsonschema
 import pytest
 
 from kontur.application.extractors.number import PageToken
-from kontur.application.passport import KEY_FIELDS, read_passport
+from kontur.application.passport import KEY_FIELDS, apply_manifest_section, read_passport
 from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage
 
 HASH = "a" * 64
@@ -331,3 +331,83 @@ def test_tied_designations_are_not_chosen() -> None:
     assert passport.clarification_reason == (
         "несколько обозначений без большинства, шифр не выбран"
     )
+
+
+def test_index_section_is_discipline_not_a_shared_cipher() -> None:
+    first = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.1.pdf"),
+        section="OV",
+        relative_path="ПД/5.4 Отопление, вентиляция/Том 5.4.1.pdf",
+        filename="Том 5.4.1.pdf",
+    )
+    second = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.2.pdf"),
+        section="OV",
+        relative_path="ПД/5.4 Отопление, вентиляция/Том 5.4.2.pdf",
+        filename="Том 5.4.2.pdf",
+    )
+    assert first.document_code is None
+    assert second.document_code is None
+    assert first.discipline == "ОВ"
+    assert second.discipline == "ОВ"
+    assert first.identity_code == "Том 5.4.1"
+    assert second.identity_code == "Том 5.4.2"
+    assert first.identity_code != second.identity_code
+    assert first.code_basis == "MANIFEST_PATH"
+    jsonschema.Draft202012Validator(SCHEMA).validate(first.to_schema())
+
+
+def test_other_index_section_does_not_invent_a_mark() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="книга.pdf"),
+        section="OTHER",
+        relative_path="ПД/прочее/книга.pdf",
+        filename="книга.pdf",
+    )
+    assert passport.discipline is None
+    assert passport.identity_code is None
+    assert passport.code_basis is None
+    assert passport.document_code is None
+
+
+def test_explanatory_note_folder_is_pz_not_other() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 1.2.pdf"),
+        section="OTHER",
+        relative_path="ПД/1 Пояснительная записка/Том 1.2.pdf",
+        filename="Том 1.2.pdf",
+    )
+    assert passport.discipline == "ПЗ"
+    assert passport.identity_code == "Том 1.2"
+    assert passport.document_code is None
+    assert passport.code_basis == "MANIFEST_PATH"
+
+
+def test_disagreeing_index_signals_do_not_choose_a_mark() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 3.pdf"),
+        section="OV",
+        relative_path="ПД/3 Архитектурные решения/Том 3.pdf",
+        filename="Том 3.pdf",
+    )
+    assert passport.discipline is None
+    assert passport.identity_code is None
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason is not None
+    assert "неоднозначен" in passport.clarification_reason
+
+
+def test_index_section_does_not_replace_filename_discipline() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.2 ОВ (1).pdf"),
+        section="KR",
+        relative_path=None,
+        filename="Том 5.4.2 ОВ (1).pdf",
+    )
+    assert passport.discipline == "ОВ"
+    assert passport.identity_code == "Том 5.4.2 ОВ (1)"
+    assert passport.code_basis == "FILENAME"
+    assert passport.document_code is None
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason is not None
+    assert "не подменяет" in passport.clarification_reason
