@@ -59,6 +59,28 @@ def test_not_applicable_inspector_may_confirm_applicability() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "status",
+    [
+        FindingStatus.LOW_QUALITY,
+        FindingStatus.ABSTAIN,
+        FindingStatus.NOT_COMPARABLE,
+        FindingStatus.MISSING_EVIDENCE,
+    ],
+)
+def test_quality_refusal_cannot_become_candidate_or_verdict(status: FindingStatus) -> None:
+    """RT-2609-29: отказ не отмывается в кандидата, нарушение или «пройдено»."""
+
+    for actor in (MACHINE, LLM, INSPECTOR):
+        for target in (
+            FindingStatus.CANDIDATE,
+            FindingStatus.CONFIRMED_VIOLATION,
+            FindingStatus.NEGATIVE_VERIFIED,
+        ):
+            with pytest.raises(TransitionError):
+                advance_finding(status, target, actor)
+
+
 def test_not_applicable_cannot_become_violation() -> None:
     with pytest.raises(TransitionError):
         advance_finding(

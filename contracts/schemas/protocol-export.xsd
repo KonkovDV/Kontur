@@ -14,7 +14,7 @@
         <xs:element name="tables">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="table" maxOccurs="6">
+              <xs:element name="table" maxOccurs="7">
                 <xs:complexType>
                   <xs:sequence>
                     <xs:element name="row" minOccurs="0" maxOccurs="unbounded">

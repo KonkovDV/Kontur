@@ -46,11 +46,12 @@ FINDING_TRANSITIONS: dict[FindingStatus, frozenset[FindingStatus]] = {
     ),
     FindingStatus.SUSPICION: frozenset({FindingStatus.CANDIDATE}),
     FindingStatus.AUTO_NO_DIFFERENCE: frozenset({FindingStatus.NEGATIVE_VERIFIED}),
-    # Статусы качества данных закрываются дозагрузкой, а не решением по существу.
-    FindingStatus.MISSING_EVIDENCE: frozenset({FindingStatus.CANDIDATE}),
-    FindingStatus.NOT_COMPARABLE: frozenset({FindingStatus.CANDIDATE}),
-    FindingStatus.LOW_QUALITY: frozenset({FindingStatus.CANDIDATE}),
-    FindingStatus.ABSTAIN: frozenset({FindingStatus.CANDIDATE}),
+    # Отказ качества не становится кандидатом, нарушением или «пройдено».
+    # Новая загрузка создаёт новую находку, а не переписывает эту.
+    FindingStatus.MISSING_EVIDENCE: frozenset(),
+    FindingStatus.NOT_COMPARABLE: frozenset(),
+    FindingStatus.LOW_QUALITY: frozenset(),
+    FindingStatus.ABSTAIN: frozenset(),
     FindingStatus.NOT_APPLICABLE: frozenset({FindingStatus.CANDIDATE}),
     FindingStatus.CONFIRMED_VIOLATION: frozenset(),
     FindingStatus.NEGATIVE_VERIFIED: frozenset(),

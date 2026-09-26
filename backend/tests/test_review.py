@@ -76,6 +76,31 @@ def test_reject_with_reason_code() -> None:
     assert not result.counts_as_violation
 
 
+@pytest.mark.parametrize(
+    "status",
+    [
+        FindingStatus.LOW_QUALITY,
+        FindingStatus.ABSTAIN,
+        FindingStatus.NOT_COMPARABLE,
+        FindingStatus.MISSING_EVIDENCE,
+    ],
+)
+def test_review_cannot_turn_a_quality_refusal_into_a_verdict(status: FindingStatus) -> None:
+    """RT-2609-29: решение инспектора не делает отказ нарушением или «пройдено»."""
+
+    refused = replace(candidate(), finding_status=status)
+    with pytest.raises(TransitionError):
+        review(refused, actor=INSPECTOR, action="CONFIRM", comment=COMMENT)
+    with pytest.raises(TransitionError):
+        review(
+            refused,
+            actor=INSPECTOR,
+            action="REJECT",
+            reason_code=ReasonCode.SOURCE_QUALITY,
+            comment=COMMENT,
+        )
+
+
 def test_automation_cannot_review() -> None:
     with pytest.raises(TransitionError):
         review(

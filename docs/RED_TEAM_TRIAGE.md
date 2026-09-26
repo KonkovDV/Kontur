@@ -157,3 +157,35 @@ psql -v ON_ERROR_STOP=1 \
 данные, и агрессивная нормализация там меняла бы смысл.
 Для character_accuracy применяется NFC + схлопывание повторных пробелов;
 регистр не сворачивается (ТЗ п. 9.1).
+
+## Прогон 26.09.2026
+
+База: `52e3b13`. Предмет: счёт IoU, протокол `needs_attention`, `supersedes_file_id`,
+полоса «Требует внимания». Скрытый тест не открывался. Гейты I/J/K/L не закрывались.
+
+### Закрыто в этом прогоне
+
+| ID | Набор | Класс | Атака | Цена отказа | Исправление | Регрессия |
+|---|---|---|---|---|---|---|
+| RT-2609-28 | RT-E | S1 | В полигон ответа подставлен NaN. `min`/`max` в Python оставляют 1.0, IoU становится 1 | Ложная локализация без пересечения контуров | Неконечная координата даёт IoU 0; счёт такой контур не принимает | `test_metrics.py::test_nan_polygon_does_not_score_as_perfect_overlap`, `test_score_cli.py::test_nan_polygon_is_not_a_localization` |
+| RT-2609-29 | RT-E | S1 | `LOW_QUALITY`, `ABSTAIN`, `NOT_COMPARABLE`, `MISSING_EVIDENCE` переводятся в `CANDIDATE`, затем в нарушение или «пройдено» | Отказ качества становится юридическим вердиктом (stop-ship № 5) | У этих статусов нет исходящих переходов. Новая загрузка создаёт новую находку | `test_state_machines.py::test_quality_refusal_cannot_become_candidate_or_verdict`, `test_review.py::test_review_cannot_turn_a_quality_refusal_into_a_verdict` |
+| RT-2609-30 | RT-E | S1 | IoU сравнивает полигоны без файла и страницы | Рамка штампа на другом листе засчитывается как локализация | Локализация только при том же `file_id` и `pdf_page_number`. Нет привязки эталона — `localization_unscored` | `test_score_cli.py::test_same_polygon_on_another_page_is_not_a_localization`, `::test_polygon_without_file_and_page_is_unscored` |
+| RT-2609-31 | RT-E | S2 | Точечный F1 считает precision по ключам, bootstrap — по строкам | Интервал может не содержать точку | Одна функция `_confusion` для точки и ресэмпла | `test_score_cli.py::test_point_f1_matches_the_bootstrap_counts` |
+| RT-2609-32 | RT-B | S2 | `missing_evidence` есть в JSON и нет в DOCX/XML/PDF | Инспектор не видит «нет документа» в скачанном протоколе | Раздел «Нет доказательств» в TABLES. Ключи секций провода равны TABLES | `test_protocol_export.py::test_docx_and_xml_follow_the_json_wire`, `test_protocol_materialize.py::test_export_tables_match_protocol_sections_except_the_pocket` |
+
+`NOT_APPLICABLE` по-прежнему может перевести в `CANDIDATE` только инспектор
+(применимость, п. 9.2). Автомат этот переход не делает.
+
+### Проверено и не стало дефектом
+
+- `supersedes_file_id` чужого шифра не склеивает головы: резолвер группирует
+  identity до обхода successor.
+- `CONFIRM` по `MISSING_EVIDENCE` уже отвергается (`test_missing_evidence_never_becomes_violation`).
+- Прямой `CONFIRM` по `LOW_QUALITY` через `review()` отвергается машиной состояний.
+- Клиппинг IoU для вогнутого полигона по-прежнему не гарантирован. Схема такой контур не запрещает. Отдельный алгоритм в этом прогоне не вводился.
+
+### Открыто
+
+| ID | Класс | Находка | Почему не закрыто | Следующий шаг |
+|---|---|---|---|---|
+| RT-2609-21 | S3 | Пять сессий юзабилити не проведены | Рекордер есть, живых сессий нет | проводит человек, Gate K |
