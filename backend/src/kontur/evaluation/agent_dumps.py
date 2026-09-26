@@ -361,7 +361,11 @@ def build_tz_scorecard(
         ),
         _scorecard_item("oidc_jwks", "unmet", "no rotation"),
         _scorecard_item("antivirus", "unmet", "intake MIME/zip-bomb only"),
-        _scorecard_item("branch_protection", "unmet", "main unprotected"),
+        _scorecard_item(
+            "branch_protection",
+            "partial",
+            "ruleset main-pr-and-ci id 23890545; required reviews 0; gates I/J/K/L stay open",
+        ),
         _scorecard_item("observability_otel", "unmet", "no Prometheus/Grafana stack"),
     ]
     return {
