@@ -52,6 +52,10 @@ F0201: заполненная графа «Утвердил» + ФИО → `APPR
 HTTP-вход: проверенный JWT (RS256/ES256). Legacy `actor@object/ROLE` только при
 `KONTUR_ALLOW_INSECURE_DEV_AUTH`. Статический публичный ключ ≠ OIDC/JWKS.
 Разбор PDF — в дочернем процессе; таймаут убивает child, не поток API.
+HTTP-загрузка не считает L1–L7 внутри запроса: `schedule_matrix_pipeline`
+ставит прогон в поток `kontur-pipeline` того же процесса. Это не брокер и не
+outbox. `get` ждёт этот прогон. CLI, учебный комплект и выбор эталона
+по-прежнему вызывают `run_matrix_pipeline` в том же вызове.
 Контейнеры core/gateway: non-root 10001, read-only rootfs, `cap_drop: ALL`,
 порты на loopback (PR #60). Повтор идентичной загрузки (hash+stage) не
 открывает процесс заново и не гоняет pipeline; `FINALIZED` → 409.
@@ -78,7 +82,8 @@ PR #65 влит: advisory lock объекта, `FOR UPDATE` процесса/н�
 `payload_sha256`, `integration_outbox` PENDING, ADR-0009. Live Postgres: retry
 идемпотенен, гонка version fail-closed, outbox `SKIP LOCKED`. Crash-before-commit
 нет. Outbox relay (ADR-0010) публикует в брокер с confirms и паузами 1/5/15 мин;
-это не РиН и не exactly-once. HTTP по-прежнему inline L1–L7. PR #66 закрыт красным
+это не РиН и не exactly-once. Загрузка HTTP ставит L1–L7 в поток процесса
+API, не в брокер (issue #177). PR #66 закрыт красным
 (FK `objects.id`); правка на `main`. PR #67 влит: отдельный `outbox-relay`
 UID 10001, quorum queue, compose `kontur` не guest; classic
 `AmqpConfirmedPublisher` снят. PR #68 влит: claim→`SYNCING`, nack→`RETRY_WAIT`,
