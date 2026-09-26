@@ -24,7 +24,16 @@ CI_DRY_RUN_SECONDS = 60
 #: Семейства, которые слайс умеет исполнять: executable с другим типом — рассинхрон
 #: между заявленным покрытием и кодом движка.
 EXECUTABLE_EXTRACTOR_TYPES: frozenset[str] = frozenset(
-    {"number", "geometry", "contour_area", "element_table", "enum", "text_regex", "exact_field", "presence"}
+    {
+        "number",
+        "geometry",
+        "contour_area",
+        "element_table",
+        "enum",
+        "text_regex",
+        "exact_field",
+        "presence",
+    }
 )
 
 
