@@ -62,7 +62,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["exact_field", "number", "enum", "set", "presence", "geometry", "semantic_candidate", "room_compare"]
+          "enum": ["exact_field", "number", "enum", "set", "presence", "geometry", "contour_area", "element_table", "semantic_candidate", "room_compare"]
         },
         "passes": {
           "type": "array",
@@ -118,7 +118,9 @@
             "gap_max_pt": { "type": "number" },
             "stamp_y": { "type": "number" },
             "read_tolerance_rel": { "type": "number" },
-            "label_max_norm": { "type": "number" }
+            "label_max_norm": { "type": "number" },
+            "min_side_pt": { "type": "number" },
+            "max_page_fraction": { "type": "number" }
           }
         },
         "room_compare": {

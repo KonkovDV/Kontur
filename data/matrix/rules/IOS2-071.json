@@ -5,7 +5,7 @@
   "unit": "мм",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Уменьшение диаметров стояков или магистралей ХВС/ГВС в РД/ИД.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -26,7 +26,7 @@
     }
   },
   "extractor": {
-    "type": "number",
+    "type": "element_table",
     "regex": null,
     "anchors": [
       "Диаметры стояков и разводящих трубопроводов В1/Т3"

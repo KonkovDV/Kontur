@@ -3,6 +3,8 @@
 Слайс исполняет:
   числовые  : extractor.type=number  + операторы из NUMERIC_OPERATORS
   обмер     : extractor.type=geometry + те же операторы (пара штрихов × масштаб)
+  контур    : extractor.type=contour_area (один замкнутый прямоугольник, м²)
+  ведомость : extractor.type=element_table (марка строки и одно число)
   текстовые : extractor.type=enum    + операторы из STRING_OPERATORS | SET_OPERATORS
               extractor.type=text_regex + те же операторы
 
@@ -23,6 +25,13 @@ from kontur.application.comparators import (
     STRING_OPERATORS,
     Comparison,
     compare_values,
+)
+from kontur.application.extractors.contour_area import extract_contour_area
+from kontur.application.extractors.element_table import (
+    TableRow,
+    align_tables,
+    parse_element_table,
+    row_hit,
 )
 from kontur.application.extractors.geometry import extract_duct_width
 from kontur.application.extractors.number import (
@@ -762,6 +771,9 @@ def _has_extracted_value(
     if extractor_type == "geometry":
         hit, _detail = extract_duct_width(page.tokens, page.pdf_bytes, page.frames, rule)
         return hit is not None
+    if extractor_type == "contour_area":
+        hit, _detail = extract_contour_area(page.tokens, page.pdf_bytes, page.frames, rule)
+        return hit is not None
     if extractor_type == "exact_field":
         return extract_exact_field(page.tokens, rule) is not None
     if extractor_type == "presence":
@@ -803,6 +815,93 @@ def _narrow_volumes(
     return None
 
 
+def _element_table_rule(
+    rule: dict[str, object],
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
+    object_id: str,
+) -> RuleEvaluation:
+    """Сравнить ведомость по маркам. Разный набор марок не склеивается."""
+
+    identity_ok = (StageResult(Stage.L1_IDENTITY, ok=True),)
+    tables: dict[DocStage, dict[str, TableRow]] = {}
+    sheets: dict[DocStage, StagePage] = {}
+    for stage in _required_stages(rule):
+        raw = pages.get(stage)
+        if not isinstance(raw, StagePage):
+            return _halt(
+                rule,
+                Stage.L2_EXTRACTION,
+                _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                f"{stage.value}: несколько томов или страница не передана",
+                prior=identity_ok,
+            )
+        parsed = parse_element_table(raw.tokens)
+        if isinstance(parsed, str):
+            return _halt(
+                rule,
+                Stage.L2_EXTRACTION,
+                _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                f"{stage.value}: {parsed}",
+                prior=identity_ok,
+            )
+        tables[stage] = parsed
+        sheets[stage] = raw
+    outcome = align_tables(tables[DocStage.PD], tables[DocStage.RD], rule)
+    if isinstance(outcome, str):
+        return _halt(
+            rule,
+            Stage.L2_EXTRACTION,
+            _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+            outcome,
+            prior=identity_ok,
+        )
+    comparison, mark = outcome
+    hits: dict[DocStage, NumberHit] = {}
+    for stage in (DocStage.PD, DocStage.RD):
+        hits[stage] = row_hit(tables[stage][mark], rule, sheets[stage].tokens)
+    stages = (
+        StageResult(Stage.L1_IDENTITY, ok=True),
+        StageResult(Stage.L2_EXTRACTION, ok=True),
+        StageResult(Stage.L3_LOCALIZATION, ok=True),
+        StageResult(Stage.L4_REVISION, ok=True),
+        StageResult(Stage.L5_PAIRING, ok=True),
+        StageResult(Stage.L6_MATRIX, ok=True),
+        StageResult(Stage.L7_FINDINGS, ok=True),
+    )
+    if run(list(stages)) is not None:
+        raise RuntimeError("каскад L1-L7 закрылся до сравнения ведомости")
+    group_id = comparison_key(
+        object_id,
+        str(rule["code"]),
+        (sheets[DocStage.PD].document.file_id, sheets[DocStage.RD].document.file_id),
+    )
+    fragments = tuple(
+        _fragment(
+            hits[stage],
+            role=_STAGE_ROLE[stage],
+            document=sheets[stage].document,
+            fragment_id=f"{group_id}-{stage.value}",
+        )
+        for stage in (DocStage.PD, DocStage.RD)
+    )
+    group = EvidenceGroup(
+        evidence_group_id=group_id,
+        object_id=object_id,
+        rule_code=str(rule["code"]),
+        matrix_version=str(rule["matrix_version"]),
+        fragments=fragments,
+        resolved_revisions=(sheets[DocStage.PD].document, sheets[DocStage.RD].document),
+    )
+    finding = _finding_from_comparison(
+        rule,
+        comparison,
+        group_id=group_id,
+        fragments=fragments,
+        pages=sheets,
+    )
+    return RuleEvaluation(finding=finding, evidence_group=group, stages=stages)
+
+
 def evaluate_rule(
     rule: dict[str, object],
     *,
@@ -824,12 +923,20 @@ def evaluate_rule(
     else:
         valid_operators = _TEXT_OPERATORS if is_text else NUMERIC_OPERATORS
 
-    if extractor_type not in ("number", "geometry", "room_compare", *_TEXT_EXTRACTOR_TYPES):
+    if extractor_type not in (
+        "number",
+        "geometry",
+        "contour_area",
+        "element_table",
+        "room_compare",
+        *_TEXT_EXTRACTOR_TYPES,
+    ):
         return _halt(
             rule,
             Stage.L6_MATRIX,
             FindingStatus.CLARIFICATION_REQUIRED,
-            "слайс исполняет extractor.type=number/geometry/enum/text_regex/exact_field/presence, "
+            "слайс исполняет extractor.type=number/geometry/contour_area/element_table/"
+            "enum/text_regex/exact_field/presence, "
             f"получено {extractor_type!r}",
         )
     if not isinstance(comparator, dict) or operator not in valid_operators:
@@ -982,6 +1089,8 @@ def evaluate_rule(
 
     if extractor_type == "room_compare":
         return _room_rule(rule, pages, object_id)
+    if extractor_type == "element_table":
+        return _element_table_rule(rule, pages, object_id)
 
     volume_pages = dict(pages)
     dual_req = _dual_read_required(rule)
@@ -1173,6 +1282,14 @@ def evaluate_rule(
         pages[stage] = stage_page
         if extractor_type == "geometry":
             number_hit, detail = extract_duct_width(
+                stage_page.tokens,
+                stage_page.pdf_bytes,
+                stage_page.frames,
+                rule,
+            )
+            missing = detail
+        elif extractor_type == "contour_area":
+            number_hit, detail = extract_contour_area(
                 stage_page.tokens,
                 stage_page.pdf_bytes,
                 stage_page.frames,

@@ -4,6 +4,20 @@
   "purpose": "Cluster compiled rules by extractor.type. Grouping is not executable coverage.",
   "closes_gate_j": false,
   "counts_by_family": {
+    "contour_area": {
+      "advisory": 0,
+      "executable": 2,
+      "extractor_missing": 0,
+      "not_applicable": 0,
+      "source_missing": 0
+    },
+    "element_table": {
+      "advisory": 0,
+      "executable": 1,
+      "extractor_missing": 0,
+      "not_applicable": 0,
+      "source_missing": 0
+    },
     "enum": {
       "advisory": 0,
       "executable": 10,
@@ -28,7 +42,7 @@
     "number": {
       "advisory": 0,
       "executable": 30,
-      "extractor_missing": 54,
+      "extractor_missing": 51,
       "not_applicable": 0,
       "source_missing": 0
     },
@@ -41,6 +55,25 @@
     }
   },
   "codes_by_family": {
+    "contour_area": {
+      "advisory": [],
+      "executable": [
+        "SPZU-025",
+        "SPZU-026"
+      ],
+      "extractor_missing": [],
+      "not_applicable": [],
+      "source_missing": []
+    },
+    "element_table": {
+      "advisory": [],
+      "executable": [
+        "IOS2-071"
+      ],
+      "extractor_missing": [],
+      "not_applicable": [],
+      "source_missing": []
+    },
     "enum": {
       "advisory": [],
       "executable": [
@@ -149,7 +182,6 @@
         "AR-050",
         "AR-051",
         "IOS1-070",
-        "IOS2-071",
         "IOS2-072",
         "IOS3-074",
         "IOS3-075",
@@ -182,8 +214,6 @@
         "PPM-108",
         "PPM-109",
         "PPM-113",
-        "SPZU-025",
-        "SPZU-026",
         "SPZU-027",
         "SPZU-028",
         "SPZU-029",
@@ -219,5 +249,5 @@
       "source_missing": []
     }
   },
-  "note": "82 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
+  "note": "79 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
 }
