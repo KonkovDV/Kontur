@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kontur.application.evaluate import StagePage, evaluate_rule
+from kontur.application.evaluate import StagePage, _room_rule, evaluate_rule
 from kontur.application.extractors.number import PageToken
 from kontur.application.room_compare import compare_room_tokens
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, ExtractionEngine
@@ -31,12 +31,12 @@ def _settings() -> dict[str, object]:
     return raw
 
 
-def _doc(stage: DocStage) -> DocumentRef:
+def _doc(stage: DocStage, file_id: str | None = None, code: str = "ОВ") -> DocumentRef:
     return DocumentRef(
-        file_id=f"f-{stage.value}",
+        file_id=file_id or f"f-{stage.value}",
         file_hash=HASH,
         doc_stage=stage,
-        document_code="ОВ",
+        document_code=code,
         revision="1",
         approval_status=ApprovalStatus.APPROVED,
     )
@@ -197,3 +197,72 @@ def test_live_number_pass_keeps_section_and_adds_room() -> None:
     assert rooms[0].evidence_group is not None
     assert rooms[0].evidence_group.fragments[0].room_id == "140"
     assert location_from_group(rooms[0].evidence_group) == "помещение 140"
+
+
+def test_two_by_two_volumes_keep_the_best_room_pair() -> None:
+    rule = FileRuleRegistry().get("IOS4-078")
+    pages = {
+        DocStage.PD: (
+            StagePage(
+                document=_doc(DocStage.PD, "pd-a", "ОВ-A"),
+                tokens=(
+                    _token("101", 0.2, 0.2),
+                    _token("В", 0.23, 0.2),
+                    _token("102", 0.5, 0.5),
+                    _token("В", 0.53, 0.5),
+                ),
+            ),
+            StagePage(
+                document=_doc(DocStage.PD, "pd-b", "ОВ-B"),
+                tokens=(_token("901", 0.2, 0.2), _token("В", 0.23, 0.2)),
+            ),
+        ),
+        DocStage.RD: (
+            StagePage(
+                document=_doc(DocStage.RD, "rd-a", "ОВ-A"),
+                tokens=(
+                    _token("101", 0.2, 0.2),
+                    _token("102", 0.5, 0.5),
+                    _token("В", 0.53, 0.5),
+                ),
+            ),
+            StagePage(
+                document=_doc(DocStage.RD, "rd-b", "ОВ-B"),
+                tokens=(_token("404", 0.2, 0.2), _token("В", 0.23, 0.2)),
+            ),
+        ),
+    }
+    result = _room_rule(rule, pages, "OBJ-ROOM")
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.evidence_group is not None
+    assert result.evidence_group.fragments[0].room_id == "101"
+    assert {item.document.file_id for item in result.evidence_group.fragments} == {"pd-a", "rd-a"}
+
+
+def test_tied_volume_pairs_abstain() -> None:
+    rule = FileRuleRegistry().get("IOS4-078")
+    pages = {
+        DocStage.PD: (
+            StagePage(
+                document=_doc(DocStage.PD, "pd-a", "ОВ-A"),
+                tokens=(_token("101", 0.2, 0.2), _token("В", 0.23, 0.2)),
+            ),
+            StagePage(
+                document=_doc(DocStage.PD, "pd-b", "ОВ-B"),
+                tokens=(_token("202", 0.2, 0.2), _token("В", 0.23, 0.2)),
+            ),
+        ),
+        DocStage.RD: (
+            StagePage(
+                document=_doc(DocStage.RD, "rd-a", "ОВ-A"),
+                tokens=(_token("101", 0.2, 0.2),),
+            ),
+            StagePage(
+                document=_doc(DocStage.RD, "rd-b", "ОВ-B"),
+                tokens=(_token("202", 0.2, 0.2),),
+            ),
+        ),
+    }
+    result = _room_rule(rule, pages, "OBJ-ROOM")
+    assert result.finding.finding_status is FindingStatus.ABSTAIN
+    assert "ничья" in result.finding.rationale

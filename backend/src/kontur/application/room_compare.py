@@ -63,6 +63,44 @@ def room_settings(rule: Mapping[str, object]) -> dict[str, object] | None:
     return room_block(rule)
 
 
+def room_ids(tokens: Sequence[PageToken], settings: Mapping[str, object]) -> set[str]:
+    """Номера помещений тома. Повтор на листе в множество не входит."""
+
+    room_re = re.compile(str(settings["room_regex"]))
+    feature_re = re.compile(str(settings["feature_regex"]))
+    radius = _as_float(settings["bind_radius"])
+    found: set[str] = set()
+    for rooms in _pages(tokens, room_re, feature_re, radius).values():
+        found.update(key for key in rooms if key != "__duplicate__")
+    return found
+
+
+def best_token_pair(
+    pd_volumes: Sequence[Sequence[PageToken]],
+    rd_volumes: Sequence[Sequence[PageToken]],
+    settings: Mapping[str, object],
+) -> tuple[int, int] | None:
+    """Индексы единственной лучшей пары томов.
+
+    None — две пары с одним и тем же лучшим Жаккаром.
+    Нет общих номеров — (0, 0).
+    """
+
+    scores: list[tuple[float, int, int]] = []
+    for left_index, pd in enumerate(pd_volumes):
+        left = room_ids(pd, settings)
+        for right_index, rd in enumerate(rd_volumes):
+            scores.append((_jaccard(left, room_ids(rd, settings)), left_index, right_index))
+    positive = [item for item in scores if item[0] > 0]
+    if not positive:
+        return (0, 0)
+    best = max(item[0] for item in positive)
+    winners = [item for item in positive if item[0] == best]
+    if len(winners) != 1:
+        return None
+    return winners[0][1], winners[0][2]
+
+
 def compare_room_tokens(
     pd_tokens: Sequence[PageToken],
     rd_tokens: Sequence[PageToken],
