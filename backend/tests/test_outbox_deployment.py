@@ -18,7 +18,11 @@ def test_relay_has_a_separate_least_privilege_container() -> None:
     assert "no-new-privileges:true" in compose
     assert "restart: unless-stopped" in compose
     assert "USER 10001:10001" in dockerfile
-    assert '".[queue,store]"' in dockerfile
+    assert "--require-hashes" in dockerfile
+    assert "-e " not in dockerfile
+    lock = (ROOT / "backend" / "requirements.lock").read_text(encoding="utf-8")
+    for package in ("aio-pika==", "psycopg==", "redis==", "boto3=="):
+        assert package in lock
     assert "relay_outbox.py" in dockerfile
     assert "consume_inbox.py" in dockerfile
     assert "inbox-consumer:" in compose
