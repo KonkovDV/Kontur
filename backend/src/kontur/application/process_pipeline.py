@@ -107,6 +107,7 @@ def _document_ref(
     approval: ApprovalStatus,
     basis: ApprovalBasis,
     sheet: str | None,
+    discipline: str | None = None,
 ) -> DocumentRef:
     return DocumentRef(
         file_id=item.file_id,
@@ -117,6 +118,7 @@ def _document_ref(
         approval_status=approval,
         approval_basis=basis,
         sheet=sheet,
+        discipline=discipline,
         predecessor_file_id=item.predecessor_file_id,
         successor_file_id=item.successor_file_id,
     )
@@ -206,6 +208,7 @@ def _pages_from_blobs(
             approval,
             basis,
             passport.sheet,
+            passport.discipline,
         )
         cache = PageImageCache(raw) if tesseract_available() else None
         built.append(
