@@ -4,7 +4,7 @@
 `SOLE_HEAD` не включён: ПД без утверждения остаётся `CLARIFICATION_REQUIRED`.
 Свободный поиск на проводе — `SUSPICION` (не 133-е правило); целый объект после этого провода не пересчитывался.
 Раздел индекса пишется в `discipline`. Ключ тома — путь и `file_id`, не марка и не голый stem.
-DOCX и XML остаются `ACCEPTED_UNPARSED`. Холодный запуск из tar не записан. Пять сессий Gate K не выдуманы.
+DOCX и XML остаются `ACCEPTED_UNPARSED`. Холодный прогон 27.09 на Windows Docker записан: tar, `docker load`, `pull_policy: never`, `healthz` 200. Хост от сети не отключался. Пять сессий Gate K не выдуманы.
 На статусе процесса четыре ключа `phase_seconds`: upload, parse, compare, protocol. Это не норматив времени.
 
 Срез **23.09.2026**. Бриф для ИИ с GitHub: [`GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md).
