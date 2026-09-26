@@ -79,6 +79,41 @@ def _paths() -> dict[str, Path] | None:
     return {item["role"]: root / item["name"] for item in _lock_files()}
 
 
+def _enum(module: object, enum_name: str, member: str, fallback: str) -> object:
+    """RapidOCR 3.x принимает в конфиге только свои Enum, строку отвергает."""
+
+    holder = getattr(module, enum_name, None)
+    if holder is None:
+        return fallback
+    return getattr(holder, member, fallback)
+
+
+def _engine_params(module: object, paths: dict[str, Path]) -> dict[str, object]:
+    onnx = _enum(module, "EngineType", "ONNXRUNTIME", "onnxruntime")
+    v5 = _enum(module, "OCRVersion", "PPOCRV5", "PP-OCRv5")
+    mobile = _enum(module, "ModelType", "MOBILE", "mobile")
+    return {
+        "Global.use_det": True,
+        "Global.use_cls": True,
+        "Global.use_rec": True,
+        "Global.log_level": "warning",
+        "Det.engine_type": onnx,
+        "Det.ocr_version": v5,
+        "Det.model_type": mobile,
+        "Det.model_path": str(paths["det"]),
+        "Cls.engine_type": onnx,
+        "Cls.ocr_version": v5,
+        "Cls.model_type": mobile,
+        "Cls.model_path": str(paths["cls"]),
+        "Rec.engine_type": onnx,
+        "Rec.ocr_version": v5,
+        "Rec.model_type": mobile,
+        "Rec.lang_type": _enum(module, "LangRec", "ESLAV", "eslav"),
+        "Rec.model_path": str(paths["rec"]),
+        "Rec.rec_keys_path": str(paths["dict"]),
+    }
+
+
 @lru_cache(maxsize=1)
 def _engine() -> object | None:
     paths = _paths()
@@ -91,20 +126,8 @@ def _engine() -> object | None:
     ctor = getattr(module, "RapidOCR", None)
     if ctor is None:
         return None
-    params = {
-        "Global.use_det": True,
-        "Global.use_cls": True,
-        "Global.use_rec": True,
-        "Det.engine_type": "onnxruntime",
-        "Cls.engine_type": "onnxruntime",
-        "Rec.engine_type": "onnxruntime",
-        "Det.model_path": str(paths["det"]),
-        "Cls.model_path": str(paths["cls"]),
-        "Rec.model_path": str(paths["rec"]),
-        "Rec.rec_keys_path": str(paths["dict"]),
-    }
     try:
-        built: object = ctor(params=params)
+        built: object = ctor(params=_engine_params(module, paths))
     except (OSError, RuntimeError, ValueError, TypeError, ImportError):
         return None
     return built
@@ -217,6 +240,60 @@ def _words(result: object, page: PdfPageTokens, image_size: tuple[int, int]) -> 
         if token is not None:
             tokens.append(token)
     return tokens
+
+
+def rapid_available() -> bool:
+    """Движок собран по весам из замка. Не прогон пилота и не capabilities."""
+
+    return callable(_engine())
+
+
+def _recognize_line(image: object) -> tuple[str, float] | None:
+    """Одна строка без детектора. Пословные рамки дробят число «1200» на «1» и «200»."""
+
+    engine = _engine()
+    if not callable(engine):
+        return None
+    try:
+        result = engine(image, use_det=False, use_cls=False, use_rec=True)
+    except (OSError, RuntimeError, ValueError, TypeError, AttributeError):
+        return None
+    texts = [str(item).strip() for item in _rows(getattr(result, "txts", None)) or []]
+    scores = [_as_float(item) for item in _rows(getattr(result, "scores", None)) or []]
+    known = [item for item in scores if item is not None]
+    return " ".join(item for item in texts if item), min(known) if known else 0.0
+
+
+def rapid_line_text(data: bytes) -> str:
+    """Текст готового кропа строки: только распознавание, без детектора."""
+
+    if not data:
+        return ""
+    read = _recognize_line(data)
+    return "" if read is None else read[0]
+
+
+def rapid_crop_tokens(
+    image: object,
+    page: PdfPageTokens,
+    image_size: tuple[int, int],
+) -> tuple[PageToken, ...] | None:
+    """Кроп значения одной строкой: токен на весь кроп. None — движка нет."""
+
+    read = _recognize_line(image)
+    if read is None:
+        return None
+    text, score = read
+    if not text:
+        return ()
+    width, height = image_size
+    corners = [(0.0, 0.0), (float(width), 0.0), (float(width), float(height)), (0.0, float(height))]
+    token = _token(text, score, corners, page, image_size)
+    if token is None:
+        return ()
+    from kontur.infrastructure.ocr_tesseract import fold_token_texts
+
+    return (replace(token, text=fold_token_texts([token.text])[0]),)
 
 
 def rapid_page_tokens(

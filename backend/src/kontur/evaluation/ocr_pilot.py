@@ -33,6 +33,7 @@ from kontur.infrastructure.ocr_bakeoff import CA_GATE_I_THRESHOLD
 OCR_PILOT_ENV = "KONTUR_OCR_PILOT_PATH"
 OCR_PILOT_OUT_ENV = "KONTUR_OCR_PILOT_OUT"
 OCR_PILOT_WORKERS_ENV = "KONTUR_OCR_PILOT_WORKERS"
+OCR_PILOT_ENGINE_ENV = "KONTUR_OCR_PILOT_ENGINE"
 KONTUR_ROOT_ENV = "KONTUR_ROOT"
 PDF_TEXT_LAYER = "PDF_TEXT_LAYER"
 RECOGNITION_LINES = "data/recognition_lines.jsonl"
@@ -259,19 +260,32 @@ def _parse_jsonl(raw: str) -> tuple[OcrPilotLine, ...]:
 def main() -> int:
     """CLI: замер на пилоте. Не печатает «гейт закрыт»."""
 
+    from kontur.infrastructure.ocr_rapid import rapid_available, rapid_line_text
     from kontur.infrastructure.ocr_tesseract import (
         image_bytes_have_stamp,
         ocr_image_bytes,
         tesseract_available,
     )
 
+    engine = os.environ.get(OCR_PILOT_ENGINE_ENV, "tesseract").strip().lower()
+    scorer: Callable[[bytes], str]
+    if engine == "tesseract":
+        if not tesseract_available():
+            print("tesseract/pytesseract нет; замер не выполнялся, гейт I открыт")
+            return 3
+        scorer = ocr_image_bytes
+    elif engine == "eslav":
+        if not rapid_available():
+            print("eslav: нет весов по замку или rapidocr; замер не выполнялся, гейт I открыт")
+            return 3
+        scorer = rapid_line_text
+    else:
+        print(f"{OCR_PILOT_ENGINE_ENV}={engine}: ожидался tesseract или eslav")
+        return 2
     path = find_pilot_zip()
     if path is None:
         print(f"нет корпуса: задайте {OCR_PILOT_ENV} или zip в files/02_*/ocr_pilot_20260811/")
         return 2
-    if not tesseract_available():
-        print("tesseract/pytesseract нет; замер не выполнялся, гейт I открыт")
-        return 3
     workers_raw = os.environ.get(OCR_PILOT_WORKERS_ENV, "4")
     try:
         workers = max(1, int(workers_raw))
@@ -304,13 +318,14 @@ def main() -> int:
         file=sys.stderr,
         flush=True,
     )
-    pairs = score_crop_bytes(lines, readable, ocr_image_bytes, workers=workers, progress=_progress)
+    pairs = score_crop_bytes(lines, readable, scorer, workers=workers, progress=_progress)
     tz = accuracy_interval(pairs)
     gate_i = gate_i_interval(pairs)
     accuracies = [character_accuracy(reference, hypothesis) for reference, hypothesis in pairs]
     mean_ca = sum(accuracies) / len(accuracies) if accuracies else 0.0
     report = {
         "pilot_path": str(path),
+        "engine": engine,
         "n_pairs": len(pairs),
         "n_crops": len(crops),
         "n_stamp_excluded": n_stamp,
@@ -335,7 +350,8 @@ def main() -> int:
     out_raw = os.environ.get(OCR_PILOT_OUT_ENV, "").strip()
     out_dir = Path(out_raw) if out_raw else Path.cwd() / "out"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / "ocr_pilot_ca.json"
+    name = "ocr_pilot_ca.json" if engine == "tesseract" else f"ocr_pilot_ca_{engine}.json"
+    out_path = out_dir / name
     out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
     print(f"wrote {out_path}", file=sys.stderr, flush=True)

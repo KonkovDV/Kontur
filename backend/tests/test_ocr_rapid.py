@@ -7,8 +7,10 @@ import json
 from pathlib import Path
 
 from kontur.domain.capabilities import CapStatus, declared_capabilities
+from kontur.domain.coordinates import PageFrame
 from kontur.infrastructure import ocr_rapid
 from kontur.infrastructure.ocr_rapid import weights_ready
+from kontur.infrastructure.pdfium_tokens import PdfPageTokens
 
 _INFRA = Path(__file__).resolve().parents[1] / "src" / "kontur" / "infrastructure"
 LOCK = _INFRA / "ocr_weights.lock.json"
@@ -56,3 +58,73 @@ def test_hash_mismatch_is_not_ready(tmp_path: Path, monkeypatch) -> None:  # typ
 def test_ocr_text_stays_measured() -> None:
     engines = {item.name: item.status for item in declared_capabilities()}
     assert engines["ocr_text"] is CapStatus.MEASURED
+
+
+class _Member:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class _Enum:
+    def __init__(self, *names: str) -> None:
+        for name in names:
+            setattr(self, name, _Member(name))
+
+
+class _RapidModule:
+    EngineType = _Enum("ONNXRUNTIME")
+    OCRVersion = _Enum("PPOCRV5")
+    ModelType = _Enum("MOBILE")
+    LangRec = _Enum("ESLAV")
+
+
+def test_engine_params_pass_rapidocr_enums_not_strings() -> None:
+    paths = {role: Path(f"/w/{role}") for role in ("det", "rec", "cls", "dict")}
+    params = ocr_rapid._engine_params(_RapidModule(), paths)
+    for stage in ("Det", "Cls", "Rec"):
+        assert params[f"{stage}.engine_type"] is _RapidModule.EngineType.ONNXRUNTIME
+        assert params[f"{stage}.ocr_version"] is _RapidModule.OCRVersion.PPOCRV5
+    assert params["Rec.lang_type"] is _RapidModule.LangRec.ESLAV
+    assert params["Rec.rec_keys_path"] == str(paths["dict"])
+
+
+def test_line_text_without_engine_is_empty(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(ocr_rapid, "_engine", lambda: None)
+    assert ocr_rapid.rapid_available() is False
+    assert ocr_rapid.rapid_line_text(b"\x89PNG") == ""
+
+
+def test_pilot_refuses_eslav_without_weights(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from kontur.evaluation import ocr_pilot
+
+    monkeypatch.setattr(ocr_rapid, "_engine", lambda: None)
+    monkeypatch.setenv(ocr_pilot.OCR_PILOT_ENGINE_ENV, "eslav")
+    assert ocr_pilot.main() == 3
+    monkeypatch.setenv(ocr_pilot.OCR_PILOT_ENGINE_ENV, "vlm")
+    assert ocr_pilot.main() == 2
+
+
+class _LineResult:
+    txts = ("1200 мм",)
+    scores = (0.93,)
+
+
+def test_value_crop_is_one_line_without_detector(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    calls: list[dict[str, object]] = []
+
+    def engine(image: object, **kwargs: object) -> _LineResult:
+        calls.append(kwargs)
+        return _LineResult()
+
+    monkeypatch.setattr(ocr_rapid, "_engine", lambda: engine)
+    page = PdfPageTokens(
+        page=1,
+        frame=PageFrame(media=(0.0, 0.0, 80.0, 20.0), crop=(0.0, 0.0, 80.0, 20.0)),
+        tokens=(),
+        has_embedded_text=False,
+        layer_kind="raster",
+    )
+    tokens = ocr_rapid.rapid_crop_tokens(object(), page, (80, 20))
+    assert tokens is not None
+    assert [token.text for token in tokens] == ["1200 мм"]
+    assert calls == [{"use_det": False, "use_cls": False, "use_rec": True}]

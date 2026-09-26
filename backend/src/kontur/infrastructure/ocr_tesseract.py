@@ -375,7 +375,7 @@ def ocr_region_eslav(
 ) -> tuple[PageToken, ...]:
     """eslav на том же кропе, что и Tesseract. Нет весов — пусто, не ошибка."""
 
-    from kontur.infrastructure.ocr_rapid import rapid_page_tokens, weights_ready
+    from kontur.infrastructure.ocr_rapid import rapid_crop_tokens, weights_ready
 
     if not weights_ready():
         return ()
@@ -405,7 +405,7 @@ def ocr_region_eslav(
         has_embedded_text=False,
         layer_kind="raster",
     )
-    rapid = rapid_page_tokens(cropped, stub, size)
+    rapid = rapid_crop_tokens(cropped, stub, size)
     if not rapid:
         return ()
     return rapid

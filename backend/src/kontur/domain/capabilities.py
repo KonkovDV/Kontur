@@ -139,8 +139,9 @@ def capabilities_payload() -> dict[str, object]:
         "health": engine_health_summary(declared),
         "note": (
             "overall считается по живому пути (векторный текст). "
-            "ocr_text=MEASURED: SILVER 26.09, n=5935, stamp_excluded=0, "
-            "gate_i_low≈0.438 при пороге 0.97. Это не AVAILABLE и не закрывает гейт I. "
+            "ocr_text=MEASURED: SILVER 26.09 в образе core, n=5935: eslav gate_i_low≈0.632, "
+            "Tesseract 5.5 gate_i_low≈0.603 при пороге 0.97. "
+            "Это не AVAILABLE и не закрывает гейт I. "
             "drawing_analysis DEGRADED: сетка штрихов, сечение не измеряется."
         ),
     }

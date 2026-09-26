@@ -40,7 +40,7 @@ offline-pull:  ## Загрузить все образы для offline-режи
 offline-up:    ## Запустить в offline-режиме (без интернета)
 	$(DC_OFF) up -d
 
-ocr-pilot:     ## SILVER CA пилота в Docker (Tesseract). Не закрывает гейт I
+ocr-pilot:     ## SILVER CA пилота в Docker (ENGINE=tesseract|eslav). Не закрывает гейт I
 	mkdir -p out
 	$(DC) build core
 	$(DC) run --rm --no-deps \
@@ -50,6 +50,7 @@ ocr-pilot:     ## SILVER CA пилота в Docker (Tesseract). Не закры�
 		-e KONTUR_ROOT=/app \
 		-e KONTUR_OCR_PILOT_OUT=/app/out \
 		-e KONTUR_OCR_PILOT_WORKERS=4 \
+		-e KONTUR_OCR_PILOT_ENGINE=$(or $(ENGINE),tesseract) \
 		core python -m kontur.evaluation.ocr_pilot
 
 train-public:  ## TRAIN_PUBLIC JSONL в Docker. Не закрывает гейт J
