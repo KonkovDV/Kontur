@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import ctypes
 
-import pypdfium2 as pdfium
-import pypdfium2.raw as pdfium_c
+import pypdfium2 as pdfium  # type: ignore[import-untyped]
+import pypdfium2.raw as pdfium_c  # type: ignore[import-untyped]
 
 from kontur.application.extractors.drawing_scale import STAMP_Y, scale_mark
 from kontur.application.extractors.number import ENGINE_VERSION, NumberHit, PageToken
