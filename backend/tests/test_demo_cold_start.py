@@ -318,3 +318,16 @@ def test_http_evidence_card_serves_pd_rd_png_and_leaves_id_empty(
         )
         assert page.status_code == 200
         assert page.content.startswith(b"\x89PNG")
+
+
+def test_cold_start_doc_names_the_three_rehearsal_beats() -> None:
+    text = (
+        Path(__file__).resolve().parents[2].joinpath("docs", "DEMO_COLD_START.md")
+    ).read_text(encoding="utf-8")
+    assert "Три такта репетиции" in text
+    assert "CLARIFICATION_REQUIRED" in text
+    assert "MISSING_EVIDENCE" in text
+    assert "PZ-001" in text and "KR-055" in text and "AR-041" in text
+    assert "REJECT" in text
+    assert "не пять сессий" in text
+    assert "не закрытие Gate K" in text
