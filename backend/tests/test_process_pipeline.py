@@ -40,6 +40,7 @@ def test_pipeline_evaluates_compiled_matrix_without_human_verdicts() -> None:
         completeness=_completeness_pd(),
         files=(item,),
         blobs={"f-pd": data},
+        inspector_approved_file_ids=frozenset({"f-pd"}),
     )
     assert report.rules_evaluated == EXPECTED_PARAM_COUNT
     assert report.pages_built == 1
@@ -67,6 +68,7 @@ def test_pipeline_does_not_treat_raster_page_as_ocr_success() -> None:
         completeness=_completeness_pd(),
         files=(item,),
         blobs={"f-empty": data},
+        inspector_approved_file_ids=frozenset({"f-empty"}),
     )
     assert report.pages_built == 1
     assert report.rules_evaluated == EXPECTED_PARAM_COUNT
@@ -106,6 +108,7 @@ def test_docx_and_xml_are_named_unsupported_not_skipped() -> None:
         completeness=_completeness_pd(),
         files=files,
         blobs={"f-pdf": pdf, "f-docx": b"PK\x03\x04", "f-xml": b"<a/>"},
+        inspector_approved_file_ids=frozenset({"f-pdf"}),
     )
     text = " ".join(report.parse_errors)
     assert "f-docx: UNSUPPORTED_FORMAT" in text
@@ -185,8 +188,7 @@ def test_later_not_approved_does_not_hide_the_earlier_file() -> None:
         files,
         {"f-early": earlier, "f-late": later},
     )
-    assert pages[DocStage.PD].document.file_id == "f-early"
-    assert pages[DocStage.PD].document.approval_basis is ApprovalBasis.PACKAGE_DEFAULT
+    assert DocStage.PD not in pages
     assert stamps["f-early"] is ApprovalStatus.UNKNOWN
     assert stamps["f-late"] is ApprovalStatus.NOT_APPROVED
 
@@ -207,7 +209,7 @@ def test_distinct_ciphers_do_not_become_revision_conflict_of_one_chain() -> None
         inspector_approved_file_ids=frozenset({"f-pz"}),
     )
     pd_heads = stage_candidates(pages, DocStage.PD)
-    assert {page.document.file_id for page in pd_heads} == {"f-pz", "f-ar"}
+    assert {page.document.file_id for page in pd_heads} == {"f-pz"}
     assert stamps["f-pz"] is ApprovalStatus.UNKNOWN
     assert stamps["f-ar"] is ApprovalStatus.UNKNOWN
     report = run_process_pipeline(
@@ -231,7 +233,7 @@ def test_distinct_ciphers_do_not_become_revision_conflict_of_one_chain() -> None
         inspector_approved_file_ids=frozenset({"f-pz"}),
     )
     by_id = {row["file_id"]: row["actuality"] for row in rows}
-    assert by_id == {"f-pz": "CURRENT", "f-ar": "CURRENT"}
+    assert by_id == {"f-pz": "CURRENT", "f-ar": "CLARIFICATION_REQUIRED"}
 
 
 def test_unresolved_pz_is_not_hidden_by_resolved_ar_cipher() -> None:
@@ -304,9 +306,14 @@ def test_successor_head_is_used_even_if_stale_file_is_uploaded_last() -> None:
         ),
     )
     blobs = {"f-current": current, "f-stale": stale, "f-rd": rd}
-    pages, _errors, stamps, _clean, _pool = _pages_from_blobs(files, blobs)
+    pages, _errors, stamps, _clean, _pool = _pages_from_blobs(
+        files,
+        blobs,
+        inspector_approved_file_ids=frozenset({"f-current"}),
+    )
     assert pages[DocStage.PD].document.file_id == "f-current"
     assert pages[DocStage.PD].document.file_id != "f-stale"
+    assert pages[DocStage.PD].document.approval_basis is ApprovalBasis.INSPECTOR_SELECT
     rows = build_document_catalog(
         (
             CatalogFile(
@@ -325,7 +332,8 @@ def test_successor_head_is_used_even_if_stale_file_is_uploaded_last() -> None:
                 current,
                 predecessor_file_id="f-stale",
             ),
-        )
+        ),
+        inspector_approved_file_ids=frozenset({"f-current"}),
     )
     by_id = {row["file_id"]: row["actuality"] for row in rows}
     assert by_id == {"f-current": "CURRENT", "f-stale": "SUPERSEDED"}

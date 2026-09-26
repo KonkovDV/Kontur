@@ -594,13 +594,15 @@ paths:
           description: Есть необработанные кандидаты или вызывающий не инспектор
   /processes/{process_id}/unfinalize:
     post:
-      summary: Отмена финализации супервизором
-      description: 'Только из PROTOCOL_FINALIZED / FINALIZED, только супервизор, только с причиной. Результат — COMPLETED, новая версия протокола и запись аудита (ADR-0005).
+      summary: Отмена финализации
+      description: 'Только из PROTOCOL_FINALIZED / FINALIZED и только с причиной. Инспектор, администратор или супервизор. Результат — COMPLETED, новая версия протокола и запись аудита.
 
         '
       operationId: unfinalizeProtocol
       x-required-roles:
+      - INSPECTOR
       - SUPERVISOR
+      - ADMIN
       parameters:
       - $ref: '#/components/parameters/ProcessId'
       requestBody:
@@ -726,7 +728,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: 'JWT проверяется только с одним настроенным асимметричным алгоритмом: RS256 с RSA-ключом либо ES256 с ключом P-256. Валидируются подпись, iss, aud, exp, nbf, непустой sub и массив roles с ролями INSPECTOR / SUPERVISOR / ADMIN. Операции, привязанные к объекту, дополнительно требуют непустой object_id в токене, совпадающий с объектом запроса; несовпадение запрещает доступ. GET /healthz публичен. GET /system/capabilities требует JWT, но не требует object_id. Администратор не подтверждает нарушения и не финализирует протокол (ADR-0001), отмена финализации — только супервизор (п. 9.3).
+      description: 'JWT проверяется только с одним настроенным асимметричным алгоритмом: RS256 с RSA-ключом либо ES256 с ключом P-256. Валидируются подпись, iss, aud, exp, nbf, непустой sub и массив roles с ролями INSPECTOR / SUPERVISOR / ADMIN. Операции, привязанные к объекту, дополнительно требуют непустой object_id в токене, совпадающий с объектом запроса; несовпадение запрещает доступ. GET /healthz публичен. GET /system/capabilities требует JWT, но не требует object_id. Администратор не подтверждает нарушения и не финализирует протокол (ADR-0001). Отмену финализации делают инспектор, администратор или супервизор.
 
         '
   parameters:

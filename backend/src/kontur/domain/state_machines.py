@@ -156,16 +156,16 @@ def advance_sync(current: SyncState, target: SyncState) -> SyncState:
 
 
 def unfinalize(current: ProcessState, actor: Actor, reason: str) -> ProcessState:
-    """Отмена финализации: только супервизор, только из FINALIZED, только с причиной.
+    """Отмена финализации: инспектор, администратор или супервизор.
 
-    Новая версия протокола и запись аудита — обязанность вызывающего слоя
-    (`review.unfinalize_process`): у домена нет порта журнала.
+    Только из FINALIZED и только с причиной. Машина этот переход не делает.
+    Новая версия протокола и запись аудита — обязанность вызывающего слоя.
     """
 
     if current is not ProcessState.FINALIZED:
         raise TransitionError("unfinalize requires FINALIZED")
-    if not (actor.is_human and actor.is_supervisor):
-        raise TransitionError("unfinalize requires a supervisor")
+    if not actor.is_human:
+        raise TransitionError("unfinalize requires a human")
     if not reason.strip():
         raise TransitionError("unfinalize requires reason")
     return ProcessState.COMPLETED

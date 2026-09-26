@@ -417,19 +417,21 @@ def test_supervisor_can_unfinalize(client: TestClient) -> None:
     assert response.json()["process_state"] == "COMPLETED"
 
 
-def test_inspector_cannot_unfinalize(client: TestClient) -> None:
-    process_id = _seed_completed(client)
-    client.post(
-        f"/api/v1/processes/{process_id}/finalize",
-        headers=INSPECTOR,
-        json={"inspector_id": "insp-7"},
-    )
-    response = client.post(
-        f"/api/v1/processes/{process_id}/unfinalize",
-        headers=INSPECTOR,
-        json={"inspector_id": "insp-7", "reason": "ошибка редакции"},
-    )
-    assert response.status_code == 403
+def test_inspector_and_admin_can_unfinalize(client: TestClient) -> None:
+    for headers, actor in ((INSPECTOR, "insp-7"), (ADMIN, "admin-1")):
+        process_id = _seed_completed(client)
+        client.post(
+            f"/api/v1/processes/{process_id}/finalize",
+            headers=INSPECTOR,
+            json={"inspector_id": "insp-7"},
+        )
+        response = client.post(
+            f"/api/v1/processes/{process_id}/unfinalize",
+            headers=headers,
+            json={"inspector_id": actor, "reason": "ошибка редакции"},
+        )
+        assert response.status_code == 200
+        assert response.json()["process_state"] == "COMPLETED"
 
 
 def test_duplicate_upload_same_hash_stage_is_empty_accepted(client: TestClient) -> None:

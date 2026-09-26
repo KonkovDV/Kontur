@@ -41,10 +41,10 @@ def test_admin_cannot_make_or_revoke_a_legal_decision() -> None:
             authorize(operation, [Role.ADMIN])
 
 
-def test_only_supervisor_unfinalizes() -> None:
+def test_inspector_admin_and_supervisor_can_unfinalize() -> None:
+    assert Role.INSPECTOR in authorize("unfinalizeProtocol", [Role.INSPECTOR])
+    assert Role.ADMIN in authorize("unfinalizeProtocol", [Role.ADMIN])
     assert authorize("unfinalizeProtocol", [Role.SUPERVISOR]) == frozenset({Role.SUPERVISOR})
-    with pytest.raises(PermissionDeniedError):
-        authorize("unfinalizeProtocol", [Role.INSPECTOR])
 
 
 def test_inspector_works_and_every_row_grants_someone() -> None:

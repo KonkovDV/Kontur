@@ -4,10 +4,10 @@
 `contracts/openapi.yaml` и проверка прав в обработчиках. Расхождение контракта
 и кода ловит `scripts/check_contracts.py`, поэтому «забыть роль» нельзя.
 
-ADR-0001: юридическое решение принимает инспектор. Поэтому администратор
-системы не может ни подтвердить нарушение, ни финализировать протокол, ни
-отменить финализацию — его роли нет ни в одной из этих строк. Отмена
-финализации — только супервизор (ТЗ п. 9.3).
+ADR-0001: юридическое решение принимает инспектор. Администратор
+системы не подтверждает нарушение и не финализирует протокол. Отмену
+финализации ответ организатора от 26.09.2026 отдаёт инспектору,
+администратору и супервизору. Машина этот переход не делает.
 
 Неизвестная роль не даёт прав: матрица работает по принципу «разрешено только
 перечисленное», а незнакомая операция — ошибка конфигурации, а не свободный
@@ -58,14 +58,14 @@ REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "startVerification": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "completeVerification": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "finalizeProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
-    "unfinalizeProtocol": frozenset({Role.SUPERVISOR}),
+    "unfinalizeProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "selectRevision": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "syncInspection": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
 }
 
 #: Операции, создающие или отменяющие юридическое решение (ADR-0001).
 LEGAL_DECISION_OPERATIONS: frozenset[str] = frozenset(
-    {"reviewFinding", "finalizeProtocol", "unfinalizeProtocol", "selectRevision"}
+    {"reviewFinding", "finalizeProtocol", "selectRevision"}
 )
 
 
