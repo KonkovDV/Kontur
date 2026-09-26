@@ -22,6 +22,7 @@ from kontur.domain.models import Extraction, Polygon
 from kontur.domain.statuses import FindingStatus
 
 _NUMBER = re.compile(r"^\d+(?:[.,]\d+)?$")
+_MARK = re.compile(r"^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё0-9./-]{0,16}\d[A-Za-zА-Яа-яЁё0-9./-]*$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +71,8 @@ def parse_element_table(tokens: Sequence[PageToken]) -> dict[str, TableRow] | st
         if not marks:
             continue
         mark = "".join(item.text.strip() for item in marks)
+        if _MARK.fullmatch(mark) is None:
+            continue
         if mark in found:
             return f"марка {mark} повторяется"
         try:

@@ -205,7 +205,23 @@ def test_missing_riser_mark_is_not_paired() -> None:
     assert "набор элементов" in result.finding.rationale
 
 
-def test_missing_stage_is_missing_evidence() -> None:
+def test_prose_label_is_not_a_riser_row() -> None:
+    pd = _doc(DocStage.PD, "ИОС2-1", "ios2-pd")
+    rd = _doc(DocStage.RD, "ИОС2-1", "ios2-rd")
+    rows_pd = (("Ширина проема", "1,2"),)
+    rows_rd = (("Ширина проема", "0,8"),)
+    result = evaluate_rule(
+        _rule("IOS2-071"),
+        object_id="OBJ-IOS2-071",
+        pages={
+            DocStage.PD: _table_page(pd, rows_pd),
+            DocStage.RD: _table_page(rd, rows_rd),
+        },
+        completeness=_completeness(),
+        revision_pool=[pd, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.LOW_QUALITY
+    assert result.finding.finding_status is not FindingStatus.CANDIDATE
     result = evaluate_rule(
         _rule("SPZU-025"),
         object_id="OBJ-SPZU-025",
