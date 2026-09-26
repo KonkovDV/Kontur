@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from kontur.cli.score import score_directory, score_scope
+from kontur.cli.score import _line, _ScoreRow, cluster_f1_interval, score_directory, score_scope
 
 
 def test_empty_submissions_stay_zero_of_six(tmp_path: Path) -> None:
@@ -47,8 +47,13 @@ def test_one_code_hits_every_duplicate_row_and_does_not_meet_tz(tmp_path: Path) 
     assert isinstance(matrix, dict)
     assert matrix["hits"] == 5
     assert matrix["n_positive"] == 6
-    assert matrix["localized_hits"] == 5
+    assert matrix["localized_hits"] == 0
+    assert matrix["localization_unscored"] == 6
+    assert matrix["f1_interval"] is None
     assert matrix["tz_recall_met"] is False
+    fpr = matrix["fpr"]
+    assert isinstance(fpr, dict)
+    assert fpr["defined"] is True
 
 
 def test_location_match_does_not_invent_gold_rooms(tmp_path: Path) -> None:
@@ -127,3 +132,87 @@ def test_location_match_hits_only_the_same_room() -> None:
     assert block["hits"] == 1
     assert block["false_positives"] == 0
     assert block["unscored_without_location"] == 0
+
+
+_SQUARE = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
+_CORNER = [[0.0, 0.0], [0.1, 0.0], [0.1, 0.1], [0.0, 0.1]]
+
+
+def _positive(polygon: list[list[float]] | None) -> dict[str, object]:
+    row: dict[str, object] = {
+        "object_id": "OBJ-X",
+        "parameter_code": "AR-041",
+        "violation_label": "VIOLATION_PRESENT",
+        "matrix_scope": "MATRIX",
+    }
+    if polygon is not None:
+        row["polygon_norm"] = polygon
+    return row
+
+
+def _submission(polygon: list[list[float]] | None) -> list[dict[str, object]]:
+    evidence: dict[str, object] = {"stage": "RD", "file_id": "f-rd", "pdf_page_number": 1}
+    if polygon is not None:
+        evidence["polygon_norm"] = polygon
+    return [
+        {
+            "object_id": "OBJ-X",
+            "checks": [
+                {
+                    "parameter_code": "AR-041",
+                    "location": "объект",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "evidence": [evidence],
+                }
+            ],
+        }
+    ]
+
+
+def test_page_number_without_polygon_is_not_a_localization() -> None:
+    from kontur.cli.score import _predictions
+
+    submissions = _submission(None)
+    block = score_scope([_positive(None)], _predictions(submissions), submissions)
+    assert block["hits"] == 1
+    assert block["localized_hits"] == 0
+    assert block["localization_unscored"] == 1
+
+
+def test_same_polygon_localizes_and_a_corner_does_not() -> None:
+    from kontur.cli.score import _predictions
+
+    same = _submission(_SQUARE)
+    hit = score_scope([_positive(_SQUARE)], _predictions(same), same)
+    assert hit["localized_hits"] == 1
+    assert hit["localization_unscored"] == 0
+    miss = _submission(_CORNER)
+    missed = score_scope([_positive(_SQUARE)], _predictions(miss), miss)
+    assert missed["hits"] == 1
+    assert missed["localized_hits"] == 0
+    assert missed["localization_unscored"] == 0
+
+
+def test_zero_negatives_are_not_printed_as_zero_fpr() -> None:
+    block = score_scope([_positive(None)], {}, [])
+    fpr = block["fpr"]
+    assert isinstance(fpr, dict)
+    assert fpr["n"] == 0
+    assert fpr["defined"] is False
+    assert fpr["point"] == 0.0
+    tail = _line("MATRIX", block).split("FPR", 1)[1]
+    assert "не определён (n=0)" in tail
+    assert "0.000" not in tail
+
+
+def test_f1_interval_is_withheld_below_ten_clusters() -> None:
+    few = [
+        _ScoreRow(object_id=f"OBJ-{index}", gold_positive=True, predicted_positive=True)
+        for index in range(9)
+    ]
+    assert cluster_f1_interval(few) is None
+    many = [
+        _ScoreRow(object_id=f"OBJ-{index}", gold_positive=True, predicted_positive=True)
+        for index in range(12)
+    ]
+    assert cluster_f1_interval(many, draws=40) == (1.0, 1.0)
