@@ -197,6 +197,9 @@ def build_handoff(
             "Guess bare 1200 is millimetres without a unit suffix",
             "Treat last uploaded file as etalon when successor is declared",
             "Treat runner_id=0 or empty steps as green CI",
+            "Mark DOCX or XML as UNSUPPORTED_FORMAT",
+            "Implement SOLE_HEAD before the owner decides",
+            "Lump index volumes that share a filename stem",
         ],
         "commands": {
             "ci_local": "python -m pytest backend/tests -q && python scripts/check_claims.py",

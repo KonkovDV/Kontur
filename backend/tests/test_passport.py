@@ -350,9 +350,9 @@ def test_index_section_is_discipline_not_a_shared_cipher() -> None:
     assert second.document_code is None
     assert first.discipline == "ОВ"
     assert second.discipline == "ОВ"
-    assert first.identity_code == "Том 5.4.1"
-    assert second.identity_code == "Том 5.4.2"
-    assert first.identity_code != second.identity_code
+    assert first.identity_code == "ПД/5.4 Отопление, вентиляция/Том 5.4.1#file-pd"
+    assert second.identity_code == "ПД/5.4 Отопление, вентиляция/Том 5.4.2#file-pd"
+    assert first.identity_code != "ОВ"
     assert first.code_basis == "MANIFEST_PATH"
     jsonschema.Draft202012Validator(SCHEMA).validate(first.to_schema())
 
@@ -378,9 +378,45 @@ def test_explanatory_note_folder_is_pz_not_other() -> None:
         filename="Том 1.2.pdf",
     )
     assert passport.discipline == "ПЗ"
-    assert passport.identity_code == "Том 1.2"
+    assert passport.identity_code == "ПД/1 Пояснительная записка/Том 1.2#file-pd"
     assert passport.document_code is None
     assert passport.code_basis == "MANIFEST_PATH"
+
+
+def test_same_filename_stem_in_two_folders_is_not_one_cipher() -> None:
+    left = apply_manifest_section(
+        read_passport(
+            (_tok("лист 1", 0.08, 0.82),),
+            file_id="vol-a",
+            file_hash=HASH,
+            filename="Том 1.pdf",
+            pages=1,
+            layer_kind="vector",
+        ),
+        section="OV",
+        relative_path="ПД/5.4 Отопление/Том 1.pdf",
+        filename="Том 1.pdf",
+    )
+    right = apply_manifest_section(
+        read_passport(
+            (_tok("лист 1", 0.08, 0.82),),
+            file_id="vol-b",
+            file_hash=HASH,
+            filename="Том 1.pdf",
+            pages=1,
+            layer_kind="vector",
+        ),
+        section="OV",
+        relative_path="ПД/5.4.2 Отопление/Том 1.pdf",
+        filename="Том 1.pdf",
+    )
+    assert left.discipline == "ОВ"
+    assert right.discipline == "ОВ"
+    assert left.identity_code == "ПД/5.4 Отопление/Том 1#vol-a"
+    assert right.identity_code == "ПД/5.4.2 Отопление/Том 1#vol-b"
+    assert left.identity_code != right.identity_code
+    assert left.document_code is None
+    assert right.document_code is None
 
 
 def test_disagreeing_index_signals_do_not_choose_a_mark() -> None:
