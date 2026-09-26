@@ -97,6 +97,8 @@ jobs:
         run: npm ci
       - name: Проверка типов TypeScript (noEmit в tsconfig.json)
         run: npx tsc --noEmit
+      - name: Полосы списка находок
+        run: npm test
 
   container-config:
     runs-on: ubuntu-latest

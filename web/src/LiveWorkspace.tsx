@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { bandOf, isCheckRefusal, type Band } from "./bands";
 import { EvidenceViewer } from "./EvidenceViewer";
 import {
   STAGE_PANES,
@@ -26,7 +27,6 @@ const REASON_CODES = [
 
 type ReasonCode = (typeof REASON_CODES)[number];
 type DocStageName = "PD" | "RD" | "ID";
-type Band = "open" | "closed" | "unchecked";
 
 type CatalogDocument = {
   file_id: string;
@@ -70,15 +70,6 @@ type AuditEvent = {
   action: string;
   payload: Record<string, unknown>;
 };
-
-const CLOSED = new Set(["CONFIRMED_VIOLATION", "NEGATIVE_VERIFIED"]);
-const OPEN = new Set(["CANDIDATE", "SUSPICION"]);
-
-function bandOf(status: string): Band {
-  if (CLOSED.has(status)) return "closed";
-  if (OPEN.has(status)) return "open";
-  return "unchecked";
-}
 
 function queueRank(status: string): number {
   if (status === "CANDIDATE") return 0;
@@ -201,6 +192,8 @@ export function LiveWorkspace({ token }: Props) {
   const counts = {
     open: findings.filter((item) => bandOf(item.finding_status) === "open").length,
     closed: findings.filter((item) => bandOf(item.finding_status) === "closed").length,
+    attention: findings.filter((item) => bandOf(item.finding_status) === "attention")
+      .length,
     unchecked: findings.filter((item) => bandOf(item.finding_status) === "unchecked")
       .length,
   };
@@ -681,6 +674,13 @@ export function LiveWorkspace({ token }: Props) {
             </button>
             <button
               type="button"
+              aria-pressed={band === "attention"}
+              onClick={() => setBand("attention")}
+            >
+              Требует внимания {counts.attention}
+            </button>
+            <button
+              type="button"
               aria-pressed={band === "unchecked"}
               onClick={() => setBand("unchecked")}
             >
@@ -721,6 +721,12 @@ export function LiveWorkspace({ token }: Props) {
 
       {card && active ? (
         <EvidenceViewer card={card} pageImages={pageImages}>
+          {isCheckRefusal(active.finding_status) ? (
+            <p className="missing-hint">
+              Система не смогла проверить. Это не нарушение.
+              {active.rationale ? ` ${active.rationale}` : ""}
+            </p>
+          ) : null}
           {active.finding_status === "MISSING_EVIDENCE" ? (
             <p className="missing-hint">
               Нет документа стадии — это не нарушение. Подтвердить нельзя.
