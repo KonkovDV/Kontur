@@ -24,11 +24,13 @@ COPY data/matrix ./data/matrix
 COPY data/dataset/gold_inventory.json ./data/dataset/gold_inventory.json
 COPY vendor/ocr /opt/kontur/ocr
 COPY scripts/fetch_ocr_weights.py /tmp/fetch_ocr_weights.py
+COPY backend/requirements.lock /tmp/requirements.lock
 RUN python /tmp/fetch_ocr_weights.py \
         --lock /app/src/kontur/infrastructure/ocr_weights.lock.json \
         --dest /opt/kontur/ocr \
     && rm /tmp/fetch_ocr_weights.py \
-    && pip install --no-cache-dir ".[ocr]"
+    && pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock \
+    && pip install --no-cache-dir --no-deps --no-build-isolation .
 ENV KONTUR_OCR_WEIGHTS=/opt/kontur/ocr
 
 # Create the runtime identity only after privileged package installation. Keep

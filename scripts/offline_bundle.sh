@@ -10,9 +10,12 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml build
 images=$(docker compose -f docker-compose.yml -f docker-compose.demo.yml config --images)
 # shellcheck disable=SC2086
 docker save -o "$out" $images
+base=$(basename "$out")
+dir=$(dirname "$out")
 if command -v sha256sum >/dev/null 2>&1; then
-  sha256sum "$out" > "$out.sha256"
+  (cd "$dir" && sha256sum "$base") > "$dir/SHA256SUMS"
 else
-  shasum -a 256 "$out" > "$out.sha256"
+  (cd "$dir" && shasum -a 256 "$base") > "$dir/SHA256SUMS"
 fi
+cp "$dir/SHA256SUMS" "$out.sha256"
 echo "$out"

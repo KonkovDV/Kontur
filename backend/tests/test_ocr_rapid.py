@@ -39,6 +39,14 @@ def test_vendored_weights_match_the_lock() -> None:
     dockerfile = (LOCK.parents[4] / "backend" / "Dockerfile").read_text(encoding="utf-8")
     assert "--fetch" not in dockerfile
     assert "modelscope" not in dockerfile
+    assert "--require-hashes" in dockerfile
+    assert "-e " not in dockerfile
+    relay = (LOCK.parents[4] / "backend" / "Dockerfile.relay").read_text(encoding="utf-8")
+    assert "--require-hashes" in relay
+    assert "-e " not in relay
+    lock_text = (LOCK.parents[4] / "backend" / "requirements.lock").read_text(encoding="utf-8")
+    assert "--hash=sha256:" in lock_text
+    assert "-e " not in lock_text
     for item in payload["files"]:
         path = root / str(item["name"])
         assert path.is_file()
