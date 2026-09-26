@@ -20,6 +20,8 @@ SOURCE = Path(ocr_rapid.__file__).read_text(encoding="utf-8")
 def test_lock_pins_eslav_weights() -> None:
     payload = json.loads(LOCK.read_text(encoding="utf-8"))
     assert payload["runtime_download"] is False
+    assert payload["license"] == "Apache-2.0"
+    assert str(payload["license_url"]).startswith("https://")
     roles = {item["role"]: item for item in payload["files"]}
     assert set(roles) == {"det", "rec", "cls", "dict"}
     assert roles["rec"]["name"] == "eslav_PP-OCRv5_rec_mobile.onnx"
@@ -29,6 +31,18 @@ def test_lock_pins_eslav_weights() -> None:
     for item in roles.values():
         assert len(item["sha256"]) == 64
         int(item["sha256"], 16)
+
+
+def test_vendored_weights_match_the_lock() -> None:
+    payload = json.loads(LOCK.read_text(encoding="utf-8"))
+    root = LOCK.parents[4] / "vendor" / "ocr"
+    dockerfile = (LOCK.parents[4] / "backend" / "Dockerfile").read_text(encoding="utf-8")
+    assert "--fetch" not in dockerfile
+    assert "modelscope" not in dockerfile
+    for item in payload["files"]:
+        path = root / str(item["name"])
+        assert path.is_file()
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == item["sha256"]
 
 
 def test_runtime_module_does_not_download() -> None:
