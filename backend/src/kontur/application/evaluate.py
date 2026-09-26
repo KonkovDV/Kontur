@@ -1168,19 +1168,22 @@ def evaluate_rule(
                 ),
                 wanted,
             )
-            for identity in matched:
-                if (
-                    identity.resolution.status is not ResolveStatus.RESOLVED
-                    or identity.resolution.resolved is None
-                ):
-                    return _halt(
-                        rule,
-                        Stage.L4_REVISION,
-                        revision_status,
-                        identity.resolution.conflict_reason
-                        or f"{stage.value}: эталон не выбран",
-                        prior=identity_ok,
-                    )
+            unresolved = [
+                identity
+                for identity in matched
+                if identity.resolution.status is not ResolveStatus.RESOLVED
+                or identity.resolution.resolved is None
+            ]
+            if matched and len(unresolved) == len(matched):
+                identity = unresolved[0]
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    identity.resolution.conflict_reason
+                    or f"{stage.value}: эталон не выбран",
+                    prior=identity_ok,
+                )
     bound = _bind_required_pages(rule, pages, required)
     if isinstance(bound, str):
         return _halt(
