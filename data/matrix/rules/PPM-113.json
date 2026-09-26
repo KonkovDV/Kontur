@@ -5,7 +5,7 @@
   "unit": "л/с / шт.",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Уменьшение диаметра кольцевого трубопровода ВПВ; сокращение количества кранов.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -26,7 +26,7 @@
     }
   },
   "extractor": {
-    "type": "number",
+    "type": "multi_field",
     "regex": null,
     "anchors": [
       "Расход воды и количество струй внутреннего пожаротушения (ВПВ)"

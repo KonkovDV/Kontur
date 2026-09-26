@@ -5,7 +5,7 @@
   "unit": "% / °",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Уменьшение уклона кровли ниже проектного; сокращение количества воронок.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -26,7 +26,7 @@
     }
   },
   "extractor": {
-    "type": "number",
+    "type": "multi_field",
     "regex": null,
     "anchors": [
       "Уклоны кровли и система водостока"

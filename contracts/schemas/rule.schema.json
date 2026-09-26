@@ -62,7 +62,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["exact_field", "number", "enum", "set", "presence", "geometry", "contour_area", "element_table", "semantic_candidate", "room_compare"]
+          "enum": ["exact_field", "number", "enum", "set", "presence", "geometry", "contour_area", "element_table", "multi_field", "semantic_candidate", "room_compare"]
         },
         "passes": {
           "type": "array",

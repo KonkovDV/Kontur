@@ -14,7 +14,7 @@
 
 | Контур | Смысл | Сейчас |
 |---|---|---|
-| Code | Функции и автотесты | часть HTTP/матрицы/протокола; 48 executable из 132 |
+| Code | Функции и автотесты | часть HTTP/матрицы/протокола; 55 executable из 132 |
 | Acceptance | Пороги на frozen/GOLD с 95% CI | не измерены; 6 gold-позитивов < n=16 для recall |
 | Production | OIDC, TLS, AV, backup, SLA | JWT containment и hardening контейнеров; ruleset `main-pr-and-ci` (id 23890545), обязательных ревью 0; не OIDC и не закрытие гейтов I/J/K/L |
 

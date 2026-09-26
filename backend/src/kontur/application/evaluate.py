@@ -5,6 +5,7 @@
   обмер     : extractor.type=geometry + те же операторы (пара штрихов × масштаб)
   контур    : extractor.type=contour_area (один замкнутый прямоугольник, м²)
   ведомость : extractor.type=element_table (марка строки и одно число)
+  поля     : extractor.type=multi_field (число только рядом с явной единицей)
   текстовые : extractor.type=enum    + операторы из STRING_OPERATORS | SET_OPERATORS
               extractor.type=text_regex + те же операторы
 
@@ -34,6 +35,12 @@ from kontur.application.extractors.element_table import (
     row_hit,
 )
 from kontur.application.extractors.geometry import extract_duct_width
+from kontur.application.extractors.multi_field import (
+    FieldHit,
+    align_fields,
+    field_hit,
+    parse_fields,
+)
 from kontur.application.extractors.number import (
     NumberHit,
     PageToken,
@@ -782,6 +789,8 @@ def _has_extracted_value(
         return extract_text(page.tokens, rule) is not None
     if extractor_type == "number":
         return extract_number(page.tokens, rule) is not None
+    if extractor_type == "multi_field":
+        return not isinstance(parse_fields(page.tokens, rule), str)
     return False
 
 
@@ -902,6 +911,103 @@ def _element_table_rule(
     return RuleEvaluation(finding=finding, evidence_group=group, stages=stages)
 
 
+def _multi_field_rule(
+    rule: dict[str, object],
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
+    object_id: str,
+) -> RuleEvaluation:
+    """Сравнить поля с явными единицами. Голое число и подсчёт фигур не читаются."""
+
+    identity_ok = (StageResult(Stage.L1_IDENTITY, ok=True),)
+    fields: dict[DocStage, dict[str, FieldHit]] = {}
+    sheets: dict[DocStage, StagePage] = {}
+    for stage in _required_stages(rule):
+        raw = pages.get(stage)
+        if raw is None:
+            return _halt(
+                rule,
+                Stage.L2_EXTRACTION,
+                _mapped(rule, "source_absent", FindingStatus.MISSING_EVIDENCE),
+                f"{stage.value}: страница не передана",
+                prior=identity_ok,
+                missing_stage=stage,
+            )
+        if not isinstance(raw, StagePage):
+            return _halt(
+                rule,
+                Stage.L2_EXTRACTION,
+                _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                f"{stage.value}: несколько томов или страница не передана",
+                prior=identity_ok,
+            )
+        parsed = parse_fields(raw.tokens, rule)
+        if isinstance(parsed, str):
+            return _halt(
+                rule,
+                Stage.L2_EXTRACTION,
+                _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                f"{stage.value}: {parsed}",
+                prior=identity_ok,
+            )
+        fields[stage] = parsed
+        sheets[stage] = raw
+    outcome = align_fields(fields[DocStage.PD], fields[DocStage.RD], rule)
+    if isinstance(outcome, str):
+        return _halt(
+            rule,
+            Stage.L2_EXTRACTION,
+            _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+            outcome,
+            prior=identity_ok,
+        )
+    comparison, unit = outcome
+    hits = {
+        stage: field_hit(fields[stage][unit], sheets[stage].tokens)
+        for stage in (DocStage.PD, DocStage.RD)
+    }
+    stages = (
+        StageResult(Stage.L1_IDENTITY, ok=True),
+        StageResult(Stage.L2_EXTRACTION, ok=True),
+        StageResult(Stage.L3_LOCALIZATION, ok=True),
+        StageResult(Stage.L4_REVISION, ok=True),
+        StageResult(Stage.L5_PAIRING, ok=True),
+        StageResult(Stage.L6_MATRIX, ok=True),
+        StageResult(Stage.L7_FINDINGS, ok=True),
+    )
+    if run(list(stages)) is not None:
+        raise RuntimeError("каскад L1-L7 закрылся до сравнения полей")
+    group_id = comparison_key(
+        object_id,
+        str(rule["code"]),
+        (sheets[DocStage.PD].document.file_id, sheets[DocStage.RD].document.file_id),
+    )
+    fragments = tuple(
+        _fragment(
+            hits[stage],
+            role=_STAGE_ROLE[stage],
+            document=sheets[stage].document,
+            fragment_id=f"{group_id}-{stage.value}",
+        )
+        for stage in (DocStage.PD, DocStage.RD)
+    )
+    group = EvidenceGroup(
+        evidence_group_id=group_id,
+        object_id=object_id,
+        rule_code=str(rule["code"]),
+        matrix_version=str(rule["matrix_version"]),
+        fragments=fragments,
+        resolved_revisions=(sheets[DocStage.PD].document, sheets[DocStage.RD].document),
+    )
+    finding = _finding_from_comparison(
+        rule,
+        comparison,
+        group_id=group_id,
+        fragments=fragments,
+        pages=sheets,
+    )
+    return RuleEvaluation(finding=finding, evidence_group=group, stages=stages)
+
+
 def evaluate_rule(
     rule: dict[str, object],
     *,
@@ -928,6 +1034,7 @@ def evaluate_rule(
         "geometry",
         "contour_area",
         "element_table",
+        "multi_field",
         "room_compare",
         *_TEXT_EXTRACTOR_TYPES,
     ):
@@ -936,6 +1043,7 @@ def evaluate_rule(
             Stage.L6_MATRIX,
             FindingStatus.CLARIFICATION_REQUIRED,
             "слайс исполняет extractor.type=number/geometry/contour_area/element_table/"
+            "multi_field/"
             "enum/text_regex/exact_field/presence, "
             f"получено {extractor_type!r}",
         )
@@ -1091,6 +1199,8 @@ def evaluate_rule(
         return _room_rule(rule, pages, object_id)
     if extractor_type == "element_table":
         return _element_table_rule(rule, pages, object_id)
+    if extractor_type == "multi_field":
+        return _multi_field_rule(rule, pages, object_id)
 
     volume_pages = dict(pages)
     dual_req = _dual_read_required(rule)

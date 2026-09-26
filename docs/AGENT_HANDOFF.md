@@ -27,10 +27,10 @@ HEAD смотреть `git rev-parse origin/main`.
 1. [`AGENTS.md`](../AGENTS.md) — инварианты 1–14.
 2. [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md) — claim на issue до правок.
 3. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json) — гейты, запреты, команды, draft_prs, extractor_triage_complete.
-4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 48 / 79 / 1 / 4 из 132.
+4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 55 / 72 / 1 / 4 из 132.
 4a. [`data/matrix/family_triage.json`](../data/matrix/family_triage.json) и [`docs/EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) — поштучное решение по 28 правилам семейств `exact_field` / `presence`: какой вид доказательства нужен и почему графика не стала текстом.
 4b. [`data/matrix/class_ladder_triage.json`](../data/matrix/class_ladder_triage.json) и [`docs/CLASS_LADDER_TRIAGE.md`](CLASS_LADDER_TRIAGE.md) — разбор 23 «классоподобных» правил: 5 переведены в `executable` через `enum` + `class_not_lower`, 13 осознанно оставлены `extractor_missing` с указанием причины (инвертированная лестница, набор признаков, таблица, допуск в обе стороны).
-4c. [`data/matrix/number_family_triage.json`](../data/matrix/number_family_triage.json) и [`docs/NUMBER_FAMILY_TRIAGE.md`](NUMBER_FAMILY_TRIAGE.md) — разбор 57 числовых правил: 6 переведены в `executable`, 51 оставлено `extractor_missing` с кодом причины (обмер по чертежу, подсчёт объектов, площадь по контуру, таблица по элементам).
+4c. [`data/matrix/number_family_triage.json`](../data/matrix/number_family_triage.json) и [`docs/NUMBER_FAMILY_TRIAGE.md`](NUMBER_FAMILY_TRIAGE.md) — разбор 57 числовых правил: 6 переведены текстом; дальше из выборки вышли `geometry`, `contour_area`, `element_table` и `multi_field`. Подсчёт объектов на плане остаётся `extractor_missing`.
 5. [`data/dataset/gold_inventory.json`](../data/dataset/gold_inventory.json) — публичный gold ≠ frozen val.
 6. [`data/dataset/gold_evidence_files.json`](../data/dataset/gold_evidence_files.json) — какие PDF gold грузить: F0171 как PD, F0201 `RD_ID_MIXED` только как RD.
 7. [`data/dataset/train_public_index_stats.json`](../data/dataset/train_public_index_stats.json) — 203 файла, стадии, join исходных PDF.
@@ -177,10 +177,11 @@ GAP-EMB добавлен в `docs/KNOWN_GAPS.md` на ветке `feat/adversari
    (`contour_area`, м², масштаб в штампе). Несколько контуров не суммируются.
    IOS2-071 исполняется ведомостью: марка строки и одно число (`element_table`).
    Разный набор марок даёт `LOW_QUALITY`.
-   **Остальные 79 `extractor_missing` разобраны. Подсчёт дверей и окон на плане
-   (AECV-Bench, arXiv:2601.04819: средний exact-match около 0,39–0,51, двери и
-   окна 0,39 и 0,34) и несколько полей в одном пункте без своего экстрактора
-   в `executable` не переводятся.**
+   Семь правил с двумя явными единицами исполняются `multi_field`: число принимается
+   только рядом с единицей из пункта, поля не переводятся.
+   **Остальные 72 `extractor_missing` разобраны. Подсчёт дверей, окон, стоянок и
+   датчиков на плане (AECV-Bench, arXiv:2601.04819: средний exact-match около
+   0,39–0,51, двери и окна 0,39 и 0,34) в `executable` не переводится.**
 5. `split()` (GAP-SPLIT) до демо.
 6. Sandbox РиН, HTTP `submitted/confirmed/ambiguous` и бизнес-ACK → `SYNCED` — нет.
 7. JWKS/OIDC, TLS 1.3, антивирус, observability — **freeze** до подачи.
