@@ -191,3 +191,20 @@ def test_missing_rd_is_missing_evidence() -> None:
     assert result.finding.finding_status is FindingStatus.MISSING_EVIDENCE
     assert result.evidence_group is None
     assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+
+
+def test_two_pd_of_one_cipher_are_not_compared() -> None:
+    first = _doc(DocStage.PD, "П-АР1", "ar-pd-1")
+    second = _doc(DocStage.PD, "П-АР1", "ar-pd-2")
+    rd = _doc(DocStage.RD, "П-АР1", "ar-rd")
+    result = evaluate_rule(
+        _rule(),
+        object_id="OBJ-AR040",
+        pages={DocStage.RD: _page(rd, _pair(40.0, _gap_pt(1.5)))},
+        completeness=_completeness(),
+        revision_pool=[first, second, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert result.finding.finding_status is not FindingStatus.MISSING_EVIDENCE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+    assert result.evidence_group is None
