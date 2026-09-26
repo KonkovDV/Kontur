@@ -269,11 +269,20 @@ def resolve_heads_by_identity(
     """Каждый шифр стадии резолвится отдельно. Пустой шифр — своя группа."""
 
     stage_docs = [item for item in documents if item.doc_stage is stage]
-    groups: dict[tuple[str, str, str] | None, list[DocumentRef]] = {}
+    groups: dict[tuple[str, str, str], list[DocumentRef]] = {}
+    blanks: list[DocumentRef] = []
     for item in stage_docs:
-        groups.setdefault(_identity_key(item), []).append(item)
+        key = _identity_key(item)
+        if key is None:
+            blanks.append(item)
+            continue
+        groups.setdefault(key, []).append(item)
     result: list[IdentityHead] = []
-    for key, group in groups.items():
+    keyed: list[tuple[tuple[str, str, str] | None, list[DocumentRef]]] = [
+        (key, group) for key, group in groups.items()
+    ]
+    keyed.extend((None, [item]) for item in blanks)
+    for key, group in keyed:
         selected = frozenset(
             item.file_id
             for item in group

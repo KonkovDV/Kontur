@@ -207,6 +207,15 @@ class TestIdentityHeads:
         }
         assert chosen == {"pd-pz", "pd-ar"}
 
+    def test_two_blank_ciphers_stay_separate_groups(self) -> None:
+        left = replace(_doc("pd-a"), document_code="")
+        right = replace(_doc("pd-b"), document_code="")
+        heads = resolve_heads_by_identity([left, right], DocStage.PD)
+        assert len(heads) == 2
+        assert {item.file_ids for item in heads} == {("pd-a",), ("pd-b",)}
+        assert all(item.key is None for item in heads)
+        assert all(item.resolution.status is ResolveStatus.RESOLVED for item in heads)
+
     def test_blank_cipher_does_not_join_known_cipher(self) -> None:
         coded = _doc("pd-pz", document_code="12345-PZ")
         blank = replace(_doc("pd-blank"), document_code="")
