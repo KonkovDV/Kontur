@@ -266,3 +266,67 @@ def test_two_pd_of_one_ios2_cipher_are_not_compared() -> None:
     assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
     assert result.finding.finding_status is not FindingStatus.MISSING_EVIDENCE
     assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+
+
+def test_same_sidewalk_area_is_not_a_hit() -> None:
+    data = _rect(20, 30, 80, 40)
+    pd = _doc(DocStage.PD, "СПЗУ-1", "walk-pd")
+    rd = _doc(DocStage.RD, "СПЗУ-1", "walk-rd")
+    result = evaluate_rule(
+        _rule("SPZU-026"),
+        object_id="OBJ-SPZU-026",
+        pages={DocStage.PD: _page(pd, data), DocStage.RD: _page(rd, data)},
+        completeness=_completeness(),
+        revision_pool=[pd, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+    assert result.evidence_group is not None
+
+
+def test_changed_sidewalk_area_is_a_candidate() -> None:
+    pd = _doc(DocStage.PD, "СПЗУ-1", "walk-pd")
+    rd = _doc(DocStage.RD, "СПЗУ-1", "walk-rd")
+    result = evaluate_rule(
+        _rule("SPZU-026"),
+        object_id="OBJ-SPZU-026",
+        pages={
+            DocStage.PD: _page(pd, _rect(20, 30, 80, 40)),
+            DocStage.RD: _page(rd, _rect(20, 30, 40, 40)),
+        },
+        completeness=_completeness(),
+        revision_pool=[pd, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+
+
+def test_missing_sidewalk_stage_is_missing_evidence() -> None:
+    result = evaluate_rule(
+        _rule("SPZU-026"),
+        object_id="OBJ-SPZU-026",
+        pages={},
+        completeness={
+            DocStage.PD: Completeness.UPLOADED,
+            DocStage.RD: Completeness.MISSING,
+            DocStage.ID: Completeness.MISSING,
+        },
+    )
+    assert result.finding.finding_status is FindingStatus.MISSING_EVIDENCE
+    assert result.evidence_group is None
+
+
+def test_two_pd_of_one_sidewalk_cipher_are_not_compared() -> None:
+    first = _doc(DocStage.PD, "СПЗУ-1", "walk-pd-1")
+    second = _doc(DocStage.PD, "СПЗУ-1", "walk-pd-2")
+    rd = _doc(DocStage.RD, "СПЗУ-1", "walk-rd")
+    result = evaluate_rule(
+        _rule("SPZU-026"),
+        object_id="OBJ-SPZU-026",
+        pages={DocStage.RD: _page(rd, _rect(20, 30, 80, 40))},
+        completeness=_completeness(),
+        revision_pool=[first, second, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert result.finding.finding_status is not FindingStatus.MISSING_EVIDENCE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
