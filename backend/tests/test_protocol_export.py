@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from io import BytesIO
 
+import pypdfium2 as pdfium
 import pytest
 from docx import Document
 from fastapi.testclient import TestClient
@@ -14,6 +15,23 @@ from kontur.presentation.api import app
 
 PDF = b"%PDF-1.7\n1 0 obj\n<<>>\nendobj\n"
 INSPECTOR = {"Authorization": "Bearer insp-7@obj-1/INSPECTOR"}
+
+
+def _pdf_text(payload: bytes) -> str:
+    document = pdfium.PdfDocument(payload)
+    try:
+        chunks: list[str] = []
+        for index in range(len(document)):
+            page = document[index]
+            textpage = page.get_textpage()
+            try:
+                chunks.append(str(textpage.get_text_bounded() or ""))
+            finally:
+                textpage.close()
+                page.close()
+        return "\n".join(chunks)
+    finally:
+        document.close()
 
 
 def test_docx_and_xml_follow_the_json_wire(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -123,4 +141,11 @@ def test_exports_print_expected_actual_and_fragment() -> None:
     assert "Ожидаемое: 1250" in text
     assert "Фактическое: 1100" in text
     assert "Полигон:" in text
-    assert render_pdf(protocol, cards).startswith(b"%PDF")
+    pdf_bytes = render_pdf(protocol, cards)
+    assert pdf_bytes.startswith(b"%PDF")
+    assert b"AUTO_NO_DIFFERENCE" not in pdf_bytes
+    pdf_text = _pdf_text(pdf_bytes)
+    for token in ("f-1", "PZ-001", "1250", "1100", "0.1", "ab" * 32):
+        assert token in xml
+        assert token in text
+        assert token in pdf_text
