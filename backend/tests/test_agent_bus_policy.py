@@ -30,3 +30,6 @@ def test_current_plan_keeps_acceptance_gates_open() -> None:
     assert "79 extractor_missing" in text
     assert "kontur.agent_bus.v2" in text
     assert "requirement → artifact → test → metric → stop" in text
+    assert "#77" in text and "needs-local-files" in text and "human" in text
+    assert "#87" in text and "cloud" in text
+    assert "рекордер не закрывает Gate K" in text
