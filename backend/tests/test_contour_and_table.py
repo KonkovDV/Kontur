@@ -234,3 +234,35 @@ def test_prose_label_is_not_a_riser_row() -> None:
     )
     assert result.finding.finding_status is FindingStatus.MISSING_EVIDENCE
     assert result.evidence_group is None
+
+
+def test_two_pd_of_one_spzu_cipher_are_not_compared() -> None:
+    first = _doc(DocStage.PD, "СПЗУ-1", "spzu-pd-1")
+    second = _doc(DocStage.PD, "СПЗУ-1", "spzu-pd-2")
+    rd = _doc(DocStage.RD, "СПЗУ-1", "spzu-rd")
+    result = evaluate_rule(
+        _rule("SPZU-025"),
+        object_id="OBJ-SPZU-025",
+        pages={DocStage.RD: _page(rd, _rect(20, 30, 80, 40))},
+        completeness=_completeness(),
+        revision_pool=[first, second, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert result.finding.finding_status is not FindingStatus.MISSING_EVIDENCE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+
+
+def test_two_pd_of_one_ios2_cipher_are_not_compared() -> None:
+    first = _doc(DocStage.PD, "ИОС2-1", "ios2-pd-1")
+    second = _doc(DocStage.PD, "ИОС2-1", "ios2-pd-2")
+    rd = _doc(DocStage.RD, "ИОС2-1", "ios2-rd")
+    result = evaluate_rule(
+        _rule("IOS2-071"),
+        object_id="OBJ-IOS2-071",
+        pages={DocStage.RD: _table_page(rd, (("В1.1", "25"),))},
+        completeness=_completeness(),
+        revision_pool=[first, second, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert result.finding.finding_status is not FindingStatus.MISSING_EVIDENCE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
