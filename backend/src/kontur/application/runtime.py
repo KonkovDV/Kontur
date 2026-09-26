@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from time import perf_counter
 from uuid import uuid4
 
 from kontur.application import review as review_actions
@@ -108,6 +109,8 @@ class ProcessRecord:
     last_sync_notice: str | None = None
     protocol_id: str | None = None
     inspector_approved_file_ids: set[str] = field(default_factory=set)
+    #: Монотонные секунды текущего прогона. Рестарт процесса их не восстанавливает.
+    phase_seconds: dict[str, float] = field(default_factory=dict)
 
     def has_file(self, content_hash: str, stage: DocStage) -> bool:
         """True, если hash+stage уже прикреплены к процессу."""
@@ -151,6 +154,7 @@ class ProcessRecord:
             "protocol_status": protocol_status(self.process_state),
             "counters": counters,
             "sync_state": self.sync_state.value,
+            "phase_seconds": _public_phase_seconds(self.phase_seconds),
             "versions": {
                 "matrix_version": self.matrix_version,
                 "model_version": self.model_version,
@@ -159,6 +163,21 @@ class ProcessRecord:
                 "git_sha": self.git_sha,
             },
         }
+
+
+_PHASE_ORDER = ("upload", "parse", "compare", "protocol")
+_CALLER_PHASES = frozenset({"upload", "protocol"})
+_PIPELINE_PHASES = frozenset({"parse", "compare"})
+
+
+def _public_phase_seconds(clocks: dict[str, float]) -> dict[str, float]:
+    """Ключи в фиксированном порядке. Пустой набор — прогон ещё не мерил фазу."""
+
+    return {
+        key: round(float(clocks[key]), 6)
+        for key in _PHASE_ORDER
+        if key in clocks
+    }
 
 
 def _manifest_hash(record: ProcessRecord) -> str:
@@ -355,6 +374,28 @@ class ProcessWorkspace:
 
         record.blobs[file_id] = content
 
+    def note_phase(self, record: ProcessRecord, name: str, seconds: float) -> None:
+        """Записать часы загрузки или сборки протокола. Разбор и сравнение пишет пайплайн."""
+
+        if name not in _CALLER_PHASES:
+            raise ValueError("эту фазу пишет только пайплайн")
+        if seconds < 0:
+            raise ValueError("часы фазы не бывают отрицательными")
+        record.phase_seconds[name] = seconds
+
+    def _merge_pipeline_clocks(
+        self, record: ProcessRecord, report: PipelineReport
+    ) -> dict[str, float]:
+        """Подмешать разбор и сравнение, не стирая загрузку и протокол."""
+
+        incoming = dict(report.phase_seconds)
+        if set(incoming) != _PIPELINE_PHASES:
+            raise ValueError("пайплайн пишет только разбор и сравнение")
+        if any(value < 0 for value in incoming.values()):
+            raise ValueError("часы фазы не бывают отрицательными")
+        record.phase_seconds.update({key: float(value) for key, value in incoming.items()})
+        return _public_phase_seconds(record.phase_seconds)
+
     def schedule_matrix_pipeline(self, record: ProcessRecord) -> None:
         """Поставить L1–L7 в поток процесса API. Запрос загрузки этого не ждёт."""
 
@@ -414,9 +455,7 @@ class ProcessWorkspace:
                 "rules_evaluated": report.rules_evaluated,
                 "pages_built": report.pages_built,
                 "parse_errors": len(report.parse_errors),
-                "phase_seconds": {
-                    key: round(value, 6) for key, value in report.phase_seconds.items()
-                },
+                "phase_seconds": self._merge_pipeline_clocks(record, report),
             },
         )
         if record.process_state is ProcessState.PARSING:
@@ -566,9 +605,7 @@ class ProcessWorkspace:
                 "rules_evaluated": report.rules_evaluated,
                 "pages_built": report.pages_built,
                 "parse_errors": len(report.parse_errors),
-                "phase_seconds": {
-                    key: round(value, 6) for key, value in report.phase_seconds.items()
-                },
+                "phase_seconds": self._merge_pipeline_clocks(record, report),
                 "after": "SELECT_REVISION",
             },
         )
@@ -610,12 +647,15 @@ class ProcessWorkspace:
             record.finalized_by = actor.actor_id
             version = self._store.next_protocol_version(record.object_id)
             protocol_id = protocol_identity(record.process_id, version)
+            assembled = perf_counter()
             payload = self._assemble_protocol_payload(
                 record, protocol_id=protocol_id, version=version
             )
+            protocol_seconds = perf_counter() - assembled
             reject_placeholder_payload(payload)
             record.protocol_id = protocol_id
             self._store.materialize_finalized(self._snapshot(record), payload)
+            self.note_phase(record, "protocol", protocol_seconds)
         except Exception:
             record.process_state = previous_state
             record.finalized_by = previous_finalized_by

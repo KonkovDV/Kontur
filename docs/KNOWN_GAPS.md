@@ -13,7 +13,6 @@
 | GAP-FREE-SEARCH | Свободный поиск как `SUSPICION`, не 133-й параметр Матрицы | Провод есть: автомат пишет `SUSPICION`, локализованная пара стадий на проводе — `VIOLATION_PRESENT` и `WARNING`, внутри статус остаётся `SUSPICION`. Целый объект после этого провода не пересчитывался. Гейт J открыт | конкурсный срез |
 | GAP-DOCX-XML | DOCX и XML приняты, параметры не извлечены | Явный `ACCEPTED_UNPARSED`. Ответ 10: оба формата контракт принимает, в `UNSUPPORTED_FORMAT` их не переводить. Разбор DOCX не заявлен | после среза |
 | GAP-ARCHIVE | 7z/rar/zip не распаковываются внутри сервиса | Бомба отклоняется на приёме. Обычный архив даёт `ARCHIVE_NOT_EXPANDED`: распаковать до сверки | после среза |
-| GAP-PHASE-CLOCK | Загрузка и экспорт протокола не отделены на HTTP | Разбор и сравнение пишут монотонные `phase_seconds`. Часы загрузки и протокола на процессе ещё не разделены | после среза |
 | GAP-CAP-OCR | OCR `MEASURED`, таблицы `UNAVAILABLE`, чертёж `DEGRADED` | SILVER 26.09 PDF_TEXT_LAYER в образе core, n=5935, coverage=1: eslav PP-OCRv5 tz_low≈0.663, gate_i_low≈0.632; Tesseract 5.5 tz_low≈0.635, gate_i_low≈0.603. Локальный Windows Tesseract 5.4 на том же корпусе: gate_i_low≈0.438. Пороги 0.95 и 0.97 не взяты. Не GOLD. Гейт I открыт | гейт I |
 | GAP-OCR-RASTER | Нет человечески проверенного эталона страниц без текстового слоя | Пилот SILVER — это PDF_TEXT_LAYER. Подписи растра не выдумывать. В образ ядра на сборке кладутся веса eslav PP-OCRv5 ONNX со сверкой SHA-256; без каталога остаётся Tesseract. `ocr_text` остаётся `MEASURED` | гейт I |
 | GAP-SPLIT | `split()` бросает `NotImplementedError` | каждая часть требует собственной `evidence_group` | после RC freeze |
@@ -60,3 +59,4 @@ GAP-EMB: вложения `/EmbeddedFile` пайплайн не видит (см
 | GAP-K6-P95 | Live `/status`: 100 VU × 60 с, n=6000, p95=18,26 мс, 0 ошибок; artifact workflow | PR #57 |
 | GAP-JWT-VERIFY | Проверенный JWT RS256/ES256; dotted-токен не падает в legacy; k6 без plaintext | PR #58 |
 | GAP-ISOLATE | PDF-разбор в spawn-процессе; таймаут terminate/kill дочернего, не поток API | pdf_guard.py |
+| GAP-PHASE-CLOCK | Четыре ключа `phase_seconds` на статусе: upload, parse, compare, protocol. Не норматив. Рестарт их не восстанавливает | runtime.py |

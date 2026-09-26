@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from time import perf_counter
 from typing import Annotated
 from uuid import uuid4
 
@@ -345,6 +346,7 @@ async def _upload_documents(
             content={"detail": "supersedes_file_id требует существующий процесс"},
         )
 
+    accept_started = perf_counter()
     payloads: list[tuple[UploadCandidate, bytes]] = []
     for upload in files:
         candidate, body = await read_bounded_upload(upload)
@@ -389,6 +391,7 @@ async def _upload_documents(
         attached = _attach_new_files(
             workspace, record, decision.accepted, bodies, doc_stage, replaced or None
         )
+        workspace.note_phase(record, "upload", perf_counter() - accept_started)
         workspace.schedule_matrix_pipeline(record)
         return _upload_receipt(record, attached, decision.rejected)
 
@@ -402,6 +405,7 @@ async def _upload_documents(
         return _upload_receipt(record, [], decision.rejected)
 
     workspace.reopen_for_upload(record)
+    workspace.note_phase(record, "upload", perf_counter() - accept_started)
     workspace.schedule_matrix_pipeline(record)
     return _upload_receipt(record, attached, decision.rejected)
 
@@ -579,6 +583,7 @@ def _protocol_document(
                 status_code=409, content={"detail": "протокол не материализован"}
             )
         return protocol_for_http(stored)
+    protocol_started = perf_counter()
     payload = assemble_protocol(
         protocol_id=record.protocol_id or record.process_id,
         object_id=record.object_id,
@@ -594,6 +599,7 @@ def _protocol_document(
         process_state=record.process_state,
         input_manifest_hash=record.input_manifest_hash,
     )
+    _workspace().note_phase(record, "protocol", perf_counter() - protocol_started)
     return protocol_for_http(payload)
 
 
