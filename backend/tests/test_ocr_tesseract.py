@@ -27,9 +27,12 @@ from kontur.domain.statuses import Completeness, FindingStatus
 from kontur.evaluation import metrics
 from kontur.infrastructure import ocr_tesseract
 from kontur.infrastructure.ocr_tesseract import (
+    _crop_pixels,
     expand_user_region,
     fill_empty_raster_pages,
+    ocr_region_crop,
     raster_pages_need_ocr,
+    suppress_colored_seal,
     tokens_from_tesseract_payload,
     unrotate_norm,
 )
@@ -396,3 +399,68 @@ def test_ocr_pool_receives_a_file_path(monkeypatch: pytest.MonkeyPatch) -> None:
     big = b"%PDF" + b"0" * 8_000_000
     fill_empty_raster_pages(document, big)
     assert workers[-1] == 2
+
+
+def test_rotated_crop_uses_the_visible_frame() -> None:
+    frame = PageFrame(media=(0.0, 0.0, 360.0, 120.0), crop=(0.0, 0.0, 360.0, 120.0), rotate=90)
+    box = _crop_pixels(frame, (0.0, 0.0, 36.0, 120.0), (120, 360))
+    assert box == (0, 0, 120, 36)
+
+
+def test_colored_seal_is_whitened_and_black_text_stays() -> None:
+    from PIL import Image
+
+    image = Image.new("RGB", (4, 1), (255, 255, 255))
+    image.putpixel((0, 0), (20, 20, 20))
+    image.putpixel((1, 0), (220, 30, 30))
+    image.putpixel((2, 0), (30, 40, 210))
+    image.putpixel((3, 0), (180, 180, 180))
+    cleaned = suppress_colored_seal(image)
+    assert hasattr(cleaned, "getpixel")
+    assert cleaned.getpixel((0, 0)) == (20, 20, 20)
+    assert cleaned.getpixel((1, 0)) == (255, 255, 255)
+    assert cleaned.getpixel((2, 0)) == (255, 255, 255)
+    gray = cleaned.getpixel((3, 0))
+    assert isinstance(gray, tuple)
+    assert gray[0] < 200
+
+
+def test_rotated_region_crop_returns_a_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    frame = PageFrame(media=(0.0, 0.0, 360.0, 120.0), crop=(0.0, 0.0, 360.0, 120.0), rotate=90)
+
+    class _Cache:
+        def page_image(self, page_number: int) -> object:
+            from PIL import Image
+
+            return Image.new("RGB", (120, 360), "white")
+
+    monkeypatch.setattr(ocr_tesseract, "tesseract_available", lambda: True)
+
+    def _import(name: str) -> object:
+        if name == "pytesseract":
+            return object()
+        raise ImportError(name)
+
+    monkeypatch.setattr(ocr_tesseract, "import_module", _import)
+    monkeypatch.setattr(
+        ocr_tesseract,
+        "_image_to_data",
+        lambda *_args, **_kwargs: {
+            "text": ["12"],
+            "conf": ["90"],
+            "left": [0],
+            "top": [0],
+            "width": [10],
+            "height": [10],
+        },
+    )
+    tokens = ocr_region_crop(
+        b"%PDF",
+        page_number=1,
+        frame=frame,
+        polygon=((4.0, 10.0), (20.0, 10.0), (20.0, 40.0), (4.0, 40.0)),
+        cache=_Cache(),  # type: ignore[arg-type]
+    )
+    assert tokens
+    assert tokens[0].text == "12"
+    assert polygon_in_unit_square(tokens[0].polygon_norm)
