@@ -216,6 +216,17 @@ class TestIdentityHeads:
         assert all(item.key is None for item in heads)
         assert all(item.resolution.status is ResolveStatus.RESOLVED for item in heads)
 
+    def test_linked_blank_ciphers_stay_one_chain(self) -> None:
+        older = replace(_doc("pd-old"), document_code="", successor_file_id="pd-new")
+        newer = replace(_doc("pd-new"), document_code="", predecessor_file_id="pd-old")
+        heads = resolve_heads_by_identity([older, newer], DocStage.PD)
+        assert len(heads) == 1
+        assert set(heads[0].file_ids) == {"pd-old", "pd-new"}
+        resolved = heads[0].resolution.resolved
+        assert heads[0].resolution.status is ResolveStatus.RESOLVED
+        assert resolved is not None
+        assert resolved.document.file_id == "pd-new"
+
     def test_two_unknown_blanks_clarify_approval_not_successors(self) -> None:
         left = replace(
             _doc("pd-a"),

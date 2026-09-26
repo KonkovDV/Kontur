@@ -266,7 +266,11 @@ def resolve_heads_by_identity(
     *,
     inspector_selected_file_ids: frozenset[str] = frozenset(),
 ) -> tuple[IdentityHead, ...]:
-    """Каждый шифр стадии резолвится отдельно. Пустой шифр — своя группа."""
+    """Каждый шифр стадии резолвится отдельно.
+
+    Пустой шифр без связи predecessor/successor — своя группа.
+    Явный successor между пустыми шифрами держит их одной цепочкой.
+    """
 
     stage_docs = [item for item in documents if item.doc_stage is stage]
     groups: dict[tuple[str, str, str], list[DocumentRef]] = {}
@@ -281,7 +285,7 @@ def resolve_heads_by_identity(
     keyed: list[tuple[tuple[str, str, str] | None, list[DocumentRef]]] = [
         (key, group) for key, group in groups.items()
     ]
-    keyed.extend((None, [item]) for item in blanks)
+    keyed.extend((None, component) for component in _blank_components(blanks))
     for key, group in keyed:
         selected = frozenset(
             item.file_id
@@ -308,6 +312,34 @@ def resolve_heads_by_identity(
             )
         )
     return tuple(result)
+
+
+def _blank_components(blanks: list[DocumentRef]) -> list[list[DocumentRef]]:
+    """Связанные пустые шифры — один компонент, остальные — по файлу."""
+
+    parent = {item.file_id: item.file_id for item in blanks}
+
+    def find(file_id: str) -> str:
+        while parent[file_id] != file_id:
+            parent[file_id] = parent[parent[file_id]]
+            file_id = parent[file_id]
+        return file_id
+
+    def union(left: str, right: str | None) -> None:
+        if right is None or right not in parent:
+            return
+        root_left = find(left)
+        root_right = find(right)
+        if root_left != root_right:
+            parent[root_right] = root_left
+
+    for item in blanks:
+        union(item.file_id, item.predecessor_file_id)
+        union(item.file_id, item.successor_file_id)
+    components: dict[str, list[DocumentRef]] = {}
+    for item in blanks:
+        components.setdefault(find(item.file_id), []).append(item)
+    return list(components.values())
 
 
 def check_stale_revision(
