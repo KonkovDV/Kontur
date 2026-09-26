@@ -14,12 +14,12 @@
     "document_code": { "type": ["string", "null"], "description": "key: true. Только основная надпись. Имя файла сюда не пишется." },
     "identity_code": {
       "type": ["string", "null"],
-      "description": "Шифр для группировки голов. Совпадает с document_code, если штамп прочитан. Иначе обозначение из имени файла."
+      "description": "Шифр для группировки голов. Совпадает с document_code, если штамп прочитан. Иначе обозначение из имени или stem файла. Марка раздела сюда не пишется."
     },
     "code_basis": {
       "type": ["string", "null"],
-      "enum": ["STAMP", "FILENAME", null],
-      "description": "STAMP — основная надпись. FILENAME — в штампе шифра нет, взято обозначение из имени. Конфликт штампа и имени не подменяет штамп."
+      "enum": ["STAMP", "FILENAME", "MANIFEST_PATH", null],
+      "description": "STAMP — основная надпись. FILENAME — в штампе шифра нет, взято обозначение из имени. MANIFEST_PATH — раздел пришёл из индекса, identity это stem файла, не общая марка. Конфликт не подменяет штамп."
     },
     "revision": { "type": ["string", "null"], "description": "key: true" },
     "approval_status": { "type": "string", "enum": ["APPROVED", "NOT_APPROVED", "UNKNOWN"] },

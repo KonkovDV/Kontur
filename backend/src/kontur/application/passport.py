@@ -4,14 +4,15 @@
 NFC и схлопывание пробелов; регистр в шифре значим. Пустой штамп остаётся
 null. Обозначение из имени файла пишется в `identity_code` с
 `code_basis=FILENAME` и не становится `document_code`. Конфликт штампа и
-имени не выбирает имя: это `needs_clarification`.
+имени не выбирает имя: это `needs_clarification`. Раздел из индекса
+пишется в `discipline` и не становится общим шифром томов.
 """
 
 from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 
 from kontur.application.extractors.number import PageToken
@@ -296,6 +297,47 @@ def section_mark_from_filename(filename: str | None) -> str | None:
     return found[0]
 
 
+_PATH_PHRASES: tuple[tuple[str, str], ...] = (
+    ("пояснительная записка", "ПЗ"),
+    ("архитектурные решения", "АР"),
+    ("конструктивные и объемно-планировочные", "КР"),
+    ("отопление", "ОВ"),
+    ("схема планировочной организации", "ПЗУ"),
+    ("проект организации строительства", "ПОС"),
+)
+
+
+def _mark_from_section_field(section: str | None) -> str | None:
+    if not section:
+        return None
+    raw = section.strip().upper().replace(" ", "")
+    if raw in _SECTION_MARKS:
+        return raw
+    return _LATIN_SECTION.get(raw)
+
+
+def _marks_from_index_path(relative_path: str | None) -> frozenset[str]:
+    if not relative_path:
+        return frozenset()
+    folded = relative_path.casefold().replace("ё", "е")
+    return frozenset(mark for phrase, mark in _PATH_PHRASES if phrase in folded)
+
+
+def manifest_section_mark(
+    section: str | None, relative_path: str | None
+) -> tuple[str | None, bool]:
+    """Одна марка из индекса. OTHER и чужие коды — не марка. Спор сигналов — не выбор."""
+
+    from_field = _mark_from_section_field(section)
+    from_path = _marks_from_index_path(relative_path)
+    if len(from_path) > 1:
+        return None, True
+    path_mark = next(iter(from_path), None)
+    if from_field is not None and path_mark is not None and from_field != path_mark:
+        return None, True
+    return from_field or path_mark, False
+
+
 def cipher_from_filename(filename: str | None) -> str | None:
     """Одно обозначение в имени файла. Несколько разных — не выбираем."""
 
@@ -499,4 +541,46 @@ def read_passport(
         extraction_confidence=confidence,
         needs_clarification=needs,
         clarification_reason=reason,
+    )
+
+
+def _note_manifest(passport: DocumentPassport, note: str) -> DocumentPassport:
+    reason = passport.clarification_reason
+    if reason is None:
+        reason = note
+    elif note not in reason:
+        reason = f"{reason}; {note}"
+    return replace(passport, needs_clarification=True, clarification_reason=reason)
+
+
+def apply_manifest_section(
+    passport: DocumentPassport,
+    *,
+    section: str | None,
+    relative_path: str | None,
+    filename: str | None,
+) -> DocumentPassport:
+    """Раздел индекса в discipline. Марка не становится общим identity."""
+
+    mark, conflict = manifest_section_mark(section, relative_path)
+    if conflict:
+        return _note_manifest(
+            passport, "раздел индекса неоднозначен и не подменяет шифр"
+        )
+    if mark is None or passport.discipline == mark:
+        return passport
+    if passport.discipline is not None:
+        return _note_manifest(
+            passport, f"раздел индекса {mark} не подменяет {passport.discipline}"
+        )
+    identity = passport.identity_code
+    basis = passport.code_basis
+    if identity is None:
+        identity = _filename_stem(filename) or passport.file_id
+        basis = "MANIFEST_PATH"
+    return replace(
+        passport,
+        discipline=mark,
+        identity_code=identity,
+        code_basis=basis,
     )

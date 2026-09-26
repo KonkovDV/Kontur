@@ -80,6 +80,8 @@ class AcceptedFile:
     stamp_approval: ApprovalStatus = ApprovalStatus.UNKNOWN
     predecessor_file_id: str | None = None
     successor_file_id: str | None = None
+    manifest_section: str | None = None
+    manifest_path: str | None = None
 
 
 @dataclass
@@ -387,6 +389,8 @@ class ProcessWorkspace:
                     doc_stage=item.doc_stage,
                     predecessor_file_id=item.predecessor_file_id,
                     successor_file_id=item.successor_file_id,
+                    manifest_section=item.manifest_section,
+                    manifest_path=item.manifest_path,
                 )
                 for item in record.files
             ),
