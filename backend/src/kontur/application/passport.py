@@ -235,12 +235,73 @@ def _designation(text: str) -> tuple[str | None, bool]:
     return None, True
 
 
+_SECTION_MARKS: frozenset[str] = frozenset(
+    {
+        "ПЗ",
+        "АР",
+        "КР",
+        "ОВ",
+        "КЖ",
+        "ОД",
+        "ПЗУ",
+        "ИОС",
+        "ПОС",
+        "ПОД",
+        "ЗУ",
+        "ППМ",
+        "ОДИ",
+        "ООС",
+        "СПЗУ",
+    }
+)
+_LATIN_SECTION: dict[str, str] = {
+    "PZ": "ПЗ",
+    "AR": "АР",
+    "KR": "КР",
+    "OV": "ОВ",
+    "KJ": "КЖ",
+    "OD": "ОД",
+    "PZU": "ПЗУ",
+    "IOS": "ИОС",
+    "POS": "ПОС",
+    "POD": "ПОД",
+    "ZU": "ЗУ",
+    "PPM": "ППМ",
+    "ODI": "ОДИ",
+    "OOS": "ООС",
+    "SPZU": "СПЗУ",
+}
+_SECTION_TOKEN = re.compile(r"[A-ZА-ЯЁ]{2,8}")
+
+
+def _filename_stem(filename: str | None) -> str:
+    if filename is None:
+        return ""
+    return filename.replace("\\", "/").rsplit("/", 1)[-1].rsplit(".", 1)[0].strip()
+
+
+def section_mark_from_filename(filename: str | None) -> str | None:
+    """Одна марка раздела в имени. Две разные марки — не выбираем."""
+
+    stem = _filename_stem(filename)
+    if not stem:
+        return None
+    found: list[str] = []
+    for raw in _SECTION_TOKEN.findall(stem.upper().replace("_", " ")):
+        mark = raw if raw in _SECTION_MARKS else _LATIN_SECTION.get(raw)
+        if mark is not None and mark not in found:
+            found.append(mark)
+    if len(found) != 1:
+        return None
+    return found[0]
+
+
 def cipher_from_filename(filename: str | None) -> str | None:
     """Одно обозначение в имени файла. Несколько разных — не выбираем."""
 
     if filename is None or not filename.strip():
         return None
-    stem = filename.replace("\\", "/").rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    stem = _filename_stem(filename)
     text = stem.replace("_", " ")
     found = [
         item
@@ -388,6 +449,7 @@ def read_passport(
         approval, approval_date = ApprovalStatus.UNKNOWN, None
         basis = ApprovalBasis.UNPROVEN
     name_code = cipher_from_filename(filename)
+    filename_discipline = section_mark_from_filename(filename)
     if code is not None and name_code is not None and code != name_code:
         needs = True
         reason = reason or (
@@ -401,9 +463,13 @@ def read_passport(
     elif name_code is not None:
         identity_code = name_code
         code_basis = "FILENAME"
+    elif filename_discipline is not None:
+        identity_code = _filename_stem(filename) or None
+        code_basis = "FILENAME" if identity_code else None
     else:
         identity_code = None
         code_basis = None
+        filename_discipline = None
     filled = sum(1 for item in (code, revision, sheet) if item)
     confidence = None
     if has_text:
@@ -412,6 +478,7 @@ def read_passport(
         file_id=file_id,
         file_hash=file_hash,
         doc_stage=stage,
+        discipline=filename_discipline if code is None else None,
         pages=pages,
         layer_kind=layer_kind,
         document_code=code,

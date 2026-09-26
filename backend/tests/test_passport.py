@@ -67,6 +67,21 @@ def test_filename_is_not_used_as_document_code() -> None:
     assert "шифр" in passport.clarification_reason
 
 
+def test_filename_section_is_discipline_not_a_shared_cipher() -> None:
+    passport = _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.2 ОВ (1).pdf")
+    assert passport.document_code is None
+    assert passport.identity_code == "Том 5.4.2 ОВ (1)"
+    assert passport.code_basis == "FILENAME"
+    assert passport.discipline == "ОВ"
+
+
+def test_two_section_marks_in_the_filename_are_not_chosen() -> None:
+    passport = _read(_tok("лист 1", 0.08, 0.82), filename="Том ОВ и КР.pdf")
+    assert passport.identity_code is None
+    assert passport.discipline is None
+    assert passport.document_code is None
+
+
 def test_filename_does_not_override_a_different_stamp() -> None:
     passport = _read(_tok("шифр: 12345-PZ", 0.08, 0.82), filename="99999-OV.pdf")
     assert passport.document_code == "12345-PZ"
