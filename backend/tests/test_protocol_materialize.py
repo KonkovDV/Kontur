@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
+import jsonschema
 import pytest
+from test_pz001 import _finding_schema, _validate_protocol
 
 from kontur.application.protocol import (
     assemble_protocol,
@@ -16,9 +19,16 @@ from kontur.application.protocol import (
 )
 from kontur.application.runtime import ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
-from kontur.domain.models import DocStage, Finding
+from kontur.domain.models import DocStage, Finding, InspectorDecision
 from kontur.domain.state_machines import Actor
-from kontur.domain.statuses import Completeness, FindingStatus, ProcessState, ReviewPriority
+from kontur.domain.statuses import (
+    STATUSES_REQUIRING_EVIDENCE,
+    Completeness,
+    FindingStatus,
+    ProcessState,
+    ReasonCode,
+    ReviewPriority,
+)
 from kontur.infrastructure.db.process_store import MemoryProcessStore
 
 
@@ -184,3 +194,75 @@ def test_quality_statuses_stay_in_needs_attention() -> None:
     assert isinstance(wire_sections, dict)
     assert wire_sections["needs_attention"]
     assert payload["violation_count"] == 0
+
+
+def test_export_tables_match_protocol_sections_except_the_pocket() -> None:
+    from kontur.application.protocol_export import TABLES
+
+    payload = assemble_protocol(
+        protocol_id="protocol-p-1",
+        object_id="obj-1",
+        findings=(),
+        completeness=_completeness(),
+        files=[],
+        versions={"matrix_version": "draft-0", "model_version": "none"},
+        input_manifest_hash="a" * 64,
+    )
+    wire = protocol_for_http(payload)
+    sections = wire["sections"]
+    assert isinstance(sections, dict)
+    assert set(sections) == set(TABLES)
+    assert "missing_evidence" in TABLES
+    assert "preliminary_no_difference" not in sections
+
+
+def test_protocol_with_every_finding_status_matches_schema() -> None:
+    now = datetime(2026, 9, 26, tzinfo=UTC)
+    findings: list[Finding] = []
+    for index, status in enumerate(FindingStatus):
+        decision = None
+        if status is FindingStatus.CONFIRMED_VIOLATION:
+            decision = InspectorDecision("insp-1", "CONFIRM", now, comment="подтверждаю")
+        elif status is FindingStatus.NEGATIVE_VERIFIED:
+            decision = InspectorDecision(
+                "insp-1",
+                "REJECT",
+                now,
+                reason_code=ReasonCode.OCR_ERROR,
+                comment="ошибка чтения",
+            )
+        findings.append(
+            Finding(
+                finding_id=f"f-{index}",
+                rule_code="PZ-001",
+                finding_status=status,
+                review_priority=ReviewPriority.MEDIUM,
+                matrix_version="draft-0",
+                rule_version="1",
+                model_version="none",
+                evidence_group_id="eg-1" if status in STATUSES_REQUIRING_EVIDENCE else None,
+                rationale="проверка схемы",
+                inspector_decision=decision,
+            )
+        )
+    payload = assemble_protocol(
+        protocol_id="protocol-p-1",
+        object_id="obj-1",
+        findings=findings,
+        completeness=_completeness(),
+        files=[],
+        versions={"matrix_version": "draft-0", "model_version": "none"},
+        input_manifest_hash="a" * 64,
+    )
+    _validate_protocol(payload)
+    schema = _finding_schema()
+    seen: set[str] = set()
+    sections = payload["sections"]
+    assert isinstance(sections, dict)
+    for rows in sections.values():
+        assert isinstance(rows, list)
+        for row in rows:
+            if isinstance(row, dict) and "finding_status" in row:
+                jsonschema.validate(row, schema)
+                seen.add(str(row["finding_status"]))
+    assert seen == {status.value for status in FindingStatus}
