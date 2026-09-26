@@ -2,6 +2,8 @@
   "schema": "kontur.ocr_weights.v1",
   "engine": "rapidocr-eslav-ppocrv5",
   "runtime_download": false,
+  "license": "Apache-2.0",
+  "license_url": "https://github.com/PaddlePaddle/PaddleOCR/blob/main/LICENSE",
   "files": [
     {
       "role": "det",

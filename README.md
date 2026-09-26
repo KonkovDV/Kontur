@@ -123,6 +123,8 @@ ACK РиН нет.
 Без сети после того, как образы уже скачаны:
 [`docker-compose.offline.yml`](docker-compose.offline.yml) и
 [`docs/DEMO_COLD_START.md`](docs/DEMO_COLD_START.md).
+Веса OCR лежат в `vendor/ocr`. Сборка ядра сверяет SHA-256 и не скачивает их.
+`scripts/offline_bundle.sh` сохраняет уже собранные образы в tar.
 
 Проверка кода без Docker, из корня репозитория:
 

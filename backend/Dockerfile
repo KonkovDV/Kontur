@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
 
 # Закрытый контур: без обращений к внешним сервисам в рантайме.
 # .git в образ не копируется: SHA передаётся на сборке.
@@ -22,13 +22,13 @@ COPY backend/src ./src
 COPY contracts ./contracts
 COPY data/matrix ./data/matrix
 COPY data/dataset/gold_inventory.json ./data/dataset/gold_inventory.json
+COPY vendor/ocr /opt/kontur/ocr
 COPY scripts/fetch_ocr_weights.py /tmp/fetch_ocr_weights.py
-RUN pip install --no-cache-dir -e ".[ocr]" \
-    && python /tmp/fetch_ocr_weights.py \
+RUN python /tmp/fetch_ocr_weights.py \
         --lock /app/src/kontur/infrastructure/ocr_weights.lock.json \
         --dest /opt/kontur/ocr \
-        --fetch \
-    && rm /tmp/fetch_ocr_weights.py
+    && rm /tmp/fetch_ocr_weights.py \
+    && pip install --no-cache-dir ".[ocr]"
 ENV KONTUR_OCR_WEIGHTS=/opt/kontur/ocr
 
 # Create the runtime identity only after privileged package installation. Keep
