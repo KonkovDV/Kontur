@@ -46,7 +46,18 @@
               "properties": {
                 "stage": { "enum": ["PD", "RD", "ID"] },
                 "file_id": { "type": "string" },
-                "pdf_page_number": { "type": "integer", "minimum": 1 }
+                "pdf_page_number": { "type": "integer", "minimum": 1 },
+                "polygon_norm": {
+                  "description": "Необязательный полигон страницы в [0;1]. Обязательный набор организатора — stage, file_id, pdf_page_number. IoU считается только если полигон есть и у эталона, и у ответа.",
+                  "type": "array",
+                  "minItems": 3,
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": { "type": "number", "minimum": 0, "maximum": 1 }
+                  }
+                }
               }
             }
           }

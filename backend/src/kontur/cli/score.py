@@ -3,22 +3,29 @@
 Совпадение — (object_id, parameter_code). В снимке gold нет location,
 поэтому номер помещения в ключе не участвует. На проводе location — помещение
 или «объект»; стадия и страница остаются в evidence.
-Локализация считается отдельно: есть ли у попадания file_id и страница.
+Локализация — IoU полигонов, не номер страницы. Строка без эталонного
+полигона в знаменатель локализации не входит.
 Матрица и свободный поиск не смешиваются. Порог ТЗ здесь не объявляется взятым.
+Интервал F1 — кластерный bootstrap по object_id и только при 10+ кластерах.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import random
 import sys
+from collections import defaultdict
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 from kontur.evaluation.dataset_package import is_hidden_test_object
 from kontur.evaluation.inventory import is_quarantined
-from kontur.evaluation.metrics import f1, meets_threshold, wilson
+from kontur.evaluation.metrics import IOU_THRESHOLD, Polygon, f1, iou, meets_threshold, wilson
 from kontur.evaluation.train_public import load_run_inventory
+
+_MIN_CLUSTERS = 10
 
 _POSITIVE = "VIOLATION_PRESENT"
 _ABSTAIN = frozenset({"COMPARISON_IMPOSSIBLE", "MISSING_DOCUMENT"})
@@ -115,8 +122,36 @@ def _gold_location(row: Mapping[str, object]) -> str | None:
     return raw.strip()
 
 
-def _localized(submissions: Sequence[Mapping[str, object]], key: tuple[str, ...]) -> bool:
+def _as_polygon(raw: object) -> Polygon | None:
+    """Полигон в [0;1] из JSON. Короткий или вне квадрата контур не эталон."""
+
+    if not isinstance(raw, list) or len(raw) < 3:
+        return None
+    points: list[tuple[float, float]] = []
+    for item in raw:
+        if not isinstance(item, list) or len(item) != 2:
+            return None
+        x, y = item[0], item[1]
+        if isinstance(x, bool) or isinstance(y, bool):
+            return None
+        if not isinstance(x, int | float) or not isinstance(y, int | float):
+            return None
+        fx, fy = float(x), float(y)
+        if fx < 0.0 or fx > 1.0 or fy < 0.0 or fy > 1.0:
+            return None
+        points.append((fx, fy))
+    return tuple(points)
+
+
+def _iou_localized(
+    submissions: Sequence[Mapping[str, object]],
+    key: tuple[str, ...],
+    gold: Polygon,
+) -> bool:
+    """Попадание, если хоть один полигон ответа даёт IoU не ниже порога."""
+
     object_id, code = key[0], key[1]
+    location = key[2] if len(key) >= 3 else None
     for document in submissions:
         if str(document.get("object_id") or "") != object_id:
             continue
@@ -126,16 +161,67 @@ def _localized(submissions: Sequence[Mapping[str, object]], key: tuple[str, ...]
         for check in checks:
             if not isinstance(check, dict) or str(check.get("parameter_code") or "") != code:
                 continue
+            if location is not None and str(check.get("location") or "").strip() != location:
+                continue
             evidence = check.get("evidence")
             if not isinstance(evidence, list):
                 continue
             for item in evidence:
                 if not isinstance(item, dict):
                     continue
-                page = item.get("pdf_page_number")
-                if str(item.get("file_id") or "").strip() and isinstance(page, int) and page >= 1:
+                predicted = _as_polygon(item.get("polygon_norm"))
+                if predicted is not None and iou(gold, predicted) >= IOU_THRESHOLD:
                     return True
     return False
+
+
+@dataclass(frozen=True, slots=True)
+class _ScoreRow:
+    object_id: str
+    gold_positive: bool
+    predicted_positive: bool
+
+
+def _f1_of(sample: Sequence[_ScoreRow]) -> float:
+    true_positive = sum(row.gold_positive and row.predicted_positive for row in sample)
+    false_positive = sum((not row.gold_positive) and row.predicted_positive for row in sample)
+    false_negative = sum(row.gold_positive and not row.predicted_positive for row in sample)
+    predicted = true_positive + false_positive
+    actual = true_positive + false_negative
+    precision = true_positive / predicted if predicted else 0.0
+    recall = true_positive / actual if actual else 0.0
+    return f1(precision, recall)
+
+
+def cluster_f1_interval(
+    rows: Sequence[_ScoreRow],
+    *,
+    min_clusters: int = _MIN_CLUSTERS,
+    draws: int = 5000,
+    seed: int = 0,
+) -> tuple[float, float] | None:
+    """2.5 и 97.5 перцентили F1 при ресэмпле кластеров object_id.
+
+    Меньше min_clusters кластеров — интервал не вывод. Не собирается из
+    нижних границ precision и recall.
+    """
+
+    by_object: dict[str, list[_ScoreRow]] = defaultdict(list)
+    for row in rows:
+        by_object[row.object_id].append(row)
+    ids = list(by_object)
+    if len(ids) < min_clusters:
+        return None
+    rng = random.Random(seed)  # noqa: S311
+    stats: list[float] = []
+    for _ in range(draws):
+        sample: list[_ScoreRow] = []
+        for _cluster in range(len(ids)):
+            sample.extend(by_object[rng.choice(ids)])
+        stats.append(_f1_of(sample))
+    stats.sort()
+    last = len(stats) - 1
+    return (stats[int(0.025 * last)], stats[int(0.975 * last)])
 
 
 def _scope_rows(rows: Sequence[Mapping[str, object]], scope: str) -> list[Mapping[str, object]]:
@@ -154,9 +240,11 @@ def score_scope(
     hits = 0
     abstain = 0
     localized_hits = 0
+    localization_unscored = 0
     unscored = 0
     scorable_pos: list[Mapping[str, object]] = []
     scorable_neg: list[Mapping[str, object]] = []
+    score_rows: list[_ScoreRow] = []
 
     def row_key(row: Mapping[str, object]) -> tuple[str, ...] | None:
         code_key = (str(row["object_id"]), str(row["parameter_code"]))
@@ -174,25 +262,43 @@ def score_scope(
             continue
         scorable_pos.append(row)
         label = predictions.get(key)
+        gold_polygon = _as_polygon(row.get("polygon_norm"))
+        if gold_polygon is None:
+            localization_unscored += 1
+        elif label == _POSITIVE and _iou_localized(submissions, key, gold_polygon):
+            localized_hits += 1
         if label in _ABSTAIN or label is None:
             abstain += 1
-            continue
-        if label == _POSITIVE:
+        elif label == _POSITIVE:
             hits += 1
-            if _localized(submissions, key):
-                localized_hits += 1
+        score_rows.append(
+            _ScoreRow(
+                object_id=str(row["object_id"]),
+                gold_positive=True,
+                predicted_positive=label == _POSITIVE,
+            )
+        )
     false_positives = 0
     for row in negatives:
         key = row_key(row)
         if key is None:
             continue
         scorable_neg.append(row)
-        if predictions.get(key) == _POSITIVE:
+        predicted_positive = predictions.get(key) == _POSITIVE
+        if predicted_positive:
             false_positives += 1
+        score_rows.append(
+            _ScoreRow(
+                object_id=str(row["object_id"]),
+                gold_positive=False,
+                predicted_positive=predicted_positive,
+            )
+        )
     predicted_keys = {
         key
         for key, label in predictions.items()
-        if label == _POSITIVE and any(
+        if label == _POSITIVE
+        and any(
             str(row["object_id"]) == key[0] and str(row["parameter_code"]) == key[1] for row in rows
         )
     }
@@ -206,6 +312,7 @@ def score_scope(
     precision = wilson(len(tp_keys), len(tp_keys) + len(fp_keys))
     fpr = wilson(false_positives, len(scorable_neg))
     point_f1 = f1(precision.point, recall.point)
+    f1_interval = cluster_f1_interval(score_rows)
     report: dict[str, object] = {
         "n_positive": len(scorable_pos),
         "hits": hits,
@@ -213,6 +320,15 @@ def score_scope(
         "n_negative": len(scorable_neg) if by_location else len(negatives),
         "false_positives": false_positives,
         "localized_hits": localized_hits,
+        "localization_unscored": localization_unscored,
+        "f1_interval": (
+            None if f1_interval is None else {"low": f1_interval[0], "high": f1_interval[1]}
+        ),
+        "f1_interval_note": (
+            "кластеров меньше 10, bootstrap не является выводом"
+            if f1_interval is None
+            else "кластерный bootstrap по object_id, не нижние границы precision и recall"
+        ),
         "recall": {"point": recall.point, "low": recall.low, "high": recall.high, "n": recall.n},
         "precision": {
             "point": precision.point,
@@ -221,7 +337,13 @@ def score_scope(
             "n": precision.n,
         },
         "f1_point": point_f1,
-        "fpr": {"point": fpr.point, "low": fpr.low, "high": fpr.high, "n": fpr.n},
+        "fpr": {
+            "point": fpr.point,
+            "low": fpr.low,
+            "high": fpr.high,
+            "n": fpr.n,
+            "defined": fpr.n > 0,
+        },
         "tz_recall_met": meets_threshold("recall", recall),
         "tz_precision_met": meets_threshold("precision", precision) if precision.n else False,
         "tz_fpr_met": meets_threshold("false_positive_rate", fpr) if fpr.n else False,
@@ -267,14 +389,26 @@ def _line(title: str, block: Mapping[str, object]) -> str:
     point_f1 = block["f1_point"]
     if not isinstance(point_f1, float):
         raise TypeError(title)
+    if fpr.get("defined") is False or fpr.get("n") == 0:
+        fpr_text = "FPR не определён (n=0)"
+    else:
+        fpr_text = f"FPR n={fpr['n']} {fpr['point']:.3f} [{fpr['low']:.3f}; {fpr['high']:.3f}]"
+    interval = block.get("f1_interval")
+    if interval is None:
+        f1_text = f"F1={point_f1:.3f} интервал не вывод (кластеров < 10)"
+    else:
+        if not isinstance(interval, dict):
+            raise TypeError(title)
+        f1_text = f"F1={point_f1:.3f} bootstrap [{interval['low']:.3f}; {interval['high']:.3f}]"
     return (
         f"{title}: n={recall['n']} hits={block['hits']} "
         f"R={recall['point']:.3f} [{recall['low']:.3f}; {recall['high']:.3f}] "
         f"P n={precision['n']} {precision['point']:.3f} "
         f"[{precision['low']:.3f}; {precision['high']:.3f}] "
-        f"F1={point_f1:.3f} "
-        f"FPR n={fpr['n']} {fpr['point']:.3f} [{fpr['low']:.3f}; {fpr['high']:.3f}] "
+        f"{f1_text} "
+        f"{fpr_text} "
         f"abstain={block['abstentions']} localized_hits={block['localized_hits']} "
+        f"localization_unscored={block['localization_unscored']} "
         f"порог_ТЗ={block['tz_recall_met']}"
     )
 
