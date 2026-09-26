@@ -95,6 +95,12 @@ def test_tz_scorecard_does_not_close_gates_or_claim_percent() -> None:
     )
     assert protocol_item["state"] == "partial"
     assert "kind=materialized" in str(protocol_item["detail"])
+    production_items = tracks["production"]
+    assert isinstance(production_items, list)
+    branch_item = next(item for item in production_items if item["id"] == "branch_protection")
+    assert branch_item["state"] == "partial"
+    assert "23890545" in str(branch_item["detail"])
+    assert "main unprotected" not in str(branch_item["detail"])
 
 
 def test_extractor_families_sum_to_declared_and_do_not_close_j() -> None:
@@ -133,6 +139,17 @@ def test_committed_dumps_match_builder() -> None:
     assert families_file["counts_by_family"] == live_families["counts_by_family"]
     assert scorecard_file["closes_gate_j"] is False
     assert live_scorecard["not_tz_percentage"] is True
+    live_tracks = live_scorecard["tracks"]
+    file_tracks = scorecard_file["tracks"]
+    assert isinstance(live_tracks, dict)
+    assert isinstance(file_tracks, dict)
+    live_branch = next(
+        item for item in live_tracks["production"] if item["id"] == "branch_protection"
+    )
+    file_branch = next(
+        item for item in file_tracks["production"] if item["id"] == "branch_protection"
+    )
+    assert file_branch == live_branch
     doc = root / "docs" / "AGENT_HANDOFF.md"
     assert doc.is_file()
     text = doc.read_text(encoding="utf-8")

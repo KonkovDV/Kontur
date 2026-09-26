@@ -109,8 +109,8 @@
       },
       {
         "id": "branch_protection",
-        "state": "unmet",
-        "detail": "main unprotected"
+        "state": "partial",
+        "detail": "ruleset main-pr-and-ci id 23890545; required reviews 0; gates I/J/K/L stay open"
       },
       {
         "id": "observability_otel",

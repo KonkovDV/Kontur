@@ -16,7 +16,7 @@
 |---|---|---|
 | Code | Функции и автотесты | часть HTTP/матрицы/протокола; 48 executable из 132 |
 | Acceptance | Пороги на frozen/GOLD с 95% CI | не измерены; 6 gold-позитивов < n=16 для recall |
-| Production | OIDC, TLS, AV, backup, SLA | JWT containment и hardening контейнеров; не OIDC |
+| Production | OIDC, TLS, AV, backup, SLA | JWT containment и hardening контейнеров; ruleset `main-pr-and-ci` (id 23890545), обязательных ревью 0; не OIDC и не закрытие гейтов I/J/K/L |
 
 Конкурсный RC к 29.09.2026 — безопасный finalize, честный coverage, рекордер
 Gate K, измеренный Gate L **без** production SLA. Полные 100% ТЗ без GOLD,
