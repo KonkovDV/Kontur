@@ -140,6 +140,36 @@ def test_pz001_not_approved_and_revision_conflict() -> None:
     assert "несколько" in conflict.finding.rationale
 
 
+def test_unresolved_sibling_cipher_does_not_block_the_approved_one() -> None:
+    """22222-PZ без утверждения не отменяет сравнение утверждённого 11111-PZ."""
+
+    rule = _REGISTRY.get("PZ-001")
+    approved = replace(_doc(DocStage.PD, file_id="pd-ok"), document_code="11111-PZ")
+    sibling = replace(
+        _doc(DocStage.PD, file_id="pd-open"),
+        document_code="22222-PZ",
+        approval_status=ApprovalStatus.UNKNOWN,
+    )
+    rd = replace(_doc(DocStage.RD, file_id="rd-ok"), document_code="11111-RD")
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: StagePage(
+                document=approved, tokens=_line("Площадь", "застройки", "1250,5")
+            ),
+            DocStage.RD: StagePage(
+                document=rd, tokens=_line("Площадь", "застройки", "1250,5")
+            ),
+        },
+        completeness=_completeness(),
+        revision_pool=[sibling, approved, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+    assert "утвержден" not in result.finding.rationale
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+
+
 def test_pz001_stale_revision_is_not_compared() -> None:
     """Явный successor, не «ред. N»: страница 9999 не эталон."""
 
