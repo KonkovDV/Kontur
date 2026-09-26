@@ -44,15 +44,7 @@ def _attach(
     workspace.keep_blob(record, file_id, payload)
 
 
-def _l4_blocked(record) -> list[str]:
-    return [
-        item.rule_code
-        for item in record.findings.values()
-        if "эталон без признака утверждения" in item.rationale
-    ]
-
-
-def test_package_default_unblocks_l4_without_human_verdict() -> None:
+def test_missing_approval_blocks_until_inspector_selects() -> None:
     pd = ascii_pdf("PD sheet 1")
     rd = ascii_pdf("RD sheet 1")
     workspace = ProcessWorkspace()
@@ -63,12 +55,24 @@ def test_package_default_unblocks_l4_without_human_verdict() -> None:
 
     assert record.process_state is ProcessState.READY
     assert record.parse_attempts == 1
-    assert _l4_blocked(record) == []
+    blocked = [
+        item.rule_code
+        for item in record.findings.values()
+        if item.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+        and item.rationale
+        and "утверждени" in item.rationale
+    ]
+    assert blocked
     assert all(item.stamp_approval is ApprovalStatus.UNKNOWN for item in record.files)
 
     workspace.select_revision(record.process_id, "f-pd", actor=INSPECTOR, comment=COMMENT)
     workspace.select_revision(record.process_id, "f-rd", actor=INSPECTOR, comment=COMMENT)
-    assert _l4_blocked(record) == []
+    assert not any(
+        item.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+        and item.rationale
+        and "утверждени" in item.rationale
+        for item in record.findings.values()
+    )
     assert all(
         item.finding_status is not FindingStatus.CONFIRMED_VIOLATION
         for item in record.findings.values()

@@ -17,7 +17,7 @@
     "approval_basis": {
       "type": "string",
       "enum": ["TITLE_BLOCK", "INSPECTOR_SELECT", "PACKAGE_DEFAULT", "UNPROVEN"],
-      "description": "TITLE_BLOCK — графа «Утвердил» и ФИО. INSPECTOR_SELECT — явный выбор инспектора. PACKAGE_DEFAULT — единственная голова ПД в комплекте без «не утв.». UNPROVEN — утверждение не доказано."
+      "description": "TITLE_BLOCK — графа «Утвердил» и ФИО. INSPECTOR_SELECT — явный выбор инспектора. PACKAGE_DEFAULT — значение для уже сохранённых документов; новый прогон его не назначает (ADR-0015). UNPROVEN — утверждение не доказано."
     },
     "approval_date": { "type": ["string", "null"], "format": "date" },
     "sheet": { "type": ["string", "null"], "description": "key: true" },

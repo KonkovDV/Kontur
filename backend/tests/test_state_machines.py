@@ -95,14 +95,18 @@ def test_finding_transitions_cover_every_status() -> None:
     assert set(FINDING_TRANSITIONS) == set(FindingStatus)
 
 
-def test_unfinalize_requires_supervisor_and_finalized() -> None:
-    supervisor = Actor("admin", is_human=True, is_supervisor=True)
-    with pytest.raises(TransitionError):
-        unfinalize(ProcessState.FINALIZED, INSPECTOR, "ошибочная финализация")
+def test_unfinalize_requires_a_human_and_finalized() -> None:
+    supervisor = Actor("lead", is_human=True, is_supervisor=True)
+    with pytest.raises(TransitionError, match="human"):
+        unfinalize(ProcessState.FINALIZED, MACHINE, "ошибочная финализация")
     with pytest.raises(TransitionError):
         unfinalize(ProcessState.VERIFYING, supervisor, "ошибочная финализация")
     with pytest.raises(TransitionError, match="reason"):
         unfinalize(ProcessState.FINALIZED, supervisor, "   ")
+    assert (
+        unfinalize(ProcessState.FINALIZED, INSPECTOR, "ошибочная финализация")
+        is ProcessState.COMPLETED
+    )
     assert (
         unfinalize(ProcessState.FINALIZED, supervisor, "ошибочная финализация")
         is ProcessState.COMPLETED

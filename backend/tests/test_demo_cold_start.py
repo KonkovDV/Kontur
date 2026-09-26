@@ -116,8 +116,8 @@ def test_compose_stack_lists_demo_services() -> None:
 
 
 @needs_font
-def test_unstamped_pd_compares_without_rewriting_the_stamp() -> None:
-    """Одна ПД без штампа сравнивается. Штамп паспорта не становится «Утвердил»."""
+def test_unstamped_pd_is_not_compared_until_the_inspector_selects() -> None:
+    """Одна ПД без сведений об утверждении не сравнивается. Штамп не переписывается."""
 
     draft = _sheet(_STALE_VALUES, stamp=False)
     rd = _sheet(_RD_VALUES)
@@ -132,13 +132,10 @@ def test_unstamped_pd_compares_without_rewriting_the_stamp() -> None:
     )
     assert report.stamp_by_file_id["f-pd-draft"] is ApprovalStatus.UNKNOWN
     slice_findings = demo_findings(report.findings)
-    assert slice_findings["PZ-001"].finding_status is FindingStatus.CANDIDATE
+    assert slice_findings["PZ-001"].finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert "утверждени" in slice_findings["PZ-001"].rationale
     assert all(
         item.finding_status is not FindingStatus.CONFIRMED_VIOLATION
-        for item in slice_findings.values()
-    )
-    assert all(
-        "эталон без признака утверждения" not in item.rationale
         for item in slice_findings.values()
     )
 

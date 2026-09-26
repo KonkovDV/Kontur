@@ -1,6 +1,6 @@
-"""Резолвер актуальной редакции (Gate E, ТЗ п. 9.1, ADR-0014).
+"""Резолвер актуальной редакции (Gate E, ТЗ п. 9.1, ответ организатора 26.09).
 
-ПД без явного «не утв.» — эталон комплекта, если голова шифра одна.
+ПД без сведений об утверждении — `CLARIFICATION_REQUIRED`, не эталон.
 РД и ИД не требуют графы «Утвердил». `NOT_APPROVED` в пул не входит.
 Несколько голов или цикл — `CLARIFICATION_REQUIRED`, без сравнения.
 
@@ -93,16 +93,42 @@ def _eligible(doc: DocumentRef) -> bool:
     return doc.approval_status is not ApprovalStatus.NOT_APPROVED
 
 
-def package_etalon(doc: DocumentRef) -> DocumentRef:
-    """Единственная голова ПД без штампа — эталон комплекта, не TITLE_BLOCK."""
+def _finish_head(
+    chosen: DocumentRef,
+    eligible: list[DocumentRef],
+    *,
+    inspector_selected: bool,
+) -> RevisionResolution:
+    """ПД без сведений об утверждении не становится эталоном сама.
 
-    if doc.doc_stage is DocStage.PD and doc.approval_status is ApprovalStatus.UNKNOWN:
-        return replace(
-            doc,
-            approval_status=ApprovalStatus.APPROVED,
-            approval_basis=ApprovalBasis.PACKAGE_DEFAULT,
+    Выбор инспектора переводит UNKNOWN в APPROVED с INSPECTOR_SELECT.
+    РД и ИД сравнение не останавливают.
+    """
+
+    if (
+        inspector_selected
+        and chosen.doc_stage is DocStage.PD
+        and chosen.approval_status is ApprovalStatus.UNKNOWN
+    ):
+        status, basis = approval_with_basis(
+            chosen.approval_status,
+            chosen.approval_basis,
+            inspector_selected=True,
         )
-    return doc
+        chosen = replace(chosen, approval_status=status, approval_basis=basis)
+    elif chosen.doc_stage is DocStage.PD and chosen.approval_status is ApprovalStatus.UNKNOWN:
+        return RevisionResolution(
+            status=ResolveStatus.CLARIFICATION_REQUIRED,
+            resolved=None,
+            conflict_reason="сведения об утверждении отсутствуют",
+        )
+    return RevisionResolution(
+        status=ResolveStatus.RESOLVED,
+        resolved=ResolvedRevision(
+            document=chosen,
+            is_stale=check_stale_revision(chosen, eligible),
+        ),
+    )
 
 
 def overlay_inspector_approval(
@@ -160,7 +186,8 @@ def resolve_revision(
        этой цепочки — голова. Два таких выбора — RevisionConflict.
        «Не утв.» в этот набор не входит.
     6. Иначе голова: нет successor в пуле пригодных редакций.
-    7. Одна голова ПД без штампа получает `PACKAGE_DEFAULT`.
+    7. Голова ПД со статусом UNKNOWN — `CLARIFICATION_REQUIRED`,
+       пока этот файл не выбран инспектором.
     8. Несколько голов или цикл — RevisionConflict.
     """
 
@@ -205,14 +232,7 @@ def resolve_revision(
             f"несколько выборов инспектора для {stage.value}: {ids}"
         )
     if len(selected) == 1:
-        chosen = package_etalon(selected[0])
-        return RevisionResolution(
-            status=ResolveStatus.RESOLVED,
-            resolved=ResolvedRevision(
-                document=chosen,
-                is_stale=check_stale_revision(chosen, eligible),
-            ),
-        )
+        return _finish_head(selected[0], eligible, inspector_selected=True)
 
     eligible_ids: frozenset[str] = frozenset(item.file_id for item in eligible)
     heads = [
@@ -228,14 +248,7 @@ def resolve_revision(
         raise RevisionConflict(
             f"несколько редакций без однозначного successor для {stage.value}: {ids}"
         )
-    chosen = package_etalon(heads[0])
-    return RevisionResolution(
-        status=ResolveStatus.RESOLVED,
-        resolved=ResolvedRevision(
-            document=chosen,
-            is_stale=check_stale_revision(chosen, eligible),
-        ),
-    )
+    return _finish_head(heads[0], eligible, inspector_selected=False)
 
 
 @dataclass(frozen=True, slots=True)
