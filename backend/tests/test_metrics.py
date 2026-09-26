@@ -190,6 +190,14 @@ def test_iou_full_containment() -> None:
     assert iou(UNIT_SQUARE, large) == pytest.approx(1.0 / 9.0, abs=1e-6)
 
 
+def test_nan_polygon_does_not_score_as_perfect_overlap() -> None:
+    """RT-2609-28: NaN в контуре не даёт IoU 1."""
+
+    poisoned = ((0.0, 0.0), (1.0, 0.0), (float("nan"), 1.0), (0.0, 1.0))
+    assert iou(UNIT_SQUARE, poisoned) == 0.0
+    assert iou(poisoned, UNIT_SQUARE) == 0.0
+
+
 def test_iou_is_clamped_to_unit_interval() -> None:
     for left, right in ((UNIT_SQUARE, UNIT_SQUARE), (UNIT_SQUARE, ())):
         result = iou(left, right)

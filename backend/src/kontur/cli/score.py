@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import sys
 from collections import defaultdict
@@ -137,7 +138,9 @@ def _as_polygon(raw: object) -> Polygon | None:
         if not isinstance(x, int | float) or not isinstance(y, int | float):
             return None
         fx, fy = float(x), float(y)
-        if fx < 0.0 or fx > 1.0 or fy < 0.0 or fy > 1.0:
+        if not math.isfinite(fx) or not math.isfinite(fy):
+            return None
+        if not (0.0 <= fx <= 1.0) or not (0.0 <= fy <= 1.0):
             return None
         points.append((fx, fy))
     return tuple(points)

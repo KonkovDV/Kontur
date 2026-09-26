@@ -193,6 +193,19 @@ def test_same_polygon_localizes_and_a_corner_does_not() -> None:
     assert missed["localization_unscored"] == 0
 
 
+def test_nan_polygon_is_not_a_localization() -> None:
+    """RT-2609-28: NaN в ответе не локализация и не выпадает из знаменателя эталона."""
+
+    from kontur.cli.score import _predictions
+
+    poisoned = [[0.0, 0.0], [1.0, 0.0], [float("nan"), 1.0], [0.0, 1.0]]
+    submission = _submission(poisoned)
+    block = score_scope([_positive(_SQUARE)], _predictions(submission), submission)
+    assert block["hits"] == 1
+    assert block["localized_hits"] == 0
+    assert block["localization_unscored"] == 0
+
+
 def test_zero_negatives_are_not_printed_as_zero_fpr() -> None:
     block = score_scope([_positive(None)], {}, [])
     fpr = block["fpr"]

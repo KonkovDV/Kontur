@@ -187,14 +187,21 @@ def _intersect_polygons(subject: Polygon, clip: Polygon) -> Polygon:
     return tuple(output)
 
 
+def _finite_ring(polygon: Polygon) -> bool:
+    return all(math.isfinite(x) and math.isfinite(y) for x, y in polygon)
+
+
 def iou(poly_a: Polygon, poly_b: Polygon) -> float:
     """IoU нормализованных полигонов после CropBox/MediaBox/Rotate.
 
     Координаты — в [0;1], Y вниз, как в `domain/coordinates.py`. Вырожденные
-    контуры (площадь 0) дают 0. Порог «локализовано» — `IOU_THRESHOLD`, не 0.95:
+    контуры (площадь 0) и неконечные координаты дают 0. Порог «локализовано» —
+    `IOU_THRESHOLD`, не 0.95:
     0.95 — нижняя граница Wilson по доле пар, а не по одному IoU.
     """
 
+    if not _finite_ring(poly_a) or not _finite_ring(poly_b):
+        return 0.0
     left = _oriented_ccw(poly_a)
     right = _oriented_ccw(poly_b)
     area_a = _polygon_area(left)
