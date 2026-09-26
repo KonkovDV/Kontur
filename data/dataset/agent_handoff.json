@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "generated_on": "2026-09-23",
-  "export_git_sha": "5cf372ac661480ecd16474b1e22301da85289af9",
+  "generated_on": "2026-09-26",
+  "export_git_sha": "811f8674436d4f338d88de0ae3901a05bfe7e420",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/AGENT_HANDOFF.md",
@@ -39,8 +39,8 @@
   ],
   "coverage_counts": {
     "advisory": 1,
-    "executable": 44,
-    "extractor_missing": 83,
+    "executable": 45,
+    "extractor_missing": 82,
     "not_applicable": 0,
     "source_missing": 4,
     "declared": 132,

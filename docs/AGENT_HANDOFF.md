@@ -27,7 +27,7 @@ HEAD смотреть `git rev-parse origin/main`.
 1. [`AGENTS.md`](../AGENTS.md) — инварианты 1–14.
 2. [`GH_AGENT_BUS.md`](GH_AGENT_BUS.md) — claim на issue до правок.
 3. [`data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json) — гейты, запреты, команды, draft_prs, extractor_triage_complete.
-4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 44 / 83 / 1 / 4 из 132.
+4. [`data/matrix/coverage_snapshot.json`](../data/matrix/coverage_snapshot.json) — разбивка `executable` / `extractor_missing` / `advisory` / `source_missing` (coverage, не вся матрица executable). Сейчас 45 / 82 / 1 / 4 из 132.
 4a. [`data/matrix/family_triage.json`](../data/matrix/family_triage.json) и [`docs/EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) — поштучное решение по 28 правилам семейств `exact_field` / `presence`: какой вид доказательства нужен и почему графика не стала текстом.
 4b. [`data/matrix/class_ladder_triage.json`](../data/matrix/class_ladder_triage.json) и [`docs/CLASS_LADDER_TRIAGE.md`](CLASS_LADDER_TRIAGE.md) — разбор 23 «классоподобных» правил: 5 переведены в `executable` через `enum` + `class_not_lower`, 13 осознанно оставлены `extractor_missing` с указанием причины (инвертированная лестница, набор признаков, таблица, допуск в обе стороны).
 4c. [`data/matrix/number_family_triage.json`](../data/matrix/number_family_triage.json) и [`docs/NUMBER_FAMILY_TRIAGE.md`](NUMBER_FAMILY_TRIAGE.md) — разбор 57 числовых правил: 6 переведены в `executable`, 51 оставлено `extractor_missing` с кодом причины (обмер по чертежу, подсчёт объектов, площадь по контуру, таблица по элементам).
@@ -169,11 +169,13 @@ GAP-EMB добавлен в `docs/KNOWN_GAPS.md` на ветке `feat/adversari
    остававшихся `extractor_missing`. Шесть стали `executable` (ZU-125, ZU-127,
    ZU-128, ZU-131 — теплотехника и энергопаспорт; SM-132 — итог ССР; PPM-114 —
    расход НПВ). Операторы и допуски не менялись, менялся только экстрактор.
-   Остальные 51 требуют обмера по чертежу, подсчёта объектов, площади по контуру
+   Остальные правила выборки требуют обмера по чертежу, подсчёта объектов, площади по контуру
    или таблицы по элементам — коды причин в `number_family_triage.json`.
-   **Все 83 `extractor_missing` полностью разобраны по трём триаж-документам.
-   Без новых экстракторов (`geometry`, `object_counting`, `per_element_table`,
-   `semantic_candidate`) переводить правила в `executable` нельзя.**
+   AR-040 исполняется обмером одной пары штрихов (масштаб в штампе, миллиметры
+   формулы, перевод в метры правила). Несколько пар дают `LOW_QUALITY`.
+   **Остальные 82 `extractor_missing` разобраны. Без своего экстрактора
+   (`object_counting`, `per_element_table`, `semantic_candidate`, обмер не одной
+   пары) переводить их в `executable` нельзя.**
 5. `split()` (GAP-SPLIT) до демо.
 6. Sandbox РиН, HTTP `submitted/confirmed/ambiguous` и бизнес-ACK → `SYNCED` — нет.
 7. JWKS/OIDC, TLS 1.3, антивирус, observability — **freeze** до подачи.

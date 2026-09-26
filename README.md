@@ -40,7 +40,7 @@ python -m kontur.cli.score --submissions <каталог>
 
 печатает n и 95% CI и не объявляет порог ТЗ взятым.
 
-Ограничение покрытия: 44 executable / 83 extractor_missing / 1 advisory /
+Ограничение покрытия: 45 executable / 82 extractor_missing / 1 advisory /
 4 source_missing из 132. OCR — `MEASURED`. PDF, DOCX и XML протокола
 собираются из одного JSON. РиН — mock, ACK нет.
 
@@ -79,7 +79,7 @@ python -m kontur.cli.score --submissions <каталог>
 ## Состояние
 
 Срез 23.09.2026. Гейты I/J/K/L **открыты**.
-Coverage: 44 executable / 83 extractor_missing / 1 advisory / 4 source_missing из 132 объявленных.
+Coverage: 45 executable / 82 extractor_missing / 1 advisory / 4 source_missing из 132 объявленных.
 OCR `MEASURED`: движок есть, порог не взят. Frozen val нет. РиН ACK нет. Freeze инфры до 29.09.
 
 Полный бриф для ИИ с GitHub: [`docs/GH_SITUATION_2026_09_21.md`](docs/GH_SITUATION_2026_09_21.md),

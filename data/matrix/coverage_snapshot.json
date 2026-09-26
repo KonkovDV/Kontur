@@ -3,8 +3,8 @@
   "matrix_version": "draft-0",
   "counts": {
     "advisory": 1,
-    "executable": 44,
-    "extractor_missing": 83,
+    "executable": 45,
+    "extractor_missing": 82,
     "not_applicable": 0,
     "source_missing": 4,
     "declared": 132,
@@ -15,6 +15,7 @@
       "POD-095"
     ],
     "executable": [
+      "AR-040",
       "AR-041",
       "AR-052",
       "IOS4-078",
@@ -61,7 +62,6 @@
       "ZU-131"
     ],
     "extractor_missing": [
-      "AR-040",
       "AR-042",
       "AR-043",
       "AR-044",
