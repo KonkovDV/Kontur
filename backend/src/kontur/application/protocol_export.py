@@ -30,6 +30,7 @@ TABLES: tuple[str, ...] = (
     "confirmed",
     "negative_verified",
     "suspicions",
+    "missing_evidence",
     "needs_attention",
 )
 _TITLES: dict[str, str] = {
@@ -38,6 +39,7 @@ _TITLES: dict[str, str] = {
     "confirmed": "Подтверждённые нарушения",
     "negative_verified": "Нарушение не подтверждено",
     "suspicions": "Подозрения",
+    "missing_evidence": "Нет доказательств",
     "needs_attention": "Требует внимания",
 }
 _FORBIDDEN = "AUTO_NO_DIFFERENCE"

@@ -138,7 +138,12 @@ _SQUARE = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
 _CORNER = [[0.0, 0.0], [0.1, 0.0], [0.1, 0.1], [0.0, 0.1]]
 
 
-def _positive(polygon: list[list[float]] | None) -> dict[str, object]:
+def _positive(
+    polygon: list[list[float]] | None,
+    *,
+    file_id: str | None = "f-rd",
+    page: int | None = 1,
+) -> dict[str, object]:
     row: dict[str, object] = {
         "object_id": "OBJ-X",
         "parameter_code": "AR-041",
@@ -147,6 +152,10 @@ def _positive(polygon: list[list[float]] | None) -> dict[str, object]:
     }
     if polygon is not None:
         row["polygon_norm"] = polygon
+    if file_id is not None:
+        row["file_id"] = file_id
+    if page is not None:
+        row["pdf_page_number"] = page
     return row
 
 
@@ -191,6 +200,88 @@ def test_same_polygon_localizes_and_a_corner_does_not() -> None:
     assert missed["hits"] == 1
     assert missed["localized_hits"] == 0
     assert missed["localization_unscored"] == 0
+
+
+def test_same_polygon_on_another_page_is_not_a_localization() -> None:
+    from kontur.cli.score import _predictions
+
+    other = _submission(_SQUARE)
+    evidence = other[0]["checks"][0]["evidence"][0]
+    assert isinstance(evidence, dict)
+    evidence["pdf_page_number"] = 12
+    block = score_scope([_positive(_SQUARE)], _predictions(other), other)
+    assert block["hits"] == 1
+    assert block["localized_hits"] == 0
+    assert block["localization_unscored"] == 0
+
+
+def test_polygon_without_file_and_page_is_unscored() -> None:
+    from kontur.cli.score import _predictions
+
+    submissions = _submission(_SQUARE)
+    block = score_scope(
+        [_positive(_SQUARE, file_id=None, page=None)],
+        _predictions(submissions),
+        submissions,
+    )
+    assert block["localized_hits"] == 0
+    assert block["localization_unscored"] == 1
+
+
+def test_point_f1_matches_the_bootstrap_counts() -> None:
+    from kontur.cli.score import _confusion, _f1_of, _predictions
+
+    rows = [
+        {
+            "object_id": "OBJ-1",
+            "parameter_code": "AR-041",
+            "violation_label": "VIOLATION_PRESENT",
+            "matrix_scope": "MATRIX",
+        },
+        {
+            "object_id": "OBJ-1",
+            "parameter_code": "AR-041",
+            "violation_label": "VIOLATION_PRESENT",
+            "matrix_scope": "MATRIX",
+        },
+        {
+            "object_id": "OBJ-1",
+            "parameter_code": "AR-042",
+            "violation_label": "NO_VIOLATION",
+            "matrix_scope": "MATRIX",
+        },
+    ]
+    submissions = [
+        {
+            "object_id": "OBJ-1",
+            "checks": [
+                {
+                    "parameter_code": "AR-041",
+                    "location": "объект",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "evidence": [{"stage": "RD", "file_id": "f", "pdf_page_number": 1}],
+                },
+                {
+                    "parameter_code": "AR-042",
+                    "location": "объект",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "evidence": [{"stage": "RD", "file_id": "f", "pdf_page_number": 1}],
+                },
+            ],
+        }
+    ]
+    block = score_scope(rows, _predictions(submissions), submissions)
+    counted = [
+        _ScoreRow(object_id="OBJ-1", gold_positive=True, predicted_positive=True),
+        _ScoreRow(object_id="OBJ-1", gold_positive=True, predicted_positive=True),
+        _ScoreRow(object_id="OBJ-1", gold_positive=False, predicted_positive=True),
+    ]
+    assert block["f1_point"] == _f1_of(counted)
+    true_positive, false_positive, _false_negative = _confusion(counted)
+    precision = block["precision"]
+    assert isinstance(precision, dict)
+    assert precision["n"] == true_positive + false_positive
+    assert precision["point"] == true_positive / (true_positive + false_positive)
 
 
 def test_nan_polygon_is_not_a_localization() -> None:

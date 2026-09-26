@@ -3,8 +3,8 @@
 Совпадение — (object_id, parameter_code). В снимке gold нет location,
 поэтому номер помещения в ключе не участвует. На проводе location — помещение
 или «объект»; стадия и страница остаются в evidence.
-Локализация — IoU полигонов, не номер страницы. Строка без эталонного
-полигона в знаменатель локализации не входит.
+Локализация — IoU полигонов на том же файле и той же странице.
+Строка без эталонного полигона, файла или страницы в знаменатель не входит.
 Матрица и свободный поиск не смешиваются. Порог ТЗ здесь не объявляется взятым.
 Интервал F1 — кластерный bootstrap по object_id и только при 10+ кластерах.
 """
@@ -146,12 +146,27 @@ def _as_polygon(raw: object) -> Polygon | None:
     return tuple(points)
 
 
+def _gold_page(row: Mapping[str, object]) -> tuple[str, int] | None:
+    """Файл и страница эталона. Без них полигон к листу не привязан."""
+
+    file_id = row.get("file_id")
+    page = row.get("pdf_page_number")
+    if not isinstance(file_id, str) or not file_id.strip():
+        return None
+    if isinstance(page, bool) or not isinstance(page, int) or page < 1:
+        return None
+    return file_id.strip(), page
+
+
 def _iou_localized(
     submissions: Sequence[Mapping[str, object]],
     key: tuple[str, ...],
     gold: Polygon,
+    *,
+    gold_file_id: str,
+    gold_page: int,
 ) -> bool:
-    """Попадание, если хоть один полигон ответа даёт IoU не ниже порога."""
+    """Попадание только на том же файле и той же странице, IoU не ниже порога."""
 
     object_id, code = key[0], key[1]
     location = key[2] if len(key) >= 3 else None
@@ -172,6 +187,10 @@ def _iou_localized(
             for item in evidence:
                 if not isinstance(item, dict):
                     continue
+                if str(item.get("file_id") or "") != gold_file_id:
+                    continue
+                if item.get("pdf_page_number") != gold_page:
+                    continue
                 predicted = _as_polygon(item.get("polygon_norm"))
                 if predicted is not None and iou(gold, predicted) >= IOU_THRESHOLD:
                     return True
@@ -185,10 +204,17 @@ class _ScoreRow:
     predicted_positive: bool
 
 
-def _f1_of(sample: Sequence[_ScoreRow]) -> float:
+def _confusion(sample: Sequence[_ScoreRow]) -> tuple[int, int, int]:
+    """TP, FP, FN по строкам разметки. Точка и bootstrap считают одно и то же."""
+
     true_positive = sum(row.gold_positive and row.predicted_positive for row in sample)
     false_positive = sum((not row.gold_positive) and row.predicted_positive for row in sample)
     false_negative = sum(row.gold_positive and not row.predicted_positive for row in sample)
+    return true_positive, false_positive, false_negative
+
+
+def _f1_of(sample: Sequence[_ScoreRow]) -> float:
+    true_positive, false_positive, false_negative = _confusion(sample)
     predicted = true_positive + false_positive
     actual = true_positive + false_negative
     precision = true_positive / predicted if predicted else 0.0
@@ -266,9 +292,16 @@ def score_scope(
         scorable_pos.append(row)
         label = predictions.get(key)
         gold_polygon = _as_polygon(row.get("polygon_norm"))
-        if gold_polygon is None:
+        gold_page = _gold_page(row)
+        if gold_polygon is None or gold_page is None:
             localization_unscored += 1
-        elif label == _POSITIVE and _iou_localized(submissions, key, gold_polygon):
+        elif label == _POSITIVE and _iou_localized(
+            submissions,
+            key,
+            gold_polygon,
+            gold_file_id=gold_page[0],
+            gold_page=gold_page[1],
+        ):
             localized_hits += 1
         if label in _ABSTAIN or label is None:
             abstain += 1
@@ -281,15 +314,12 @@ def score_scope(
                 predicted_positive=label == _POSITIVE,
             )
         )
-    false_positives = 0
     for row in negatives:
         key = row_key(row)
         if key is None:
             continue
         scorable_neg.append(row)
         predicted_positive = predictions.get(key) == _POSITIVE
-        if predicted_positive:
-            false_positives += 1
         score_rows.append(
             _ScoreRow(
                 object_id=str(row["object_id"]),
@@ -297,33 +327,29 @@ def score_scope(
                 predicted_positive=predicted_positive,
             )
         )
-    predicted_keys = {
-        key
-        for key, label in predictions.items()
-        if label == _POSITIVE
-        and any(
-            str(row["object_id"]) == key[0] and str(row["parameter_code"]) == key[1] for row in rows
-        )
-    }
-    true_keys = {key for row in scorable_pos if (key := row_key(row)) is not None}
-    if by_location:
-        true_keys = {key for key in true_keys if len(key) == 3}
-        predicted_keys = {key for key in predicted_keys if len(key) == 3}
-    tp_keys = predicted_keys & true_keys
-    fp_keys = predicted_keys - true_keys
-    recall = wilson(hits, len(scorable_pos))
-    precision = wilson(len(tp_keys), len(tp_keys) + len(fp_keys))
-    fpr = wilson(false_positives, len(scorable_neg))
-    point_f1 = f1(precision.point, recall.point)
+    true_positive, row_false_positive, false_negative = _confusion(score_rows)
+    recall = wilson(true_positive, true_positive + false_negative)
+    precision = wilson(true_positive, true_positive + row_false_positive)
+    fpr = wilson(row_false_positive, len(scorable_neg))
+    point_f1 = _f1_of(score_rows)
+    localization_n = len(scorable_pos) - localization_unscored
+    localization = wilson(localized_hits, localization_n)
     f1_interval = cluster_f1_interval(score_rows)
     report: dict[str, object] = {
         "n_positive": len(scorable_pos),
         "hits": hits,
         "abstentions": abstain,
         "n_negative": len(scorable_neg) if by_location else len(negatives),
-        "false_positives": false_positives,
+        "false_positives": row_false_positive,
         "localized_hits": localized_hits,
         "localization_unscored": localization_unscored,
+        "localization": {
+            "point": localization.point,
+            "low": localization.low,
+            "high": localization.high,
+            "n": localization.n,
+            "defined": localization.n > 0,
+        },
         "f1_interval": (
             None if f1_interval is None else {"low": f1_interval[0], "high": f1_interval[1]}
         ),
@@ -396,6 +422,14 @@ def _line(title: str, block: Mapping[str, object]) -> str:
         fpr_text = "FPR не определён (n=0)"
     else:
         fpr_text = f"FPR n={fpr['n']} {fpr['point']:.3f} [{fpr['low']:.3f}; {fpr['high']:.3f}]"
+    localization_block = block.get("localization")
+    if not isinstance(localization_block, dict) or localization_block.get("defined") is False:
+        localization_text = "локализация не определена"
+    else:
+        localization_text = (
+            f"локализация {block['localized_hits']}/{localization_block['n']} "
+            f"[{localization_block['low']:.3f}; {localization_block['high']:.3f}]"
+        )
     interval = block.get("f1_interval")
     if interval is None:
         f1_text = f"F1={point_f1:.3f} интервал не вывод (кластеров < 10)"
@@ -410,7 +444,7 @@ def _line(title: str, block: Mapping[str, object]) -> str:
         f"[{precision['low']:.3f}; {precision['high']:.3f}] "
         f"{f1_text} "
         f"{fpr_text} "
-        f"abstain={block['abstentions']} localized_hits={block['localized_hits']} "
+        f"abstain={block['abstentions']} {localization_text} "
         f"localization_unscored={block['localization_unscored']} "
         f"порог_ТЗ={block['tz_recall_met']}"
     )
