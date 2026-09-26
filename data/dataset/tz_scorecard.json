@@ -9,8 +9,8 @@
   "not_tz_percentage": true,
   "coverage_counts": {
     "advisory": 1,
-    "executable": 45,
-    "extractor_missing": 82,
+    "executable": 48,
+    "extractor_missing": 79,
     "not_applicable": 0,
     "source_missing": 4,
     "declared": 132,
@@ -26,7 +26,7 @@
       {
         "id": "matrix_executable_132",
         "state": "unmet",
-        "detail": "executable=45 extractor_missing=82"
+        "detail": "executable=48 extractor_missing=79"
       },
       {
         "id": "http_vector_pipeline",
