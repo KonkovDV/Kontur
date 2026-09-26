@@ -22,6 +22,26 @@ from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
 from kontur.domain.statuses import FindingStatus
 
 
+def test_same_stem_identities_do_not_become_one_successor_fight() -> None:
+    left = _doc(
+        "vol-a",
+        document_code="ПД/5.4 Отопление/Том 1#vol-a",
+        approval=ApprovalStatus.UNKNOWN,
+    )
+    right = _doc(
+        "vol-b",
+        document_code="ПД/5.4.2 Отопление/Том 1#vol-b",
+        approval=ApprovalStatus.UNKNOWN,
+    )
+    heads = resolve_heads_by_identity([left, right], DocStage.PD)
+    assert len(heads) == 2
+    assert {head.file_ids for head in heads} == {("vol-a",), ("vol-b",)}
+    for head in heads:
+        reason = head.resolution.conflict_reason or ""
+        assert "successor" not in reason
+        assert head.resolution.status is ResolveStatus.CLARIFICATION_REQUIRED
+
+
 def _doc(
     file_id: str,
     *,

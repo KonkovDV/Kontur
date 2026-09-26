@@ -553,6 +553,22 @@ def _note_manifest(passport: DocumentPassport, note: str) -> DocumentPassport:
     return replace(passport, needs_clarification=True, clarification_reason=reason)
 
 
+def _manifest_identity(
+    filename: str | None, relative_path: str | None, file_id: str
+) -> str:
+    """Ключ тома. Голый stem и марка раздела склеивают разные папки."""
+
+    stem = _filename_stem(filename) or file_id
+    if relative_path:
+        normalized = relative_path.replace("\\", "/").strip("/")
+        leaf = _filename_stem(normalized.rsplit("/", 1)[-1]) or stem
+        parent = normalized.rsplit("/", 1)[0] if "/" in normalized else ""
+        body = f"{parent}/{leaf}" if parent else leaf
+    else:
+        body = stem
+    return f"{body}#{file_id}"
+
+
 def apply_manifest_section(
     passport: DocumentPassport,
     *,
@@ -576,7 +592,7 @@ def apply_manifest_section(
     identity = passport.identity_code
     basis = passport.code_basis
     if identity is None:
-        identity = _filename_stem(filename) or passport.file_id
+        identity = _manifest_identity(filename, relative_path, passport.file_id)
         basis = "MANIFEST_PATH"
     return replace(
         passport,
