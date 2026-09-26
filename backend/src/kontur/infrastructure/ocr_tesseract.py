@@ -4,8 +4,11 @@
 Речников из пилота в замер не входит. Dual-read vector↔OCR в `evaluate_rule`
 зовёт `ocr_region_crop`; пустой кроп не считается disagreement.
 
-Ошибка, таймаут, поворот ≠ 0, нет pytesseract — исходные токены без
-исключения. Пустой результат — статусы качества, не violation.
+Ошибка, таймаут или отсутствие pytesseract оставляют исходные токены.
+Поворот кадра не обрывает кроп: pdfium уже отдал видимую страницу.
+Цветная печать выбеливается до распознавания; чёрный текст и серый
+штамп не трогаются. Пустой результат — статусы качества, не violation.
+`ocr_text` остаётся MEASURED. Гейт I этим модулем не закрывается.
 eslav и Tesseract читают кроп по отдельности: нет ответа — не голос.
 Растр для Tesseract — 300 dpi (scale = 300/72 относительно PDF user space).
 """
@@ -202,10 +205,14 @@ def tokens_from_tesseract_payload(
     image_size: tuple[int, int],
     *,
     region: UserRegion | None = None,
+    view_origin: tuple[float, float] | None = None,
+    page_image_size: tuple[int, int] | None = None,
 ) -> tuple[PageToken, ...]:
     """Слова Tesseract → grounded PageToken.
 
-    Без region bitmap = CropBox при rotate=0. С region — кадр кропа в user space.
+    Без region bitmap = видимый кадр pdfium, включая /Rotate.
+    С view_origin слово лежит на кропе этого кадра.
+    С region — кадр кропа в user space при rotate=0.
     conf < MIN_WORD_CONF и выход за [0;1] отбрасываются.
     """
 
@@ -233,7 +240,20 @@ def tokens_from_tesseract_payload(
         height = _field_float(payload, "height", index)
         if width <= 0 or height <= 0:
             continue
-        if region is None:
+        if view_origin is not None and page_image_size is not None:
+            origin_x, origin_y = view_origin
+            mapped = polygons_from_view_pixels(
+                origin_x + left,
+                origin_y + top,
+                origin_x + left + width,
+                origin_y + top + height,
+                page_image_size,
+                page.frame,
+            )
+            if mapped is None:
+                continue
+            polygon, polygon_norm = mapped
+        elif region is None:
             mapped = polygons_from_view_pixels(
                 left, top, left + width, top + height, image_size, page.frame
             )
@@ -304,18 +324,21 @@ def ocr_region_crop(
     polygon: Polygon,
     cache: PageImageCache | None = None,
 ) -> tuple[PageToken, ...]:
-    """Tesseract на расширенном кропе значения. Поворот и сбой — пустой кортеж."""
+    """Tesseract на расширенном кропе значения. Сбой и пустой кадр — пустой кортеж."""
 
-    if not tesseract_available() or frame.rotate != 0:
+    if not tesseract_available():
         return ()
     region = expand_user_region(polygon, frame)
     if region is None:
         return ()
     store = cache if cache is not None else PageImageCache(data)
     image = store.page_image(page_number)
-    cropped = _crop_to_region(image, frame, region)
-    if cropped is None:
+    full_size = _image_size(image)
+    box = None if full_size is None else _crop_pixels(frame, region, full_size)
+    cropped = _crop_image(image, box)
+    if cropped is None or box is None or full_size is None:
         return ()
+    cropped = suppress_colored_seal(cropped)
     size = _image_size(cropped)
     if size is None:
         return ()
@@ -333,7 +356,13 @@ def ocr_region_crop(
         has_embedded_text=False,
         layer_kind="raster",
     )
-    return tokens_from_tesseract_payload(payload, stub, size, region=region)
+    return tokens_from_tesseract_payload(
+        payload,
+        stub,
+        size,
+        view_origin=(float(box[0]), float(box[1])),
+        page_image_size=full_size,
+    )
 
 
 def ocr_region_eslav(
@@ -348,16 +377,19 @@ def ocr_region_eslav(
 
     from kontur.infrastructure.ocr_rapid import rapid_page_tokens, weights_ready
 
-    if not weights_ready() or frame.rotate != 0:
+    if not weights_ready():
         return ()
     region = expand_user_region(polygon, frame)
     if region is None:
         return ()
     store = cache if cache is not None else PageImageCache(data)
     image = store.page_image(page_number)
-    cropped = _crop_to_region(image, frame, region)
+    full_size = _image_size(image)
+    box = None if full_size is None else _crop_pixels(frame, region, full_size)
+    cropped = _crop_image(image, box)
     if cropped is None:
         return ()
+    cropped = suppress_colored_seal(cropped)
     size = _image_size(cropped)
     if size is None:
         return ()
@@ -643,35 +675,108 @@ def _render_pil(pdf_page: object) -> object | None:
             close()
 
 
-def _crop_to_region(image: object | None, frame: PageFrame, region: UserRegion) -> object | None:
-    if image is None:
-        return None
-    size = _image_size(image)
-    if size is None:
-        return None
-    img_w, img_h = size
-    crop_left, crop_bottom, crop_right, crop_top = frame.crop
-    crop_w = crop_right - crop_left
-    crop_h = crop_top - crop_bottom
-    if crop_w <= 0 or crop_h <= 0:
+def _crop_pixels(
+    frame: PageFrame,
+    region: UserRegion,
+    image_size: tuple[int, int],
+) -> tuple[int, int, int, int] | None:
+    """User-space кроп → пиксели видимого кадра. /Rotate уже в кадре pdfium."""
+
+    img_w, img_h = image_size
+    if img_w <= 0 or img_h <= 0:
         return None
     left, bottom, right, top = region
-    px0 = int(round((left - crop_left) / crop_w * img_w))
-    px1 = int(round((right - crop_left) / crop_w * img_w))
-    py0 = int(round((crop_top - top) / crop_h * img_h))
-    py1 = int(round((crop_top - bottom) / crop_h * img_h))
+    polygon = ((left, bottom), (right, bottom), (right, top), (left, top))
+    try:
+        norm = to_normalized(polygon, frame)
+    except ValueError:
+        return None
+    xs = [point[0] * img_w for point in norm]
+    ys = [point[1] * img_h for point in norm]
+    px0 = int(round(min(xs)))
+    px1 = int(round(max(xs)))
+    py0 = int(round(min(ys)))
+    py1 = int(round(max(ys)))
     px0 = max(0, min(img_w - 1, px0))
     px1 = max(px0 + 1, min(img_w, px1))
     py0 = max(0, min(img_h - 1, py0))
     py1 = max(py0 + 1, min(img_h, py1))
+    return (px0, py0, px1, py1)
+
+
+def _crop_image(
+    image: object | None,
+    box: tuple[int, int, int, int] | None,
+) -> object | None:
+    if image is None or box is None:
+        return None
     crop = getattr(image, "crop", None)
     if crop is None:
         return None
     try:
-        cropped: object = crop((px0, py0, px1, py1))
+        cropped: object = crop(box)
     except (TypeError, ValueError):
         return None
     return cropped
+
+
+def _point_band(band: object, table: list[int]) -> object:
+    point = getattr(band, "point", None)
+    if point is None:
+        raise TypeError("канал без point")
+    painted: object = point(table)
+    return painted
+
+
+def _ink_mask(chops: object, lead: object, other_a: object, other_b: object) -> object:
+    bright = [255 if value > 100 else 0 for value in range(256)]
+    gap = [255 if value > 40 else 0 for value in range(256)]
+    subtract = getattr(chops, "subtract", None)
+    multiply = getattr(chops, "multiply", None)
+    if subtract is None or multiply is None:
+        raise TypeError("ImageChops без subtract/multiply")
+    lead_hi = _point_band(lead, bright)
+    gap_a = _point_band(subtract(lead, other_a), gap)
+    gap_b = _point_band(subtract(lead, other_b), gap)
+    masked: object = multiply(multiply(lead_hi, gap_a), gap_b)
+    return masked
+
+
+def suppress_colored_seal(image: object) -> object:
+    """Красная и синяя печать → белый фон. Чёрный текст и серый штамп остаются."""
+
+    try:
+        pillow = import_module("PIL.Image")
+        chops = import_module("PIL.ImageChops")
+    except ImportError:
+        return image
+    convert = getattr(image, "convert", None)
+    size = _image_size(image)
+    if convert is None or size is None:
+        return image
+    rgb = convert("RGB")
+    split = getattr(rgb, "split", None)
+    if split is None:
+        return image
+    bands = split()
+    if not isinstance(bands, tuple) or len(bands) != 3:
+        return image
+    red_band, green_band, blue_band = bands
+    try:
+        red_mask = _ink_mask(chops, red_band, green_band, blue_band)
+        blue_mask = _ink_mask(chops, blue_band, red_band, green_band)
+        lighter = getattr(chops, "lighter", None)
+        if lighter is None:
+            return image
+        mask = lighter(red_mask, blue_mask)
+        white = pillow.new("RGB", size, (255, 255, 255))
+        composite = getattr(pillow, "composite", None)
+        if composite is None:
+            return image
+        cleaned: object = composite(white, rgb, mask)
+    except (TypeError, ValueError, OSError):
+        return image
+    return cleaned
 
 
 def unrotate_norm(nx: float, ny: float, quarter_ccw: int) -> tuple[float, float]:
@@ -690,6 +795,8 @@ def unrotate_norm(nx: float, ny: float, quarter_ccw: int) -> tuple[float, float]
 
 def _ocr_image(image: object, page: PdfPageTokens, size: tuple[int, int]) -> tuple[PageToken, ...]:
     from kontur.infrastructure.ocr_rapid import rapid_page_tokens
+
+    image = suppress_colored_seal(image)
 
     rapid = rapid_page_tokens(image, page, size)
     if rapid:
@@ -775,7 +882,7 @@ def _ocr_pdf_page(pdf_page: object, page: PdfPageTokens) -> tuple[PageToken, ...
     if image is None or size is None:
         return ()
     tokens = _ocr_image(image, page, size)
-    if tokens or page.frame.rotate != 0:
+    if tokens:
         return tokens
     return _ocr_turned_image(image, page)
 
