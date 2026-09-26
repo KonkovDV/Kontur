@@ -259,7 +259,11 @@ def _parse_jsonl(raw: str) -> tuple[OcrPilotLine, ...]:
 def main() -> int:
     """CLI: замер на пилоте. Не печатает «гейт закрыт»."""
 
-    from kontur.infrastructure.ocr_tesseract import ocr_image_bytes, tesseract_available
+    from kontur.infrastructure.ocr_tesseract import (
+        image_bytes_have_stamp,
+        ocr_image_bytes,
+        tesseract_available,
+    )
 
     path = find_pilot_zip()
     if path is None:
@@ -280,8 +284,27 @@ def main() -> int:
 
     lines = load_recognition_lines(path)
     crops = load_crop_bytes(path, lines)
-    print(f"ocr-pilot crops={len(crops)} workers={workers}", file=sys.stderr, flush=True)
-    pairs = score_crop_bytes(lines, crops, ocr_image_bytes, workers=workers, progress=_progress)
+    readable: dict[str, bytes] = {}
+    n_stamp = 0
+    for line in lines:
+        if not eligible_for_ca(line):
+            continue
+        payload = crops.get(line.crop_path)
+        if payload is None:
+            continue
+        if image_bytes_have_stamp(payload):
+            n_stamp += 1
+            continue
+        readable[line.crop_path] = payload
+    eligible_n = len(readable) + n_stamp
+    coverage = (len(readable) / eligible_n) if eligible_n else 0.0
+    print(
+        f"ocr-pilot crops={len(crops)} readable={len(readable)} "
+        f"stamp_excluded={n_stamp} workers={workers}",
+        file=sys.stderr,
+        flush=True,
+    )
+    pairs = score_crop_bytes(lines, readable, ocr_image_bytes, workers=workers, progress=_progress)
     tz = accuracy_interval(pairs)
     gate_i = gate_i_interval(pairs)
     accuracies = [character_accuracy(reference, hypothesis) for reference, hypothesis in pairs]
@@ -290,6 +313,8 @@ def main() -> int:
         "pilot_path": str(path),
         "n_pairs": len(pairs),
         "n_crops": len(crops),
+        "n_stamp_excluded": n_stamp,
+        "coverage": coverage,
         "workers": workers,
         "mean_ca": mean_ca,
         "tz_point": tz.point,
@@ -302,7 +327,10 @@ def main() -> int:
         "gate_i_n": gate_i.n,
         "silver_not_gold": True,
         "closes_gate_i": False,
-        "note": "SILVER PDF_TEXT_LAYER, без Речникова. Не публиковать как порог ТЗ.",
+        "note": (
+            "SILVER PDF_TEXT_LAYER, без Речникова. Толстое чёрное кольцо "
+            "не входит в знаменатель. Не порог ТЗ. Гейт I открыт."
+        ),
     }
     out_raw = os.environ.get(OCR_PILOT_OUT_ENV, "").strip()
     out_dir = Path(out_raw) if out_raw else Path.cwd() / "out"

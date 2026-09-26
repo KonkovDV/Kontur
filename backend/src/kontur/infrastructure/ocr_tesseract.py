@@ -779,6 +779,121 @@ def suppress_colored_seal(image: object) -> object:
     return cleaned
 
 
+def achromatic_stamp_overlap(image: object) -> bool:
+    """Толстое тёмное кольцо по четырём краям кропа и чернила внутри.
+
+    Цветная печать к этому моменту уже белая. Волосная рамка ячейки,
+    подчёркивание и строка с белыми полями кольцом не являются.
+    Срабатывание значит: участок не читается.
+    """
+
+    convert = getattr(image, "convert", None)
+    resize = getattr(image, "resize", None)
+    if convert is None:
+        return False
+    gray = convert("L")
+    size = _image_size(gray)
+    if size is None:
+        return False
+    width, height = size
+    if width < 24 or height < 24:
+        return False
+    if max(width, height) > 180 and resize is not None:
+        scale = 180 / max(width, height)
+        gray = gray.resize((max(24, int(width * scale)), max(24, int(height * scale))))
+        resized = _image_size(gray)
+        if resized is None:
+            return False
+        width, height = resized
+    reader = getattr(gray, "get_flattened_data", None)
+    if reader is None:
+        reader = getattr(gray, "getdata", None)
+    if reader is None:
+        return False
+    pixels = [int(item) for item in reader()]
+    if len(pixels) != width * height:
+        return False
+    margin_x = max(2, int(width * 0.12))
+    margin_y = max(2, int(height * 0.12))
+
+    def row_ink(y: int, x0: int, x1: int) -> float:
+        if x1 <= x0:
+            return 0.0
+        ink = sum(1 for x in range(x0, x1) if pixels[y * width + x] < 90)
+        return ink / (x1 - x0)
+
+    def column_ink(x: int, y0: int, y1: int) -> float:
+        if y1 <= y0:
+            return 0.0
+        ink = sum(1 for y in range(y0, y1) if pixels[y * width + x] < 90)
+        return ink / (y1 - y0)
+
+    def thickness(fractions: list[float]) -> int:
+        return sum(1 for item in fractions if item >= 0.55)
+
+    top = thickness([row_ink(y, 0, width) for y in range(margin_y)])
+    bottom = thickness(
+        [row_ink(y, 0, width) for y in range(height - margin_y, height)]
+    )
+    left = thickness([column_ink(x, 0, height) for x in range(margin_x)])
+    right = thickness(
+        [column_ink(x, 0, height) for x in range(width - margin_x, width)]
+    )
+    inner_ink = 0
+    inner_total = 0
+    for y in range(margin_y, height - margin_y):
+        for x in range(margin_x, width - margin_x):
+            inner_total += 1
+            if pixels[y * width + x] < 90:
+                inner_ink += 1
+    inner = (inner_ink / inner_total) if inner_total else 0.0
+    # Толщина ≥ 3 отсекает волосную рамку ячейки и подчёркивание.
+    return min(top, bottom, left, right) >= 3 and inner > 0.04
+
+
+def image_bytes_have_stamp(data: bytes) -> bool:
+    """Кроп пилота с чёрной печатью. Такие строки не входят в знаменатель CA."""
+
+    if not data:
+        return False
+    try:
+        pillow = import_module("PIL.Image")
+    except ImportError:
+        return False
+    open_image = getattr(pillow, "open", None)
+    if open_image is None:
+        return False
+    try:
+        image = open_image(BytesIO(data))
+    except (OSError, ValueError):
+        return False
+    return achromatic_stamp_overlap(image)
+
+
+def value_region_unreadable(
+    data: bytes,
+    *,
+    page_number: int,
+    frame: PageFrame,
+    polygon: Polygon,
+    cache: PageImageCache | None = None,
+) -> bool:
+    """Кроп значения закрыт чёрной печатью. Без кадра страницы — False."""
+
+    if cache is None:
+        return False
+    region = expand_user_region(polygon, frame)
+    if region is None:
+        return False
+    image = cache.page_image(page_number)
+    full_size = _image_size(image)
+    box = None if full_size is None else _crop_pixels(frame, region, full_size)
+    cropped = _crop_image(image, box)
+    if cropped is None:
+        return False
+    return achromatic_stamp_overlap(cropped)
+
+
 def unrotate_norm(nx: float, ny: float, quarter_ccw: int) -> tuple[float, float]:
     """Точка кадра, повёрнутого против часовой на quarter*90, в исходном кадре."""
 

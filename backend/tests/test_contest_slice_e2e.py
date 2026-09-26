@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 
 import pytest
 from pdf_fixtures import contest_slice_font, cyrillic_pdf
@@ -19,6 +20,7 @@ from kontur.application.process_pipeline import (
 )
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
+from kontur.domain.coordinates import PageFrame
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
 from kontur.domain.statuses import Completeness, FindingStatus, ProcessState
 from kontur.evaluation.contest_slice import (
@@ -28,6 +30,7 @@ from kontur.evaluation.contest_slice import (
     groups_by_rule,
 )
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
+from kontur.infrastructure.ocr_tesseract import PageImageCache
 from kontur.infrastructure.pdfium_tokens import file_sha256
 
 OBJECT_ID = "OBJ-CONTEST-SLICE-E2E"
@@ -158,6 +161,34 @@ def test_token_slice_candidates_have_evidence() -> None:
     for row in log:
         assert row["closes_gate_j"] is False
         assert row["fragments"]
+
+
+def test_black_stamp_on_the_value_is_low_quality(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "kontur.application.evaluate.value_region_unreadable",
+        lambda *_args, **_kwargs: True,
+    )
+    frame = PageFrame(media=(0.0, 0.0, 400.0, 400.0), crop=(0.0, 0.0, 400.0, 400.0), rotate=0)
+    cache = PageImageCache(b"%PDF-1.4\n")
+    pages = {
+        stage: replace(
+            page,
+            pdf_bytes=b"%PDF-1.4\n",
+            frames=(frame,),
+            render_cache=cache,
+        )
+        for stage, page in _pages(_PD_VALUES, _RD_CANDIDATE).items()
+    }
+    result = evaluate_rule(
+        _REGISTRY.get("PZ-001"),
+        object_id=OBJECT_ID,
+        pages=pages,
+        completeness=_completeness(),
+    )
+    assert result.finding.finding_status is FindingStatus.LOW_QUALITY
+    assert "coverage=0" in result.finding.rationale
+    assert result.finding.finding_status is not FindingStatus.CANDIDATE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
 
 def test_token_slice_missing_rd_is_missing_evidence() -> None:
