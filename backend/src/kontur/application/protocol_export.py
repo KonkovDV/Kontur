@@ -170,7 +170,7 @@ def render_docx(
     protocol: Mapping[str, object],
     cards: Mapping[str, Mapping[str, object]] | None = None,
 ) -> bytes:
-    """Документ Word: статус загрузки, тип проверки, пять таблиц, карточки."""
+    """Документ Word: статус загрузки, тип проверки, разделы TABLES, карточки."""
 
     document = Document()
     document.add_heading("Протокол проверки", level=0)
@@ -321,12 +321,29 @@ def render_pdf(
 
     def line(text: str, size: int = 11) -> None:
         nonlocal y
-        if y < 48:
-            sheet.showPage()
-            y = 800
         sheet.setFont(font, size)
-        sheet.drawString(40, y, text[:180])
-        y -= 16
+        rest = text
+        pieces: list[str] = []
+        while True:
+            if sheet.stringWidth(rest, font, size) <= 520 or len(rest) <= 1:
+                pieces.append(rest)
+                break
+            low, high = 1, len(rest)
+            while low < high:
+                mid = (low + high + 1) // 2
+                if sheet.stringWidth(rest[:mid], font, size) <= 520:
+                    low = mid
+                else:
+                    high = mid - 1
+            pieces.append(rest[:low])
+            rest = rest[low:]
+        for piece in pieces:
+            if y < 48:
+                sheet.showPage()
+                sheet.setFont(font, size)
+                y = 800
+            sheet.drawString(40, y, piece)
+            y -= 16
 
     line("Протокол проверки", 16)
     line(f"Объект: {_text(protocol.get('object_id'))}")
