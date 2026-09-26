@@ -138,3 +138,49 @@ def test_tz_protocol_schema_forbids_kind_and_assembled() -> None:
     properties = schema["properties"]
     assert "kind" not in properties
     assert "assembled" not in properties
+
+
+def test_quality_statuses_stay_in_needs_attention() -> None:
+    findings = tuple(
+        Finding(
+            finding_id=f"f-{status.value}",
+            rule_code="PZ-001",
+            finding_status=status,
+            review_priority=ReviewPriority.LOW,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+        )
+        for status in (
+            FindingStatus.LOW_QUALITY,
+            FindingStatus.ABSTAIN,
+            FindingStatus.CLARIFICATION_REQUIRED,
+            FindingStatus.NOT_COMPARABLE,
+            FindingStatus.NOT_APPLICABLE,
+        )
+    )
+    payload = assemble_protocol(
+        protocol_id="protocol-p-1",
+        object_id="obj-1",
+        findings=findings,
+        completeness=_completeness(),
+        files=[],
+        versions={"matrix_version": "draft-0", "model_version": "none"},
+        input_manifest_hash="a" * 64,
+    )
+    section = payload["sections"]
+    assert isinstance(section, dict)
+    rows = section["needs_attention"]
+    assert isinstance(rows, list)
+    assert {item["finding_status"] for item in rows} == {
+        "LOW_QUALITY",
+        "ABSTAIN",
+        "CLARIFICATION_REQUIRED",
+        "NOT_COMPARABLE",
+        "NOT_APPLICABLE",
+    }
+    wire = protocol_for_http(payload)
+    wire_sections = wire["sections"]
+    assert isinstance(wire_sections, dict)
+    assert wire_sections["needs_attention"]
+    assert payload["violation_count"] == 0

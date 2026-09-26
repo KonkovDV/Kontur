@@ -721,6 +721,14 @@ def _room_evaluation(
                 label,
             )
         )
+    roles = {item.role for item in fragments}
+    if EvidenceRole.EXPECTED not in roles or EvidenceRole.ACTUAL not in roles:
+        return _halt(
+            rule,
+            Stage.L5_PAIRING,
+            FindingStatus.ABSTAIN,
+            diff.rationale or "нет пары expected/actual",
+        )
     group = EvidenceGroup(
         evidence_group_id=group_id,
         object_id=object_id,

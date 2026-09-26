@@ -18,6 +18,11 @@ _SECTION: dict[FindingStatus, str] = {
     FindingStatus.SUSPICION: "suspicions",
     FindingStatus.MISSING_EVIDENCE: "missing_evidence",
     FindingStatus.AUTO_NO_DIFFERENCE: "preliminary_no_difference",
+    FindingStatus.LOW_QUALITY: "needs_attention",
+    FindingStatus.ABSTAIN: "needs_attention",
+    FindingStatus.CLARIFICATION_REQUIRED: "needs_attention",
+    FindingStatus.NOT_COMPARABLE: "needs_attention",
+    FindingStatus.NOT_APPLICABLE: "needs_attention",
 }
 
 
@@ -139,6 +144,7 @@ def assemble_protocol(
         "negative_verified": [],
         "suspicions": [],
         "missing_evidence": [],
+        "needs_attention": [],
         "preliminary_no_difference": [],
     }
     for finding in findings:
@@ -149,7 +155,7 @@ def assemble_protocol(
             continue
         bucket = _SECTION.get(finding.finding_status)
         if bucket is None:
-            continue
+            raise ValueError(f"{finding.finding_status.value} не входит ни в одну секцию протокола")
         sections[bucket].append(finding_to_schema(finding))
 
     confirmed = sections["confirmed"]

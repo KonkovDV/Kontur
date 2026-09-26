@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
@@ -16,6 +17,7 @@ from kontur.domain.statuses import (
 
 Point = tuple[float, float]
 Polygon = tuple[Point, ...]
+_FILE_HASH = re.compile(r"^[a-f0-9]{64}$")
 
 
 class DocStage(StrEnum):
@@ -68,6 +70,16 @@ class DocumentRef:
     successor_file_id: str | None = None
 
 
+def _polygon_points(polygon: Polygon, *, normalized: bool) -> None:
+    if len(polygon) < 3:
+        raise ValueError("polygon должен содержать не меньше трёх точек")
+    for x, y in polygon:
+        if isinstance(x, bool) or isinstance(y, bool):
+            raise ValueError("координата polygon не число")
+        if normalized and not (0.0 <= x <= 1.0 and 0.0 <= y <= 1.0):
+            raise ValueError("polygon_norm вне [0;1]")
+
+
 @dataclass(frozen=True, slots=True)
 class Extraction:
     """Извлечённое значение.
@@ -110,6 +122,10 @@ class EvidenceFragment:
     def __post_init__(self) -> None:
         if self.page < 1:
             raise ValueError("номер страницы начинается с 1, а не с 0")
+        if _FILE_HASH.fullmatch(self.document.file_hash) is None:
+            raise ValueError("file_hash должен быть SHA-256 в 64 hex-символах")
+        _polygon_points(self.polygon_source, normalized=False)
+        _polygon_points(self.polygon_norm, normalized=True)
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,8 +139,15 @@ class EvidenceGroup:
     fragments: tuple[EvidenceFragment, ...]
     resolved_revisions: tuple[DocumentRef, ...] = ()
 
+    def __post_init__(self) -> None:
+        if not self.fragments:
+            return
+        roles = {item.role for item in self.fragments}
+        if EvidenceRole.EXPECTED not in roles or EvidenceRole.ACTUAL not in roles:
+            raise ValueError("evidence group требует роли expected и actual")
+
     def role(self, role: EvidenceRole) -> EvidenceFragment | None:
-        return next((f for f in self.fragments if f.role is role), None)
+        return next((item for item in self.fragments if item.role is role), None)
 
 
 @dataclass(frozen=True, slots=True)

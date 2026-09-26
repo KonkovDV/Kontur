@@ -71,6 +71,11 @@ paths:
                   - PD
                   - RD
                   - ID
+                supersedes_file_id:
+                  type: string
+                  description: >
+                    file_id уже загруженного файла той же стадии, который этот
+                    файл заменяет. Новый файл становится successor.
                 files:
                   type: array
                   items:

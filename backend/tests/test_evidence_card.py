@@ -211,6 +211,42 @@ def test_group_id_mismatch_fails_closed() -> None:
         )
 
 
+def test_fragment_rejects_a_short_hash_and_a_norm_outside_the_square() -> None:
+    document = _doc(DocStage.PD, "file-pd", "abc")
+    sample = _fragment(EvidenceRole.EXPECTED, DocStage.PD, HASH_PD, "1", 1.0)
+    with pytest.raises(ValueError, match="SHA-256"):
+        EvidenceFragment(
+            fragment_id=sample.fragment_id,
+            role=sample.role,
+            document=document,
+            page=1,
+            polygon_source=sample.polygon_source,
+            polygon_norm=sample.polygon_norm,
+            extracted=sample.extracted,
+        )
+    with pytest.raises(ValueError, match="polygon_norm"):
+        EvidenceFragment(
+            fragment_id=sample.fragment_id,
+            role=sample.role,
+            document=sample.document,
+            page=1,
+            polygon_source=sample.polygon_source,
+            polygon_norm=((0.1, 0.2), (1.2, 0.2), (1.2, 0.4), (0.1, 0.4)),
+            extracted=sample.extracted,
+        )
+
+
+def test_group_rejects_a_single_role() -> None:
+    with pytest.raises(ValueError, match="expected и actual"):
+        EvidenceGroup(
+            evidence_group_id="eg-one",
+            object_id="obj-1",
+            rule_code="PZ-001",
+            matrix_version="draft-0",
+            fragments=(_fragment(EvidenceRole.EXPECTED, DocStage.PD, HASH_PD, "1", 1.0),),
+        )
+
+
 def test_demo_cards_validate_and_do_not_close_gate_k() -> None:
     cards = json.loads(DEMO_CARDS.read_text(encoding="utf-8"))
     assert isinstance(cards, list)

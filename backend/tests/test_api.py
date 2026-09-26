@@ -708,6 +708,32 @@ def _attach_group(process_id: str) -> None:
             grounded_in_source_tokens=True,
         ),
     )
+    actual_document = DocumentRef(
+        file_id="file-rd",
+        file_hash="b" * 64,
+        doc_stage=DocStage.RD,
+        document_code="ПЗ-001",
+        revision="1",
+        approval_status=ApprovalStatus.APPROVED,
+        sheet="ТЭП",
+    )
+    actual = EvidenceFragment(
+        fragment_id="eg-1-RD",
+        role=EvidenceRole.ACTUAL,
+        document=actual_document,
+        page=1,
+        polygon_source=((72.0, 400.0), (120.0, 400.0), (120.0, 430.0), (72.0, 430.0)),
+        polygon_norm=polygon,
+        extracted=Extraction(
+            raw_token="1100",  # noqa: S106
+            engine=ExtractionEngine.VECTOR,
+            engine_version="pdfium",
+            confidence=0.9,
+            normalized_value=1100.0,
+            unit="м²",
+            grounded_in_source_tokens=True,
+        ),
+    )
     record = app.state.workspace.get(process_id)
     assert record is not None
     record.evidence_groups["eg-1"] = EvidenceGroup(
@@ -715,7 +741,7 @@ def _attach_group(process_id: str) -> None:
         object_id=record.object_id,
         rule_code="PZ-001",
         matrix_version="draft-0",
-        fragments=(fragment,),
+        fragments=(fragment, actual),
     )
     record.audit.record("insp-7", "REVIEW", {"finding_id": "f-1", "action": "CONFIRM"})
 
@@ -768,3 +794,55 @@ def test_evidence_card_404_for_unknown_finding(client: TestClient) -> None:
         headers=INSPECTOR,
     )
     assert response.status_code == 404
+
+
+def test_supersedes_file_id_makes_the_new_upload_the_head(client: TestClient) -> None:
+    from kontur.application.revision_resolver import resolve_revision
+    from kontur.domain.models import ApprovalBasis
+
+    first = client.post(
+        "/api/v1/documents/upload",
+        headers=INSPECTOR,
+        data={"object_id": "obj-1", "doc_stage": "RD"},
+        files=[("files", ("rd-old.pdf", PDF, "application/pdf"))],
+    )
+    assert first.status_code == 202
+    process_id = first.json()["process_id"]
+    record = app.state.workspace.get(process_id)
+    assert record is not None
+    old_id = record.files[0].file_id
+    second = client.post(
+        "/api/v1/documents/upload",
+        headers=INSPECTOR,
+        data={
+            "object_id": "obj-1",
+            "process_id": process_id,
+            "doc_stage": "RD",
+            "supersedes_file_id": old_id,
+        },
+        files=[("files", ("rd-new.pdf", PDF + b"\n% next\n", "application/pdf"))],
+    )
+    assert second.status_code == 202
+    by_id = {item.file_id: item for item in record.files}
+    new_id = next(item for item in by_id if item != old_id)
+    assert by_id[new_id].predecessor_file_id == old_id
+    assert by_id[old_id].successor_file_id == new_id
+    pipeline = app.state.workspace._pipeline_files(record)  # noqa: SLF001
+    documents = [
+        DocumentRef(
+            file_id=item.file_id,
+            file_hash=item.file_hash,
+            doc_stage=item.doc_stage,
+            document_code="RD-1",
+            revision="1",
+            approval_status=ApprovalStatus.UNKNOWN,
+            approval_basis=ApprovalBasis.UNPROVEN,
+            predecessor_file_id=item.predecessor_file_id,
+            successor_file_id=item.successor_file_id,
+        )
+        for item in pipeline
+        if item.doc_stage is DocStage.RD
+    ]
+    resolution = resolve_revision(documents, DocStage.RD)
+    assert resolution.resolved is not None
+    assert resolution.resolved.document.file_id == new_id

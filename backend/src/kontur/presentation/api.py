@@ -164,8 +164,15 @@ def _attach_new_files(
     accepted_items: tuple[UploadCandidate, ...],
     bodies: dict[str, bytes],
     doc_stage: DocStage,
+    supersedes_file_id: str | None = None,
 ) -> list[dict[str, str]]:
     attached: list[dict[str, str]] = []
+    prior = None
+    if supersedes_file_id:
+        prior = next(
+            (item for item in record.files if item.file_id == supersedes_file_id),
+            None,
+        )
     for item in accepted_items:
         digest = item.content_hash
         if digest is None:
@@ -176,10 +183,15 @@ def _attach_new_files(
             filename=item.filename,
             doc_stage=doc_stage,
             size_bytes=item.size_bytes,
+            predecessor_file_id=prior.file_id if prior is not None else None,
         )
+        if prior is not None:
+            prior.successor_file_id = stored.file_id
         if workspace.attach_file(record, stored):
             workspace.keep_blob(record, stored.file_id, bodies[digest])
             attached.append({"file_id": stored.file_id, "file_hash": stored.file_hash})
+        elif prior is not None:
+            prior.successor_file_id = None
     return attached
 
 
@@ -260,6 +272,7 @@ async def upload_documents(
     authorization: Annotated[str | None, Header()] = None,
     process_id: Annotated[str | None, Form()] = None,
     doc_stage: Annotated[DocStage | None, Form()] = None,
+    supersedes_file_id: Annotated[str | None, Form()] = None,
 ) -> dict[str, object] | JSONResponse:
     try:
         return await _upload_documents(
@@ -269,6 +282,7 @@ async def upload_documents(
             authorization=authorization,
             process_id=process_id,
             doc_stage=doc_stage,
+            supersedes_file_id=supersedes_file_id,
         )
     finally:
         for upload in files:
@@ -286,6 +300,7 @@ async def _upload_documents(
     authorization: str | None,
     process_id: str | None,
     doc_stage: DocStage | None,
+    supersedes_file_id: str | None,
 ) -> dict[str, object] | JSONResponse:
     _subject, _granted, caller_object_id = _require("uploadDocuments", authorization)
     normalized_object_id = object_id.strip()
@@ -323,6 +338,12 @@ async def _upload_documents(
                 "message": "doc_stage обязателен: без стадии файл нельзя привязать к ПД/РД/ИД",
             },
         )
+    replaced = supersedes_file_id.strip() if supersedes_file_id else ""
+    if replaced and record is None:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "supersedes_file_id требует существующий процесс"},
+        )
 
     payloads: list[tuple[UploadCandidate, bytes]] = []
     for upload in files:
@@ -332,6 +353,28 @@ async def _upload_documents(
     if decision.rejected and not decision.accepted:
         worst = max(decision.rejected, key=lambda item: item.http_status)
         return JSONResponse(status_code=worst.http_status, content=_rejection_body(worst))
+    if replaced and len(decision.accepted) != 1:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "supersedes_file_id задаётся ровно для одного файла"},
+        )
+    if replaced and record is not None:
+        prior = next((item for item in record.files if item.file_id == replaced), None)
+        if prior is None:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "supersedes_file_id не найден в процессе"},
+            )
+        if prior.doc_stage is not doc_stage:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "successor должен быть той же стадии"},
+            )
+        if prior.successor_file_id is not None:
+            return JSONResponse(
+                status_code=409,
+                content={"detail": "у файла уже есть successor"},
+            )
 
     bodies = {
         item.content_hash: body
@@ -344,7 +387,7 @@ async def _upload_documents(
         completeness[doc_stage] = Completeness.UPLOADED
         record = workspace.create(normalized_object_id, completeness)
         attached = _attach_new_files(
-            workspace, record, decision.accepted, bodies, doc_stage
+            workspace, record, decision.accepted, bodies, doc_stage, replaced or None
         )
         workspace.schedule_matrix_pipeline(record)
         return _upload_receipt(record, attached, decision.rejected)
@@ -353,7 +396,7 @@ async def _upload_documents(
         raise TransitionError("протокол финализирован, дозагрузка запрещена")
 
     attached = _attach_new_files(
-        workspace, record, decision.accepted, bodies, doc_stage
+        workspace, record, decision.accepted, bodies, doc_stage, replaced or None
     )
     if not attached:
         return _upload_receipt(record, [], decision.rejected)
