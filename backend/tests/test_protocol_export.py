@@ -62,10 +62,11 @@ def test_docx_and_xml_follow_the_json_wire(monkeypatch: pytest.MonkeyPatch) -> N
         "Подтверждённые нарушения",
         "Нарушение не подтверждено",
         "Подозрения",
+        "Требует внимания",
         "Карточки доказательств",
     ):
         assert title in headings
-    assert len(document.tables) == 6
+    assert len(document.tables) == 7
     assert xml.status_code == 200
     text = xml.content.decode("utf-8")
     assert "check_type" in text

@@ -354,10 +354,12 @@ CREATE INDEX process_findings_status ON process_findings (process_id, finding_st
 CREATE TABLE process_files (
     process_id  TEXT NOT NULL REFERENCES processes (id),
     file_id     TEXT NOT NULL,
-    file_hash   CHAR(64) NOT NULL,
-    filename    TEXT NOT NULL,
-    doc_stage   TEXT NOT NULL CHECK (doc_stage IN ('PD', 'RD', 'ID')),
-    size_bytes  INTEGER NOT NULL CHECK (size_bytes >= 0),
+    file_hash           CHAR(64) NOT NULL,
+    filename            TEXT NOT NULL,
+    doc_stage           TEXT NOT NULL CHECK (doc_stage IN ('PD', 'RD', 'ID')),
+    size_bytes          INTEGER NOT NULL CHECK (size_bytes >= 0),
+    predecessor_file_id TEXT,
+    successor_file_id   TEXT,
     PRIMARY KEY (process_id, file_id),
     UNIQUE (process_id, file_hash, doc_stage)
 );

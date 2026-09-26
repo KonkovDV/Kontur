@@ -77,12 +77,36 @@ def _fragment() -> EvidenceFragment:
 
 
 def _group() -> EvidenceGroup:
+    actual = EvidenceFragment(
+        fragment_id="frag-rd",
+        role=EvidenceRole.ACTUAL,
+        document=DocumentRef(
+            file_id="file-rd",
+            file_hash="b" * 64,
+            doc_stage=DocStage.RD,
+            document_code="12345-RD",
+            revision="1",
+            approval_status=ApprovalStatus.APPROVED,
+            sheet="1",
+        ),
+        page=1,
+        polygon_source=SQUARE,
+        polygon_norm=SQUARE,
+        extracted=Extraction(
+            raw_token="1100",  # noqa: S106
+            engine=ExtractionEngine.VECTOR,
+            engine_version="pdfium",
+            confidence=0.9,
+            normalized_value=1100.0,
+            grounded_in_source_tokens=True,
+        ),
+    )
     return EvidenceGroup(
         evidence_group_id="eg-1",
         object_id="obj-pack",
         rule_code="PZ-001",
         matrix_version="draft-0",
-        fragments=(_fragment(),),
+        fragments=(_fragment(), actual),
     )
 
 

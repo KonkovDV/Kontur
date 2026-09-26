@@ -39,7 +39,7 @@
     },
     "sections": {
       "type": "object",
-      "description": "Пять таблиц п. 9.2 плюс внутренний карман preliminary_no_difference: автоматическое «расхождения нет» до ответа организатора на вопрос 8. Это не NEGATIVE_VERIFIED и не входит в число нарушений.",
+      "description": "Пять таблиц п. 9.2, секция needs_attention для статусов качества данных и внутренний карман preliminary_no_difference. Карман — автоматическое «расхождения нет» до ответа организатора на вопрос 8. Это не NEGATIVE_VERIFIED и не входит в число нарушений. needs_attention — LOW_QUALITY, ABSTAIN, CLARIFICATION_REQUIRED, NOT_COMPARABLE, NOT_APPLICABLE: отказ системы, не нарушение.",
       "required": ["completeness", "candidates", "confirmed", "negative_verified", "suspicions"],
       "properties": {
         "completeness": { "type": "array", "items": { "type": "object" } },
@@ -48,6 +48,11 @@
         "negative_verified": { "type": "array", "items": { "$ref": "./finding.schema.json" } },
         "suspicions": { "type": "array", "items": { "type": "object" } },
         "missing_evidence": { "type": "array", "items": { "$ref": "./finding.schema.json" } },
+        "needs_attention": {
+          "type": "array",
+          "description": "Статусы качества данных. Не нарушение и не «пройдено».",
+          "items": { "$ref": "./finding.schema.json" }
+        },
         "preliminary_no_difference": {
           "type": "array",
           "description": "Внутренние AUTO_NO_DIFFERENCE. Не выгружаются в РиН.",

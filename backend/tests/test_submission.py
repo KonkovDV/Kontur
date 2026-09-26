@@ -80,12 +80,18 @@ def _group(
     rule_code: str = "AR-014",
     group_id: str = "eg-1",
 ) -> EvidenceGroup:
+    present = {item.role for item in fragments}
+    padded = list(fragments)
+    if fragments and EvidenceRole.EXPECTED not in present:
+        padded.insert(0, _fragment(EvidenceRole.EXPECTED, DocStage.PD, second_read=True))
+    if fragments and EvidenceRole.ACTUAL not in present:
+        padded.append(_fragment(EvidenceRole.ACTUAL, DocStage.RD, second_read=True))
     return EvidenceGroup(
         evidence_group_id=group_id,
         object_id="obj-1",
         rule_code=rule_code,
         matrix_version="draft-0",
-        fragments=fragments,
+        fragments=tuple(padded),
     )
 
 

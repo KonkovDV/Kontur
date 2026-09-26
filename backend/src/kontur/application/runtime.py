@@ -78,6 +78,8 @@ class AcceptedFile:
     doc_stage: DocStage
     size_bytes: int
     stamp_approval: ApprovalStatus = ApprovalStatus.UNKNOWN
+    predecessor_file_id: str | None = None
+    successor_file_id: str | None = None
 
 
 @dataclass
@@ -205,6 +207,8 @@ class ProcessWorkspace:
                     filename=item.filename,
                     doc_stage=item.doc_stage,
                     size_bytes=item.size_bytes,
+                    predecessor_file_id=item.predecessor_file_id,
+                    successor_file_id=item.successor_file_id,
                 )
                 for item in record.files
             ),
@@ -241,6 +245,8 @@ class ProcessWorkspace:
                     filename=item.filename,
                     doc_stage=item.doc_stage,
                     size_bytes=item.size_bytes,
+                    predecessor_file_id=item.predecessor_file_id,
+                    successor_file_id=item.successor_file_id,
                 )
                 for item in snapshot.files
             ],
@@ -379,6 +385,8 @@ class ProcessWorkspace:
                     file_hash=item.file_hash,
                     filename=item.filename,
                     doc_stage=item.doc_stage,
+                    predecessor_file_id=item.predecessor_file_id,
+                    successor_file_id=item.successor_file_id,
                 )
                 for item in record.files
             ),
@@ -480,6 +488,8 @@ class ProcessWorkspace:
                 file_hash=item.file_hash,
                 filename=item.filename,
                 doc_stage=item.doc_stage,
+                predecessor_file_id=item.predecessor_file_id,
+                successor_file_id=item.successor_file_id,
             )
             for item in record.files
         )
