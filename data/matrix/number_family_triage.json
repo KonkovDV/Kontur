@@ -16,12 +16,12 @@
     "daylight_calculation": "КЕО — результат светотехнического расчёта по геометрии помещения, а не извлекаемое число."
   },
   "decision_counts": {
-    "kept_extractor_missing": 47,
+    "kept_extractor_missing": 40,
     "promoted_executable": 6
   },
-  "total_surveyed": 53,
+  "total_surveyed": 46,
   "closes_gate_j": false,
-  "note": "Разбор не закрывает Gate J и не заявляет 132/132. Числа проверены на синтетических фикстурах, а не на контрольной выборке: это заявка на исполнимость, не измеренная точность. AR-040 вышел из выборки: extractor.type=geometry, одна пара штрихов. SPZU-025 и SPZU-026 вышли: extractor.type=contour_area, один замкнутый прямоугольник, площадь в м², несколько контуров не суммируются. IOS2-071 вышел: extractor.type=element_table, марка строки и одно число, разный набор марок не склеивается. Подсчёт объектов и несколько полей в одном пункте остаются extractor_missing.",
+  "note": "Разбор не закрывает Gate J и не заявляет 132/132. Числа проверены на синтетических фикстурах, а не на контрольной выборке: это заявка на исполнимость, не измеренная точность. AR-040 вышел из выборки: extractor.type=geometry, одна пара штрихов. SPZU-025 и SPZU-026 вышли: extractor.type=contour_area, один замкнутый прямоугольник, площадь в м², несколько контуров не суммируются. IOS2-071 вышел: extractor.type=element_table, марка строки и одно число, разный набор марок не склеивается. AR-045, IOS1-070, KR-067, POS-088, PPM-113, AR-046 и SPZU-029 вышли: extractor.type=multi_field, число только рядом с явной единицей из правила, поля не переводятся. Подсчёт объектов на плане остаётся extractor_missing.",
   "entries": [
     {
       "code": "AR-042",
@@ -44,28 +44,6 @@
       "decision": "kept_extractor_missing",
       "reason_code": "layered_composite",
       "rationale": "«Пирог» из слоёв: значение — упорядоченный список толщин, а не одно число."
-    },
-    {
-      "code": "AR-045",
-      "section": "АР",
-      "name": "Уклоны кровли и система водостока",
-      "unit": "% / °",
-      "operator": "delta",
-      "coverage_status": "extractor_missing",
-      "decision": "kept_extractor_missing",
-      "reason_code": "multi_field_number",
-      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
-    },
-    {
-      "code": "AR-046",
-      "section": "АР",
-      "name": "Общее количество и габариты оконных блоков",
-      "unit": "шт. / м²",
-      "operator": "delta",
-      "coverage_status": "extractor_missing",
-      "decision": "kept_extractor_missing",
-      "reason_code": "object_counting",
-      "rationale": "Требуется подсчёт однотипных объектов на плане. AECV-Bench (arXiv:2601.04819, январь 2026) даёт средний exact-match около 0,39–0,51; двери и окна у сильнейшей модели 0,39 и 0,34. Прямоугольный контур не отождествляется с дверью или окном."
     },
     {
       "code": "AR-047",
@@ -110,17 +88,6 @@
       "decision": "kept_extractor_missing",
       "reason_code": "daylight_calculation",
       "rationale": "КЕО — результат светотехнического расчёта по геометрии помещения, а не извлекаемое число."
-    },
-    {
-      "code": "IOS1-070",
-      "section": "ИОС1",
-      "name": "Параметры и контуры заземления и молниезащиты",
-      "unit": "Ом / мм²",
-      "operator": "delta",
-      "coverage_status": "extractor_missing",
-      "decision": "kept_extractor_missing",
-      "reason_code": "multi_field_number",
-      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
     },
     {
       "code": "IOS3-074",
@@ -231,17 +198,6 @@
       "decision": "kept_extractor_missing",
       "reason_code": "area_from_polygon",
       "rationale": "Площадь вычисляется по замкнутому контуру на чертеже; подписанного числа может не быть вовсе."
-    },
-    {
-      "code": "KR-067",
-      "section": "КР",
-      "name": "Ведомости расхода материалов (бетон, сталь)",
-      "unit": "м³ / т",
-      "operator": "delta",
-      "coverage_status": "extractor_missing",
-      "decision": "kept_extractor_missing",
-      "reason_code": "multi_field_number",
-      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
     },
     {
       "code": "ODI-116",
@@ -387,17 +343,6 @@
       "rationale": "Значение лежит в календарном графике или графике движения рабочих — это диаграмма, не текст."
     },
     {
-      "code": "POS-088",
-      "section": "ПОС",
-      "name": "Точки подключения и мощности временных ресурсов",
-      "unit": "кВт / м³",
-      "operator": "delta",
-      "coverage_status": "extractor_missing",
-      "decision": "kept_extractor_missing",
-      "reason_code": "multi_field_number",
-      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
-    },
-    {
       "code": "PPM-104",
       "section": "ППМ",
       "name": "Ширина и высота эвакуационных проходов",
@@ -429,17 +374,6 @@
       "decision": "kept_extractor_missing",
       "reason_code": "object_counting",
       "rationale": "Требуется подсчёт однотипных объектов на плане. AECV-Bench (arXiv:2601.04819, январь 2026) даёт средний exact-match около 0,39–0,51; двери и окна у сильнейшей модели 0,39 и 0,34. Прямоугольный контур не отождествляется с дверью или окном."
-    },
-    {
-      "code": "PPM-113",
-      "section": "ППМ",
-      "name": "Расход воды и количество струй внутреннего пожаротушения (ВПВ)",
-      "unit": "л/с / шт.",
-      "operator": "delta",
-      "coverage_status": "extractor_missing",
-      "decision": "kept_extractor_missing",
-      "reason_code": "multi_field_number",
-      "rationale": "Параметр объединяет разные единицы измерения в одном пункте; сравнивать надо несколько полей."
     },
     {
       "code": "PPM-114",
@@ -492,17 +426,6 @@
       "decision": "kept_extractor_missing",
       "reason_code": "area_from_polygon",
       "rationale": "Площадь вычисляется по замкнутому контуру на чертеже; подписанного числа может не быть вовсе."
-    },
-    {
-      "code": "SPZU-029",
-      "section": "СПЗУ",
-      "name": "Спецификация МАФ",
-      "unit": "шт. / компл.",
-      "operator": "delta",
-      "coverage_status": "extractor_missing",
-      "decision": "kept_extractor_missing",
-      "reason_code": "object_counting",
-      "rationale": "Требуется подсчёт однотипных объектов на плане. AECV-Bench (arXiv:2601.04819, январь 2026) даёт средний exact-match около 0,39–0,51; двери и окна у сильнейшей модели 0,39 и 0,34. Прямоугольный контур не отождествляется с дверью или окном."
     },
     {
       "code": "SPZU-030",
@@ -643,5 +566,14 @@
   ],
   "moved_to_element_table": [
     "IOS2-071"
+  ],
+  "moved_to_multi_field": [
+    "AR-045",
+    "AR-046",
+    "IOS1-070",
+    "KR-067",
+    "POS-088",
+    "PPM-113",
+    "SPZU-029"
   ]
 }

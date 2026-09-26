@@ -29,7 +29,7 @@
 | Требование | Статус |
 |---|---|
 | Три независимых scorecard | ведётся JSON, без процента «по ТЗ» |
-| 132/132 executable | 48 executable, 79 `extractor_missing`, 1 advisory, 4 source_missing |
+| 132/132 executable | 55 executable, 72 `extractor_missing`, 1 advisory, 4 source_missing |
 | GOLD OCR / frozen val | нет; SILVER и n=6 не закрывают I/J |
 | Пять инспекторов Gate K | рекордер есть; сессий нет |
 | RabbitMQ + MinIO + outbox workers | relay+inbox контейнеры; HTTP inline; РиН ACK нет |
@@ -53,7 +53,7 @@
 
 1. Безопасный PostgreSQL finalize (ADR-0009: колонки, не `kind=materialized`).
 2. Gate K: пять сессий человеком; код рекордера не закрывает гейт.
-3. Честный coverage 48 executable / 79 extractor_missing / 1 advisory / 4 source_missing; без заявления,
+3. Честный coverage 55 executable / 72 extractor_missing / 1 advisory / 4 source_missing; без заявления,
    что вся матрица executable.
 4. E2E demo на векторном слое; `ocr_text=MEASURED`, гейт I открыт.
 5. Gate L измерен на GHA и **не** назван production SLA.

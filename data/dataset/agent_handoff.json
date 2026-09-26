@@ -39,8 +39,8 @@
   ],
   "coverage_counts": {
     "advisory": 1,
-    "executable": 48,
-    "extractor_missing": 79,
+    "executable": 55,
+    "extractor_missing": 72,
     "not_applicable": 0,
     "source_missing": 4,
     "declared": 132,

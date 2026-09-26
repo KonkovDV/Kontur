@@ -5,7 +5,7 @@
 
 Доказуемая репетиция — in-process pytest (синтетические кириллические PDF),
 не объект `10_Полярная_25_СОШ1100к7`. Coverage на момент среза:
-48 executable / 79 extractor_missing / 1 advisory / 4 source_missing из 132
+55 executable / 72 extractor_missing / 1 advisory / 4 source_missing из 132
 объявленных. Это разбивка, не заявление, что вся матрица executable.
 
 ## Что считается успехом

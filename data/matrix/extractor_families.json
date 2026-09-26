@@ -39,10 +39,17 @@
       "not_applicable": 0,
       "source_missing": 0
     },
+    "multi_field": {
+      "advisory": 0,
+      "executable": 7,
+      "extractor_missing": 0,
+      "not_applicable": 0,
+      "source_missing": 0
+    },
     "number": {
       "advisory": 0,
       "executable": 30,
-      "extractor_missing": 51,
+      "extractor_missing": 44,
       "not_applicable": 0,
       "source_missing": 0
     },
@@ -137,6 +144,21 @@
       "not_applicable": [],
       "source_missing": []
     },
+    "multi_field": {
+      "advisory": [],
+      "executable": [
+        "AR-045",
+        "AR-046",
+        "IOS1-070",
+        "KR-067",
+        "POS-088",
+        "PPM-113",
+        "SPZU-029"
+      ],
+      "extractor_missing": [],
+      "not_applicable": [],
+      "source_missing": []
+    },
     "number": {
       "advisory": [],
       "executable": [
@@ -174,14 +196,11 @@
       "extractor_missing": [
         "AR-042",
         "AR-044",
-        "AR-045",
-        "AR-046",
         "AR-047",
         "AR-048",
         "AR-049",
         "AR-050",
         "AR-051",
-        "IOS1-070",
         "IOS2-072",
         "IOS3-074",
         "IOS3-075",
@@ -194,7 +213,6 @@
         "KR-061",
         "KR-064",
         "KR-065",
-        "KR-067",
         "ODI-116",
         "ODI-117",
         "ODI-118",
@@ -208,15 +226,12 @@
         "POS-083",
         "POS-084",
         "POS-086",
-        "POS-088",
         "PPM-104",
         "PPM-105",
         "PPM-108",
         "PPM-109",
-        "PPM-113",
         "SPZU-027",
         "SPZU-028",
-        "SPZU-029",
         "SPZU-030",
         "SPZU-031",
         "SPZU-032",
@@ -249,5 +264,5 @@
       "source_missing": []
     }
   },
-  "note": "79 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
+  "note": "72 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
 }

@@ -29,6 +29,7 @@ EXECUTABLE_EXTRACTOR_TYPES: frozenset[str] = frozenset(
         "geometry",
         "contour_area",
         "element_table",
+        "multi_field",
         "enum",
         "text_regex",
         "exact_field",

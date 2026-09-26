@@ -5,7 +5,7 @@
   "unit": "м³ / т",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Итоговое расхождение объемов материалов между ПД, РД и ИД > 2%.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
@@ -26,7 +26,7 @@
     }
   },
   "extractor": {
-    "type": "number",
+    "type": "multi_field",
     "regex": null,
     "anchors": [
       "Ведомости расхода материалов (бетон, сталь)"
