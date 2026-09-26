@@ -142,6 +142,7 @@ def _record_for_finding(finding_id: str) -> ProcessRecord | None:
     """Найти уже загруженный процесс так же, как текущий workspace.review_finding."""
 
     workspace = _workspace()
+    workspace.wait_pipelines()
     for record in workspace._items.values():  # noqa: SLF001 - единая in-memory граница
         for key, item in record.findings.items():
             if item.finding_id == finding_id or key == finding_id:
@@ -345,7 +346,7 @@ async def _upload_documents(
         attached = _attach_new_files(
             workspace, record, decision.accepted, bodies, doc_stage
         )
-        workspace.run_matrix_pipeline(record)
+        workspace.schedule_matrix_pipeline(record)
         return _upload_receipt(record, attached, decision.rejected)
 
     if record.process_state is ProcessState.FINALIZED:
@@ -358,7 +359,7 @@ async def _upload_documents(
         return _upload_receipt(record, [], decision.rejected)
 
     workspace.reopen_for_upload(record)
-    workspace.run_matrix_pipeline(record)
+    workspace.schedule_matrix_pipeline(record)
     return _upload_receipt(record, attached, decision.rejected)
 
 

@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from uuid import uuid4
 
 from kontur.application import review as review_actions
+from kontur.application.pipeline_worker import PipelineWorker
 from kontur.application.process_pipeline import (
     PipelineFile,
     PipelineReport,
@@ -169,8 +170,10 @@ class ProcessWorkspace:
     def __init__(self, store: ProcessStore | None = None) -> None:
         self._items: dict[str, ProcessRecord] = {}
         self._store: ProcessStore = store if store is not None else MemoryProcessStore()
+        self._pipeline = PipelineWorker(self._run_scheduled)
 
     def reset(self) -> None:
+        self._pipeline.wait_all()
         self._items.clear()
         store = self._store
         if isinstance(store, MemoryProcessStore):
@@ -275,6 +278,9 @@ class ProcessWorkspace:
         )
 
     def get(self, process_id: str) -> ProcessRecord | None:
+        """Дождаться прогона загрузки, если он ещё идёт, и вернуть запись."""
+
+        self._pipeline.wait(process_id)
         current = self._items.get(process_id)
         if current is not None:
             return current
@@ -294,6 +300,16 @@ class ProcessWorkspace:
         }
         self._items[process_id] = record
         return record
+
+    def peek(self, process_id: str) -> ProcessRecord | None:
+        """Запись без ожидания прогона. Пока поток считает, состояние ещё PARSING."""
+
+        return self._items.get(process_id)
+
+    def wait_pipelines(self) -> None:
+        """Дождаться всех прогонов, уже поставленных загрузкой."""
+
+        self._pipeline.wait_all()
 
     def create(self, object_id: str, completeness: CompletenessMap) -> ProcessRecord:
         record = ProcessRecord(
@@ -330,6 +346,25 @@ class ProcessWorkspace:
         """Тело файла только в памяти процесса: Postgres снимок его не хранит."""
 
         record.blobs[file_id] = content
+
+    def schedule_matrix_pipeline(self, record: ProcessRecord) -> None:
+        """Поставить L1–L7 в поток процесса API. Запрос загрузки этого не ждёт."""
+
+        self._pipeline.submit(record.process_id)
+
+    def _run_scheduled(self, process_id: str) -> None:
+        record = self._items.get(process_id)
+        if record is None or record.process_state is not ProcessState.PARSING:
+            return
+        try:
+            self.run_matrix_pipeline(record)
+        except Exception as exc:
+            record.audit.record(
+                "system",
+                "PIPELINE_FAILED",
+                {"error": type(exc).__name__},
+            )
+            raise
 
     def run_matrix_pipeline(self, record: ProcessRecord) -> PipelineReport:
         """L1–L7 по загруженным PDF. Успех прогона → READY, не FINALIZED."""
