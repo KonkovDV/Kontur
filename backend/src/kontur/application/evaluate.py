@@ -64,9 +64,9 @@ from kontur.application.revision_resolver import (
 from kontur.application.room_compare import (
     RoomDiff,
     RoomSpot,
+    best_token_pair,
     compare_room_tokens,
     room_block,
-    room_settings,
 )
 from kontur.application.scenarios import CompletenessMap, status_for_missing_stage
 from kontur.domain.coordinates import PageFrame
@@ -603,6 +603,16 @@ def _room_pass_findings(
     rd_pages = _volume_list(pages.get(DocStage.RD))
     if not pd_pages or not rd_pages:
         return ()
+    if len(pd_pages) > 1 or len(rd_pages) > 1:
+        choice = best_token_pair(
+            tuple(item.tokens for item in pd_pages),
+            tuple(item.tokens for item in rd_pages),
+            settings,
+        )
+        if choice is None:
+            return ()
+        pd_pages = (pd_pages[choice[0]],)
+        rd_pages = (rd_pages[choice[1]],)
     kept: list[RuleEvaluation] = []
     for pd in pd_pages:
         for rd in rd_pages:
@@ -636,7 +646,7 @@ def _room_rule(
     pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
     object_id: str,
 ) -> RuleEvaluation:
-    settings = room_settings(rule)
+    settings = room_block(rule)
     if settings is None:
         return _halt(
             rule,
@@ -644,15 +654,32 @@ def _room_rule(
             FindingStatus.CLARIFICATION_REQUIRED,
             "room_compare без порогов в правиле",
         )
-    pd = pages.get(DocStage.PD)
-    rd = pages.get(DocStage.RD)
-    if not isinstance(pd, StagePage) or not isinstance(rd, StagePage):
+    pd_volumes = _volume_list(pages.get(DocStage.PD))
+    rd_volumes = _volume_list(pages.get(DocStage.RD))
+    if not pd_volumes or not rd_volumes:
         return _halt(
             rule,
             Stage.L4_REVISION,
             FindingStatus.CLARIFICATION_REQUIRED,
             "room_compare ждёт одну голову ПД и одну голову РД",
         )
+    if len(pd_volumes) == 1 and len(rd_volumes) == 1:
+        pd, rd = pd_volumes[0], rd_volumes[0]
+    else:
+        choice = best_token_pair(
+            tuple(item.tokens for item in pd_volumes),
+            tuple(item.tokens for item in rd_volumes),
+            settings,
+        )
+        if choice is None:
+            return _halt(
+                rule,
+                Stage.L4_REVISION,
+                FindingStatus.ABSTAIN,
+                "ничья пар томов по номерам помещений",
+            )
+        pd = pd_volumes[choice[0]]
+        rd = rd_volumes[choice[1]]
     diffs = compare_room_tokens(pd.tokens, rd.tokens, settings)
     if not diffs:
         return _halt(
