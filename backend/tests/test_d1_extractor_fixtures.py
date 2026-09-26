@@ -349,6 +349,82 @@ def test_kr055_equal_mismatch_and_neighbor_class() -> None:
     assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
 
 
+def test_kr055_not_approved_and_two_heads_do_not_compare() -> None:
+    rule = _REGISTRY.get("KR-055")
+    blocked = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: StagePage(
+                document=replace(
+                    _doc(DocStage.PD), approval_status=ApprovalStatus.NOT_APPROVED
+                ),
+                tokens=_line("Класс", "бетона", "B30"),
+            ),
+            DocStage.RD: _page(DocStage.RD, _line("Класс", "бетона", "B25")),
+        },
+        completeness=_completeness(),
+    )
+    assert blocked.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    first = replace(_doc(DocStage.PD, file_id="kr-v1"), document_code="11111-KR")
+    second = replace(_doc(DocStage.PD, file_id="kr-v2"), document_code="11111-KR")
+    rd = _doc(DocStage.RD)
+    conflict = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: (
+                StagePage(document=first, tokens=_line("Класс", "бетона", "B30")),
+                StagePage(document=second, tokens=_line("Класс", "бетона", "B25")),
+            ),
+            DocStage.RD: StagePage(document=rd, tokens=_line("Класс", "бетона", "B25")),
+        },
+        completeness=_completeness(),
+        revision_pool=[first, second, rd],
+    )
+    assert conflict.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert conflict.finding.finding_status is not FindingStatus.CANDIDATE
+
+
+def test_ar041_not_approved_and_two_heads_do_not_compare() -> None:
+    rule = _REGISTRY.get("AR-041")
+    blocked = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: StagePage(
+                document=replace(
+                    _doc(DocStage.PD), approval_status=ApprovalStatus.NOT_APPROVED
+                ),
+                tokens=_line("Ширина", "проема", "1200", "мм"),
+            ),
+            DocStage.RD: _page(DocStage.RD, _line("Ширина", "проема", "1,1", "м")),
+        },
+        completeness=_completeness(),
+    )
+    assert blocked.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    first = replace(_doc(DocStage.PD, file_id="ar-v1"), document_code="11111-AR")
+    second = replace(_doc(DocStage.PD, file_id="ar-v2"), document_code="11111-AR")
+    rd = _doc(DocStage.RD)
+    conflict = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: (
+                StagePage(document=first, tokens=_line("Ширина", "проема", "1200", "мм")),
+                StagePage(document=second, tokens=_line("Ширина", "проема", "1100", "мм")),
+            ),
+            DocStage.RD: StagePage(
+                document=rd, tokens=_line("Ширина", "проема", "1,1", "м")
+            ),
+        },
+        completeness=_completeness(),
+        revision_pool=[first, second, rd],
+    )
+    assert conflict.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
+    assert conflict.finding.finding_status is not FindingStatus.CANDIDATE
+
+
 def test_zu125_millimetres_stay_millimetres() -> None:
     rule = _REGISTRY.get("ZU-125")
     hit = extract_number(

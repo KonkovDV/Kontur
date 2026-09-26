@@ -151,3 +151,42 @@ def test_exports_print_expected_actual_and_fragment() -> None:
         assert token in xml
         assert token in text
         assert token in pdf_text
+
+
+def test_pdf_keeps_the_tail_of_a_long_card() -> None:
+    tail = "TAIL-" + ("9" * 240)
+    protocol = {
+        "protocol_id": "p-long",
+        "object_id": "obj-1",
+        "status": "VERIFICATION_COMPLETED",
+        "scenario": "PD_RD_ONLY",
+        "violation_count": 0,
+        "upload_status": {"pd": "PD_UPLOADED", "rd": "RD_UPLOADED", "id": "ID_MISSING"},
+        "sections": {
+            "completeness": [],
+            "candidates": [
+                {
+                    "finding_id": "f-long",
+                    "rule_code": "PZ-001",
+                    "finding_status": "CANDIDATE",
+                    "rationale": tail,
+                    "expected_value": "1",
+                    "actual_value": "2",
+                    "delta": "1",
+                }
+            ],
+            "confirmed": [],
+            "negative_verified": [],
+            "suspicions": [],
+            "missing_evidence": [],
+            "needs_attention": [],
+        },
+    }
+    xml = render_xml(protocol).decode("utf-8")
+    docx_text = "\n".join(
+        paragraph.text for paragraph in Document(BytesIO(render_docx(protocol))).paragraphs
+    )
+    pdf_text = _pdf_text(render_pdf(protocol)).replace("\n", "").replace("\r", "")
+    assert tail in xml
+    assert tail in docx_text
+    assert tail in pdf_text
