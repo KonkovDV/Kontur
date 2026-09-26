@@ -84,6 +84,31 @@ Outbox остаётся `PENDING`, пока relay не подтвердит бр
 
 Устный показ может взять один из этих кандидатов, отказ по `AR-041` и уточнение до выбора эталона. Это не пять сессий и не закрытие Gate K.
 
+## Запись прогона 27.09.2026
+
+Хост: Windows, Docker Engine 29.8.0, Compose v5.5.1, 20 CPU, память демона
+16677773312 байт. Образы собраны с `KONTUR_GIT_SHA=438b63fd85759822ffb899cd41ca2ef92296cfba`.
+Словарь `vendor/ocr/ppocrv5_eslav_dict.txt` в этой ревизии закреплён как LF:
+без этого рабочая копия Windows ломает SHA-256 замка и сборка ядра падает.
+
+Локальный tar `out/kontur_images.tar` в git не входит. Размер 2606031360 байт,
+SHA-256 `60c7a93b37620fee98d9041b80f149a2a6957633f099a1aa9003843a1b9a0c4e`.
+Четыре образа приложения удалены. `docker load` вернул их; id ядра снова
+`sha256:be1385030b54ddad5411bb2748f1132bcfc7f22bb3dbcb6e07dd7e6ee9f729c8`.
+Базовые образы postgres, redis, rabbitmq и minio на хосте уже были.
+
+Команда подъёма, без `--build`:
+
+```text
+docker compose -f docker-compose.yml -f docker-compose.demo.yml -f docker-compose.offline.yml up -d --no-build
+```
+
+`http://127.0.0.1:8000/api/v1/healthz` и `http://127.0.0.1:3000/api/v1/healthz`
+ответили 200 `{"status":"ok"}`. В контейнере ядра тот же `KONTUR_GIT_SHA`.
+Тома `pgdata`, `rabbitmq` и `minio` не стирались. Сеть хоста не отключалась:
+`pull_policy: never` и `--no-build` не дают registry и пересборку. Это не
+чистая Linux-машина без сети. Гейты I/J/K/L этот прогон не закрывает.
+
 ## Что это не закрывает
 
 | Тема | Статус |
