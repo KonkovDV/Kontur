@@ -913,6 +913,25 @@ components:
               type: integer
         sync_state:
           $ref: '#/components/schemas/SyncState'
+        phase_seconds:
+          type: object
+          description: 'Монотонные секунды загрузки, разбора, сравнения и сборки протокола. Это измерение прогона, не норматив времени. Рестарт процесса часы в статус не возвращает.
+
+            '
+          additionalProperties: false
+          properties:
+            upload:
+              type: number
+              minimum: 0
+            parse:
+              type: number
+              minimum: 0
+            compare:
+              type: number
+              minimum: 0
+            protocol:
+              type: number
+              minimum: 0
         versions:
           $ref: '#/components/schemas/Versions'
     SyncState:
