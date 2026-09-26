@@ -117,11 +117,36 @@ def test_finalize_blocked_by_open_candidate() -> None:
     assert pending == ["f-1"]
 
 
-def test_suspicion_blocks_finalize() -> None:
+def test_suspicion_does_not_block_finalize() -> None:
     stalled = replace(candidate("f-s"), finding_status=FindingStatus.SUSPICION)
     ok, pending = can_finalize([stalled])
-    assert not ok
-    assert pending == ["f-s"]
+    assert ok
+    assert pending == []
+
+
+def test_inspector_can_accept_or_reject_a_hypothesis() -> None:
+    suspicion = replace(candidate("f-s"), finding_status=FindingStatus.SUSPICION)
+    accepted = review(suspicion, actor=INSPECTOR, action="CONFIRM", comment=COMMENT)
+    assert accepted.finding_status is FindingStatus.CONFIRMED_VIOLATION
+    rejected = review(
+        suspicion,
+        actor=INSPECTOR,
+        action="REJECT",
+        reason_code=ReasonCode.SOURCE_QUALITY,
+        comment=COMMENT,
+    )
+    assert rejected.finding_status is FindingStatus.NEGATIVE_VERIFIED
+
+
+def test_machine_cannot_accept_a_hypothesis() -> None:
+    suspicion = replace(candidate("f-s"), finding_status=FindingStatus.SUSPICION)
+    with pytest.raises(TransitionError):
+        review(
+            suspicion,
+            actor=Actor("worker", is_human=False),
+            action="CONFIRM",
+            comment=COMMENT,
+        )
 
 
 def test_clarification_does_not_block_finalize() -> None:

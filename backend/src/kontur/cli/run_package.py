@@ -36,6 +36,7 @@ from kontur.evaluation.dataset_package import is_hidden_test_object
 from kontur.evaluation.inventory import QuarantineViolation, is_quarantined, require_path_open
 from kontur.evaluation.submission import build_check, build_submission
 from kontur.evaluation.submission_pack import build_input_manifest
+from kontur.infrastructure.matrix.free_search import wire_codes
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
 from kontur.infrastructure.pdf_guard import (
     PdfParseTimeoutError,
@@ -390,8 +391,8 @@ def submission_from_record(
 ) -> tuple[dict[str, object], list[dict[str, str]]]:
     """Собрать checks. Строка без доказательства нарушения в ответ не попадает."""
 
-    codes = registry.all_codes()
-    rules = {code: registry.get(code) for code in codes}
+    codes = wire_codes(registry.all_codes())
+    rules = {code: registry.get(code) for code in registry.all_codes()}
     checks = []
     dropped: list[dict[str, str]] = []
     for finding in record.findings.values():

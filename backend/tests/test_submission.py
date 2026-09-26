@@ -47,6 +47,7 @@ def _fragment(
     page: int = 7,
     grounded: bool = True,
     second_read: bool | None = None,
+    room_id: str | None = None,
 ) -> EvidenceFragment:
     return EvidenceFragment(
         fragment_id=f"frag-{role.value}-{stage.value}",
@@ -61,6 +62,7 @@ def _fragment(
             sheet="7",
         ),
         page=page,
+        room_id=room_id,
         polygon_source=SQUARE,
         polygon_norm=SQUARE,
         extracted=Extraction(
@@ -354,3 +356,27 @@ def test_findings_to_submission_is_the_only_assembly_path() -> None:
     assert "VIOLATION_PRESENT" in labels
     assert "NO_VIOLATION" in labels
     assert "AUTO_NO_DIFFERENCE" not in json.dumps(payload)
+
+
+def test_localized_suspicion_is_a_warning_and_stays_suspicion() -> None:
+    group = _group(
+        _fragment(EvidenceRole.EXPECTED, DocStage.PD, room_id="140"),
+        _fragment(EvidenceRole.ACTUAL, DocStage.RD, room_id="140"),
+        rule_code="FREE-HEATING-001",
+    )
+    finding = _finding(FindingStatus.SUSPICION, rule_code="FREE-HEATING-001")
+    check = build_check(finding, group, known_codes=["FREE-HEATING-001"])
+    assert finding.finding_status is FindingStatus.SUSPICION
+    assert check.violation_label is ContestViolationLabel.VIOLATION_PRESENT
+    assert check.protocol_status is ContestProtocolStatus.WARNING
+    payload = build_submission("obj-1", [check], known_codes=["FREE-HEATING-001"])
+    assert payload["checks"][0]["parameter_code"] == "FREE-HEATING-001"
+
+
+def test_suspicion_without_a_room_stays_comparison_impossible() -> None:
+    group = _group(
+        _fragment(EvidenceRole.EXPECTED, DocStage.PD),
+        _fragment(EvidenceRole.ACTUAL, DocStage.RD),
+    )
+    check = build_check(_finding(FindingStatus.SUSPICION), group)
+    assert check.violation_label is ContestViolationLabel.COMPARISON_IMPOSSIBLE

@@ -44,7 +44,13 @@ FINDING_TRANSITIONS: dict[FindingStatus, frozenset[FindingStatus]] = {
             FindingStatus.NEGATIVE_VERIFIED,
         }
     ),
-    FindingStatus.SUSPICION: frozenset({FindingStatus.CANDIDATE}),
+    FindingStatus.SUSPICION: frozenset(
+        {
+            FindingStatus.CANDIDATE,
+            FindingStatus.CONFIRMED_VIOLATION,
+            FindingStatus.NEGATIVE_VERIFIED,
+        }
+    ),
     FindingStatus.AUTO_NO_DIFFERENCE: frozenset({FindingStatus.NEGATIVE_VERIFIED}),
     # Отказ качества не становится кандидатом, нарушением или «пройдено».
     # Новая загрузка создаёт новую находку, а не переписывает эту.

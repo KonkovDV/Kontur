@@ -15,6 +15,7 @@ from kontur.application.protocol import canonical_protocol_json, protocol_for_ht
 from kontur.domain.models import EvidenceGroup, Finding
 from kontur.evaluation.agent_dumps import build_handoff, git_sha, repo_root
 from kontur.evaluation.submission import findings_to_submission
+from kontur.infrastructure.matrix.free_search import wire_codes
 from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
 
 PACK_SCHEMA = "kontur.submission_pack.v1"
@@ -206,8 +207,8 @@ def build_submission_pack(
     if findings:
         if object_id is None or not object_id.strip():
             raise ValueError("submission pack с находками требует object_id")
-        codes = registry.all_codes()
-        rules = {code: registry.get(code) for code in codes}
+        codes = wire_codes(registry.all_codes())
+        rules = {code: registry.get(code) for code in registry.all_codes()}
         submission = findings_to_submission(
             object_id,
             findings,

@@ -641,6 +641,31 @@ def _with_room_pass(
     return replace(result, also=result.also + fresh)
 
 
+def evaluate_free_search(
+    rule: dict[str, object],
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
+    object_id: str,
+) -> tuple[RuleEvaluation, ...]:
+    """Гипотеза вне 132. Автомат пишет SUSPICION, не CANDIDATE и не вердикт."""
+
+    result = _room_rule(rule, pages, object_id)
+    kept: list[RuleEvaluation] = []
+    for item in (result, *result.also):
+        status = item.finding.finding_status
+        if item.evidence_group is None or status not in {
+            FindingStatus.CANDIDATE,
+            FindingStatus.SUSPICION,
+        }:
+            continue
+        kept.append(
+            replace(
+                item,
+                finding=replace(item.finding, finding_status=FindingStatus.SUSPICION),
+            )
+        )
+    return tuple(kept)
+
+
 def _room_rule(
     rule: dict[str, object],
     pages: Mapping[DocStage, StagePage | Sequence[StagePage]],

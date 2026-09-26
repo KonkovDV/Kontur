@@ -78,7 +78,11 @@ function queueRank(status: string): number {
 }
 
 function reviewable(status: string): boolean {
-  return status === "CANDIDATE" || status === "CLARIFICATION_REQUIRED";
+  return (
+    status === "CANDIDATE" ||
+    status === "CLARIFICATION_REQUIRED" ||
+    status === "SUSPICION"
+  );
 }
 
 export function sessionFromToken(token: string): { subject: string; objectId: string } {
@@ -200,8 +204,8 @@ export function LiveWorkspace({ token }: Props) {
   const active = findings.find((item) => item.finding_id === activeId) ?? null;
   const canReview = active !== null && reviewable(active.finding_status) && comment.trim() !== "";
   const canReject = canReview && reason !== "";
-  const blockingQueue =
-    (status?.counters.candidates ?? 0) > 0 || (status?.counters.suspicions ?? 0) > 0;
+  const blockingQueue = (status?.counters.candidates ?? 0) > 0;
+  const suspicion = active?.finding_status === "SUSPICION";
 
   async function refresh(nextProcessId: string) {
     const [listedDocs, listedFindings, nextStatus] = await Promise.all([
@@ -408,7 +412,7 @@ export function LiveWorkspace({ token }: Props) {
   async function finalizeProtocol() {
     if (!processId) return;
     if (blockingQueue) {
-      setError("сначала закройте кандидатов и подозрения");
+      setError("сначала закройте кандидатов");
       return;
     }
     setBusy(true);
@@ -732,11 +736,6 @@ export function LiveWorkspace({ token }: Props) {
               Нет документа стадии — это не нарушение. Подтвердить нельзя.
             </p>
           ) : null}
-          {active.finding_status === "SUSPICION" ? (
-            <p className="missing-hint">
-              Подозрение блокирует финализацию. Кнопки решения для него нет.
-            </p>
-          ) : null}
           {reviewable(active.finding_status) ? (
             <>
               <label>
@@ -769,22 +768,24 @@ export function LiveWorkspace({ token }: Props) {
                   disabled={busy || !canReject}
                   onClick={() => void decide("REJECT")}
                 >
-                  Отклонить (R)
+                  {suspicion ? "Отклонить" : "Отклонить (R)"}
                 </button>
-                <button
-                  type="button"
-                  disabled={busy || !canReview}
-                  onClick={() => void decide("REQUEST_CLARIFICATION")}
-                >
-                  Уточнить (Q)
-                </button>
+                {suspicion ? null : (
+                  <button
+                    type="button"
+                    disabled={busy || !canReview}
+                    onClick={() => void decide("REQUEST_CLARIFICATION")}
+                  >
+                    Уточнить (Q)
+                  </button>
+                )}
                 <button
                   type="button"
                   className="action-secondary"
                   disabled={busy || !canReview}
                   onClick={() => void decide("CONFIRM")}
                 >
-                  Подтвердить (C)
+                  {suspicion ? "Принять гипотезу" : "Подтвердить (C)"}
                 </button>
               </div>
               <small>Кликов до решения: {clicks}. Кнопка решения добавит 1.</small>
@@ -797,8 +798,9 @@ export function LiveWorkspace({ token }: Props) {
         <section className="summary" aria-label="Протокол">
           <h2>Протокол</h2>
           <p>
-            Финализация ждёт, пока не останется кандидатов и подозрений. Уточнение
-            и отсутствие документа финализацию не держат.
+            Финализация ждёт, пока не останется кандидатов. Подозрение её не держит:
+            гипотезу можно принять или отклонить. Уточнение и отсутствие документа
+            финализацию тоже не держат.
           </p>
           <p>
             Осталось кандидатов: {status?.counters.candidates ?? "—"}, подозрений:{" "}
