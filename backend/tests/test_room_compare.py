@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kontur.application.evaluate import StagePage, _room_rule, evaluate_rule
+from kontur.application.evaluate import StagePage, _room_rule, evaluate_free_search, evaluate_rule
 from kontur.application.extractors.number import PageToken
 from kontur.application.room_compare import compare_room_tokens
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, ExtractionEngine
@@ -266,3 +266,26 @@ def test_tied_volume_pairs_abstain() -> None:
     result = _room_rule(rule, pages, "OBJ-ROOM")
     assert result.finding.finding_status is FindingStatus.ABSTAIN
     assert "ничья" in result.finding.rationale
+
+
+def test_free_search_room_diff_stays_suspicion() -> None:
+    rule = {
+        "code": "FREE-HEATING-001",
+        "matrix_version": "draft-0",
+        "extractor": {"type": "room_compare", "room_compare": _settings()},
+    }
+    pages = {
+        DocStage.PD: StagePage(
+            document=_doc(DocStage.PD),
+            tokens=(_token("101", 0.2, 0.2), _token("В", 0.23, 0.2)),
+        ),
+        DocStage.RD: StagePage(
+            document=_doc(DocStage.RD),
+            tokens=(_token("101", 0.2, 0.2),),
+        ),
+    }
+    found = evaluate_free_search(rule, pages, "OBJ-ROOM")
+    assert len(found) == 1
+    assert found[0].finding.finding_status is FindingStatus.SUSPICION
+    assert found[0].evidence_group is not None
+    assert found[0].evidence_group.fragments[0].room_id == "101"

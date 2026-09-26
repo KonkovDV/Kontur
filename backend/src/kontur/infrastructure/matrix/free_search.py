@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+
+from kontur.infrastructure.matrix.registry import discover_matrix_root
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,6 +18,7 @@ class FreeSearchEntry:
     mapping_status: str
     action: str
     matrix_scope: str
+    room_compare: dict[str, object] | None = None
 
 
 def load_free_search(path: Path) -> tuple[FreeSearchEntry, ...]:
@@ -33,6 +37,7 @@ def load_free_search(path: Path) -> tuple[FreeSearchEntry, ...]:
         if status != "MATRIX_GAP":
             code = item.get("parameter_code")
             raise ValueError(f"free_search.json: {code} не MATRIX_GAP")
+        raw_room = item.get("room_compare")
         entries.append(
             FreeSearchEntry(
                 parameter_code=str(item["parameter_code"]),
@@ -41,6 +46,23 @@ def load_free_search(path: Path) -> tuple[FreeSearchEntry, ...]:
                 mapping_status=status,
                 action=str(item.get("action") or ""),
                 matrix_scope=str(item.get("matrix_scope") or ""),
+                room_compare=raw_room if isinstance(raw_room, dict) else None,
             )
         )
     return tuple(entries)
+
+
+def wire_codes(matrix_codes: Sequence[str], path: Path | None = None) -> list[str]:
+    """Коды матрицы плюс free-search. В реестр 132 они не входят."""
+
+    catalog = path or (discover_matrix_root() / "free_search.json")
+    extra = (
+        [entry.parameter_code for entry in load_free_search(catalog)]
+        if catalog.is_file()
+        else []
+    )
+    codes: list[str] = []
+    for code in (*matrix_codes, *extra):
+        if code not in codes:
+            codes.append(code)
+    return codes

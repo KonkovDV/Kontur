@@ -17,7 +17,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from time import perf_counter
 
-from kontur.application.evaluate import StagePage, evaluate_rule
+from kontur.application.evaluate import StagePage, evaluate_free_search, evaluate_rule
 from kontur.application.intake import accepted_unparsed_detail
 from kontur.application.passport import read_passport
 from kontur.application.revision_resolver import (
@@ -36,7 +36,12 @@ from kontur.domain.models import (
 )
 from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus
 from kontur.infrastructure.injection_scan import scan_tokens_for_injection
-from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
+from kontur.infrastructure.matrix.free_search import load_free_search
+from kontur.infrastructure.matrix.registry import (
+    EXPECTED_PARAM_COUNT,
+    FileRuleRegistry,
+    discover_matrix_root,
+)
 from kontur.infrastructure.ocr_tesseract import (
     PageImageCache,
     fill_empty_raster_pages,
@@ -314,6 +319,36 @@ def run_process_pipeline(
             findings.append(replace(finding, finding_id=f"pipe-{code}{suffix}"))
             if item.evidence_group is not None:
                 groups.append(item.evidence_group)
+    catalog = discover_matrix_root() / "free_search.json"
+    if catalog.is_file():
+        for entry in load_free_search(catalog):
+            if entry.room_compare is None:
+                continue
+            searched = evaluate_free_search(
+                {
+                    "code": entry.parameter_code,
+                    "matrix_version": source.matrix_version,
+                    "extractor": {
+                        "type": "room_compare",
+                        "room_compare": entry.room_compare,
+                    },
+                },
+                pages,
+                object_id,
+            )
+            for index, item in enumerate(searched):
+                finding = item.finding
+                if finding.finding_status is not FindingStatus.SUSPICION:
+                    raise RuntimeError(
+                        f"{entry.parameter_code}: свободный поиск записал "
+                        f"{finding.finding_status.value}"
+                    )
+                suffix = "" if index == 0 else f"-{index}"
+                findings.append(
+                    replace(finding, finding_id=f"pipe-{entry.parameter_code}{suffix}")
+                )
+                if item.evidence_group is not None:
+                    groups.append(item.evidence_group)
     compare_seconds = perf_counter() - compare_started
     report = PipelineReport(
         findings=tuple(findings),

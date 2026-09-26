@@ -107,16 +107,14 @@ def complete_verification(
 def can_finalize(findings: list[Finding]) -> tuple[bool, list[str]]:
     """Финализация — после обработки всех кандидатов и подозрений.
 
-    CANDIDATE блокирует. SUSPICION блокирует: это необработанный сигнал.
+    CANDIDATE блокирует. SUSPICION не блокирует: инспектор принимает
+    или отклоняет гипотезу, а протокол можно собрать и без этого.
     CLARIFICATION_REQUIRED не блокирует: п. 9.3 и OpenAPI явно допускают
     перевод кандидата в уточнение как способ закрыть очередь.
     MISSING_EVIDENCE выводится отдельным перечнем и не блокирует.
     """
 
-    blocking = {
-        FindingStatus.CANDIDATE,
-        FindingStatus.SUSPICION,
-    }
+    blocking = {FindingStatus.CANDIDATE}
     pending = [f.finding_id for f in findings if f.finding_status in blocking]
     return (not pending, pending)
 

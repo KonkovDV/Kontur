@@ -242,6 +242,17 @@ def stage_values(group: EvidenceGroup) -> dict[DocStage, Value]:
     return values
 
 
+def _suspicion_on_two_stages(group: EvidenceGroup | None) -> bool:
+    """Помещение и фрагменты минимум двух стадий. Внутри статус остаётся SUSPICION."""
+
+    if group is None:
+        return False
+    stages = {item.document.doc_stage for item in group.fragments}
+    if len(stages) < 2:
+        return False
+    return any(item.room_id for item in group.fragments)
+
+
 def evidence_from_group(group: EvidenceGroup) -> tuple[SubmissionEvidence, ...]:
     """Доказательства без дублей, в порядке фрагментов группы."""
 
@@ -339,6 +350,11 @@ def build_check(
     )
     code = contest_parameter_code(finding.rule_code, style, known_codes=known_codes)
     label = contest_violation_label(finding.finding_status)
+    localized_suspicion = (
+        finding.finding_status is FindingStatus.SUSPICION and _suspicion_on_two_stages(group)
+    )
+    if localized_suspicion:
+        label = ContestViolationLabel.VIOLATION_PRESENT
 
     if group is not None:
         finding_code = canonicalize_rule_code(finding.rule_code, known_codes=known_codes)
@@ -391,10 +407,14 @@ def build_check(
         pd_value=values.get(DocStage.PD),
         rd_value=values.get(DocStage.RD),
         id_value=values.get(DocStage.ID),
-        protocol_status=contest_protocol_status(
-            finding.finding_status,
-            review_priority=finding.review_priority,
-            missing_stage=missing_stage,
+        protocol_status=(
+            ContestProtocolStatus.WARNING
+            if localized_suspicion
+            else contest_protocol_status(
+                finding.finding_status,
+                review_priority=finding.review_priority,
+                missing_stage=missing_stage,
+            )
         ),
         criticality=criticality,
     )
