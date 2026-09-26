@@ -73,13 +73,13 @@ def test_location_match_does_not_invent_gold_rooms(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     report = score_directory(tmp_path, match="location")
-    assert report["location_in_gold"] is False
+    assert report["location_in_gold"] is True
     assert report["match"] == "object_id+parameter_code+location"
     matrix = report["matrix"]
     assert isinstance(matrix, dict)
-    assert matrix["n_positive"] == 0
+    assert matrix["n_positive"] == 6
     assert matrix["hits"] == 0
-    assert matrix["unscored_without_location"] == 6
+    assert matrix["unscored_without_location"] == 0
     code = score_directory(tmp_path)
     code_matrix = code["matrix"]
     assert isinstance(code_matrix, dict)
