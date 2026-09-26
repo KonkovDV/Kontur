@@ -58,7 +58,7 @@ def test_docx_in_stage_folder_is_reported(tmp_path: Path) -> None:
     assert isinstance(row, dict)
     errors = row["parse_errors"]
     assert isinstance(errors, list)
-    assert any("UNSUPPORTED_FORMAT" in item and ".docx" in item for item in errors)
+    assert any("ACCEPTED_UNPARSED" in item and ".docx" in item for item in errors)
     assert row["n_files"] == 2
 
 

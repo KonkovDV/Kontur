@@ -402,6 +402,9 @@ class ProcessWorkspace:
                 "rules_evaluated": report.rules_evaluated,
                 "pages_built": report.pages_built,
                 "parse_errors": len(report.parse_errors),
+                "phase_seconds": {
+                    key: round(value, 6) for key, value in report.phase_seconds.items()
+                },
             },
         )
         if record.process_state is ProcessState.PARSING:
@@ -549,6 +552,9 @@ class ProcessWorkspace:
                 "rules_evaluated": report.rules_evaluated,
                 "pages_built": report.pages_built,
                 "parse_errors": len(report.parse_errors),
+                "phase_seconds": {
+                    key: round(value, 6) for key, value in report.phase_seconds.items()
+                },
                 "after": "SELECT_REVISION",
             },
         )

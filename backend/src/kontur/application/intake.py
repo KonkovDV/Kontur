@@ -8,6 +8,8 @@
 Границы намеренно двоичные: 50 × 1024 × 1024 больше, чем 50 000 000, поэтому
 такой порог не отклонит файл, который организатор считает допустимым. Если в
 приёмке имеются в виду десятичные мегабайты, меняется одна константа.
+Лимиты относятся к интерактивной загрузке, не к размеру корпуса: файл или
+пакет больше порога получает явный отказ, а не тихий пропуск.
 """
 
 from __future__ import annotations
@@ -33,8 +35,8 @@ MAX_BATCH_BYTES: int = 200 * 1024 * 1024
 #: Псевдоимя для отказа, относящегося к пакету целиком, а не к файлу.
 BATCH_SCOPE: str = "*"
 
-#: Перечень форматов п. 9.1: PDF, DOCX, XML. DWG остаётся NOT_SUPPORTED до
-#: ответа на вопрос 6 (п. 11 требует CV-анализ DWG, а перечень его не содержит).
+#: Перечень форматов п. 9.1: PDF, DOCX, XML. DWG в разбор не входит:
+#: ответ организатора 26.09.2026 оставляет его вне MVP.
 ALLOWED_DOCUMENT_SUFFIXES: frozenset[str] = frozenset({".pdf", ".docx", ".xml"})
 ALLOWED_ARCHIVE_SUFFIXES: frozenset[str] = frozenset({".zip", ".7z", ".rar"})
 ALLOWED_SUFFIXES: frozenset[str] = ALLOWED_DOCUMENT_SUFFIXES | ALLOWED_ARCHIVE_SUFFIXES
@@ -192,6 +194,19 @@ def archive_looks_like_bomb(payload: bytes) -> bool:
     if compressed > 0 and uncompressed / compressed > _BOMB_EXPAND_RATIO:
         return True
     return False
+
+
+def accepted_unparsed_detail(suffix: str) -> str:
+    """Формат контракта принят, параметры из него не извлечены.
+
+    Это не `UNSUPPORTED_FORMAT`: код 415 остаётся для DWG и прочих
+    расширений вне перечня PDF, DOCX и XML.
+    """
+
+    return (
+        f"ACCEPTED_UNPARSED: {suffix} принят по контракту, "
+        "извлечение параметров не выполнено"
+    )
 
 
 def check_file(candidate: UploadCandidate) -> Rejection | None:

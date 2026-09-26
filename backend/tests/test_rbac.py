@@ -34,6 +34,12 @@ def test_unknown_role_never_escalates() -> None:
         authorize("unfinalizeProtocol", ["inspector"])
 
 
+def test_ml_engineer_cannot_change_an_inspector_decision() -> None:
+    for operation in sorted(LEGAL_DECISION_OPERATIONS):
+        with pytest.raises(PermissionDeniedError):
+            authorize(operation, ["ML_ENGINEER"])
+
+
 def test_admin_cannot_make_or_revoke_a_legal_decision() -> None:
     for operation in sorted(LEGAL_DECISION_OPERATIONS):
         assert Role.ADMIN not in REQUIRED_ROLES[operation]

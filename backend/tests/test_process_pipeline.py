@@ -44,6 +44,9 @@ def test_pipeline_evaluates_compiled_matrix_without_human_verdicts() -> None:
     )
     assert report.rules_evaluated == EXPECTED_PARAM_COUNT
     assert report.pages_built == 1
+    assert set(report.phase_seconds) == {"parse", "compare"}
+    assert report.phase_seconds["parse"] >= 0
+    assert report.phase_seconds["compare"] >= 0
     assert len(report.findings) == EXPECTED_PARAM_COUNT
     assert all(item.finding_status not in HUMAN_ONLY_STATUSES for item in report.findings)
     assert FindingStatus.CONFIRMED_VIOLATION not in {
@@ -52,6 +55,61 @@ def test_pipeline_evaluates_compiled_matrix_without_human_verdicts() -> None:
     assert {item.finding_id for item in report.findings} == {
         f"pipe-{finding.rule_code}" for finding in report.findings
     }
+
+
+def test_contract_office_is_accepted_unparsed() -> None:
+    payload = b"PK\x03\x04"
+    item = PipelineFile(
+        file_id="f-doc",
+        file_hash=file_sha256(payload),
+        filename="note.docx",
+        doc_stage=DocStage.PD,
+    )
+    report = run_process_pipeline(
+        object_id="obj-office",
+        completeness=_completeness_pd(),
+        files=(item,),
+        blobs={"f-doc": payload},
+    )
+    assert any("ACCEPTED_UNPARSED" in line and ".docx" in line for line in report.parse_errors)
+    assert all("UNSUPPORTED_FORMAT" not in line for line in report.parse_errors)
+    assert report.pages_built == 0
+
+
+def test_dwg_stays_an_explicit_format_error() -> None:
+    payload = b"AC1024"
+    item = PipelineFile(
+        file_id="f-dwg",
+        file_hash=file_sha256(payload),
+        filename="plan.dwg",
+        doc_stage=DocStage.RD,
+    )
+    report = run_process_pipeline(
+        object_id="obj-dwg",
+        completeness=_completeness_pd(),
+        files=(item,),
+        blobs={"f-dwg": payload},
+    )
+    assert any("UNSUPPORTED_FORMAT" in line and ".dwg" in line for line in report.parse_errors)
+    assert report.pages_built == 0
+
+
+def test_zip_is_not_silently_skipped() -> None:
+    payload = b"PK\x03\x04"
+    item = PipelineFile(
+        file_id="f-zip",
+        file_hash=file_sha256(payload),
+        filename="pack.zip",
+        doc_stage=DocStage.PD,
+    )
+    report = run_process_pipeline(
+        object_id="obj-zip",
+        completeness=_completeness_pd(),
+        files=(item,),
+        blobs={"f-zip": payload},
+    )
+    assert any("ARCHIVE_NOT_EXPANDED" in line and ".zip" in line for line in report.parse_errors)
+    assert report.pages_built == 0
 
 
 def test_pipeline_does_not_treat_raster_page_as_ocr_success() -> None:
@@ -96,7 +154,7 @@ def test_corrupt_pdf_is_parse_error_not_violation() -> None:
     assert all(item.finding_status not in HUMAN_ONLY_STATUSES for item in report.findings)
 
 
-def test_docx_and_xml_are_named_unsupported_not_skipped() -> None:
+def test_docx_and_xml_are_named_accepted_unparsed_not_skipped() -> None:
     pdf = ascii_pdf("CODE 12345-PZ Rev 2 Sheet 1")
     files = (
         PipelineFile("f-pdf", file_sha256(pdf), "sheet.pdf", DocStage.PD),
@@ -111,8 +169,9 @@ def test_docx_and_xml_are_named_unsupported_not_skipped() -> None:
         inspector_approved_file_ids=frozenset({"f-pdf"}),
     )
     text = " ".join(report.parse_errors)
-    assert "f-docx: UNSUPPORTED_FORMAT" in text
-    assert "f-xml: UNSUPPORTED_FORMAT" in text
+    assert "f-docx: ACCEPTED_UNPARSED" in text
+    assert "f-xml: ACCEPTED_UNPARSED" in text
+    assert "UNSUPPORTED_FORMAT" not in text
     assert report.pages_built == 1
     assert all(item.finding_status not in HUMAN_ONLY_STATUSES for item in report.findings)
 

@@ -24,6 +24,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 from referencing import Registry, Resource
 
+from kontur.application.intake import accepted_unparsed_detail
 from kontur.application.passport import read_passport
 from kontur.application.protocol import assemble_protocol, protocol_for_http
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
@@ -427,7 +428,7 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
             "revision": None,
             "sheet": None,
             "room": None,
-            "parse_error": f"UNSUPPORTED_FORMAT: сверка читает PDF, {suffix} без разбора",
+            "parse_error": accepted_unparsed_detail(suffix),
         }
     try:
         document = run_pdf_parse_sync(
@@ -464,6 +465,7 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
 
 
 def _page_rows(item: PackageFile, raw: bytes, object_id: str) -> list[dict[str, object]]:
+    # Ошибка формата уже на строке поля. Пустой список страниц её не прячет.
     if item.path.suffix.lower() in {".docx", ".xml"}:
         return []
     rows: list[dict[str, object]] = []

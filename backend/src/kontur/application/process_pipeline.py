@@ -15,8 +15,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from time import perf_counter
 
 from kontur.application.evaluate import StagePage, evaluate_rule
+from kontur.application.intake import accepted_unparsed_detail
 from kontur.application.passport import read_passport
 from kontur.application.revision_resolver import (
     ResolveStatus,
@@ -69,14 +71,27 @@ class PipelineReport:
     stamp_by_file_id: Mapping[str, ApprovalStatus]
     evidence_groups: tuple[EvidenceGroup, ...] = ()
     injection_clean_by_file_id: Mapping[str, bool] = field(default_factory=dict)
+    #: Монотонные секунды разбора и сравнения. Загрузка и экспорт протокола
+    #: в этот отчёт не входят: их часы живут у вызывающего.
+    phase_seconds: Mapping[str, float] = field(default_factory=dict)
 
 
 def _is_pdf(filename: str) -> bool:
     return filename.lower().endswith(".pdf")
 
 
+def _archive_suffix(filename: str) -> str | None:
+    """Архив — способ поставки, не формат сверки."""
+
+    lower = filename.lower()
+    for suffix in (".zip", ".7z", ".rar"):
+        if lower.endswith(suffix):
+            return suffix
+    return None
+
+
 def _unparsed_office(filename: str) -> str | None:
-    """DOCX и XML принимаются на входе, но сверка их не читает."""
+    """DOCX и XML приняты контрактом. Параметры из них пока не извлекаются."""
 
     lower = filename.lower()
     for suffix in (".docx", ".xml"):
@@ -132,11 +147,21 @@ def _pages_from_blobs(
     for item in files:
         office = _unparsed_office(item.filename)
         if office is not None:
+            errors.append(f"{item.file_id}: {accepted_unparsed_detail(office)}")
+            continue
+        archive = _archive_suffix(item.filename)
+        if archive is not None:
             errors.append(
-                f"{item.file_id}: UNSUPPORTED_FORMAT: сверка читает PDF, {office} без разбора"
+                f"{item.file_id}: ARCHIVE_NOT_EXPANDED: {archive} распакуйте до сверки"
             )
             continue
         if not _is_pdf(item.filename):
+            dot = item.filename.rfind(".")
+            suffix = item.filename[dot:].lower() if dot >= 0 else ""
+            label = suffix or ".нет"
+            errors.append(
+                f"{item.file_id}: UNSUPPORTED_FORMAT: {label} не входит в разбор PDF"
+            )
             continue
         raw = blobs.get(item.file_id)
         if raw is None:
@@ -258,11 +283,14 @@ def run_process_pipeline(
     codes = source.all_codes()
     if len(codes) != EXPECTED_PARAM_COUNT:
         raise ValueError(f"матрица {len(codes)} правил, ожидалось {EXPECTED_PARAM_COUNT}")
+    parse_started = perf_counter()
     pages, parse_errors, stamps, injection_clean, revision_pool = _pages_from_blobs(
         files,
         blobs,
         inspector_approved_file_ids=inspector_approved_file_ids,
     )
+    parse_seconds = perf_counter() - parse_started
+    compare_started = perf_counter()
     findings: list[Finding] = []
     groups: list[EvidenceGroup] = []
     for code in codes:
@@ -283,6 +311,7 @@ def run_process_pipeline(
             findings.append(replace(finding, finding_id=f"pipe-{code}{suffix}"))
             if item.evidence_group is not None:
                 groups.append(item.evidence_group)
+    compare_seconds = perf_counter() - compare_started
     report = PipelineReport(
         findings=tuple(findings),
         rules_evaluated=len(codes),
@@ -291,6 +320,7 @@ def run_process_pipeline(
         stamp_by_file_id=stamps,
         evidence_groups=tuple(groups),
         injection_clean_by_file_id=injection_clean,
+        phase_seconds={"parse": parse_seconds, "compare": compare_seconds},
     )
     assert_machine_only(report.findings)
     return report

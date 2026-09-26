@@ -26,8 +26,13 @@ def test_empty_package_is_not_a_scenario() -> None:
         detect_scenario(mapping)
 
 
-def test_full_scenario() -> None:
-    assert detect_scenario(FULL_MAP) is Scenario.FULL
+def test_three_stages_without_registry_are_not_full() -> None:
+    assert detect_scenario(FULL_MAP) is Scenario.PARTIALLY_LOADED
+
+
+def test_declared_composition_of_three_stages_is_full() -> None:
+    result = detect_scenario(FULL_MAP, expected_composition_declared=True)
+    assert result is Scenario.FULL
 
 
 def test_missing_id_gives_pd_rd_only() -> None:
@@ -38,6 +43,8 @@ def test_missing_id_gives_pd_rd_only() -> None:
 def test_partial_wins_over_full() -> None:
     mapping = FULL_MAP | {DocStage.ID: Completeness.PARTIAL}
     assert detect_scenario(mapping) is Scenario.PARTIALLY_LOADED
+    declared = detect_scenario(mapping, expected_composition_declared=True)
+    assert declared is Scenario.PARTIALLY_LOADED
 
 
 def test_single_stage() -> None:

@@ -13,7 +13,19 @@ from kontur.domain.statuses import Completeness, FindingStatus, Scenario
 CompletenessMap = dict[DocStage, Completeness]
 
 
-def detect_scenario(completeness: CompletenessMap) -> Scenario:
+def detect_scenario(
+    completeness: CompletenessMap,
+    *,
+    expected_composition_declared: bool = False,
+) -> Scenario:
+    """Сценарий по фактическим стадиям.
+
+    `FULL` только если ожидаемый состав задан (карточка объекта, перечень
+    инспектора или реестр) и все три стадии загружены без `PARTIAL`.
+    Три непустые стадии без такого реестра — `PARTIALLY_LOADED`: факт
+    загрузки не равен полноте комплекта.
+    """
+
     present = {
         stage
         for stage, state in completeness.items()
@@ -26,7 +38,9 @@ def detect_scenario(completeness: CompletenessMap) -> Scenario:
     if partial:
         return Scenario.PARTIALLY_LOADED
     if present == {DocStage.PD, DocStage.RD, DocStage.ID}:
-        return Scenario.FULL
+        if expected_composition_declared:
+            return Scenario.FULL
+        return Scenario.PARTIALLY_LOADED
     if present == {DocStage.PD, DocStage.RD}:
         return Scenario.PD_RD_ONLY
     if present == {DocStage.PD, DocStage.ID}:
