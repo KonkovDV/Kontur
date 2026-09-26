@@ -415,6 +415,8 @@ def submission_from_record(
 
 def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> dict[str, object]:
     cipher = None
+    identity_code = None
+    code_basis = None
     revision = None
     sheet = None
     parse_error = None
@@ -425,6 +427,8 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
             "file_id": item.file_id,
             "doc_stage": item.stage.value,
             "cipher": None,
+            "identity_code": None,
+            "code_basis": None,
             "revision": None,
             "sheet": None,
             "room": None,
@@ -447,6 +451,8 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
             object_id=object_id,
         )
         cipher = passport.document_code
+        identity_code = passport.identity_code
+        code_basis = passport.code_basis
         revision = passport.revision
         sheet = passport.sheet
     except (PdfParseTimeoutError, ValueError, OSError) as exc:
@@ -457,6 +463,8 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
         "file_id": item.file_id,
         "doc_stage": item.stage.value,
         "cipher": cipher,
+        "identity_code": identity_code,
+        "code_basis": code_basis,
         "revision": revision,
         "sheet": sheet,
         "room": None,

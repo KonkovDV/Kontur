@@ -207,6 +207,44 @@ class TestIdentityHeads:
         }
         assert chosen == {"pd-pz", "pd-ar"}
 
+    def test_two_blank_ciphers_stay_separate_groups(self) -> None:
+        left = replace(_doc("pd-a"), document_code="")
+        right = replace(_doc("pd-b"), document_code="")
+        heads = resolve_heads_by_identity([left, right], DocStage.PD)
+        assert len(heads) == 2
+        assert {item.file_ids for item in heads} == {("pd-a",), ("pd-b",)}
+        assert all(item.key is None for item in heads)
+        assert all(item.resolution.status is ResolveStatus.RESOLVED for item in heads)
+
+    def test_linked_blank_ciphers_stay_one_chain(self) -> None:
+        older = replace(_doc("pd-old"), document_code="", successor_file_id="pd-new")
+        newer = replace(_doc("pd-new"), document_code="", predecessor_file_id="pd-old")
+        heads = resolve_heads_by_identity([older, newer], DocStage.PD)
+        assert len(heads) == 1
+        assert set(heads[0].file_ids) == {"pd-old", "pd-new"}
+        resolved = heads[0].resolution.resolved
+        assert heads[0].resolution.status is ResolveStatus.RESOLVED
+        assert resolved is not None
+        assert resolved.document.file_id == "pd-new"
+
+    def test_two_unknown_blanks_clarify_approval_not_successors(self) -> None:
+        left = replace(
+            _doc("pd-a"),
+            document_code="",
+            approval_status=ApprovalStatus.UNKNOWN,
+        )
+        right = replace(
+            _doc("pd-b"),
+            document_code="",
+            approval_status=ApprovalStatus.UNKNOWN,
+        )
+        heads = resolve_heads_by_identity([left, right], DocStage.PD)
+        assert len(heads) == 2
+        assert {item.file_ids for item in heads} == {("pd-a",), ("pd-b",)}
+        for item in heads:
+            assert item.resolution.status is ResolveStatus.CLARIFICATION_REQUIRED
+            assert item.resolution.conflict_reason == "сведения об утверждении отсутствуют"
+
     def test_blank_cipher_does_not_join_known_cipher(self) -> None:
         coded = _doc("pd-pz", document_code="12345-PZ")
         blank = replace(_doc("pd-blank"), document_code="")

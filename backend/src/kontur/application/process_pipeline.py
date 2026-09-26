@@ -201,7 +201,7 @@ def _pages_from_blobs(
         )
         ref = _document_ref(
             item,
-            passport.document_code,
+            passport.identity_code,
             passport.revision,
             approval,
             basis,

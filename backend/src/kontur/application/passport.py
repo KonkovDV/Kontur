@@ -1,9 +1,10 @@
 """L1 Identity: основная надпись и метаданные файла.
 
 Ключ Exact Match (ТЗ п. 14.3, вопрос 10): `document_code`, `revision`, `sheet`.
-NFC и схлопывание пробелов; регистр в шифре значим. Пустое поле остаётся
-null — не подставляем имя файла как шифр. Конфликт штампа и имени не
-разрешается в пользу более нового: это `needs_clarification`.
+NFC и схлопывание пробелов; регистр в шифре значим. Пустой штамп остаётся
+null. Обозначение из имени файла пишется в `identity_code` с
+`code_basis=FILENAME` и не становится `document_code`. Конфликт штампа и
+имени не выбирает имя: это `needs_clarification`.
 """
 
 from __future__ import annotations
@@ -91,6 +92,8 @@ class DocumentPassport:
     has_embedded_text: bool = False
     text_render_agreement: bool | None = None
     extraction_confidence: float | None = None
+    identity_code: str | None = None
+    code_basis: str | None = None
     needs_clarification: bool = False
     clarification_reason: str | None = None
     injection_clean: bool | None = None
@@ -117,6 +120,8 @@ class DocumentPassport:
             "doc_stage": stage,
             "discipline": self.discipline,
             "document_code": self.document_code,
+            "identity_code": self.identity_code,
+            "code_basis": self.code_basis,
             "revision": self.revision,
             "approval_status": self.approval_status.value,
             "approval_basis": self.approval_basis.value,
@@ -228,6 +233,27 @@ def _designation(text: str) -> tuple[str | None, bool]:
     if len(winners) == 1:
         return winners[0], False
     return None, True
+
+
+def cipher_from_filename(filename: str | None) -> str | None:
+    """Одно обозначение в имени файла. Несколько разных — не выбираем."""
+
+    if filename is None or not filename.strip():
+        return None
+    stem = filename.replace("\\", "/").rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    text = stem.replace("_", " ")
+    found = [
+        item
+        for item in (
+            *(normalize_key_field(raw) for raw in _CODE_DESIGNATION.findall(text)),
+            *(normalize_key_field(raw) for raw in _CODE_BARE.findall(text)),
+        )
+        if item
+    ]
+    unique = list(dict.fromkeys(found))
+    if len(unique) != 1:
+        return None
+    return unique[0]
 
 
 def cipher_from_text(text: str) -> str | None:
@@ -361,6 +387,23 @@ def read_passport(
     if text_render_agreement is False:
         approval, approval_date = ApprovalStatus.UNKNOWN, None
         basis = ApprovalBasis.UNPROVEN
+    name_code = cipher_from_filename(filename)
+    if code is not None and name_code is not None and code != name_code:
+        needs = True
+        reason = reason or (
+            f"шифр в штампе {code}, в имени файла {name_code}: имя не подменяет штамп"
+        )
+        identity_code: str | None = code
+        code_basis: str | None = "STAMP"
+    elif code is not None:
+        identity_code = code
+        code_basis = "STAMP"
+    elif name_code is not None:
+        identity_code = name_code
+        code_basis = "FILENAME"
+    else:
+        identity_code = None
+        code_basis = None
     filled = sum(1 for item in (code, revision, sheet) if item)
     confidence = None
     if has_text:
@@ -372,6 +415,8 @@ def read_passport(
         pages=pages,
         layer_kind=layer_kind,
         document_code=code,
+        identity_code=identity_code,
+        code_basis=code_basis,
         revision=revision,
         sheet=sheet,
         approval_status=approval,

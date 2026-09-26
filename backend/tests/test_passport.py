@@ -60,9 +60,21 @@ def test_stamp_fills_key_fields_and_matches_schema() -> None:
 def test_filename_is_not_used_as_document_code() -> None:
     passport = _read(_tok("лист 1", 0.08, 0.82), filename="12345-PZ_RD.pdf")
     assert passport.document_code is None
+    assert passport.identity_code == "12345-PZ"
+    assert passport.code_basis == "FILENAME"
     assert passport.needs_clarification is True
     assert passport.clarification_reason is not None
     assert "шифр" in passport.clarification_reason
+
+
+def test_filename_does_not_override_a_different_stamp() -> None:
+    passport = _read(_tok("шифр: 12345-PZ", 0.08, 0.82), filename="99999-OV.pdf")
+    assert passport.document_code == "12345-PZ"
+    assert passport.identity_code == "12345-PZ"
+    assert passport.code_basis == "STAMP"
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason is not None
+    assert "не подменяет" in passport.clarification_reason
 
 
 def test_disagreeing_cipher_reads_are_not_chosen() -> None:
