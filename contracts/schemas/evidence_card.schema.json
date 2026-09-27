@@ -63,6 +63,10 @@
         }
       }
     },
-    "closes_gate_k": { "type": "boolean", "const": false }
+    "closes_gate_k": { "type": "boolean", "const": false },
+    "approval_notice": {
+      "type": "string",
+      "description": "Плашка единственной неутверждённой головы ПД. Не вердикт о нарушении."
+    }
   }
 }

@@ -205,7 +205,7 @@ def test_token_slice_missing_rd_is_missing_evidence() -> None:
         assert result.finding.evidence_group_id is None
 
 
-def test_token_slice_unapproved_is_clarification() -> None:
+def test_token_slice_unstamped_pd_compares() -> None:
     pages = _pages(_PD_VALUES, _RD_CANDIDATE, approved=False)
     for code in CONTEST_SLICE_CODES:
         result = evaluate_rule(
@@ -214,8 +214,8 @@ def test_token_slice_unapproved_is_clarification() -> None:
             pages=pages,
             completeness=_completeness(),
         )
-        assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
-        assert result.finding.finding_status is not FindingStatus.CANDIDATE
+        assert "утверждени" not in result.finding.rationale
+        assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
 
 def test_token_slice_no_anchor_is_low_quality() -> None:
@@ -366,16 +366,16 @@ def test_pdf_pipeline_ar041_bare_1200_stays_unconverted() -> None:
 
 
 @needs_font
-def test_pdf_pipeline_without_stamp_asks_for_approval() -> None:
-    """Одна ПД без сведений об утверждении не сравнивается, пока инспектор не выберет файл."""
+def test_pdf_pipeline_without_stamp_compares_and_keeps_the_stamp() -> None:
+    """Одна ПД без штампа сравнивается. Штамп файла остаётся UNKNOWN."""
 
     report = _pipeline(_sheet(_PD_VALUES, stamp=False), _sheet(_RD_CANDIDATE, stamp=False))
     assert report.stamp_by_file_id["f-pd"] is ApprovalStatus.UNKNOWN
     findings = contest_findings(report.findings)
     assert findings
+    assert any(item.finding_status is FindingStatus.CANDIDATE for item in findings.values())
     for finding in findings.values():
-        assert finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
-        assert "утверждени" in finding.rationale
+        assert "утверждени" not in finding.rationale
         assert finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
 

@@ -85,6 +85,9 @@ export function EvidencePane({ title, role, fragment, pageImageUrl }: PaneProps)
                 {fragment.document.approval_basis
                   ? ` / ${fragment.document.approval_basis}`
                   : ""}
+                {fragment.document.approval_basis === "SOLE_HEAD"
+                  ? " — утверждение не подтверждено"
+                  : ""}
               </dd>
             </div>
             <div>

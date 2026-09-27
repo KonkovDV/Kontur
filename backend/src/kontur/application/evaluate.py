@@ -58,6 +58,7 @@ from kontur.application.revision_resolver import (
     IdentityHead,
     ResolveStatus,
     RevisionConflict,
+    etalon_policy,
     resolve_heads_by_identity,
     resolve_revision,
 )
@@ -73,6 +74,7 @@ from kontur.domain.coordinates import PageFrame
 from kontur.domain.geometry import polygon_in_unit_square
 from kontur.domain.idempotency import comparison_key
 from kontur.domain.models import (
+    ApprovalBasis,
     ApprovalStatus,
     DocStage,
     DocumentRef,
@@ -295,6 +297,28 @@ def _volume_list(
     if isinstance(item, StagePage):
         return (item,)
     return tuple(item)
+
+
+def _retag_sole_head(
+    pages: dict[DocStage, StagePage | tuple[StagePage, ...]],
+    stage: DocStage,
+    chosen: DocumentRef,
+) -> None:
+    """Копия документа с SOLE_HEAD. Штамп файла в паспорте не меняется."""
+
+    current = pages.get(stage)
+    if current is None:
+        return
+    if isinstance(current, StagePage):
+        if current.document.file_id == chosen.file_id:
+            pages[stage] = replace(current, document=chosen)
+        return
+    pages[stage] = tuple(
+        replace(volume, document=chosen)
+        if volume.document.file_id == chosen.file_id
+        else volume
+        for volume in current
+    )
 
 
 def bind_stage_page(
@@ -1248,6 +1272,8 @@ def evaluate_rule(
                 if anchor is None:
                     continue
                 chosen = resolution.resolved.document
+                if chosen.approval_basis is ApprovalBasis.SOLE_HEAD:
+                    _retag_sole_head(pages, stage, chosen)
                 if anchor.file_id != chosen.file_id:
                     return _halt(
                         rule,
@@ -1261,7 +1287,8 @@ def evaluate_rule(
                     )
     else:
         for stage, page in pages.items():
-            for volume in _volume_list(page):
+            volumes = _volume_list(page)
+            for volume in volumes:
                 approval = volume.document.approval_status
                 if approval is ApprovalStatus.NOT_APPROVED:
                     return _halt(
@@ -1271,14 +1298,32 @@ def evaluate_rule(
                         f"{stage.value}: редакция помечена «не утв.»",
                         prior=identity_ok,
                     )
-                if stage is DocStage.PD and approval is not ApprovalStatus.APPROVED:
-                    return _halt(
-                        rule,
-                        Stage.L4_REVISION,
-                        revision_status,
-                        f"{stage.value}: эталон без признака утверждения",
-                        prior=identity_ok,
+            pending = [
+                volume
+                for volume in volumes
+                if volume.document.approval_status is not ApprovalStatus.APPROVED
+            ]
+            if stage is DocStage.PD and pending:
+                sole = (
+                    etalon_policy() == "sole_head"
+                    and len(volumes) == 1
+                    and len(pending) == 1
+                )
+                if sole:
+                    only = pending[0]
+                    _retag_sole_head(
+                        pages,
+                        stage,
+                        replace(only.document, approval_basis=ApprovalBasis.SOLE_HEAD),
                     )
+                    continue
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    revision_status,
+                    f"{stage.value}: эталон без признака утверждения",
+                    prior=identity_ok,
+                )
 
     if extractor_type == "room_compare":
         return _room_rule(rule, pages, object_id)

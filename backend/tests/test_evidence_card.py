@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -14,9 +15,11 @@ from kontur.application.evidence_card import (
     build_evidence_card,
     evidence_group_to_schema,
 )
+from kontur.application.revision_resolver import SOLE_HEAD_NOTICE
 from kontur.application.runtime import ProcessWorkspace
 from kontur.domain.geometry import bbox_from_polygon
 from kontur.domain.models import (
+    ApprovalBasis,
     ApprovalStatus,
     DocStage,
     DocumentRef,
@@ -126,6 +129,23 @@ def _candidate() -> Finding:
         disagreement_kind=DisagreementKind.VALUE_DELTA,
         rationale="delta вне допуска",
     )
+
+
+def test_sole_head_notice_is_on_the_card() -> None:
+    group = _group()
+    pd = group.fragments[0]
+    stamped = replace(pd, document=replace(pd.document, approval_basis=ApprovalBasis.SOLE_HEAD))
+    group = replace(group, fragments=(stamped, group.fragments[1]))
+    card = build_evidence_card(
+        process_id="p-1",
+        finding=_candidate(),
+        group=group,
+        rule={"code": "PZ-001"},
+        audit_records=(),
+    )
+    assert card["approval_notice"] == SOLE_HEAD_NOTICE
+    _validator().validate(card)
+    assert card["finding"]["finding_status"] == "CANDIDATE"
 
 
 def test_card_matches_schema_and_keeps_raw() -> None:

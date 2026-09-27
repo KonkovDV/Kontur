@@ -21,7 +21,8 @@ from reportlab.pdfbase import pdfmetrics  # type: ignore[import-untyped]
 from reportlab.pdfbase.ttfonts import TTFont  # type: ignore[import-untyped]
 from reportlab.pdfgen import canvas  # type: ignore[import-untyped]
 
-from kontur.domain.models import EvidenceGroup
+from kontur.application.revision_resolver import SOLE_HEAD_NOTICE
+from kontur.domain.models import ApprovalBasis, EvidenceGroup
 from kontur.evaluation.agent_dumps import repo_root
 
 TABLES: tuple[str, ...] = (
@@ -121,6 +122,12 @@ def _tolerance_text(rule: Mapping[str, object] | None) -> str:
     return ", ".join(parts)
 
 
+def _basis_label(basis: ApprovalBasis) -> str:
+    if basis is ApprovalBasis.SOLE_HEAD:
+        return f"SOLE_HEAD: {SOLE_HEAD_NOTICE}"
+    return basis.value
+
+
 def cards_from_groups(
     protocol: Mapping[str, object],
     groups: Mapping[str, EvidenceGroup],
@@ -144,7 +151,7 @@ def cards_from_groups(
                 "document_code": "; ".join(item.document.document_code for item in fragments),
                 "revision": "; ".join(item.document.revision for item in fragments),
                 "approval_basis": "; ".join(
-                    item.document.approval_basis.value for item in fragments
+                    _basis_label(item.document.approval_basis) for item in fragments
                 ),
                 "page": "; ".join(str(item.page) for item in fragments),
                 "polygon_norm": json.dumps(

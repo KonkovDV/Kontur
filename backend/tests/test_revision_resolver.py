@@ -18,7 +18,7 @@ from kontur.application.revision_resolver import (
     resolve_heads_by_identity,
     resolve_revision,
 )
-from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
+from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage, DocumentRef
 from kontur.domain.statuses import FindingStatus
 
 
@@ -39,7 +39,10 @@ def test_same_stem_identities_do_not_become_one_successor_fight() -> None:
     for head in heads:
         reason = head.resolution.conflict_reason or ""
         assert "successor" not in reason
-        assert head.resolution.status is ResolveStatus.CLARIFICATION_REQUIRED
+        assert head.resolution.status is ResolveStatus.RESOLVED
+        assert head.resolution.resolved is not None
+        assert head.resolution.resolved.document.approval_basis is ApprovalBasis.SOLE_HEAD
+        assert head.resolution.resolved.document.approval_status is ApprovalStatus.UNKNOWN
 
 
 def _doc(
@@ -90,13 +93,22 @@ class TestBasicResolution:
         assert result.status is ResolveStatus.CLARIFICATION_REQUIRED
         assert result.resolved is None
 
-    def test_single_unknown_pd_needs_clarification(self) -> None:
+    def test_single_unknown_pd_is_sole_head(self) -> None:
+        doc = _doc("pd-v1", approval=ApprovalStatus.UNKNOWN)
+        result = resolve_revision([doc], DocStage.PD)
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-v1"
+        assert result.resolved.document.approval_status is ApprovalStatus.UNKNOWN
+        assert result.resolved.document.approval_basis is ApprovalBasis.SOLE_HEAD
+
+    def test_strict_unknown_pd_needs_clarification(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("KONTUR_ETALON_POLICY", "strict")
         doc = _doc("pd-v1", approval=ApprovalStatus.UNKNOWN)
         result = resolve_revision([doc], DocStage.PD)
         assert result.status is ResolveStatus.CLARIFICATION_REQUIRED
         assert result.resolved is None
-        assert result.conflict_reason is not None
-        assert "утверждени" in result.conflict_reason
+        assert result.conflict_reason == "сведения об утверждении отсутствуют"
 
     def test_two_unknown_pd_revisions_need_clarification(self) -> None:
         first = _doc("pd-v1", approval=ApprovalStatus.UNKNOWN, document_code="OV-1")
@@ -146,10 +158,11 @@ class TestBasicResolution:
             DocStage.PD,
             inspector_selected_file_ids=frozenset({"pd-bad"}),
         )
-        assert result.status is ResolveStatus.CLARIFICATION_REQUIRED
-        assert result.resolved is None
-        assert result.conflict_reason is not None
-        assert "утверждени" in result.conflict_reason
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-ok"
+        assert result.resolved.document.approval_status is ApprovalStatus.UNKNOWN
+        assert result.resolved.document.approval_basis is ApprovalBasis.SOLE_HEAD
 
     def test_rd_without_stamp_resolves(self) -> None:
         doc = _doc("rd-v1", stage=DocStage.RD, approval=ApprovalStatus.UNKNOWN)
@@ -262,8 +275,9 @@ class TestIdentityHeads:
         assert len(heads) == 2
         assert {item.file_ids for item in heads} == {("pd-a",), ("pd-b",)}
         for item in heads:
-            assert item.resolution.status is ResolveStatus.CLARIFICATION_REQUIRED
-            assert item.resolution.conflict_reason == "сведения об утверждении отсутствуют"
+            assert item.resolution.status is ResolveStatus.RESOLVED
+            assert item.resolution.resolved is not None
+            assert item.resolution.resolved.document.approval_basis is ApprovalBasis.SOLE_HEAD
 
     def test_blank_cipher_does_not_join_known_cipher(self) -> None:
         coded = _doc("pd-pz", document_code="12345-PZ")
