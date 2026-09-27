@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from time import perf_counter
 from uuid import uuid4
@@ -85,6 +86,19 @@ class AcceptedFile:
     manifest_path: str | None = None
 
 
+_COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
+
+
+def _pinned_git_sha() -> str:
+    """SHA сборки образа. Слово unspecified и короткий GITHUB_SHA не подходят."""
+
+    for key in ("KONTUR_GIT_SHA", "GITHUB_SHA"):
+        pinned = os.environ.get(key, "").strip().lower()
+        if _COMMIT_SHA.fullmatch(pinned):
+            return pinned
+    return "unspecified"
+
+
 @dataclass
 class ProcessRecord:
     process_id: str
@@ -105,7 +119,7 @@ class ProcessRecord:
     model_version: str = "none"
     dataset_version: str = "unspecified"
     input_manifest_hash: str = "pending"
-    git_sha: str = field(default_factory=lambda: os.environ.get("GITHUB_SHA") or "unspecified")
+    git_sha: str = field(default_factory=_pinned_git_sha)
     last_sync_notice: str | None = None
     protocol_id: str | None = None
     inspector_approved_file_ids: set[str] = field(default_factory=set)

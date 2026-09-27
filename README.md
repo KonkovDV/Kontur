@@ -18,7 +18,9 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
 машины: `KONTUR_BIND=0.0.0.0`. Базы, RabbitMQ и MinIO остаются на 127.0.0.1.
 Для скорости на сервере жюри: `KONTUR_CORE_CPUS=24` и `KONTUR_CORE_MEM_LIMIT=64g`.
 Перед сборкой: `KONTUR_GIT_SHA` — 40 символов `git rev-parse HEAD`. Без этого
-`run_manifest.json` пишет `unspecified`, потому что `.git` в образ не копируется.
+`run_manifest.json` пишет пустой `git_sha`, потому что `.git` в образ не копируется.
+`up` не подменяет SHA, зашитый в образ. Статус процесса читает `KONTUR_GIT_SHA`,
+затем `GITHUB_SHA`. Слово `unspecified` и короткий SHA в версии не попадают.
 Проверка: http://127.0.0.1:3000/api/v1/healthz . Плашка «учебный стенд», токен
 `inspector-1@OBJ-DEMO-COLD-START/INSPECTOR`. Кнопка «Учебный комплект» кладёт
 синтетические ПД, РД и ИД. Документы организатора на стенд не класть.

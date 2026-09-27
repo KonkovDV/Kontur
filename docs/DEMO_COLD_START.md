@@ -104,7 +104,10 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml -f docker-compos
 ```
 
 `http://127.0.0.1:8000/api/v1/healthz` и `http://127.0.0.1:3000/api/v1/healthz`
-ответили 200 `{"status":"ok"}`. В контейнере ядра тот же `KONTUR_GIT_SHA`.
+ответили 200 `{"status":"ok"}`. SHA в контейнере совпал со сборкой, потому что
+переменная была в окружении шелла. Строка compose
+`KONTUR_GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}` без этой переменной затирала
+SHA образа. Она убрана: `up` оставляет SHA сборки, статус процесса его читает.
 Тома `pgdata`, `rabbitmq` и `minio` не стирались. Сеть хоста не отключалась:
 `pull_policy: never` и `--no-build` не дают registry и пересборку. Это не
 чистая Linux-машина без сети. Гейты I/J/K/L этот прогон не закрывает.
