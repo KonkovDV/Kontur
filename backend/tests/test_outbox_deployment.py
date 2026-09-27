@@ -41,6 +41,46 @@ def test_package_runner_out_is_owned_before_start() -> None:
     assert "service_completed_successfully" in runner
 
 
+def test_compose_keeps_the_sha_baked_into_the_image() -> None:
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    assert "GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}" in compose
+    assert "KONTUR_GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}" not in compose
+
+
+def test_process_status_reads_the_image_sha(monkeypatch) -> None:
+    from kontur.application.runtime import ProcessWorkspace
+    from kontur.domain.models import DocStage
+    from kontur.domain.statuses import Completeness
+
+    monkeypatch.delenv("GITHUB_SHA", raising=False)
+    monkeypatch.setenv("KONTUR_GIT_SHA", "ab" * 20)
+    record = ProcessWorkspace().create(
+        "obj-sha",
+        {
+            DocStage.PD: Completeness.UPLOADED,
+            DocStage.RD: Completeness.MISSING,
+            DocStage.ID: Completeness.MISSING,
+        },
+    )
+    versions = record.to_status()["versions"]
+    assert isinstance(versions, dict)
+    assert versions["git_sha"] == "ab" * 20
+
+    monkeypatch.setenv("KONTUR_GIT_SHA", "unspecified")
+    monkeypatch.setenv("GITHUB_SHA", "cd" * 20)
+    again = ProcessWorkspace().create(
+        "obj-sha-ci",
+        {
+            DocStage.PD: Completeness.UPLOADED,
+            DocStage.RD: Completeness.MISSING,
+            DocStage.ID: Completeness.MISSING,
+        },
+    )
+    ci_versions = again.to_status()["versions"]
+    assert isinstance(ci_versions, dict)
+    assert ci_versions["git_sha"] == "cd" * 20
+
+
 def test_relay_is_present_in_offline_override() -> None:
     offline = (ROOT / "docker-compose.offline.yml").read_text(encoding="utf-8")
     assert "outbox-relay:" in offline

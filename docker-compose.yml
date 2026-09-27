@@ -100,7 +100,6 @@ services:
       KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY}
       KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
       KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
-      KONTUR_GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
     depends_on:
       postgres:
         condition: service_healthy
@@ -228,7 +227,6 @@ services:
       - no-new-privileges:true
     environment:
       KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
-      KONTUR_GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
     volumes:
       - ${KONTUR_PACKAGE_INPUT:-./input}:/input:ro
       - ${KONTUR_PACKAGE_OUT:-./out}:/out
