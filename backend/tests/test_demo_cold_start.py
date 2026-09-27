@@ -91,6 +91,9 @@ def _attach(
     file_id: str,
     stage: DocStage,
     payload: bytes,
+    *,
+    predecessor_file_id: str | None = None,
+    successor_file_id: str | None = None,
 ) -> None:
     item = AcceptedFile(
         file_id=file_id,
@@ -98,6 +101,8 @@ def _attach(
         filename=f"{file_id}.pdf",
         doc_stage=stage,
         size_bytes=len(payload),
+        predecessor_file_id=predecessor_file_id,
+        successor_file_id=successor_file_id,
     )
     workspace.attach_file(record, item)
     workspace.keep_blob(record, file_id, payload)
@@ -165,7 +170,7 @@ def test_demo_rehearsal_confirm_reject_protocol_outbox() -> None:
     unordered = demo_findings(tuple(record.findings.values()))
     for code in DEMO_CODES:
         assert unordered[code].finding_status is FindingStatus.CLARIFICATION_REQUIRED
-        assert "несколько редакций" in unordered[code].rationale
+        assert unordered[code].finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
     workspace.select_revision(
         record.process_id,

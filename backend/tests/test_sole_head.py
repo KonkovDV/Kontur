@@ -103,6 +103,38 @@ def test_strict_unknown_pd_stays_clarification(monkeypatch: pytest.MonkeyPatch) 
     assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
 
+def test_stamped_blank_does_not_drop_another_volume() -> None:
+    from kontur.application.process_pipeline import _stages_from_heads
+    from kontur.domain.models import ApprovalBasis
+
+    stamped = _doc(DocStage.PD, file_id="pz", code="", approval=ApprovalStatus.APPROVED)
+    stamped = replace(stamped, approval_basis=ApprovalBasis.TITLE_BLOCK, file_hash="a" * 64)
+    other = _doc(DocStage.PD, file_id="ov", code="Том 5.4.2 ОВ")
+    other = replace(other, file_hash="b" * 64)
+    draft = _doc(DocStage.PD, file_id="draft", code="")
+    draft = replace(draft, file_hash="c" * 64)
+    rd = _doc(DocStage.RD, file_id="rd", code="", approval=ApprovalStatus.UNKNOWN)
+    rd = replace(rd, file_hash="d" * 64)
+    built = [
+        (stamped, StagePage(document=stamped, tokens=())),
+        (other, StagePage(document=other, tokens=())),
+        (draft, StagePage(document=draft, tokens=())),
+        (rd, StagePage(document=rd, tokens=())),
+    ]
+    raw = _stages_from_heads(built, frozenset())[DocStage.PD]
+    assert isinstance(raw, tuple)
+    assert {page.document.file_id for page in raw} == {"pz", "ov", "draft"}
+    chosen_pages = _stages_from_heads(built, frozenset({"pz"}))
+    assert chosen_pages[DocStage.RD].document.file_id == "rd"
+    chosen = chosen_pages[DocStage.PD]
+    assert isinstance(chosen, tuple)
+    by_id = {page.document.file_id: page.document for page in chosen}
+    assert set(by_id) == {"pz", "ov"}
+    assert by_id["ov"].approval_basis is ApprovalBasis.SOLE_HEAD
+    assert by_id["ov"].approval_status is ApprovalStatus.UNKNOWN
+    assert by_id["pz"].approval_status is ApprovalStatus.APPROVED
+
+
 def test_protocol_names_the_unproven_stamp() -> None:
     polygon = ((0.1, 0.2), (0.4, 0.2), (0.4, 0.3), (0.1, 0.3))
     area = "1250"
