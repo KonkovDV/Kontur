@@ -643,6 +643,9 @@ export function LiveWorkspace({ token }: Props) {
                   <td>{item.revision ?? "—"}</td>
                   <td>
                     {item.approval_status} / {item.approval_basis}
+                    {item.approval_basis === "SOLE_HEAD"
+                      ? " — утверждение не подтверждено"
+                      : ""}
                   </td>
                   <td>{item.actuality}</td>
                   <td>

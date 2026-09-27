@@ -247,7 +247,10 @@ def test_later_not_approved_does_not_hide_the_earlier_file() -> None:
         files,
         {"f-early": earlier, "f-late": later},
     )
-    assert DocStage.PD not in pages
+    assert pages[DocStage.PD].document.file_id == "f-early"
+    assert pages[DocStage.PD].document.file_id != "f-late"
+    assert pages[DocStage.PD].document.approval_status is ApprovalStatus.UNKNOWN
+    assert pages[DocStage.PD].document.approval_basis is ApprovalBasis.SOLE_HEAD
     assert stamps["f-early"] is ApprovalStatus.UNKNOWN
     assert stamps["f-late"] is ApprovalStatus.NOT_APPROVED
 
@@ -268,7 +271,11 @@ def test_distinct_ciphers_do_not_become_revision_conflict_of_one_chain() -> None
         inspector_approved_file_ids=frozenset({"f-pz"}),
     )
     pd_heads = stage_candidates(pages, DocStage.PD)
-    assert {page.document.file_id for page in pd_heads} == {"f-pz"}
+    assert {page.document.file_id for page in pd_heads} == {"f-pz", "f-ar"}
+    by_file = {page.document.file_id: page.document for page in pd_heads}
+    assert by_file["f-pz"].approval_basis is ApprovalBasis.INSPECTOR_SELECT
+    assert by_file["f-ar"].approval_basis is ApprovalBasis.SOLE_HEAD
+    assert by_file["f-ar"].approval_status is ApprovalStatus.UNKNOWN
     assert stamps["f-pz"] is ApprovalStatus.UNKNOWN
     assert stamps["f-ar"] is ApprovalStatus.UNKNOWN
     report = run_process_pipeline(
@@ -292,7 +299,7 @@ def test_distinct_ciphers_do_not_become_revision_conflict_of_one_chain() -> None
         inspector_approved_file_ids=frozenset({"f-pz"}),
     )
     by_id = {row["file_id"]: row["actuality"] for row in rows}
-    assert by_id == {"f-pz": "CURRENT", "f-ar": "CLARIFICATION_REQUIRED"}
+    assert by_id == {"f-pz": "CURRENT", "f-ar": "CURRENT"}
 
 
 def test_unresolved_pz_is_not_hidden_by_resolved_ar_cipher() -> None:

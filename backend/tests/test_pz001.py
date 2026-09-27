@@ -302,15 +302,15 @@ def test_not_approved_mark_blocks_comparison(rule: dict[str, object]) -> None:
     assert "не утв" in result.finding.rationale
 
 
-def test_unapproved_revision_does_not_compare(rule: dict[str, object]) -> None:
+def test_unknown_revision_compares_as_sole_head(rule: dict[str, object]) -> None:
     result = _run(
         rule,
         ("Площадь", "застройки", "1250,5"),
         ("Площадь", "застройки", "1100"),
         approved=False,
     )
-    assert result.finding.finding_status is FindingStatus.CLARIFICATION_REQUIRED
-    assert result.finding.finding_status is not FindingStatus.CANDIDATE
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
 
 def test_pool_rejects_page_that_is_not_approved_head(rule: dict[str, object]) -> None:

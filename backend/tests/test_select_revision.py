@@ -62,8 +62,12 @@ def test_missing_approval_blocks_until_inspector_selects() -> None:
         and item.rationale
         and "утверждени" in item.rationale
     ]
-    assert blocked
+    assert blocked == []
     assert all(item.stamp_approval is ApprovalStatus.UNKNOWN for item in record.files)
+    assert any(
+        item.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+        for item in record.findings.values()
+    )
 
     workspace.select_revision(record.process_id, "f-pd", actor=INSPECTOR, comment=COMMENT)
     workspace.select_revision(record.process_id, "f-rd", actor=INSPECTOR, comment=COMMENT)

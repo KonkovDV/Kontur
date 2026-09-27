@@ -193,6 +193,7 @@ paths:
                           - TITLE_BLOCK
                           - INSPECTOR_SELECT
                           - PACKAGE_DEFAULT
+                          - SOLE_HEAD
                           - UNPROVEN
                         actuality:
                           type: string

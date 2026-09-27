@@ -1,6 +1,8 @@
 """Резолвер актуальной редакции (Gate E, ТЗ п. 9.1, ответ организатора 26.09).
 
-ПД без сведений об утверждении — `CLARIFICATION_REQUIRED`, не эталон.
+ПД без штампа: `KONTUR_ETALON_POLICY=strict` даёт `CLARIFICATION_REQUIRED`.
+`sole_head` (по умолчанию) берёт единственную голову без другой утверждённой
+редакции в цепочке и ставит `SOLE_HEAD`, не переписывая штамп в APPROVED.
 РД и ИД не требуют графы «Утвердил». `NOT_APPROVED` в пул не входит.
 Несколько голов или цикл — `CLARIFICATION_REQUIRED`, без сравнения.
 
@@ -10,10 +12,13 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, replace
 from enum import StrEnum
 
 from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage, DocumentRef
+
+SOLE_HEAD_NOTICE = "утверждение не подтверждено"
 
 
 def _identity_key(doc: DocumentRef) -> tuple[str, str, str] | None:
@@ -87,6 +92,15 @@ class RevisionResolution:
     conflict_reason: str | None = None
 
 
+def etalon_policy() -> str:
+    """`sole_head` по умолчанию. Неизвестное значение — `strict`, как ADR-0015."""
+
+    raw = os.environ.get("KONTUR_ETALON_POLICY", "sole_head").strip().lower()
+    if raw == "sole_head":
+        return "sole_head"
+    return "strict"
+
+
 def _eligible(doc: DocumentRef) -> bool:
     """В пул головы входит всё, кроме явного «не утв.»."""
 
@@ -99,10 +113,11 @@ def _finish_head(
     *,
     inspector_selected: bool,
 ) -> RevisionResolution:
-    """ПД без сведений об утверждении не становится эталоном сама.
+    """ПД без штампа: strict останавливает, sole_head берёт единственную голову.
 
     Выбор инспектора переводит UNKNOWN в APPROVED с INSPECTOR_SELECT.
-    РД и ИД сравнение не останавливают.
+    Явный «не утв.» в эту функцию не приходит. РД и ИД сравнение не останавливают.
+    Другая утверждённая редакция той же цепочки не даёт назначить черновик эталоном.
     """
 
     if (
@@ -117,11 +132,18 @@ def _finish_head(
         )
         chosen = replace(chosen, approval_status=status, approval_basis=basis)
     elif chosen.doc_stage is DocStage.PD and chosen.approval_status is ApprovalStatus.UNKNOWN:
-        return RevisionResolution(
-            status=ResolveStatus.CLARIFICATION_REQUIRED,
-            resolved=None,
-            conflict_reason="сведения об утверждении отсутствуют",
+        approved_other = any(
+            item.file_id != chosen.file_id and item.approval_status is ApprovalStatus.APPROVED
+            for item in eligible
         )
+        if etalon_policy() == "sole_head" and not approved_other:
+            chosen = replace(chosen, approval_basis=ApprovalBasis.SOLE_HEAD)
+        else:
+            return RevisionResolution(
+                status=ResolveStatus.CLARIFICATION_REQUIRED,
+                resolved=None,
+                conflict_reason="сведения об утверждении отсутствуют",
+            )
     return RevisionResolution(
         status=ResolveStatus.RESOLVED,
         resolved=ResolvedRevision(
@@ -186,8 +208,9 @@ def resolve_revision(
        этой цепочки — голова. Два таких выбора — RevisionConflict.
        «Не утв.» в этот набор не входит.
     6. Иначе голова: нет successor в пуле пригодных редакций.
-    7. Голова ПД со статусом UNKNOWN — `CLARIFICATION_REQUIRED`,
-       пока этот файл не выбран инспектором.
+    7. Голова ПД со статусом UNKNOWN. Выбор инспектора ставит APPROVED.
+       Иначе `strict` — `CLARIFICATION_REQUIRED`. `sole_head` берёт эту
+       голову с SOLE_HEAD, если в цепочке нет другой APPROVED редакции.
     8. Несколько голов или цикл — RevisionConflict.
     """
 

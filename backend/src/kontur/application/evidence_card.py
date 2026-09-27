@@ -7,7 +7,9 @@ from datetime import date
 from typing import Any
 
 from kontur.application.protocol import finding_to_schema
+from kontur.application.revision_resolver import SOLE_HEAD_NOTICE
 from kontur.domain.models import (
+    ApprovalBasis,
     DocumentRef,
     EvidenceFragment,
     EvidenceGroup,
@@ -157,7 +159,7 @@ def build_evidence_card(
         raise ValueError(
             f"{finding.finding_id}: evidence_group_id расходится с группой"
         )
-    return {
+    card: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "process_id": process_id,
         "finding": finding_to_schema(finding),
@@ -166,3 +168,8 @@ def build_evidence_card(
         "audit": audit_for_finding(audit_records, finding.finding_id),
         "closes_gate_k": False,
     }
+    if group is not None and any(
+        item.document.approval_basis is ApprovalBasis.SOLE_HEAD for item in group.fragments
+    ):
+        card["approval_notice"] = SOLE_HEAD_NOTICE
+    return card

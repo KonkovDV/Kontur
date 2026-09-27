@@ -59,7 +59,7 @@ def _by_file_id(body: dict[str, object]) -> dict[str, dict[str, object]]:
     return mapping
 
 
-def test_documents_list_marks_unstamped_pd_as_clarification(
+def test_documents_list_marks_unstamped_pd_as_sole_head(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
@@ -83,8 +83,9 @@ def test_documents_list_marks_unstamped_pd_as_clarification(
     )
     assert listed.status_code == 200
     body = listed.json()
-    assert body["documents"][0]["approval_basis"] == "UNPROVEN"
-    assert body["documents"][0]["actuality"] == "CLARIFICATION_REQUIRED"
+    assert body["documents"][0]["approval_status"] == "UNKNOWN"
+    assert body["documents"][0]["approval_basis"] == "SOLE_HEAD"
+    assert body["documents"][0]["actuality"] == "CURRENT"
     assert body["documents"][0]["doc_stage"] == "PD"
 
     page = client.get(
@@ -211,8 +212,9 @@ def test_http_catalog_after_select_marks_same_cipher_superseded(
     before = _by_file_id(listed.json())
     assert before["f-early"]["actuality"] == "CLARIFICATION_REQUIRED"
     assert before["f-late"]["actuality"] == "CLARIFICATION_REQUIRED"
-    assert before["f-ar"]["actuality"] == "CLARIFICATION_REQUIRED"
-    assert before["f-ar"]["approval_basis"] == "UNPROVEN"
+    assert before["f-ar"]["actuality"] == "CURRENT"
+    assert before["f-ar"]["approval_status"] == "UNKNOWN"
+    assert before["f-ar"]["approval_basis"] == "SOLE_HEAD"
     assert before["f-rd"]["actuality"] == "CURRENT"
 
     findings = client.get(
@@ -248,8 +250,9 @@ def test_http_catalog_after_select_marks_same_cipher_superseded(
     assert after["f-early"]["actuality"] == "CURRENT"
     assert after["f-early"]["approval_basis"] == "INSPECTOR_SELECT"
     assert after["f-late"]["actuality"] == "SUPERSEDED"
-    assert after["f-ar"]["actuality"] == "CLARIFICATION_REQUIRED"
-    assert after["f-ar"]["approval_basis"] == "UNPROVEN"
+    assert after["f-ar"]["actuality"] == "CURRENT"
+    assert after["f-ar"]["approval_status"] == "UNKNOWN"
+    assert after["f-ar"]["approval_basis"] == "SOLE_HEAD"
     assert after["f-rd"]["actuality"] == "CURRENT"
 
     findings_after = client.get(
