@@ -22,7 +22,7 @@ from kontur.application.intake import accepted_unparsed_detail
 from kontur.application.passport import apply_manifest_section, read_passport
 from kontur.application.revision_resolver import (
     ResolveStatus,
-    _same_document_identity,
+    _identity_key,
     approval_with_basis,
     resolve_heads_by_identity,
 )
@@ -255,7 +255,7 @@ def _stages_from_heads(
     for stage, items in by_stage.items():
         refs = [ref for ref, _page in items]
         by_id = {ref.file_id: page for ref, page in items}
-        resolved: list[tuple[DocumentRef, StagePage]] = []
+        heads: list[StagePage] = []
         for identity in resolve_heads_by_identity(
             refs,
             stage,
@@ -267,20 +267,14 @@ def _stages_from_heads(
             ):
                 continue
             chosen = identity.resolution.resolved.document
-            resolved.append((chosen, by_id[chosen.file_id]))
-        approved = [
-            document
-            for document, _page in resolved
-            if document.approval_status is ApprovalStatus.APPROVED
-        ]
-        heads: list[StagePage] = []
-        for chosen, page in resolved:
-            hidden = chosen.approval_basis is ApprovalBasis.SOLE_HEAD and any(
-                _same_document_identity(chosen, item) for item in approved
-            )
-            if hidden:
-                continue
-            heads.append(replace(page, document=chosen))
+            heads.append(replace(by_id[chosen.file_id], document=chosen))
+        if stage is DocStage.PD and inspector_approved_file_ids:
+            heads = [
+                page
+                for page in heads
+                if page.document.file_id in inspector_approved_file_ids
+                or _identity_key(page.document) is not None
+            ]
         if len(heads) == 1:
             pages[stage] = heads[0]
         elif len(heads) > 1:
