@@ -15,6 +15,10 @@
         "properties": {
           "parameter_code": { "type": "string" },
           "location": { "type": "string" },
+          "rationale": {
+            "type": "string",
+            "description": "Текст остановки. Не ключ сопоставления: номер помещения и «объект» остаются в location."
+          },
           "pd_value": {},
           "rd_value": {},
           "id_value": {},
