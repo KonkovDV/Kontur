@@ -34,7 +34,7 @@ from kontur.domain.statuses import Completeness, ProcessState
 from kontur.evaluation.agent_dumps import git_sha, repo_root
 from kontur.evaluation.dataset_package import is_hidden_test_object
 from kontur.evaluation.inventory import QuarantineViolation, is_quarantined, require_path_open
-from kontur.evaluation.submission import build_check, build_submission
+from kontur.evaluation.submission import build_check, build_submission, halt_location
 from kontur.evaluation.submission_pack import build_input_manifest
 from kontur.infrastructure.matrix.free_search import wire_codes
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
@@ -399,8 +399,7 @@ def _schema_validator(schema_name: str) -> Draft202012Validator:
 def _location_for(finding: Finding, group: EvidenceGroup | None) -> str | None:
     if group is not None and group.fragments:
         return None
-    text = finding.rationale.strip()
-    return text or "объект"
+    return halt_location(finding)
 
 
 def submission_from_record(

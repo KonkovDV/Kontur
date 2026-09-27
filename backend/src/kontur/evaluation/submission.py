@@ -191,6 +191,7 @@ class SubmissionCheck:
     id_value: Value = None
     protocol_status: ContestProtocolStatus | None = None
     criticality: str | None = None
+    rationale: str = ""
 
     def __post_init__(self) -> None:
         if not self.parameter_code.strip():
@@ -216,6 +217,8 @@ class SubmissionCheck:
             wire["protocol_status"] = self.protocol_status.value
         if self.criticality is not None:
             wire["criticality"] = self.criticality
+        if self.rationale.strip():
+            wire["rationale"] = self.rationale.strip()
         return wire
 
 
@@ -289,6 +292,18 @@ def location_from_group(group: EvidenceGroup) -> str:
         value = fragment.extracted.normalized_value
         if isinstance(value, str) and value.startswith("помещение "):
             return value
+    return "объект"
+
+
+def halt_location(finding: Finding) -> str | None:
+    """Ключ отказа без фрагментов. Номер помещения ещё не известен.
+
+    Текст rationale сюда не подставляется. Для отсутствующей стадии None:
+    build_check пишет имя стадии, не причину целиком.
+    """
+
+    if finding.finding_status is FindingStatus.MISSING_EVIDENCE:
+        return None
     return "объект"
 
 
@@ -417,6 +432,7 @@ def build_check(
             )
         ),
         criticality=criticality,
+        rationale=finding.rationale,
     )
 
 
@@ -479,8 +495,7 @@ def findings_to_submission(
             rule = rules.get(canonicalize_rule_code(finding.rule_code))
         location = None
         if group is None or not group.fragments:
-            text = finding.rationale.strip()
-            location = text or None
+            location = halt_location(finding)
         checks.append(
             build_check(
                 finding,

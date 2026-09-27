@@ -103,6 +103,7 @@ def _finding(
     rule_code: str = "AR-014",
     group_id: str | None = "eg-1",
     priority: ReviewPriority = ReviewPriority.HIGH,
+    rationale: str = "",
 ) -> Finding:
     return Finding(
         finding_id="fnd-1",
@@ -113,6 +114,7 @@ def _finding(
         rule_version="1",
         model_version="m-0",
         evidence_group_id=group_id,
+        rationale=rationale,
     )
 
 
@@ -336,6 +338,24 @@ def test_submission_is_deterministic_and_deduplicated() -> None:
     assert len(checks) == 1
     with pytest.raises(ValueError, match="object_id"):
         build_submission("  ", [check])
+
+
+def test_halt_without_fragments_keeps_rationale_out_of_location() -> None:
+    reason = "сведения об утверждении отсутствуют"
+    finding = _finding(
+        FindingStatus.CLARIFICATION_REQUIRED,
+        rule_code="IOS4-078",
+        group_id=None,
+        rationale=reason,
+    )
+    payload = findings_to_submission("obj-tyumen", [finding])
+    schema = json.loads(SUBMISSION_SCHEMA.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(schema).validate(payload)
+    check = payload["checks"][0]
+    assert check["location"] == "объект"
+    assert reason not in str(check["location"])
+    assert check["rationale"] == reason
+    assert check["violation_label"] == "COMPARISON_IMPOSSIBLE"
 
 
 def test_findings_to_submission_is_the_only_assembly_path() -> None:
