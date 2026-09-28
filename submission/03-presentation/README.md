@@ -1,13 +1,15 @@
 # Презентация
 
-**Ссылка для формы:** https://github.com/KonkovDV/Kontur/blob/main/submission/03-presentation/Kontur.pptx
+**Ссылка для формы:** https://github.com/KonkovDV/Kontur/tree/main/submission/03-presentation
 
-Десять слайдов. Текстовая копия — [`demo_day_slides.md`](demo_day_slides.md).
+Поле формы — эта папка. PowerPoint и PDF кладутся сюда же.
+Текстовая копия слайдов — [`demo_day_slides.md`](demo_day_slides.md).
 Ролик в этот пакет не входит.
 
 | Файл | Роль |
 |---|---|
-| [`Kontur.pptx`](Kontur.pptx) | Поле «Презентация» |
+| [`Kontur.pptx`](Kontur.pptx) | PowerPoint, уже в папке |
+| PDF | кладётся в эту же папку |
 | [`demo_day_slides.md`](demo_day_slides.md) | Тот же текст без файла PowerPoint |
 
 На слайде метрик публичный gold в режиме location — 0 из 6. Это не порог ТЗ.
