@@ -370,6 +370,54 @@ def test_two_ov_volumes_ask_instead_of_picking_one() -> None:
     assert result.evidence_group is None
 
 
+def test_blank_cipher_neighbours_do_not_break_the_ov_chain() -> None:
+    """Утверждённый файл без шифра не останавливает том ОВ фразой про непрочитанный шифр."""
+
+    rule = _REGISTRY.get("IOS4-078")
+    pd_ov, doc_ov = _headed(
+        DocStage.PD,
+        "pd-ov",
+        "АНО/150321/1-П-ОВ",
+        ("воздуховод", "сечение", "500×300", "мм"),
+    )
+    rd_ov, doc_rd = _headed(
+        DocStage.RD,
+        "rd-ov",
+        "АНО/150321/1-РД-ОВ1",
+        ("воздуховод", "сечение", "400×200", "мм"),
+    )
+    stamped = replace(
+        _doc(DocStage.PD, "stamp"),
+        file_id="pd-stamp",
+        document_code="",
+        approval_status=ApprovalStatus.APPROVED,
+    )
+    other = replace(
+        _doc(DocStage.PD, "other"),
+        file_id="pd-other",
+        document_code="",
+        approval_status=ApprovalStatus.UNKNOWN,
+    )
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: (
+                StagePage(document=stamped, tokens=()),
+                pd_ov,
+                StagePage(document=other, tokens=()),
+            ),
+            DocStage.RD: rd_ov,
+        },
+        completeness=_completeness(),
+        revision_pool=[stamped, doc_ov, other, doc_rd],
+    )
+    assert "не прочитан" not in result.finding.rationale
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
+    assert result.finding.source_id == "pd-ov"
+
+
 def test_ios4_binds_hvac_subsection_among_other_engineering_volumes() -> None:
     """ПД ИОС5.4 — отопление. ИОС5.1 и ВК число не отдают.
 

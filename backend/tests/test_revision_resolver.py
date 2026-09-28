@@ -211,6 +211,43 @@ class TestBasicResolution:
         with pytest.raises(RevisionConflict, match="не прочитан"):
             resolve_revision([coded, blank], DocStage.PD)
 
+    def test_coded_anchor_ignores_blank_cipher_files(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("KONTUR_ETALON_POLICY", raising=False)
+        coded = _doc("pd-ov", document_code="Том 5.4.2 ОВ", approval=ApprovalStatus.UNKNOWN)
+        stamped = replace(
+            _doc("pd-stamp", approval=ApprovalStatus.APPROVED),
+            document_code="",
+        )
+        other = replace(
+            _doc("pd-other", approval=ApprovalStatus.UNKNOWN),
+            document_code="",
+        )
+        result = resolve_revision([coded, stamped, other], DocStage.PD, anchor=coded)
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-ov"
+        assert result.resolved.document.approval_status is ApprovalStatus.UNKNOWN
+        assert result.resolved.document.approval_basis is ApprovalBasis.SOLE_HEAD
+
+    def test_blank_anchor_does_not_swallow_a_coded_volume(self) -> None:
+        coded = _doc("pd-ov", document_code="Том 5.4.2 ОВ")
+        blank = replace(_doc("pd-blank", approval=ApprovalStatus.APPROVED), document_code="")
+        result = resolve_revision([coded, blank], DocStage.PD, anchor=blank)
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-blank"
+
+    def test_blank_anchor_keeps_its_own_successor(self) -> None:
+        first = replace(_doc("pd-a", successor="pd-b"), document_code="")
+        second = replace(_doc("pd-b", predecessor="pd-a"), document_code="")
+        coded = _doc("pd-ov", document_code="Том 5.4.2 ОВ")
+        result = resolve_revision([first, second, coded], DocStage.PD, anchor=first)
+        assert result.status is ResolveStatus.RESOLVED
+        assert result.resolved is not None
+        assert result.resolved.document.file_id == "pd-b"
+
 
 class TestIdentityHeads:
     def test_two_ciphers_resolve_independently(self) -> None:
