@@ -277,21 +277,31 @@ def evidence_from_group(group: EvidenceGroup) -> tuple[SubmissionEvidence, ...]:
     return tuple(items)
 
 
+def _inventory_location(value: str) -> str:
+    """Номер как в инвентаре. Префикс «помещение» в ключ не входит."""
+
+    text = value.strip()
+    prefix = "помещение "
+    if text.startswith(prefix):
+        text = text[len(prefix) :].strip()
+    return text or "объект"
+
+
 def location_from_group(group: EvidenceGroup) -> str:
-    """Ключ организатора: номер помещения или конструктивный элемент, иначе «объект».
+    """Ключ организатора: номер помещения как в инвентаре, иначе «объект».
 
     Стадия, шифр, редакция, лист и страница лежат в evidence, не в location.
-    Номер помещения берётся из normalized_value вида «помещение N». Иначе ключ — «объект».
+    Счётчик строку не переписывает: «помещение 140» и «140» — разные ключи.
     """
 
     if not group.fragments:
         raise ValueError(f"{group.evidence_group_id}: нет фрагментов для локализации")
     for fragment in group.fragments:
         if fragment.room_id:
-            return f"помещение {fragment.room_id}"
+            return _inventory_location(fragment.room_id)
         value = fragment.extracted.normalized_value
         if isinstance(value, str) and value.startswith("помещение "):
-            return value
+            return _inventory_location(value)
     return "объект"
 
 

@@ -92,6 +92,31 @@ def test_location_match_does_not_invent_gold_rooms(tmp_path: Path) -> None:
     assert code_matrix["hits"] == 5
 
 
+def test_inventory_room_key_hits_one_row_and_not_the_threshold(tmp_path: Path) -> None:
+    submission = {
+        "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED",
+        "checks": [
+            {
+                "parameter_code": "IOS4-078",
+                "location": "140",
+                "violation_label": "VIOLATION_PRESENT",
+                "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 88}],
+            }
+        ],
+    }
+    (tmp_path / "submission_gold.json").write_text(
+        json.dumps(submission, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    report = score_directory(tmp_path, match="location")
+    matrix = report["matrix"]
+    assert isinstance(matrix, dict)
+    assert matrix["hits"] == 1
+    assert matrix["n_positive"] == 6
+    assert matrix["tz_recall_met"] is False
+    assert report["closes_gate_j"] is False
+
+
 def test_location_match_hits_only_the_same_room() -> None:
     row = {
         "object_id": "OBJ-X",

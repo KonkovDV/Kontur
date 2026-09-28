@@ -160,7 +160,7 @@ def test_fragment_keeps_source_polygon_and_ocr_engine() -> None:
     assert result.finding.finding_status is FindingStatus.CANDIDATE
     assert result.evidence_group is not None
     assert result.evidence_group.fragments[0].room_id == "140"
-    assert location_from_group(result.evidence_group) == "помещение 140"
+    assert location_from_group(result.evidence_group) == "140"
     fragment = result.evidence_group.fragments[0]
     assert fragment.polygon_source == source
     assert fragment.polygon_norm == norm
@@ -196,7 +196,7 @@ def test_live_number_pass_keeps_section_and_adds_room() -> None:
     assert rooms
     assert rooms[0].evidence_group is not None
     assert rooms[0].evidence_group.fragments[0].room_id == "140"
-    assert location_from_group(rooms[0].evidence_group) == "помещение 140"
+    assert location_from_group(rooms[0].evidence_group) == "140"
 
 
 def test_two_by_two_volumes_keep_the_best_room_pair() -> None:
