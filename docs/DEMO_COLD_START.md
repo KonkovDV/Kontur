@@ -112,6 +112,32 @@ SHA образа. Она убрана: `up` оставляет SHA сборки,
 `pull_policy: never` и `--no-build` не дают registry и пересборку. Это не
 чистая Linux-машина без сети. Гейты I/J/K/L этот прогон не закрывает.
 
+## Запись прогона 28.09.2026
+
+Повтор после срезов 28.09. Хост тот же: Windows, Docker Engine 29.8.0,
+Compose v5.5.1, 20 CPU, память демона 16677756928 байт. Образы собраны с
+`KONTUR_GIT_SHA=b6645cd1cebfde245ad4e7dbc576c4b385895632`.
+
+Локальный tar `out/kontur_images.tar` в git не входит. Размер 1811542016 байт,
+SHA-256 `f0333651b3cddbaa1da0080ed8af127b8975567995822e756f113dc28366b8e3`.
+Четыре образа приложения удалены. `docker load` вернул их; id ядра снова
+`sha256:69aafa1c1196dca26b7bd19537a9152b06785c33a99ef35d28cf1a598b79c832`.
+Базовые образы postgres, redis, rabbitmq и minio на хосте уже были.
+Тома не стирались.
+
+Команда подъёма, без `--build`:
+
+```text
+docker compose -f docker-compose.yml -f docker-compose.demo.yml -f docker-compose.offline.yml up -d --no-build
+```
+
+`http://127.0.0.1:8000/api/v1/healthz`, `http://127.0.0.1:3000/healthz` и
+`http://127.0.0.1:3000/api/v1/healthz` ответили 200 `{"status":"ok"}`.
+В контейнере ядра `KONTUR_GIT_SHA` совпал со сборкой. Docker отметил core и
+gateway `healthy`. Сеть хоста не отключалась. Это не чистая Linux-машина
+без сети. Гейты I/J/K/L этот прогон не закрывает. Пакет сдачи в `out/`
+собрался с покрытием 55 / 72 / 1 / 4 и `closes_gate_k=false`. Это не порог ТЗ.
+
 ## Что это не закрывает
 
 | Тема | Статус |
