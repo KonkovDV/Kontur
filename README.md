@@ -1,3 +1,18 @@
+<p align="center">
+  <a href="https://github.com/KonkovDV/Kontur/raw/main/submission/03-presentation/Kontur.pptx"><img alt="Презентация в PowerPoint" src="https://img.shields.io/badge/%D0%9F%D1%80%D0%B5%D0%B7%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F-PowerPoint-B7472A?style=for-the-badge&amp;logo=libreofficeimpress&amp;logoColor=white"></a>
+  <a href="https://github.com/KonkovDV/Kontur/blob/main/submission/03-presentation/Kontur.pdf"><img alt="Презентация в PDF" src="https://img.shields.io/badge/%D0%9F%D1%80%D0%B5%D0%B7%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F-PDF-EC1C24?style=for-the-badge&amp;logo=files&amp;logoColor=white"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/KonkovDV/Kontur/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/KonkovDV/Kontur/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="LICENSE"><img alt="Лицензия Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white">
+  <a href="docker-compose.offline.yml"><img alt="Docker Compose офлайн" src="https://img.shields.io/badge/Docker_Compose-offline-2496ED?logo=docker&amp;logoColor=white"></a>
+  <a href="contracts/openapi.yaml"><img alt="OpenAPI 3.1" src="https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&amp;logoColor=white"></a>
+  <img alt="Задача №10, Мосгосстройнадзор" src="https://img.shields.io/badge/%D0%B7%D0%B0%D0%B4%D0%B0%D1%87%D0%B0_%E2%84%9610-%D0%9C%D0%BE%D1%81%D0%B3%D0%BE%D1%81%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BD%D0%B0%D0%B4%D0%B7%D0%BE%D1%80-520978">
+  <a href="docs/METRICS.md"><img alt="Гейты I/J/K/L открыты" src="https://img.shields.io/badge/%D0%B3%D0%B5%D0%B9%D1%82%D1%8B_I%2FJ%2FK%2FL-%D0%BE%D1%82%D0%BA%D1%80%D1%8B%D1%82%D1%8B-lightgrey"></a>
+</p>
+
 # Контур — «Инспектор ИИ»
 
 Сервис камеральной сверки проектной (ПД), рабочей (РД) и исполнительной (ИД)
