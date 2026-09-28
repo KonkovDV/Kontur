@@ -13,7 +13,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_GLOBS = ("README.md", "AGENTS.md", "docs/**/*.md", "web/**/*.md", "data/**/*.md")
+PUBLIC_GLOBS = (
+    "README.md",
+    "AGENTS.md",
+    "docs/**/*.md",
+    "submission/**/*.md",
+    "web/**/*.md",
+    "data/**/*.md",
+)
 
 FORBIDDEN: tuple[tuple[str, str], ...] = (
     (r"полностью автоматическ\w*\s+надзор", "автономный надзор не заявляется"),
