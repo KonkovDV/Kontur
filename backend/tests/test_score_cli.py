@@ -42,7 +42,7 @@ def test_one_code_hits_every_duplicate_row_and_does_not_meet_tz(tmp_path: Path) 
         json.dumps(submission, ensure_ascii=False),
         encoding="utf-8",
     )
-    report = score_directory(tmp_path)
+    report = score_directory(tmp_path, match="code")
     matrix = report["matrix"]
     assert isinstance(matrix, dict)
     assert matrix["hits"] == 5
@@ -53,7 +53,13 @@ def test_one_code_hits_every_duplicate_row_and_does_not_meet_tz(tmp_path: Path) 
     assert matrix["tz_recall_met"] is False
     fpr = matrix["fpr"]
     assert isinstance(fpr, dict)
-    assert fpr["defined"] is True
+    assert fpr["defined"] is False
+    assert fpr["n"] == 0
+    default = score_directory(tmp_path)
+    assert default["match"] == "object_id+parameter_code+location"
+    default_matrix = default["matrix"]
+    assert isinstance(default_matrix, dict)
+    assert default_matrix["hits"] == 0
 
 
 def test_location_match_does_not_invent_gold_rooms(tmp_path: Path) -> None:
@@ -80,7 +86,7 @@ def test_location_match_does_not_invent_gold_rooms(tmp_path: Path) -> None:
     assert matrix["n_positive"] == 6
     assert matrix["hits"] == 0
     assert matrix["unscored_without_location"] == 0
-    code = score_directory(tmp_path)
+    code = score_directory(tmp_path, match="code")
     code_matrix = code["matrix"]
     assert isinstance(code_matrix, dict)
     assert code_matrix["hits"] == 5
@@ -307,6 +313,108 @@ def test_zero_negatives_are_not_printed_as_zero_fpr() -> None:
     tail = _line("MATRIX", block).split("FPR", 1)[1]
     assert "не определён (n=0)" in tail
     assert "0.000" not in tail
+
+
+def test_invalid_submission_does_not_receive_a_score(tmp_path: Path) -> None:
+    (tmp_path / "submission_bad.json").write_text(
+        json.dumps({"object_id": "OBJ-X", "checks": [{"parameter_code": "IOS4-078"}]}),
+        encoding="utf-8",
+    )
+    try:
+        score_directory(tmp_path)
+    except ValueError as exc:
+        assert "submission_bad.json" in str(exc)
+    else:
+        raise AssertionError("невалидный ответ получил отчёт")
+
+
+def test_ineligible_negative_is_not_a_false_positive() -> None:
+    from kontur.cli.score import _predictions
+
+    row = {
+        "object_id": "OBJ-NOVOSLOBODSKAYA",
+        "parameter_code": "KR-055",
+        "violation_label": "NO_VIOLATION",
+        "matrix_scope": "MATRIX",
+        "score_eligible": False,
+        "location": "Стена в грунте",
+    }
+    submissions = [
+        {
+            "object_id": "OBJ-NOVOSLOBODSKAYA",
+            "checks": [
+                {
+                    "parameter_code": "KR-055",
+                    "location": "Стена в грунте",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "evidence": [{"stage": "PD", "file_id": "f", "pdf_page_number": 1}],
+                }
+            ],
+        }
+    ]
+    block = score_scope([row], _predictions(submissions), submissions)
+    assert block["n_negative"] == 0
+    assert block["false_positives"] == 0
+    assert block["unlabeled_positive"] == 1
+    fpr = block["fpr"]
+    assert isinstance(fpr, dict)
+    assert fpr["defined"] is False
+
+
+def test_other_row_page_is_not_a_localization() -> None:
+    from kontur.cli.score import _predictions_by_location
+
+    own = {
+        "object_id": "OBJ-X",
+        "parameter_code": "IOS4-078",
+        "violation_label": "VIOLATION_PRESENT",
+        "matrix_scope": "MATRIX",
+        "location": "140",
+        "evidence": [
+            {"file_id": "F0171", "pdf_page_number": 88, "polygon_norm": _SQUARE},
+            {"file_id": "F0201", "pdf_page_number": 18, "polygon_norm": _SQUARE},
+        ],
+    }
+    other = {
+        "object_id": "OBJ-X",
+        "parameter_code": "IOS4-079",
+        "violation_label": "VIOLATION_PRESENT",
+        "matrix_scope": "MATRIX",
+        "location": "012",
+        "evidence": [
+            {"file_id": "F0171", "pdf_page_number": 104, "polygon_norm": _SQUARE},
+            {"file_id": "F0201", "pdf_page_number": 17, "polygon_norm": _SQUARE},
+        ],
+    }
+    submissions = [
+        {
+            "object_id": "OBJ-X",
+            "checks": [
+                {
+                    "parameter_code": "IOS4-078",
+                    "location": "140",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "evidence": [
+                        {
+                            "stage": "RD",
+                            "file_id": "F0201",
+                            "pdf_page_number": 17,
+                            "polygon_norm": _SQUARE,
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
+    block = score_scope(
+        [own, other],
+        _predictions_by_location(submissions),
+        submissions,
+        by_location=True,
+    )
+    assert block["hits"] == 1
+    assert block["localized_hits"] == 0
+    assert block["localization_unscored"] == 0
 
 
 def test_f1_interval_is_withheld_below_ten_clusters() -> None:
