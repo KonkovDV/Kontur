@@ -4,9 +4,8 @@
 **не** выбор production-модели. GPU-прогон на ПД/РД/ИД не выполнялся.
 Hidden test не открывался. Публичные SOTA-цифры на порог ТЗ не переносятся.
 
-Полная программа трёх контуров: [`TZ_COMPLETION.md`](TZ_COMPLETION.md),
-[`TZ_SCORECARD.md`](TZ_SCORECARD.md). Протокол: [ADR-0009](adr/0009-atomic-protocol-materialization.md).
-План: [`WORK_PLAN.md`](WORK_PLAN.md) — freeze инфраструктуры до 29.09.
+Три контура готовности: [`TZ_SCORECARD.md`](TZ_SCORECARD.md). Протокол: [ADR-0009](adr/0009-atomic-protocol-materialization.md).
+План: [`PLAN_2026_09_28_29.md`](PLAN_2026_09_28_29.md) — freeze инфраструктуры до 29.09.
 
 ## Поправки к внешним memo
 

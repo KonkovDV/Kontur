@@ -393,17 +393,12 @@ docs/           ADR, архитектура, метрики, трассируе�
 | Handoff следующего агента | [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md), [`agent_handoff.json`](data/dataset/agent_handoff.json) |
 | Шина нескольких ИИ | [`docs/GH_AGENT_BUS.md`](docs/GH_AGENT_BUS.md) |
 | Оперативный план 28–29.09 | [`docs/PLAN_2026_09_28_29.md`](docs/PLAN_2026_09_28_29.md) |
-| Аудит среза 28.09 | [`docs/AUDIT_2026_09_28.md`](docs/AUDIT_2026_09_28.md) |
 | Пакет сдачи, машиночитаемый | [`docs/SUBMISSION_PACK.md`](docs/SUBMISSION_PACK.md) |
 | Карантин датасета | [`docs/DATA_QUARANTINE.md`](docs/DATA_QUARANTINE.md) |
 | Нормативный реестр | [`docs/NORMATIVE_REGISTRY.md`](docs/NORMATIVE_REGISTRY.md) |
 | Вопросы организатору | [`docs/QUESTIONS_TO_ORGANIZER.md`](docs/QUESTIONS_TO_ORGANIZER.md) |
 | OSINT Document AI, 21.09 | [`docs/RESEARCH_OSINT_2026.md`](docs/RESEARCH_OSINT_2026.md) |
 | Донор архитектуры AeroBIM | [`docs/SOTA_AEROBIM_ANALYSIS.md`](docs/SOTA_AEROBIM_ANALYSIS.md) |
-| Errata аудита «46% ТЗ» | [`docs/AUDITOR_ERRATA.md`](docs/AUDITOR_ERRATA.md) |
-| План работ | [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md), [`docs/PLAN_2026_09.md`](docs/PLAN_2026_09.md) |
-| Срез 21.09, архив | [`docs/GH_SITUATION_2026_09_21.md`](docs/GH_SITUATION_2026_09_21.md) |
-
 ## Права на код
 
 Код Контура передаётся заказчику задачи. Открытой лицензии на него в
