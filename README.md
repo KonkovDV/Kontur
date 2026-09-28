@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="Logo.png" alt="Логотип Контур" width="480">
+</p>
+
+<p align="center">
   <a href="https://github.com/KonkovDV/Kontur/raw/main/submission/03-presentation/Kontur.pptx"><img alt="Презентация в PowerPoint" src="https://img.shields.io/badge/%D0%9F%D1%80%D0%B5%D0%B7%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F-PowerPoint-B7472A?style=for-the-badge&amp;logo=libreofficeimpress&amp;logoColor=white"></a>
   <a href="https://github.com/KonkovDV/Kontur/blob/main/submission/03-presentation/Kontur.pdf"><img alt="Презентация в PDF" src="https://img.shields.io/badge/%D0%9F%D1%80%D0%B5%D0%B7%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F-PDF-EC1C24?style=for-the-badge&amp;logo=files&amp;logoColor=white"></a>
 </p>
