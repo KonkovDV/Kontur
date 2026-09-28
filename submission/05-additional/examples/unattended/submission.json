@@ -1,0 +1,1061 @@
+{
+  "object_id": "OBJ-DEMO-COLD-START",
+  "checks": [
+    {
+      "parameter_code": "AR-040",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-041",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-042",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-043",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-044",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-045",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-046",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-047",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-048",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-049",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-050",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-051",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-052",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "AR-053",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS1-068",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS1-069",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS1-070",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS2-071",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS2-072",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS2-073",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS3-074",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS3-075",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS4-076",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS4-077",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS4-078",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS4-079",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "IOS5-080",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-054",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-055",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-056",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-057",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-058",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-059",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-060",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-061",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-062",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-063",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-064",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-065",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-066",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "KR-067",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ODI-115",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ODI-116",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ODI-117",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ODI-118",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ODI-119",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ODI-120",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ODI-121",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ODI-122",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ODI-123",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "OOS-098",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "OOS-099",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "OOS-100",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "OOS-101",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POD-090",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POD-091",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POD-092",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POD-093",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POD-094",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POD-095",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POD-096",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POD-097",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POS-081",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POS-082",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POS-083",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POS-084",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POS-085",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POS-086",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POS-087",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POS-088",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "POS-089",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-102",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-103",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-104",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-105",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-106",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-107",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-108",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-109",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-110",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-111",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-112",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-113",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PPM-114",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-001",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-002",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-003",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-004",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-005",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-006",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-007",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-008",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-009",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-010",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-011",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-012",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-013",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-014",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-015",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-016",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-017",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-018",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-019",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-020",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-021",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-022",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "PZ-023",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SM-132",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-024",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-025",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-026",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-027",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-028",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-029",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-030",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-031",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-032",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-033",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-034",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-035",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-036",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-037",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-038",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "SPZU-039",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ZU-124",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ZU-125",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ZU-126",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ZU-127",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ZU-128",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ZU-129",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ZU-130",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    },
+    {
+      "parameter_code": "ZU-131",
+      "location": "объект",
+      "violation_label": "COMPARISON_IMPOSSIBLE",
+      "evidence": [],
+      "protocol_status": "COMPARISON_IMPOSSIBLE",
+      "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd"
+    }
+  ]
+}
