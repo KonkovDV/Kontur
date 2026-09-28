@@ -44,20 +44,6 @@ def _reject_mixed_identities(docs: list[DocumentRef], stage: DocStage) -> None:
         )
 
 
-def _same_document_identity(left: DocumentRef, right: DocumentRef) -> bool:
-    """Цепочка редакций — один документ, не все файлы стадии (ADR-0003)."""
-
-    if left.doc_stage is not right.doc_stage:
-        return False
-    if left.document_code and right.document_code and left.document_code != right.document_code:
-        return False
-    if left.sheet and right.sheet and left.sheet != right.sheet:
-        return False
-    if left.discipline and right.discipline and left.discipline != right.discipline:
-        return False
-    return True
-
-
 class RevisionConflict(ValueError):
     """Граф редакций содержит неоднозначность или цикл.
 
@@ -200,7 +186,8 @@ def resolve_revision(
     """Выбирает последнюю утверждённую редакцию для стадии.
 
     1. Только документы нужной стадии.
-    2. При `anchor` — только та же identity (шифр, лист, раздел).
+    2. При `anchor` — только тот же `_identity_key`. Пустой шифр якоря
+       берёт свой компонент файлов без шифра и не захватывает тома с шифром.
     3. `NOT_APPROVED` в пул голов не попадает. ПД без штампа остаётся кандидатом.
     4. Разные шифры или лист/раздел — не одна цепочка. Выбор инспектора
        чужой документ не поглощает.
@@ -225,7 +212,19 @@ def resolve_revision(
                     f" запрошена {stage.value}"
                 ),
             )
-        stage_docs = [item for item in stage_docs if _same_document_identity(anchor, item)]
+        anchor_key = _identity_key(anchor)
+        if anchor_key is not None:
+            stage_docs = [item for item in stage_docs if _identity_key(item) == anchor_key]
+        else:
+            blanks = [item for item in stage_docs if _identity_key(item) is None]
+            stage_docs = next(
+                (
+                    component
+                    for component in _blank_components(blanks)
+                    if any(item.file_id == anchor.file_id for item in component)
+                ),
+                [],
+            )
     if not stage_docs:
         return RevisionResolution(
             status=ResolveStatus.MISSING_EVIDENCE,
