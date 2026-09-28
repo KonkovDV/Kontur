@@ -163,6 +163,12 @@ select {
   padding: 0;
 }
 
+.finding-list li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
 .finding-list button.is-active {
   font-weight: 700;
 }

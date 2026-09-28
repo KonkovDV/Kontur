@@ -56,6 +56,7 @@ REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "getAuditLog": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getEvidenceCard": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "reviewFinding": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
+    "confirmCandidates": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "startVerification": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "completeVerification": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "finalizeProtocol": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
@@ -66,7 +67,7 @@ REQUIRED_ROLES: dict[str, frozenset[Role]] = {
 
 #: Операции, создающие или отменяющие юридическое решение (ADR-0001).
 LEGAL_DECISION_OPERATIONS: frozenset[str] = frozenset(
-    {"reviewFinding", "finalizeProtocol", "selectRevision"}
+    {"reviewFinding", "confirmCandidates", "finalizeProtocol", "selectRevision"}
 )
 
 

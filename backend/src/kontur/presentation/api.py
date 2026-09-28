@@ -76,6 +76,12 @@ class ReviewRequest(BaseModel):
     reason_code: ReasonCode | None = None
 
 
+class ConfirmCandidatesRequest(BaseModel):
+    inspector_id: str = Field(min_length=1)
+    comment: str = Field(min_length=1)
+    finding_ids: list[str] = Field(min_length=1, max_length=50)
+
+
 class SelectRevisionRequest(BaseModel):
     inspector_id: str = Field(min_length=1)
     comment: str = Field(min_length=1)
@@ -781,6 +787,36 @@ def review_finding(
     if finding.disagreement_kind is not None:
         payload["disagreement_kind"] = finding.disagreement_kind.value
     return payload
+
+
+@app.post("/api/v1/processes/{process_id}/findings/confirm", response_model=None)
+def confirm_candidates(
+    process_id: str,
+    body: ConfirmCandidatesRequest,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    subject, granted, object_id = _require("confirmCandidates", authorization)
+    if body.inspector_id != subject:
+        raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    try:
+        updated = _workspace().confirm_candidates(
+            process_id,
+            body.finding_ids,
+            actor=actor_from_roles(subject, granted),
+            comment=body.comment,
+        )
+    except KeyError:
+        return JSONResponse(status_code=404, content={"detail": "находка не найдена"})
+    return {
+        "process_id": process_id,
+        "confirmed": [
+            {"finding_id": item.finding_id, "finding_status": item.finding_status.value}
+            for item in updated
+        ],
+    }
 
 
 def _human_process_action(
