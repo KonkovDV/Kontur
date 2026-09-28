@@ -6,7 +6,7 @@
 
 Не frozen val, не закрытие гейтов I/J/K, не заявление, что вся матрица
 executable. Инварианты — [`../AGENTS.md`](../AGENTS.md). Срез —
-[`GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md). Машиночитаемый хэндоф —
+[`AGENT_HANDOFF.md`](AGENT_HANDOFF.md). Машиночитаемый хэндоф —
 [`../data/dataset/agent_handoff.json`](../data/dataset/agent_handoff.json).
 
 ---
@@ -63,8 +63,7 @@ gh issue view N --json title,labels,parent,subIssues,blockedBy,blocking,comments
 `data/dataset/agent_handoff.json` → тело issue `N`.
 **Не начинать работу, пока не выполнен claim.**
 
-Issue [#86](https://github.com/KonkovDV/Kontur/issues/86) и
-[`GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md) — снимок
+Issue [#86](https://github.com/KonkovDV/Kontur/issues/86) — снимок
 **21.09** (29 executable / 103 extractor_missing). Текущая разбивка —
 только `data/matrix/coverage_snapshot.json` и `coverage_counts` в
 `agent_handoff.json` (на 23.09: 44 / 83 / 1 / 4).
