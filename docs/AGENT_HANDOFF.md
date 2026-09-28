@@ -25,7 +25,7 @@ HEAD смотреть `git rev-parse origin/main`.
 
 ## Допуск 23.09.2026
 
-Репозиторий `KonkovDV/Kontur` публичный. Лицензия кода — Apache-2.0 (`LICENSE`, `docs/THIRD_PARTY_NOTICES.md`).
+Репозиторий `KonkovDV/Kontur` публичный. С 28.09 код передаётся заказчику задачи, открытой лицензии на него нет; файла `LICENSE` нет. Лицензии зависимостей — `docs/THIRD_PARTY_NOTICES.md`.
 Сводная таблица ответов организатора от 26.09.2026 —
 [`ORGANIZER_ANSWERS_2026_09_26.md`](ORGANIZER_ANSWERS_2026_09_26.md).
 Канал отправки вопросов 1–22 из репозитория не зафиксирован.
