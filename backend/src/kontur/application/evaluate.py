@@ -65,7 +65,7 @@ from kontur.application.revision_resolver import (
 from kontur.application.room_compare import (
     RoomDiff,
     RoomSpot,
-    best_token_pair,
+    collapse_room_diffs,
     compare_room_tokens,
     room_block,
 )
@@ -616,7 +616,11 @@ def _room_pass_findings(
     pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
     object_id: str,
 ) -> tuple[RuleEvaluation, ...]:
-    """Атомарные candidate/suspicion. Пустая пара и отказ не подменяют числовой проход."""
+    """Атомарные candidate/suspicion. Пустая пара и отказ не подменяют числовой проход.
+
+    Сравниваются все пары томов. Конфликт по номеру в проход не попадает:
+    остаётся отказ числового прохода, ложный кандидат не пишется.
+    """
 
     if "room_pass" not in _passes(rule):
         return ()
@@ -627,25 +631,11 @@ def _room_pass_findings(
     rd_pages = _volume_list(pages.get(DocStage.RD))
     if not pd_pages or not rd_pages:
         return ()
-    if len(pd_pages) > 1 or len(rd_pages) > 1:
-        choice = best_token_pair(
-            tuple(item.tokens for item in pd_pages),
-            tuple(item.tokens for item in rd_pages),
-            settings,
-        )
-        if choice is None:
-            return ()
-        pd_pages = (pd_pages[choice[0]],)
-        rd_pages = (rd_pages[choice[1]],)
     kept: list[RuleEvaluation] = []
-    for pd in pd_pages:
-        for rd in rd_pages:
-            diffs = compare_room_tokens(pd.tokens, rd.tokens, settings)
-            kept.extend(
-                _room_evaluation(rule, diff, pd, rd, object_id)
-                for diff in diffs
-                if diff.kind in {"candidate", "suspicion"}
-            )
+    for diff, pd, rd in _tagged_room_diffs(pd_pages, rd_pages, settings):
+        if diff.kind not in {"candidate", "suspicion"}:
+            continue
+        kept.append(_room_evaluation(rule, diff, pd, rd, object_id))
     return tuple(kept)
 
 
@@ -712,34 +702,47 @@ def _room_rule(
             FindingStatus.CLARIFICATION_REQUIRED,
             "room_compare ждёт одну голову ПД и одну голову РД",
         )
-    if len(pd_volumes) == 1 and len(rd_volumes) == 1:
-        pd, rd = pd_volumes[0], rd_volumes[0]
-    else:
-        choice = best_token_pair(
-            tuple(item.tokens for item in pd_volumes),
-            tuple(item.tokens for item in rd_volumes),
-            settings,
-        )
-        if choice is None:
-            return _halt(
-                rule,
-                Stage.L4_REVISION,
-                FindingStatus.ABSTAIN,
-                "ничья пар томов по номерам помещений",
-            )
-        pd = pd_volumes[choice[0]]
-        rd = rd_volumes[choice[1]]
-    diffs = compare_room_tokens(pd.tokens, rd.tokens, settings)
-    if not diffs:
+    tagged = _tagged_room_diffs(pd_volumes, rd_volumes, settings)
+    if not tagged:
         return _halt(
             rule,
             Stage.L2_EXTRACTION,
             _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
             "номера помещений на паре листов не сопоставились",
         )
-    built = tuple(_room_evaluation(rule, diff, pd, rd, object_id) for diff in diffs)
+    built = tuple(
+        _room_evaluation(rule, diff, pd, rd, object_id) for diff, pd, rd in tagged
+    )
     first, *rest = built
     return replace(first, also=tuple(rest))
+
+
+def _tagged_room_diffs(
+    pd_volumes: Sequence[StagePage],
+    rd_volumes: Sequence[StagePage],
+    settings: Mapping[str, object],
+) -> tuple[tuple[RoomDiff, StagePage, StagePage], ...]:
+    """Все пары томов. Синтезированный abstain конфликта не привязан к чужому листу."""
+
+    tagged: list[tuple[RoomDiff, StagePage, StagePage]] = []
+    for pd in pd_volumes:
+        for rd in rd_volumes:
+            for diff in compare_room_tokens(pd.tokens, rd.tokens, settings):
+                tagged.append((diff, pd, rd))
+    if not tagged:
+        return ()
+    collapsed = collapse_room_diffs([item[0] for item in tagged])
+    index = {id(diff): (pd, rd) for diff, pd, rd in tagged}
+    out: list[tuple[RoomDiff, StagePage, StagePage]] = []
+    for diff in collapsed:
+        pair = index.get(id(diff))
+        if pair is None:
+            if diff.kind != "abstain":
+                continue
+            out.append((diff, pd_volumes[0], rd_volumes[0]))
+            continue
+        out.append((diff, pair[0], pair[1]))
+    return tuple(out)
 
 
 def _room_evaluation(

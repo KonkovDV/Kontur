@@ -239,7 +239,7 @@ def test_two_by_two_volumes_keep_the_best_room_pair() -> None:
     assert {item.document.file_id for item in result.evidence_group.fragments} == {"pd-a", "rd-a"}
 
 
-def test_tied_volume_pairs_abstain() -> None:
+def test_disjoint_volume_pairs_both_compare() -> None:
     rule = FileRuleRegistry().get("IOS4-078")
     pages = {
         DocStage.PD: (
@@ -264,8 +264,14 @@ def test_tied_volume_pairs_abstain() -> None:
         ),
     }
     result = _room_rule(rule, pages, "OBJ-ROOM")
-    assert result.finding.finding_status is FindingStatus.ABSTAIN
-    assert "ничья" in result.finding.rationale
+    rooms: list[str] = []
+    for item in (result, *result.also):
+        group = item.evidence_group
+        if group is None:
+            continue
+        rooms.append(group.fragments[0].room_id or "")
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert sorted(rooms) == ["101", "202"]
 
 
 def test_free_search_room_diff_stays_suspicion() -> None:
@@ -289,3 +295,63 @@ def test_free_search_room_diff_stays_suspicion() -> None:
     assert found[0].finding.finding_status is FindingStatus.SUSPICION
     assert found[0].evidence_group is not None
     assert found[0].evidence_group.fragments[0].room_id == "101"
+
+
+def test_latin_b_matches_cyrillic_feature_regex() -> None:
+    pd = (_token("101", 0.2, 0.2), _token("B", 0.23, 0.2))
+    rd = (_token("101", 0.2, 0.2),)
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert any(item.kind == "candidate" and item.room == "101" for item in diffs)
+
+
+def test_one_rd_sheet_does_not_drop_the_second_pd_sheet() -> None:
+    pd = (
+        _token("101", 0.2, 0.2, page=1),
+        _token("В", 0.23, 0.2, page=1),
+        _token("202", 0.2, 0.2, page=2),
+        _token("В", 0.23, 0.2, page=2),
+    )
+    rd = (
+        _token("101", 0.2, 0.2, page=9),
+        _token("202", 0.5, 0.5, page=9),
+    )
+    kinds = {item.room: item.kind for item in compare_room_tokens(pd, rd, _settings())}
+    assert kinds["101"] == "candidate"
+    assert kinds["202"] == "candidate"
+
+
+def test_unrelated_sheet_does_not_emit_its_rooms() -> None:
+    pd = (
+        _token("101", 0.2, 0.2, page=1),
+        _token("В", 0.23, 0.2, page=1),
+        _token("102", 0.5, 0.5, page=1),
+    )
+    rd = (
+        _token("101", 0.2, 0.2, page=2),
+        _token("600", 0.2, 0.2, page=3),
+        _token("601", 0.5, 0.5, page=3),
+    )
+    kinds = {item.room: item.kind for item in compare_room_tokens(pd, rd, _settings())}
+    assert kinds["101"] == "candidate"
+    assert "600" not in kinds
+    assert "601" not in kinds
+
+
+def test_conflicting_pairs_abstain_that_room_only() -> None:
+    pd = (
+        _token("101", 0.2, 0.2, page=1),
+        _token("В", 0.23, 0.2, page=1),
+        _token("202", 0.2, 0.2, page=2),
+        _token("В", 0.23, 0.2, page=2),
+        _token("101", 0.2, 0.2, page=3),
+        _token("В", 0.23, 0.2, page=3),
+    )
+    rd = (
+        _token("101", 0.2, 0.2, page=5),
+        _token("202", 0.2, 0.2, page=6),
+        _token("101", 0.2, 0.2, page=7),
+        _token("В", 0.23, 0.2, page=7),
+    )
+    kinds = {item.room: item.kind for item in compare_room_tokens(pd, rd, _settings())}
+    assert kinds["101"] == "abstain"
+    assert kinds["202"] == "candidate"

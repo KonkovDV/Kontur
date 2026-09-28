@@ -1,12 +1,16 @@
 """Сравнение признака по номеру помещения. Пороги только из правила.
 
-Не пишет finding_status. Не подбирает пороги по gold.
+Все пары листов с Жаккаром не ниже порога правила. Конфликт вердикта
+по одному номеру — abstain этого номера. Латинские омоглифы метки
+сворачиваются до регэкспа правила. Пороги из JSON не подбираются по gold.
+Не пишет finding_status.
 """
 
 from __future__ import annotations
 
 import math
 import re
+import unicodedata
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 
@@ -14,6 +18,30 @@ from kontur.application.extractors.number import PageToken
 from kontur.domain.models import ExtractionEngine, Polygon
 
 _REQUIRED = ("room_regex", "feature_regex", "bind_radius", "pair_jaccard_min", "max_differences")
+
+# Латиница, которую на листе путают с кириллической меткой: B4 не становится правилом,
+# но одиночная «B» читается как «В» до уже заданного feature_regex.
+_LATIN_LOOKALIKES = str.maketrans(
+    {
+        "A": "А",
+        "B": "В",
+        "C": "С",
+        "E": "Е",
+        "H": "Н",
+        "K": "К",
+        "M": "М",
+        "O": "О",
+        "P": "Р",
+        "T": "Т",
+        "X": "Х",
+        "a": "а",
+        "c": "с",
+        "e": "е",
+        "o": "о",
+        "p": "р",
+        "x": "х",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,42 +91,10 @@ def room_settings(rule: Mapping[str, object]) -> dict[str, object] | None:
     return room_block(rule)
 
 
-def room_ids(tokens: Sequence[PageToken], settings: Mapping[str, object]) -> set[str]:
-    """Номера помещений тома. Повтор на листе в множество не входит."""
+def label_text(text: str) -> str:
+    """NFC и латинские омоглифы метки. Порог и регэксп правила не меняет."""
 
-    room_re = re.compile(str(settings["room_regex"]))
-    feature_re = re.compile(str(settings["feature_regex"]))
-    radius = _as_float(settings["bind_radius"])
-    found: set[str] = set()
-    for rooms in _pages(tokens, room_re, feature_re, radius).values():
-        found.update(key for key in rooms if key != "__duplicate__")
-    return found
-
-
-def best_token_pair(
-    pd_volumes: Sequence[Sequence[PageToken]],
-    rd_volumes: Sequence[Sequence[PageToken]],
-    settings: Mapping[str, object],
-) -> tuple[int, int] | None:
-    """Индексы единственной лучшей пары томов.
-
-    None — две пары с одним и тем же лучшим Жаккаром.
-    Нет общих номеров — (0, 0).
-    """
-
-    scores: list[tuple[float, int, int]] = []
-    for left_index, pd in enumerate(pd_volumes):
-        left = room_ids(pd, settings)
-        for right_index, rd in enumerate(rd_volumes):
-            scores.append((_jaccard(left, room_ids(rd, settings)), left_index, right_index))
-    positive = [item for item in scores if item[0] > 0]
-    if not positive:
-        return (0, 0)
-    best = max(item[0] for item in positive)
-    winners = [item for item in positive if item[0] == best]
-    if len(winners) != 1:
-        return None
-    return winners[0][1], winners[0][2]
+    return unicodedata.normalize("NFC", text).translate(_LATIN_LOOKALIKES).strip()
 
 
 def compare_room_tokens(
@@ -106,7 +102,10 @@ def compare_room_tokens(
     rd_tokens: Sequence[PageToken],
     settings: Mapping[str, object],
 ) -> tuple[RoomDiff, ...]:
-    """Пара листов по Жаккару номеров. Пустой результат — листы не сопоставились."""
+    """Все пары листов с Жаккаром не ниже порога.
+
+    Пустой результат — ни одна пара не сопоставилась.
+    """
 
     room_re = re.compile(str(settings["room_regex"]))
     feature_re = re.compile(str(settings["feature_regex"]))
@@ -122,7 +121,7 @@ def compare_room_tokens(
     if pd_clean and rd_clean:
         for pd_rooms, rd_rooms in _pair(pd_clean, rd_clean, jaccard_min):
             out.extend(_pair_diffs(pd_rooms, rd_rooms, max_diff))
-    return tuple(out)
+    return collapse_room_diffs(out)
 
 
 def _as_float(value: object) -> float:
@@ -135,6 +134,54 @@ def _as_int(value: object) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"ожидалось целое, получено {value!r}")
     return value
+
+
+def collapse_room_diffs(diffs: Sequence[RoomDiff]) -> tuple[RoomDiff, ...]:
+    """Один номер — один вердикт. Разные двусторонние виды гасят номер.
+
+    Пометка «номер только на одном листе» не отменяет пару, где номер есть
+    на обоих листах: это соседний лист, а не второй вердикт.
+    """
+
+    sheet: list[RoomDiff] = []
+    by_room: dict[str, list[RoomDiff]] = {}
+    for item in diffs:
+        if not item.room:
+            sheet.append(item)
+            continue
+        by_room.setdefault(item.room, []).append(item)
+    out = list(sheet)
+    for room in sorted(by_room):
+        group = by_room[room]
+        sided = [item for item in group if item.pd is not None and item.rd is not None]
+        use = sided or [item for item in group if item.pd is None or item.rd is None]
+        kinds = {item.kind for item in use}
+        positives = kinds & {"candidate", "suspicion"}
+        if len(positives) > 1 or (positives and "match" in kinds):
+            out.append(
+                RoomDiff(
+                    "abstain",
+                    room,
+                    None,
+                    None,
+                    f"помещение {room}: конфликт пар листов",
+                )
+            )
+            continue
+        if positives:
+            chosen = [item for item in use if item.kind in positives]
+            out.append(min(chosen, key=_diff_order))
+            continue
+        matches = [item for item in use if item.kind == "match"]
+        if matches:
+            out.append(min(matches, key=_diff_order))
+    return tuple(out)
+
+
+def _diff_order(item: RoomDiff) -> tuple[int, int]:
+    pd_page = 0 if item.pd is None else item.pd.page
+    rd_page = 0 if item.rd is None else item.rd.page
+    return (pd_page, rd_page)
 
 
 def _center(polygon: Polygon) -> tuple[float, float]:
@@ -214,7 +261,10 @@ def _pages(
 ) -> dict[int, dict[str, RoomSpot]]:
     by_page: dict[int, list[PageToken]] = {}
     for token in tokens:
-        by_page.setdefault(token.page, []).append(token)
+        text = label_text(token.text)
+        if not text:
+            continue
+        by_page.setdefault(token.page, []).append(replace(token, text=text))
     pages: dict[int, dict[str, RoomSpot]] = {}
     for page, items in by_page.items():
         expanded = _expand(items, room_re, feature_re)
@@ -288,24 +338,17 @@ def _pair(
     rd_pages: Mapping[int, Mapping[str, RoomSpot]],
     jaccard_min: float,
 ) -> list[tuple[Mapping[str, RoomSpot], Mapping[str, RoomSpot]]]:
-    used: set[int] = set()
+    """Каждая пара листов не ниже порога. Лист РД не выбывает после первой пары."""
+
     pairs: list[tuple[Mapping[str, RoomSpot], Mapping[str, RoomSpot]]] = []
-    for _pd_no, pd_rooms in pd_pages.items():
-        best_no: int | None = None
-        best_score = jaccard_min
+    for pd_no in sorted(pd_pages):
+        pd_rooms = pd_pages[pd_no]
         pd_ids = {key for key in pd_rooms if key != "__duplicate__"}
-        for rd_no, rd_rooms in rd_pages.items():
-            if rd_no in used:
-                continue
+        for rd_no in sorted(rd_pages):
+            rd_rooms = rd_pages[rd_no]
             rd_ids = {key for key in rd_rooms if key != "__duplicate__"}
-            score = _jaccard(pd_ids, rd_ids)
-            if score >= best_score:
-                best_score = score
-                best_no = rd_no
-        if best_no is None:
-            continue
-        used.add(best_no)
-        pairs.append((pd_rooms, rd_pages[best_no]))
+            if _jaccard(pd_ids, rd_ids) >= jaccard_min:
+                pairs.append((pd_rooms, rd_rooms))
     return pairs
 
 
