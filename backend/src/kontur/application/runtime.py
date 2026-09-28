@@ -529,6 +529,51 @@ class ProcessWorkspace:
             return updated
         raise KeyError(finding_id)
 
+    def confirm_candidates(
+        self,
+        process_id: str,
+        finding_ids: list[str],
+        *,
+        actor: Actor,
+        comment: str,
+    ) -> tuple[Finding, ...]:
+        """Подтвердить пачку кандидатов. Проверка всей пачки до первой записи."""
+
+        record = self._items.get(process_id)
+        if record is None:
+            raise KeyError(process_id)
+        selected: list[tuple[str, Finding]] = []
+        for finding_id in finding_ids:
+            stored_key: str | None = None
+            current: Finding | None = None
+            for key, item in record.findings.items():
+                if item.finding_id == finding_id or key == finding_id:
+                    stored_key = key
+                    current = item
+                    break
+            if current is None or stored_key is None:
+                raise KeyError(finding_id)
+            selected.append((stored_key, current))
+        updated = review_actions.confirm_candidates(
+            [item for _key, item in selected],
+            actor=actor,
+            comment=comment,
+        )
+        for (stored_key, _current), finding in zip(selected, updated, strict=True):
+            record.findings[stored_key] = finding
+            self._store.save_finding(record.process_id, finding)
+            record.audit.record(
+                actor.actor_id,
+                "REVIEW",
+                {"finding_id": finding.finding_id, "action": "CONFIRM"},
+            )
+        if record.process_state is ProcessState.READY and updated:
+            record.process_state = review_actions.start_verification(
+                record.process_state, actor=actor, audit=record.audit
+            )
+            self._persist(record)
+        return updated
+
     def _replace_machine_findings(
         self, record: ProcessRecord, findings: tuple[Finding, ...]
     ) -> None:

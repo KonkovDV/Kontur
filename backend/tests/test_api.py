@@ -846,3 +846,70 @@ def test_supersedes_file_id_makes_the_new_upload_the_head(client: TestClient) ->
     resolution = resolve_revision(documents, DocStage.RD)
     assert resolution.resolved is not None
     assert resolution.resolved.document.file_id == new_id
+
+
+def _put(process_id: str, finding_id: str, status: FindingStatus) -> None:
+    app.state.workspace.put_finding(
+        process_id,
+        Finding(
+            finding_id=finding_id,
+            evidence_group_id=f"eg-{finding_id}",
+            rule_code="PZ-001",
+            finding_status=status,
+            review_priority=ReviewPriority.HIGH,
+            matrix_version="draft-0",
+            rule_version="0.1.0",
+            model_version="none",
+        ),
+    )
+
+
+def test_mass_confirm_audits_each_candidate_and_refuses_a_mixed_batch(client: TestClient) -> None:
+    process_id = _upload(client).json()["process_id"]
+    _put(process_id, "f-1", FindingStatus.CANDIDATE)
+    _put(process_id, "f-2", FindingStatus.CANDIDATE)
+    _put(process_id, "f-3", FindingStatus.SUSPICION)
+    _put(process_id, "f-4", FindingStatus.MISSING_EVIDENCE)
+    body = {
+        "inspector_id": "insp-7",
+        "comment": "пачка подтверждена по листам",
+        "finding_ids": ["f-1", "f-3"],
+    }
+    mixed = client.post(
+        f"/api/v1/processes/{process_id}/findings/confirm",
+        headers=INSPECTOR,
+        json=body,
+    )
+    assert mixed.status_code == 409
+    record = app.state.workspace.get(process_id)
+    assert record is not None
+    statuses = {item.finding_id: item.finding_status for item in record.findings.values()}
+    assert statuses["f-1"] is FindingStatus.CANDIDATE
+    assert statuses["f-3"] is FindingStatus.SUSPICION
+    empty = client.post(
+        f"/api/v1/processes/{process_id}/findings/confirm",
+        headers=INSPECTOR,
+        json={**body, "finding_ids": []},
+    )
+    assert empty.status_code == 422
+    forbidden = client.post(
+        f"/api/v1/processes/{process_id}/findings/confirm",
+        headers=ADMIN,
+        json={**body, "finding_ids": ["f-1", "f-2"]},
+    )
+    assert forbidden.status_code == 403
+    ok = client.post(
+        f"/api/v1/processes/{process_id}/findings/confirm",
+        headers=INSPECTOR,
+        json={**body, "finding_ids": ["f-1", "f-2"]},
+    )
+    assert ok.status_code == 200
+    assert [item["finding_status"] for item in ok.json()["confirmed"]] == [
+        "CONFIRMED_VIOLATION",
+        "CONFIRMED_VIOLATION",
+    ]
+    reviews = [item for item in record.audit.records if item[1] == "REVIEW"]
+    assert len(reviews) == 2
+    assert {item[2]["finding_id"] for item in reviews} == {"f-1", "f-2"}
+    statuses = {item.finding_id: item.finding_status for item in record.findings.values()}
+    assert statuses["f-4"] is FindingStatus.MISSING_EVIDENCE

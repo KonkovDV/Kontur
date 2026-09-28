@@ -6,6 +6,7 @@ NEGATIVE_VERIFIED. Вызов из фоновой задачи, автомата
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -22,6 +23,8 @@ from kontur.domain.state_machines import (
     unfinalize,
 )
 from kontur.domain.statuses import FindingStatus, ProcessState, ReasonCode
+
+MASS_CONFIRM_LIMIT = 50
 
 ACTION_TO_STATUS: dict[str, FindingStatus] = {
     "CONFIRM": FindingStatus.CONFIRMED_VIOLATION,
@@ -60,6 +63,33 @@ def review(
         comment=comment.strip(),
     )
     return replace(finding, finding_status=target, inspector_decision=decision)
+
+
+def confirm_candidates(
+    findings: Sequence[Finding],
+    *,
+    actor: Actor,
+    comment: str,
+) -> tuple[Finding, ...]:
+    """Пачка только из CANDIDATE. Отказ и чужой статус не применяются вовсе.
+
+    Массового отклонения нет: действие всегда CONFIRM. Пустой список и повтор
+    идентификатора не пишут ни одной находки.
+    """
+
+    if not findings:
+        raise TransitionError("пустой список подтверждения")
+    if len(findings) > MASS_CONFIRM_LIMIT:
+        raise TransitionError(f"пачка больше {MASS_CONFIRM_LIMIT} находок")
+    ids = [item.finding_id for item in findings]
+    if len(ids) != len(set(ids)):
+        raise TransitionError("повтор finding_id в пачке")
+    if not actor.is_human:
+        raise TransitionError("массовое подтверждение требует инспектора")
+    for item in findings:
+        if item.finding_status is not FindingStatus.CANDIDATE:
+            raise TransitionError(f"{item.finding_id}: массово подтверждается только CANDIDATE")
+    return tuple(review(item, actor=actor, action="CONFIRM", comment=comment) for item in findings)
 
 
 def start_verification(

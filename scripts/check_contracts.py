@@ -63,6 +63,7 @@ OBJECT_BOUND_OPERATIONS = frozenset(
         "getAuditLog",
         "getEvidenceCard",
         "reviewFinding",
+        "confirmCandidates",
         "startVerification",
         "completeVerification",
         "finalizeProtocol",

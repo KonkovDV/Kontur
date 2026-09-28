@@ -165,6 +165,7 @@ export function LiveWorkspace({ token }: Props) {
   const [processDraft, setProcessDraft] = useState("");
   const [documents, setDocuments] = useState<CatalogDocument[]>([]);
   const [findings, setFindings] = useState<FindingRow[]>([]);
+  const [checked, setChecked] = useState<string[]>([]);
   const [status, setStatus] = useState<ProcessStatus | null>(null);
   const [band, setBand] = useState<Band>("open");
   const [sectionFilter, setSectionFilter] = useState("");
@@ -366,6 +367,39 @@ export function LiveWorkspace({ token }: Props) {
       next,
     ]);
     setClicks(0);
+  }
+
+  function toggleChecked(findingId: string) {
+    setChecked((current) =>
+      current.includes(findingId)
+        ? current.filter((item) => item !== findingId)
+        : [...current, findingId],
+    );
+  }
+
+  async function confirmChecked() {
+    if (!processId || checked.length === 0 || comment.trim() === "") return;
+    setBusy(true);
+    setError("");
+    try {
+      await readJson(
+        await fetch(`/api/v1/processes/${processId}/findings/confirm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            inspector_id: session.subject,
+            comment: comment.trim(),
+            finding_ids: checked,
+          }),
+        }),
+      );
+      setChecked([]);
+      await refresh(processId);
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : "пачка не подтверждена");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function decide(action: "CONFIRM" | "REJECT" | "REQUEST_CLARIFICATION") {
@@ -708,9 +742,29 @@ export function LiveWorkspace({ token }: Props) {
               ))}
             </select>
           </label>
+          {visible.some((item) => item.finding_status === "CANDIDATE") ? (
+            <div className="mass-confirm">
+              <button
+                type="button"
+                disabled={busy || checked.length === 0 || comment.trim() === ""}
+                onClick={() => void confirmChecked()}
+              >
+                Подтвердить отмеченные ({checked.length})
+              </button>
+              <p>Отклонение по-прежнему по одной находке, с причиной.</p>
+            </div>
+          ) : null}
           <ul className="finding-list">
             {visible.map((item) => (
               <li key={item.finding_id}>
+                {item.finding_status === "CANDIDATE" ? (
+                  <input
+                    type="checkbox"
+                    aria-label={`Отметить ${item.rule_code}`}
+                    checked={checked.includes(item.finding_id)}
+                    onChange={() => toggleChecked(item.finding_id)}
+                  />
+                ) : null}
                 <button
                   type="button"
                   className={item.finding_id === activeId ? "is-active" : undefined}

@@ -9,6 +9,7 @@ import pytest
 from kontur.application.review import (
     can_finalize,
     complete_verification,
+    confirm_candidates,
     finalize_process,
     review,
     select_revision_as_etalon,
@@ -52,6 +53,40 @@ def test_confirm_records_decision_and_counts_as_violation() -> None:
     assert result.inspector_decision is not None
     assert result.inspector_decision.comment == COMMENT
     assert result.counts_as_violation
+
+
+def test_mass_confirm_only_candidates_and_refuses_the_whole_batch() -> None:
+    first = candidate("f-1")
+    second = candidate("f-2")
+    second = replace(second, evidence_group_id="eg-2")
+    suspicion = replace(
+        candidate("f-3"),
+        finding_status=FindingStatus.SUSPICION,
+        evidence_group_id="eg-3",
+    )
+    missing = replace(
+        candidate("f-4"),
+        finding_status=FindingStatus.MISSING_EVIDENCE,
+        evidence_group_id=None,
+    )
+    confirmed = confirm_candidates((first, second), actor=INSPECTOR, comment=COMMENT)
+    assert [item.finding_status for item in confirmed] == [
+        FindingStatus.CONFIRMED_VIOLATION,
+        FindingStatus.CONFIRMED_VIOLATION,
+    ]
+    assert first.finding_status is FindingStatus.CANDIDATE
+    for bad in (
+        (),
+        (first, first),
+        (first, suspicion),
+        (missing,),
+        (first, missing),
+    ):
+        with pytest.raises(TransitionError):
+            confirm_candidates(bad, actor=INSPECTOR, comment=COMMENT)
+    machine = Actor("pipeline", is_human=False)
+    with pytest.raises(TransitionError, match="инспектора"):
+        confirm_candidates((candidate("f-9"),), actor=machine, comment=COMMENT)
 
 
 def test_confirm_without_comment_is_refused() -> None:
