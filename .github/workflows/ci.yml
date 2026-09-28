@@ -204,6 +204,14 @@ jobs:
       KONTUR_CORE_CPUS: "2"
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Gateway limit tests
+        working-directory: gateway
+        run: |
+          npm ci
+          npm test
       - name: Build gateway image
         run: docker compose build gateway
       - name: Verify gateway runtime contract

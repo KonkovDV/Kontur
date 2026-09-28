@@ -71,7 +71,7 @@ HTTP-загрузка не считает L1–L7 внутри запроса: `
 ставит прогон в поток `kontur-pipeline` того же процесса. Это не брокер и не
 outbox. `get` ждёт этот прогон. CLI, учебный комплект и выбор эталона
 по-прежнему вызывают `run_matrix_pipeline` в том же вызове.
-Контейнеры core/gateway: non-root 10001, read-only rootfs, `cap_drop: ALL`,
+Контейнеры core/gateway: non-root 10001, read-only rootfs, `cap_drop: ALL`, healthcheck на `/api/v1/healthz` и `/healthz`. Gateway отвечает `FILE_TOO_LARGE` на файл больше 50 МБ и `RATE_LIMITED` на слишком частую загрузку. Это не production SLA.
 порты на loopback (PR #60). Повтор идентичной загрузки (hash+stage) не
 открывает процесс заново и не гоняет pipeline; `FINALIZED` → 409.
 `web/` и `gateway/` зафиксированы `package-lock.json`; CI frontend — `npm ci`.
