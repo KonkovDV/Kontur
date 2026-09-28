@@ -1,0 +1,1766 @@
+{
+  "input_manifest": {
+    "files": [
+      {
+        "file_hash": "13f6a2e19f04e72a719437b34ec24868cd462689a5858f88f9e4ea3044523736",
+        "file_id": "f-id"
+      },
+      {
+        "file_hash": "b8a5f726c17bc0cb31fabbda2c30f775b7369a1353f86574cfcc51740baa7962",
+        "file_id": "f-pd-draft"
+      },
+      {
+        "file_hash": "e88f63c48735741112efe332ffa89bc788ee43141391013b9a26570c19b832b0",
+        "file_id": "f-pd"
+      },
+      {
+        "file_hash": "80147228ec65971b4c8ef94a4706821baec65c24b0744c83b64965deeae2372c",
+        "file_id": "f-rd"
+      }
+    ],
+    "manifest_hash": "357d2af92aa746687106f21054e50b16296fa0c33a170bc7dcd5e8f56ceeef5f"
+  },
+  "object_id": "OBJ-DEMO-COLD-START",
+  "protocol_id": "protocol-f3a72513-77d0-44b3-ab17-4f5f8e2816a6",
+  "scenario": "PARTIALLY_LOADED",
+  "sections": {
+    "candidates": [],
+    "completeness": [],
+    "confirmed": [],
+    "missing_evidence": [],
+    "needs_attention": [
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-040",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-040",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-041",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-041",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-042",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-042",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-043",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-043",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-044",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-044",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-045",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-045",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-046",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-046",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-047",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-047",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-048",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-048",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-049",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-049",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-050",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "AR-050",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-051",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "AR-051",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-052",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "AR-052",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-AR-053",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "AR-053",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS1-068",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS1-068",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS1-069",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS1-069",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS1-070",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS1-070",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS2-071",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS2-071",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS2-072",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "IOS2-072",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS2-073",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS2-073",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS3-074",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS3-074",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS3-075",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "IOS3-075",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS4-076",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS4-076",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS4-077",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS4-077",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS4-078",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS4-078",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS4-079",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS4-079",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-IOS5-080",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "IOS5-080",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-054",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-054",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-055",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-055",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-056",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-056",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-057",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-057",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-058",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-058",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-059",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-059",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-060",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-060",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-061",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-061",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-062",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-062",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-063",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-063",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-064",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-064",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-065",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-065",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-066",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "KR-066",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-KR-067",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "KR-067",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ODI-115",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ODI-115",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ODI-116",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ODI-116",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ODI-117",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ODI-117",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ODI-118",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "ODI-118",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ODI-119",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ODI-119",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ODI-120",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ODI-120",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ODI-121",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ODI-121",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ODI-122",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "ODI-122",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ODI-123",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ODI-123",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-OOS-098",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "OOS-098",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-OOS-099",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "OOS-099",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-OOS-100",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "OOS-100",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-OOS-101",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "OOS-101",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POD-090",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "POD-090",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POD-091",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "POD-091",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POD-092",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "POD-092",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POD-093",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "POD-093",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POD-094",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "POD-094",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POD-095",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "POD-095",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POD-096",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "POD-096",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POD-097",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "POD-097",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POS-081",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "POS-081",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POS-082",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "POS-082",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POS-083",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "POS-083",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POS-084",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "POS-084",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POS-085",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "POS-085",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POS-086",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "POS-086",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POS-087",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "POS-087",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POS-088",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "POS-088",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-POS-089",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "POS-089",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-102",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-102",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-103",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-103",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-104",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-104",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-105",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-105",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-106",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-106",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-107",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-107",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-108",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-108",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-109",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-109",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-110",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-110",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-111",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-111",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-112",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-112",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-113",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-113",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PPM-114",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PPM-114",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-001",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-001",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-002",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-002",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-003",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "PZ-003",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-004",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-004",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-005",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-005",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-006",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-006",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-007",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-007",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-008",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-008",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-009",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-009",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-010",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-010",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-011",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-011",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-012",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-012",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-013",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-013",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-014",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-014",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-015",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-015",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-016",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-016",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-017",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-017",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-018",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-018",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-019",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-019",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-020",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-020",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-021",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-021",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-022",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-022",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-PZ-023",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "PZ-023",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SM-132",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "SM-132",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-024",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "SPZU-024",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-025",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "SPZU-025",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-026",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "SPZU-026",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-027",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-027",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-028",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-028",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-029",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "SPZU-029",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-030",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-030",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-031",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-031",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-032",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-032",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-033",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "SPZU-033",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-034",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-034",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-035",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-035",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-036",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "SPZU-036",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-037",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-037",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-038",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-038",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-SPZU-039",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "SPZU-039",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ZU-124",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ZU-124",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ZU-125",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ZU-125",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ZU-126",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ZU-126",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ZU-127",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ZU-127",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ZU-128",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ZU-128",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ZU-129",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "ZU-129",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ZU-130",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "MEDIUM",
+        "rule_code": "ZU-130",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      },
+      {
+        "counts_as_violation": false,
+        "finding_id": "pipe-ZU-131",
+        "finding_status": "CLARIFICATION_REQUIRED",
+        "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
+        "review_priority": "HIGH",
+        "rule_code": "ZU-131",
+        "versions": {
+          "matrix_version": "draft-0",
+          "model_version": "none",
+          "rule_version": "0.1.0"
+        }
+      }
+    ],
+    "negative_verified": [],
+    "suspicions": []
+  },
+  "status": "READY",
+  "upload_status": {
+    "id": "ID_UPLOADED",
+    "pd": "PD_UPLOADED",
+    "rd": "RD_UPLOADED"
+  },
+  "version": 1,
+  "versions": {
+    "dataset_version": "unspecified",
+    "git_sha": "50fc1fe26aef6e86598b64b2bc4a7146dab8b8fc",
+    "matrix_version": "draft-0",
+    "model_version": "none"
+  },
+  "violation_count": 0
+}
