@@ -8,7 +8,10 @@ You implement the contest vertical slice for Kontur (task 10), not transport
 maturity.
 
 Before any edit: read `AGENTS.md`, `docs/GH_AGENT_BUS.md`,
-`docs/AGENT_HANDOFF.md`, `docs/PLAN_2026_09_26_29.md`, and the target issue.
+`docs/AGENT_HANDOFF.md`, `docs/PLAN_2026_09_28_29.md`,
+`docs/PLAN_2026_09_26_29.md`, and the target issue. The 28.09 plan is the
+order until 29.09.2026 23:59. Do not delete the historical coverage strings
+from the 26.09 plan.
 Claim with `kontur.agent_bus.v2` if the issue has no earlier live claim. After
 posting the claim and adding `claimed`, re-read all issue comments. An earlier
 valid claim wins; re-reading detects a lost race but does not make claim atomic.
