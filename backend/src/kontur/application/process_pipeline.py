@@ -17,6 +17,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from time import perf_counter
 
+from kontur.application.docx_text import DocxReadError, read_docx_bytes
 from kontur.application.evaluate import StagePage, evaluate_free_search, evaluate_rule
 from kontur.application.intake import accepted_unparsed_detail
 from kontur.application.passport import apply_manifest_section, read_passport
@@ -98,8 +99,8 @@ def _archive_suffix(filename: str) -> str | None:
     return None
 
 
-def _unparsed_office(filename: str) -> str | None:
-    """DOCX и XML приняты контрактом. Параметры из них пока не извлекаются."""
+def _office_suffix(filename: str) -> str | None:
+    """DOCX разбирается текстом. XML принят контрактом и пока не разбирается."""
 
     lower = filename.lower()
     for suffix in (".docx", ".xml"):
@@ -155,9 +156,61 @@ def _pages_from_blobs(
     injection_clean: dict[str, bool] = {}
     built: list[tuple[DocumentRef, StagePage]] = []
     for item in files:
-        office = _unparsed_office(item.filename)
-        if office is not None:
+        office = _office_suffix(item.filename)
+        if office == ".xml":
             errors.append(f"{item.file_id}: {accepted_unparsed_detail(office)}")
+            continue
+        if office == ".docx":
+            raw = blobs.get(item.file_id)
+            if raw is None:
+                errors.append(f"{item.file_id}: нет содержимого в памяти")
+                continue
+            try:
+                parsed = read_docx_bytes(raw)
+            except DocxReadError as exc:
+                errors.append(f"{item.file_id}: {exc}")
+                continue
+            if not parsed.tokens:
+                errors.append(f"{item.file_id}: DOCX: текст не прочитан")
+                continue
+            if parsed.skipped:
+                skipped = ", ".join(parsed.skipped)
+                errors.append(f"{item.file_id}: DOCX: пропущены {skipped}")
+            tokens = parsed.tokens
+            injection_clean_flag = scan_tokens_for_injection(tokens).is_clean
+            passport = read_passport(
+                tokens,
+                file_id=item.file_id,
+                file_hash=item.file_hash,
+                filename=item.filename,
+                pages=1,
+                layer_kind="vector",
+                injection_clean=injection_clean_flag,
+            )
+            passport = apply_manifest_section(
+                passport,
+                section=item.manifest_section,
+                relative_path=item.manifest_path,
+                filename=item.filename,
+            )
+            stamp = passport.approval_status
+            stamps[item.file_id] = stamp
+            injection_clean[item.file_id] = injection_clean_flag
+            approval, basis = approval_with_basis(
+                stamp,
+                passport.approval_basis,
+                inspector_selected=item.file_id in inspector_approved_file_ids,
+            )
+            ref = _document_ref(
+                item,
+                passport.identity_code,
+                passport.revision,
+                approval,
+                basis,
+                passport.sheet,
+                passport.discipline,
+            )
+            built.append((ref, StagePage(document=ref, tokens=tokens)))
             continue
         archive = _archive_suffix(item.filename)
         if archive is not None:
