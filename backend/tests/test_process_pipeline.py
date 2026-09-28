@@ -71,8 +71,9 @@ def test_contract_office_is_accepted_unparsed() -> None:
         files=(item,),
         blobs={"f-doc": payload},
     )
-    assert any("ACCEPTED_UNPARSED" in line and ".docx" in line for line in report.parse_errors)
+    assert any("DOCX: не прочитан" in line for line in report.parse_errors)
     assert all("UNSUPPORTED_FORMAT" not in line for line in report.parse_errors)
+    assert all("ACCEPTED_UNPARSED" not in line for line in report.parse_errors)
     assert report.pages_built == 0
 
 
@@ -169,7 +170,7 @@ def test_docx_and_xml_are_named_accepted_unparsed_not_skipped() -> None:
         inspector_approved_file_ids=frozenset({"f-pdf"}),
     )
     text = " ".join(report.parse_errors)
-    assert "f-docx: ACCEPTED_UNPARSED" in text
+    assert "f-docx: DOCX: не прочитан" in text
     assert "f-xml: ACCEPTED_UNPARSED" in text
     assert "UNSUPPORTED_FORMAT" not in text
     assert report.pages_built == 1
