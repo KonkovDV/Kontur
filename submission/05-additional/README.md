@@ -19,7 +19,7 @@
 
 | Материал | Роль |
 |---|---|
-| [`Kontur.pptx`](../03-presentation/Kontur.pptx) | Дека для поля «Презентация» |
+| [`03-presentation/`](../03-presentation/README.md) | Папка для поля «Презентация»: PowerPoint и PDF |
 | [`openapi.yaml`](../../contracts/openapi.yaml) | Контракт API |
 | [`submission.schema.json`](../../contracts/schemas/submission.schema.json) | Схема ответа |
 | [`demo_package/README.md`](../../examples/demo_package/README.md) | Раскладка учебного пакета |

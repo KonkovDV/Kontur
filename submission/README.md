@@ -10,7 +10,7 @@
 |---|---|
 | Репозиторий | https://github.com/KonkovDV/Kontur |
 | Документация | https://github.com/KonkovDV/Kontur/tree/main/submission/02-documentation |
-| Презентация | https://github.com/KonkovDV/Kontur/blob/main/submission/03-presentation/Kontur.pptx |
+| Презентация | https://github.com/KonkovDV/Kontur/tree/main/submission/03-presentation |
 | Прототип | https://github.com/KonkovDV/Kontur/tree/main/submission/04-prototype |
 | Дополнительно | https://github.com/KonkovDV/Kontur/tree/main/submission/05-additional |
 
