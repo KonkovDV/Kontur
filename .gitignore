@@ -26,3 +26,5 @@ out/
 *.pdf
 *.pptx
 !docs/**/*.pdf
+!submission/**/*.pdf
+!submission/**/*.pptx

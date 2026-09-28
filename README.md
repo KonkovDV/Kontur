@@ -47,7 +47,8 @@ python -m kontur.cli.score --submissions <каталог>
 собираются из одного JSON. РиН — mock, ACK нет.
 Архитектура — [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 Метрики — [`docs/METRICS.md`](docs/METRICS.md). Пробелы —
-[`docs/KNOWN_GAPS.md`](docs/KNOWN_GAPS.md).
+[`docs/KNOWN_GAPS.md`](docs/KNOWN_GAPS.md). Пять полей формы сдачи —
+[`submission/README.md`](submission/README.md).
 
 Работает: стенд одной командой выше, `healthz`, учебный комплект, карточка
 с полигоном, решение инспектора и пачка только из `CANDIDATE`, протокол
