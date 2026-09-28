@@ -22,10 +22,10 @@
 Gate K, измеренный Gate L **без** production SLA. Полные 100% ТЗ без GOLD,
 frozen val и пяти инспекторов **недостижимы**.
 
-OSINT Document AI (срез 20.09.2026, не bake-off GOLD): [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
+OSINT Document AI (срез 28.09.2026, литература 21.09, не bake-off GOLD): [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
 Кластеры правил: [`extractor_families.json`](../data/matrix/extractor_families.json)
 (группировка по `extractor.type`, не 132/132 executable).
 Поштучный триаж семейств `exact_field` / `presence`:
 [`EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) и
-[`family_triage.json`](../data/matrix/family_triage.json). Разбивка сейчас:
-`executable` 48, `extractor_missing` 79, `advisory` 1, `source_missing` 4.
+[`family_triage.json`](../data/matrix/family_triage.json). Живая разбивка —
+`executable` 55, `extractor_missing` 72, `advisory` 1, `source_missing` 4.
