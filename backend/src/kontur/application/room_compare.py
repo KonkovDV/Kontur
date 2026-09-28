@@ -19,8 +19,8 @@ from kontur.domain.models import ExtractionEngine, Polygon
 
 _REQUIRED = ("room_regex", "feature_regex", "bind_radius", "pair_jaccard_min", "max_differences")
 
-# Латиница, которую на листе путают с кириллической меткой: B4 не становится правилом,
-# но одиночная «B» читается как «В» до уже заданного feature_regex.
+# Латиница, которую на листе путают с кириллической меткой.
+# B читается как В, P как П: так устроены feature_regex ИОС4, не золотые страницы.
 _LATIN_LOOKALIKES = str.maketrans(
     {
         "A": "А",
@@ -31,14 +31,14 @@ _LATIN_LOOKALIKES = str.maketrans(
         "K": "К",
         "M": "М",
         "O": "О",
-        "P": "Р",
+        "P": "П",
         "T": "Т",
         "X": "Х",
         "a": "а",
         "c": "с",
         "e": "е",
         "o": "о",
-        "p": "р",
+        "p": "п",
         "x": "х",
     }
 )
@@ -112,14 +112,13 @@ def compare_room_tokens(
     radius = _as_float(settings["bind_radius"])
     jaccard_min = _as_float(settings["pair_jaccard_min"])
     max_diff = _as_int(settings["max_differences"])
-    pd_pages = _pages(pd_tokens, room_re, feature_re, radius)
-    rd_pages = _pages(rd_tokens, room_re, feature_re, radius)
-    abstains, pd_clean = _without_duplicates(pd_pages)
-    rd_abstains, rd_clean = _without_duplicates(rd_pages)
-    out = list(abstains)
-    out.extend(rd_abstains)
-    if pd_clean and rd_clean:
-        for pd_rooms, rd_rooms in _pair(pd_clean, rd_clean, jaccard_min):
+    boxes = _exclude_boxes(settings)
+    pd_pages, pd_dups = _pages(pd_tokens, room_re, feature_re, radius, boxes)
+    rd_pages, rd_dups = _pages(rd_tokens, room_re, feature_re, radius, boxes)
+    out = list(pd_dups)
+    out.extend(rd_dups)
+    if pd_pages and rd_pages:
+        for pd_rooms, rd_rooms in _pair(pd_pages, rd_pages, jaccard_min):
             out.extend(_pair_diffs(pd_rooms, rd_rooms, max_diff))
     return collapse_room_diffs(out)
 
@@ -153,6 +152,17 @@ def collapse_room_diffs(diffs: Sequence[RoomDiff]) -> tuple[RoomDiff, ...]:
     out = list(sheet)
     for room in sorted(by_room):
         group = by_room[room]
+        if any(item.kind == "abstain" for item in group):
+            out.append(
+                RoomDiff(
+                    "abstain",
+                    room,
+                    None,
+                    None,
+                    f"помещение {room}: номер повторяется на листе",
+                )
+            )
+            continue
         sided = [item for item in group if item.pd is not None and item.rd is not None]
         use = sided or [item for item in group if item.pd is None or item.rd is None]
         kinds = {item.kind for item in use}
@@ -238,19 +248,28 @@ def _expand(
     return expanded
 
 
-def _without_duplicates(
-    pages: Mapping[int, Mapping[str, RoomSpot]],
-) -> tuple[tuple[RoomDiff, ...], dict[int, Mapping[str, RoomSpot]]]:
-    abstains: list[RoomDiff] = []
-    clean: dict[int, Mapping[str, RoomSpot]] = {}
-    for number, rooms in pages.items():
-        if "__duplicate__" in rooms:
-            abstains.append(
-                RoomDiff("abstain", "", None, None, "номер помещения повторяется на листе")
-            )
+def _exclude_boxes(
+    settings: Mapping[str, object],
+) -> tuple[tuple[float, float, float, float], ...]:
+    """Прямоугольники из правила. Нет поля — ничего не вырезается."""
+
+    raw = settings.get("exclude_bboxes")
+    if not isinstance(raw, list):
+        return ()
+    boxes: list[tuple[float, float, float, float]] = []
+    for item in raw:
+        if not isinstance(item, list | tuple) or len(item) != 4:
             continue
-        clean[number] = rooms
-    return tuple(abstains), clean
+        try:
+            box = tuple(float(value) for value in item)
+        except (TypeError, ValueError):
+            continue
+        boxes.append((box[0], box[1], box[2], box[3]))
+    return tuple(boxes)
+
+
+def _inside_box(point: tuple[float, float], box: tuple[float, float, float, float]) -> bool:
+    return box[0] <= point[0] <= box[2] and box[1] <= point[1] <= box[3]
 
 
 def _pages(
@@ -258,14 +277,19 @@ def _pages(
     room_re: re.Pattern[str],
     feature_re: re.Pattern[str],
     radius: float,
-) -> dict[int, dict[str, RoomSpot]]:
+    boxes: Sequence[tuple[float, float, float, float]] = (),
+) -> tuple[dict[int, dict[str, RoomSpot]], tuple[RoomDiff, ...]]:
     by_page: dict[int, list[PageToken]] = {}
     for token in tokens:
         text = label_text(token.text)
         if not text:
             continue
-        by_page.setdefault(token.page, []).append(replace(token, text=text))
+        labeled = replace(token, text=text)
+        if boxes and any(_inside_box(_center(labeled.polygon_norm), box) for box in boxes):
+            continue
+        by_page.setdefault(token.page, []).append(labeled)
     pages: dict[int, dict[str, RoomSpot]] = {}
+    abstains: list[RoomDiff] = []
     for page, items in by_page.items():
         expanded = _expand(items, room_re, feature_re)
         rooms = [item for item in expanded if room_re.fullmatch(item.text.strip())]
@@ -273,27 +297,29 @@ def _pages(
         counts: dict[str, int] = {}
         for item in rooms:
             counts[item.text.strip()] = counts.get(item.text.strip(), 0) + 1
-        if any(count > 1 for count in counts.values()):
-            pages[page] = {
-                "__duplicate__": RoomSpot(
-                    "__duplicate__",
-                    page,
-                    rooms[0].polygon_source,
-                    rooms[0].polygon_norm,
-                    None,
-                    None,
-                    rooms[0].engine,
+        for name, count in sorted(counts.items()):
+            if count > 1:
+                abstains.append(
+                    RoomDiff(
+                        "abstain",
+                        name,
+                        None,
+                        None,
+                        f"помещение {name}: номер повторяется на листе",
+                    )
                 )
-            }
-            continue
+        owned = _owned_features(rooms, features, radius)
         bound: dict[str, RoomSpot] = {}
         for item in rooms:
-            feature = _nearest_feature(item, features, radius)
+            name = item.text.strip()
+            if counts[name] > 1:
+                continue
+            feature = owned.get(name)
             feature_source = None if feature is None else feature.polygon_source
             feature_norm = None if feature is None else feature.polygon_norm
             feature_engine = None if feature is None else feature.engine
-            bound[item.text.strip()] = RoomSpot(
-                item.text.strip(),
+            bound[name] = RoomSpot(
+                name,
                 page,
                 item.polygon_source,
                 item.polygon_norm,
@@ -304,33 +330,38 @@ def _pages(
             )
         if bound:
             pages[page] = bound
-    return pages
+    return pages, tuple(abstains)
 
 
-def _nearest_feature(
-    room: PageToken,
+def _owned_features(
+    rooms: Sequence[PageToken],
     features: Sequence[PageToken],
     radius: float,
-) -> PageToken | None:
-    origin = _center(room.polygon_norm)
-    best: PageToken | None = None
-    best_dist = radius
-    ambiguous = False
+) -> dict[str, PageToken]:
+    """Признак достаётся одному ближайшему номеру. Ничья радиуса — никому."""
+
+    owned: dict[str, PageToken] = {}
     for feature in features:
-        if feature.page != room.page:
+        origin = _center(feature.polygon_norm)
+        ranked: list[tuple[float, str]] = []
+        for room in rooms:
+            if feature.page != room.page:
+                continue
+            dist = math.hypot(
+                *[
+                    left - right
+                    for left, right in zip(origin, _center(room.polygon_norm), strict=True)
+                ]
+            )
+            if dist <= radius + 1e-12:
+                ranked.append((dist, room.text.strip()))
+        ranked.sort(key=lambda item: item[0])
+        if not ranked:
             continue
-        dist = math.hypot(
-            *[a - b for a, b in zip(origin, _center(feature.polygon_norm), strict=True)]
-        )
-        if dist < best_dist - 1e-9:
-            best = feature
-            best_dist = dist
-            ambiguous = False
-        elif abs(dist - best_dist) <= 1e-9:
-            ambiguous = True
-    if best is None or ambiguous:
-        return None
-    return best
+        if len(ranked) > 1 and ranked[1][0] <= ranked[0][0] + 1e-9:
+            continue
+        owned.setdefault(ranked[0][1], feature)
+    return owned
 
 
 def _pair(
