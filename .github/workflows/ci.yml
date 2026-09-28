@@ -209,7 +209,9 @@ jobs:
           node-version: "22"
       - name: Gateway limit tests
         working-directory: gateway
-        run: npm test
+        run: |
+          npm ci
+          npm test
       - name: Build gateway image
         run: docker compose build gateway
       - name: Verify gateway runtime contract
