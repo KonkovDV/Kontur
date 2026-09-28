@@ -488,6 +488,77 @@ paths:
           description: Недопустимый переход состояния
         '422':
           description: Отсутствует reason_code при отклонении
+  /processes/{process_id}/findings/confirm:
+    post:
+      summary: Подтвердить пачку кандидатов
+      description: 'Только отмеченные находки в статусе CANDIDATE. Массового отклонения нет. Пустой список и чужой статус не меняют ни одной находки. Каждая находка получает отдельную запись аудита. Это не закрытие Gate K.
+
+        '
+      operationId: confirmCandidates
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - inspector_id
+              - comment
+              - finding_ids
+              properties:
+                inspector_id:
+                  type: string
+                  minLength: 1
+                comment:
+                  type: string
+                  minLength: 1
+                finding_ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: string
+                    minLength: 1
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '200':
+          description: Каждая находка подтверждена отдельно
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - process_id
+                - confirmed
+                properties:
+                  process_id:
+                    type: string
+                  confirmed:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - finding_id
+                      - finding_status
+                      properties:
+                        finding_id:
+                          type: string
+                        finding_status:
+                          type: string
+        '404':
+          description: Процесс или находка не найдены
+        '409':
+          description: В пачке не только CANDIDATE
+        '422':
+          description: Пустой список или нет комментария
   /processes/{process_id}/verify:
     post:
       summary: Открыть очередь верификации
