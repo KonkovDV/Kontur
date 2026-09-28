@@ -45,6 +45,19 @@ python -m kontur.cli.score --submissions <каталог>
 Ограничение покрытия: 55 executable / 72 extractor_missing / 1 advisory /
 4 source_missing из 132. OCR — `MEASURED`. PDF, DOCX и XML протокола
 собираются из одного JSON. РиН — mock, ACK нет.
+Архитектура — [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Метрики — [`docs/METRICS.md`](docs/METRICS.md). Пробелы —
+[`docs/KNOWN_GAPS.md`](docs/KNOWN_GAPS.md).
+
+Работает: стенд одной командой выше, `healthz`, учебный комплект, карточка
+с полигоном, решение инспектора и пачка только из `CANDIDATE`, протокол
+JSON/DOCX/XML/PDF, чтение абзацев и таблиц DOCX, пакетный прогон и счёт
+публичного gold с n и интервалом.
+
+Не работает как приёмка: пороги раздела 14, гейты I/J/K/L, frozen validation,
+пять сессий инспекторов, разбор XML и вложений PDF, распаковка архива внутри
+сервиса, DWG, живой РиН, УКЭП и OIDC. 72 правила без экстрактора не становятся
+нарушением.
 
 **Вход:** PDF, DOCX, XML. **Выход:** протокол с карточками доказательств и
 решением инспектора. **Ядро продукта:** не распознавание текста, а
@@ -67,9 +80,11 @@ python -m kontur.cli.score --submissions <каталог>
 - Комплектность на проводе — `PD_UPLOADED` / `RD_PARTIAL` / `ID_MISSING`.
   Процесс — `COMPLETED` / `FINALIZED`. Протокол — `VERIFICATION_COMPLETED` /
   `PROTOCOL_FINALIZED`. Это проекции, не одна простыня статусов (ADR-0005).
-- Явная пометка «не утв.» не может быть эталоном. ПД без сведений об
-  утверждении — `CLARIFICATION_REQUIRED`, пока инспектор не выберет файл
-  (ADR-0015). Отменить финализацию могут инспектор, администратор и супервизор.
+- Явная пометка «не утв.» не может быть эталоном. Единственная голова ПД без
+  штампа сравнивается с `SOLE_HEAD`, штамп не переписывается (ADR-0017).
+  Две головы одного шифра — `CLARIFICATION_REQUIRED`.
+  `KONTUR_ETALON_POLICY=strict` оставляет ADR-0015. Отменить финализацию
+  могут инспектор, администратор и супервизор.
 - Пороги раздела 14 ТЗ (Character Accuracy ≥0,95; Exact Match ≥0,90; связка
   ≥0,95; локализация ≥0,95 при IoU≥0,50; Precision ≥0,90; Recall ≥0,80;
   F1 ≥0,85; FPR ≤0,10) — это **минимумы приёмки, а не заявленный результат**.
@@ -148,8 +163,8 @@ python -m kontur.cli.score --submissions <каталог>
 и пишет `submission_*.json`, `protocol_*.json`, `documents_*.json`,
 `fields_*.jsonl` и `run_manifest.json`. Флаг `--pages-text` добавляет
 `pages_text_<объект>.jsonl`: текст, bbox и `engine` (`vector` или `ocr`).
-`score` считает эти submission по публичному gold: матрица и свободный поиск
-отдельно, с n и 95% CI.
+`score` по умолчанию совпадает по `object_id`, коду и `location`. Матрица и
+свободный поиск считаются отдельно, с n и 95% CI.
 Порог ТЗ эта команда не объявляет взятым. Это черновик: инспектор находки
 не подтверждает, `violation_count` остаётся 0, ACK РиН нет. `RD_ID_MIXED`
 не назначается стадией. Скрытый тест пропускается. Таймаут разбора PDF
@@ -183,3 +198,5 @@ python -m kontur.cli.score --submissions <каталог>
 | Нормативный реестр | [`docs/NORMATIVE_REGISTRY.md`](docs/NORMATIVE_REGISTRY.md) |
 | SOTA / донор AeroBIM | [`docs/SOTA_AEROBIM_ANALYSIS.md`](docs/SOTA_AEROBIM_ANALYSIS.md) |
 | Известные пробелы | [`docs/KNOWN_GAPS.md`](docs/KNOWN_GAPS.md) |
+| Архитектура для жюри | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| Метрики, n и интервал | [`docs/METRICS.md`](docs/METRICS.md) |
