@@ -1,10 +1,14 @@
 """Счёт публичного gold. Не frozen val и не закрытие гейта J.
 
-По умолчанию совпадение — (object_id, parameter_code).
-`--match location` берёт `location` из инвентаря как в исходном
-`public_gold_checks.jsonl`: номер помещения «140», не строка «помещение 140».
-Локализация — IoU полигонов на том же файле и той же странице.
+По умолчанию совпадение — (object_id, parameter_code, location).
+`location` берётся из инвентаря как в исходном `public_gold_checks.jsonl`:
+номер помещения «140», не строка «помещение 140».
+Локализация — IoU полигона на file_id и странице той же gold-строки.
+Страница другой строки того же кода попаданием не считается.
 Строка без эталонного полигона, файла или страницы в знаменатель не входит.
+`score_eligible` не true в попадание и FPR не входит.
+Позитив без метки — unlabeled_positive, не ложное и не истинное срабатывание.
+Ответ вне submission.schema.json числа не получает.
 Матрица и свободный поиск не смешиваются. Порог ТЗ здесь не объявляется взятым.
 Интервал F1 — кластерный bootstrap по object_id и только при 10+ кластерах.
 """
@@ -20,6 +24,8 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+
+from jsonschema import Draft202012Validator, ValidationError  # type: ignore[import-untyped]
 
 from kontur.evaluation.dataset_package import is_hidden_test_object
 from kontur.evaluation.inventory import is_quarantined
@@ -50,21 +56,43 @@ def _rows(inventory: Mapping[str, object]) -> list[dict[str, object]]:
     return rows
 
 
+def _submission_validator() -> Draft202012Validator:
+    for parent in Path(__file__).resolve().parents:
+        schema_path = parent / "contracts" / "schemas" / "submission.schema.json"
+        if schema_path.is_file():
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            return Draft202012Validator(schema)
+    raise ValueError("нет contracts/schemas/submission.schema.json")
+
+
 def _load_submissions(folder: Path) -> list[dict[str, object]]:
     found: list[dict[str, object]] = []
     if not folder.is_dir():
         raise ValueError(f"{folder}: не каталог")
+    validator = _submission_validator()
     for path in sorted(folder.glob("submission_*.json")):
         if is_quarantined(path):
             continue
         payload = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise ValueError(f"{path.name}: ожидался объект")
+        try:
+            validator.validate(payload)
+        except ValidationError as exc:
+            raise ValueError(f"{path.name}: {exc.message}") from exc
         object_id = str(payload.get("object_id") or "")
         if is_hidden_test_object(object_id):
             raise ValueError(f"{object_id}: скрытый тест в счёт не берётся")
         found.append(payload)
     return found
+
+
+def _row_eligible(row: Mapping[str, object]) -> bool:
+    """Нет поля — синтетическая строка теста. Явный false в счёт не входит."""
+
+    if "score_eligible" not in row:
+        return True
+    return row.get("score_eligible") is True
 
 
 def _predictions(submissions: Sequence[Mapping[str, object]]) -> dict[tuple[str, ...], str]:
@@ -158,15 +186,40 @@ def _gold_page(row: Mapping[str, object]) -> tuple[str, int] | None:
     return file_id.strip(), page
 
 
+def _fragment_target(item: Mapping[str, object]) -> tuple[str, int, Polygon | None] | None:
+    file_id = item.get("file_id")
+    page = item.get("pdf_page_number")
+    if not isinstance(file_id, str) or not file_id.strip():
+        return None
+    if isinstance(page, bool) or not isinstance(page, int) or page < 1:
+        return None
+    return file_id.strip(), page, _as_polygon(item.get("polygon_norm"))
+
+
+def _gold_targets(row: Mapping[str, object]) -> list[tuple[str, int, Polygon | None]]:
+    """Фрагменты этой строки. Чужой лист того же кода сюда не подмешивается."""
+
+    evidence = row.get("evidence")
+    if isinstance(evidence, list):
+        targets = [
+            target
+            for item in evidence
+            if isinstance(item, dict) and (target := _fragment_target(item)) is not None
+        ]
+        if targets:
+            return targets
+    page = _gold_page(row)
+    if page is None:
+        return []
+    return [(page[0], page[1], _as_polygon(row.get("polygon_norm")))]
+
+
 def _iou_localized(
     submissions: Sequence[Mapping[str, object]],
     key: tuple[str, ...],
-    gold: Polygon,
-    *,
-    gold_file_id: str,
-    gold_page: int,
+    targets: Sequence[tuple[str, int, Polygon]],
 ) -> bool:
-    """Попадание только на том же файле и той же странице, IoU не ниже порога."""
+    """Попадание только на file_id и странице фрагмента этой строки."""
 
     object_id, code = key[0], key[1]
     location = key[2] if len(key) >= 3 else None
@@ -187,13 +240,16 @@ def _iou_localized(
             for item in evidence:
                 if not isinstance(item, dict):
                     continue
-                if str(item.get("file_id") or "") != gold_file_id:
-                    continue
-                if item.get("pdf_page_number") != gold_page:
-                    continue
                 predicted = _as_polygon(item.get("polygon_norm"))
-                if predicted is not None and iou(gold, predicted) >= IOU_THRESHOLD:
-                    return True
+                if predicted is None:
+                    continue
+                file_id = str(item.get("file_id") or "")
+                page = item.get("pdf_page_number")
+                for gold_file_id, gold_page, gold in targets:
+                    if file_id != gold_file_id or page != gold_page:
+                        continue
+                    if iou(gold, predicted) >= IOU_THRESHOLD:
+                        return True
     return False
 
 
@@ -257,6 +313,42 @@ def _scope_rows(rows: Sequence[Mapping[str, object]], scope: str) -> list[Mappin
     return [row for row in rows if row.get("matrix_scope") == scope]
 
 
+def _row_key(row: Mapping[str, object], *, by_location: bool) -> tuple[str, ...] | None:
+    code_key = (str(row["object_id"]), str(row["parameter_code"]))
+    if not by_location:
+        return code_key
+    location = _gold_location(row)
+    if location is None:
+        return None
+    return (*code_key, location)
+
+
+def _unlabeled_positive(
+    rows: Sequence[Mapping[str, object]],
+    predictions: Mapping[tuple[str, ...], str],
+    *,
+    by_location: bool,
+    unknown_codes: bool,
+) -> int:
+    """VIOLATION_PRESENT без eligible-метки. Не FP и не TP."""
+
+    known_codes = {str(row.get("parameter_code") or "") for row in rows}
+    eligible_keys = {
+        key
+        for row in rows
+        if _row_eligible(row) and (key := _row_key(row, by_location=by_location)) is not None
+    }
+    count = 0
+    for key, label in predictions.items():
+        if label != _POSITIVE:
+            continue
+        if not unknown_codes and key[1] not in known_codes:
+            continue
+        if key not in eligible_keys:
+            count += 1
+    return count
+
+
 def score_scope(
     rows: Sequence[Mapping[str, object]],
     predictions: Mapping[tuple[str, ...], str],
@@ -264,6 +356,10 @@ def score_scope(
     *,
     by_location: bool = False,
 ) -> dict[str, object]:
+    unlabeled = _unlabeled_positive(
+        rows, predictions, by_location=by_location, unknown_codes=False
+    )
+    rows = [row for row in rows if _row_eligible(row)]
     positives = [row for row in rows if row.get("violation_label") == _POSITIVE]
     negatives = [row for row in rows if row.get("violation_label") == "NO_VIOLATION"]
     hits = 0
@@ -276,13 +372,7 @@ def score_scope(
     score_rows: list[_ScoreRow] = []
 
     def row_key(row: Mapping[str, object]) -> tuple[str, ...] | None:
-        code_key = (str(row["object_id"]), str(row["parameter_code"]))
-        if not by_location:
-            return code_key
-        location = _gold_location(row)
-        if location is None:
-            return None
-        return (*code_key, location)
+        return _row_key(row, by_location=by_location)
 
     for row in positives:
         key = row_key(row)
@@ -291,17 +381,14 @@ def score_scope(
             continue
         scorable_pos.append(row)
         label = predictions.get(key)
-        gold_polygon = _as_polygon(row.get("polygon_norm"))
-        gold_page = _gold_page(row)
-        if gold_polygon is None or gold_page is None:
+        targets = [
+            (file_id, page, polygon)
+            for file_id, page, polygon in _gold_targets(row)
+            if polygon is not None
+        ]
+        if not targets:
             localization_unscored += 1
-        elif label == _POSITIVE and _iou_localized(
-            submissions,
-            key,
-            gold_polygon,
-            gold_file_id=gold_page[0],
-            gold_page=gold_page[1],
-        ):
+        elif label == _POSITIVE and _iou_localized(submissions, key, targets):
             localized_hits += 1
         if label in _ABSTAIN or label is None:
             abstain += 1
@@ -373,6 +460,7 @@ def score_scope(
             "n": fpr.n,
             "defined": fpr.n > 0,
         },
+        "unlabeled_positive": unlabeled,
         "tz_recall_met": meets_threshold("recall", recall),
         "tz_precision_met": meets_threshold("precision", precision) if precision.n else False,
         "tz_fpr_met": meets_threshold("false_positive_rate", fpr) if fpr.n else False,
@@ -382,7 +470,7 @@ def score_scope(
     return report
 
 
-def score_directory(folder: Path, *, match: str = "code") -> dict[str, object]:
+def score_directory(folder: Path, *, match: str = "location") -> dict[str, object]:
     if match not in {"code", "location"}:
         raise ValueError("match: code или location")
     inventory = load_run_inventory()
@@ -399,6 +487,9 @@ def score_directory(folder: Path, *, match: str = "code") -> dict[str, object]:
         "not_frozen_val": True,
         "match": "object_id+parameter_code+location" if by_location else "object_id+parameter_code",
         "location_in_gold": location_in_gold,
+        "unlabeled_positive": _unlabeled_positive(
+            rows, predictions, by_location=by_location, unknown_codes=True
+        ),
         "matrix": score_scope(
             _scope_rows(rows, "MATRIX"), predictions, submissions, by_location=by_location
         ),
@@ -453,7 +544,7 @@ def _line(title: str, block: Mapping[str, object]) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Счёт публичного gold по submission_*.json")
     parser.add_argument("--submissions", required=True, type=Path)
-    parser.add_argument("--match", choices=("code", "location"), default="code")
+    parser.add_argument("--match", choices=("code", "location"), default="location")
     args = parser.parse_args(argv)
     try:
         report = score_directory(args.submissions, match=args.match)
@@ -465,6 +556,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not isinstance(matrix, dict) or not isinstance(free, dict):
         raise TypeError("score")
     print("публичная разметка, не frozen val. Порог ТЗ по нижней границе Wilson не заявлен взятым.")
+    print(f"unlabeled_positive={report['unlabeled_positive']}")
     print(_line("MATRIX", matrix))
     print(_line("FREE_SEARCH", free))
     print(json.dumps(report, ensure_ascii=False, indent=2))
