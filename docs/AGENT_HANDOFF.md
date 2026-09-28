@@ -6,7 +6,7 @@ R1 = `sole_head` (ADR-0017): единственная голова ПД без �
 Свободный поиск на проводе — `SUSPICION` (не 133-е правило). Повтор индекса после `sole_head` (`c18cf8e`): матрица 0 из 6, свободный поиск 0 из 4, оба abstain. IOS4 остановился на цепочке «шифр части файлов ПД не прочитан», не на комнате. Это не порог ТЗ.
 Оперативный порядок до 29.09.2026 23:59 — [`PLAN_2026_09_28_29.md`](PLAN_2026_09_28_29.md). Исторический [`PLAN_2026_09_26_29.md`](PLAN_2026_09_26_29.md) не переписывать: тест держит в нём «48 executable» и «79 extractor_missing».
 Раздел индекса пишется в `discipline`. Ключ тома — путь и `file_id`, не марка и не голый stem.
-DOCX и XML остаются `ACCEPTED_UNPARSED`. Холодный прогон 27.09 на Windows Docker записан: tar, `docker load`, `pull_policy: never`, `healthz` 200. Хост от сети не отключался. SHA сборки compose больше не затирает: статус читает `KONTUR_GIT_SHA`. Пять сессий Gate K не выдуманы.
+DOCX читается абзацами и таблицами. XML остаётся `ACCEPTED_UNPARSED`. В `run_manifest` поле `object_id_basis`: `files_index`, `object_json`, `cli` или `directory_name`. `model_version` — имя доступного движка OCR, иначе `none`. SHA весов без проверенного файла не пишется. Холодный прогон 27.09 на Windows Docker записан: tar, `docker load`, `pull_policy: never`, `healthz` 200. Хост от сети не отключался. SHA сборки compose больше не затирает: статус читает `KONTUR_GIT_SHA`. Пять сессий Gate K не выдуманы.
 На статусе процесса четыре ключа `phase_seconds`: upload, parse, compare, protocol. Это не норматив времени.
 
 Срез **23.09.2026**. Бриф для ИИ с GitHub: [`GH_SITUATION_2026_09_21.md`](GH_SITUATION_2026_09_21.md).

@@ -14,10 +14,12 @@ from kontur.cli.run_package import (
     _field_row,
     _page_rows,
     _read_bytes,
+    _recognizer_name,
+    package_model_version,
     run_directory,
     run_object,
 )
-from kontur.domain.models import DocStage
+from kontur.domain.models import DocStage, ExtractionEngine
 from kontur.evaluation.dataset_package import HIDDEN_TEST_OBJECT_IDS
 from kontur.evaluation.demo_kit import demo_sheet_files
 from kontur.infrastructure.pdfium_tokens import file_sha256
@@ -296,3 +298,78 @@ def test_one_object_failure_still_writes_the_manifest(tmp_path: Path, monkeypatc
     assert isinstance(objects, list)
     assert failures == [{"object_id": "OBJ-PACK-BAD", "reason": "RuntimeError: boom"}]
     assert [item["object_id"] for item in objects] == ["OBJ-PACK-OK"]
+
+
+def _one_pdf_object(root: Path, name: str) -> None:
+    folder = root / name / "ПД"
+    folder.mkdir(parents=True)
+    (folder / "sheet.pdf").write_bytes(cyrillic_pdf((("шифр: 1-PZ", 20.0, 20.0),)))
+
+
+def test_directory_name_is_the_object_basis(tmp_path: Path) -> None:
+    source = tmp_path / "in"
+    _one_pdf_object(source, "DIR-NAME")
+    report = run_directory(source, tmp_path / "out")
+    assert report["failures"] == []
+    assert report["object_id_basis"] == {"DIR-NAME": "directory_name"}
+    written = report["objects"]
+    assert isinstance(written, list)
+    assert written[0]["object_id"] == "DIR-NAME"
+
+
+def test_index_beats_the_directory_name(tmp_path: Path) -> None:
+    source = tmp_path / "WRONG"
+    source.mkdir()
+    (source / "sheet.pdf").write_bytes(cyrillic_pdf((("лист", 20.0, 20.0),)))
+    row = {"object_id": "OBJ-RIGHT", "file_id": "pd-1", "stage": "PD", "path": "sheet.pdf"}
+    (source / "files_index.jsonl").write_text(json.dumps(row) + "\n", encoding="utf-8")
+    report = run_directory(source, tmp_path / "out", object_id="OBJ-CLI")
+    assert report["failures"] == []
+    assert report["mode"] == "files_index"
+    assert report["object_id_basis"] == {"OBJ-RIGHT": "files_index"}
+
+
+def test_object_json_beats_cli_and_directory_name(tmp_path: Path) -> None:
+    source = tmp_path / "in"
+    _one_pdf_object(source, "WRONG")
+    (source / "WRONG" / "object.json").write_text(
+        json.dumps({"object_id": "OBJ-JSON"}),
+        encoding="utf-8",
+    )
+    report = run_directory(source, tmp_path / "out", object_id="OBJ-CLI")
+    assert report["failures"] == []
+    assert report["object_id_basis"] == {"OBJ-JSON": "object_json"}
+
+
+def test_cli_object_id_names_a_folder_without_json(tmp_path: Path) -> None:
+    source = tmp_path / "in"
+    _one_pdf_object(source, "WRONG")
+    report = run_directory(source, tmp_path / "out", object_id="OBJ-CLI")
+    assert report["failures"] == []
+    assert report["object_id_basis"] == {"OBJ-CLI": "cli"}
+
+
+def test_model_version_names_the_engine_or_stays_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("KONTUR_MODEL_VERSION", raising=False)
+    monkeypatch.setattr("kontur.cli.run_package.weights_ready", lambda: False)
+    monkeypatch.setattr("kontur.cli.run_package._tesseract_version_text", lambda: "5.5.0")
+    assert package_model_version() == "tesseract-5.5.0"
+    monkeypatch.setattr("kontur.cli.run_package._tesseract_version_text", lambda: None)
+    assert package_model_version() == "none"
+    monkeypatch.setenv("KONTUR_MODEL_VERSION", "pinned-by-env")
+    assert package_model_version() == "pinned-by-env"
+
+
+def test_ocr_recognizer_is_eslav_only_for_an_ocr_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("kontur.cli.run_package.weights_ready", lambda: True)
+    assert _recognizer_name(ExtractionEngine.OCR) == "eslav_PP-OCRv5"
+    assert _recognizer_name(ExtractionEngine.VECTOR) is None
+
+
+def test_vector_page_row_does_not_invent_a_recognizer(tmp_path: Path) -> None:
+    path = tmp_path / "sheet.pdf"
+    payload = cyrillic_pdf((("лист", 20.0, 20.0),))
+    path.write_bytes(payload)
+    rows = _page_rows(PackageFile("f", DocStage.PD, path), payload, "OBJ")
+    assert rows
+    assert all("recognizer" not in row for row in rows)

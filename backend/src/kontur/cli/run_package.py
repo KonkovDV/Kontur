@@ -30,7 +30,7 @@ from kontur.application.passport import apply_manifest_section, read_passport
 from kontur.application.protocol import assemble_protocol, protocol_for_http
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
 from kontur.domain.geometry import bbox_from_polygon
-from kontur.domain.models import DocStage, EvidenceGroup, Finding
+from kontur.domain.models import DocStage, EvidenceGroup, ExtractionEngine, Finding
 from kontur.domain.statuses import Completeness, ProcessState
 from kontur.evaluation.agent_dumps import git_sha, repo_root
 from kontur.evaluation.dataset_package import is_hidden_test_object
@@ -39,6 +39,8 @@ from kontur.evaluation.submission import build_check, build_submission, halt_loc
 from kontur.evaluation.submission_pack import build_input_manifest
 from kontur.infrastructure.matrix.free_search import wire_codes
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
+from kontur.infrastructure.ocr_rapid import weights_ready
+from kontur.infrastructure.ocr_tesseract import tesseract_available
 from kontur.infrastructure.pdf_guard import (
     PdfParseTimeoutError,
     pdf_parse_timeout_s,
@@ -137,6 +139,75 @@ def _index_path(root: Path) -> Path | None:
     return None
 
 
+def _object_json_id(folder: Path) -> str | None:
+    """object.json в каталоге объекта. Нет файла — имя каталога ещё можно взять."""
+
+    path = folder / "object.json"
+    if not path.is_file() or is_quarantined(path):
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path.name}: ожидался объект")
+    object_id = str(payload.get("object_id") or "").strip()
+    if not object_id:
+        raise ValueError(f"{path.name}: нет object_id")
+    return object_id
+
+
+def _folder_identity(folder: Path, cli_object_id: str | None) -> tuple[str, str]:
+    """object.json, затем --object-id, затем имя каталога."""
+
+    declared = _object_json_id(folder)
+    if declared is not None:
+        return declared, "object_json"
+    if cli_object_id:
+        return cli_object_id, "cli"
+    return folder.name, "directory_name"
+
+
+def _tesseract_version_text() -> str | None:
+    if not tesseract_available():
+        return None
+    try:
+        pytesseract = import_module("pytesseract")
+        version = pytesseract.get_tesseract_version()
+    except (OSError, ValueError, AttributeError, RuntimeError):
+        return None
+    text = str(version).strip()
+    return text or None
+
+
+def package_model_version() -> str:
+    """Движок, который есть локально. Явная переменная окружения побеждает.
+
+    SHA весов сюда не подставляется: нет проверенного файла — нет суммы.
+    """
+
+    explicit = os.environ.get("KONTUR_MODEL_VERSION", "").strip()
+    if explicit:
+        return explicit
+    parts: list[str] = []
+    if weights_ready():
+        parts.append("eslav_PP-OCRv5")
+    tesseract = _tesseract_version_text()
+    if tesseract is not None:
+        parts.append(f"tesseract-{tesseract}")
+    return "+".join(parts) if parts else "none"
+
+
+def _recognizer_name(engine: ExtractionEngine) -> str | None:
+    """Имя модели только у OCR-токена и только если движок известен."""
+
+    if engine is not ExtractionEngine.OCR:
+        return None
+    if weights_ready():
+        return "eslav_PP-OCRv5"
+    tesseract = _tesseract_version_text()
+    if tesseract is not None:
+        return f"tesseract-{tesseract}"
+    return None
+
+
 def _extended_path(path: Path) -> Path:
     """Префикс \\\\?\\ для путей длиннее MAX_PATH. Обычный open их не видит."""
 
@@ -187,34 +258,47 @@ def _unique_id(stem: str, used: set[str], digest: str) -> str:
 
 def discover_folders(
     root: Path,
-) -> tuple[dict[str, list[PackageFile]], list[dict[str, str]], list[dict[str, str]]]:
-    """Папки стадий. Каталог без токена стадии режется той же меткой, что MIXED."""
+    *,
+    cli_object_id: str | None = None,
+) -> tuple[
+    dict[str, list[PackageFile]],
+    list[dict[str, str]],
+    list[dict[str, str]],
+    dict[str, str],
+]:
+    """Папки стадий. object_id: object.json, затем --object-id, затем имя каталога."""
 
     skipped: list[dict[str, str]] = []
     resolutions: list[dict[str, str]] = []
     objects: dict[str, list[PackageFile]] = {}
+    bases: dict[str, str] = {}
 
-    def take(object_id: str, folder: Path) -> None:
+    def take(folder: Path) -> None:
+        object_id, basis = _folder_identity(folder, cli_object_id)
         if is_hidden_test_object(object_id):
             skipped.append({"object_id": object_id, "reason": "hidden_test"})
             return
+        if object_id in objects:
+            raise ValueError(f"object_id {object_id} задан дважды")
         files, extra_skipped, extra_resolved = _pdfs_in_object(object_id, folder)
         skipped.extend(extra_skipped)
         resolutions.extend(extra_resolved)
         if files:
             objects[object_id] = files
+            bases[object_id] = basis
 
     children = [
         path for path in sorted(root.iterdir()) if path.is_dir() and not is_quarantined(path)
     ]
     staged_children = [path for path in children if _has_stage_dir(path)]
-    if staged_children:
-        for child in staged_children:
-            take(child.name, child)
-        return objects, skipped, resolutions
-    if _has_stage_dir(root):
-        take(root.name, root)
-    return objects, skipped, resolutions
+    targets = staged_children or ([root] if _has_stage_dir(root) else [])
+    if cli_object_id:
+        unnamed = [folder for folder in targets if _object_json_id(folder) is None]
+        if len(unnamed) > 1:
+            raise ValueError("--object-id задан для нескольких каталогов без object.json")
+    for folder in targets:
+        take(folder)
+    return objects, skipped, resolutions, bases
 
 
 def _has_stage_dir(folder: Path) -> bool:
@@ -558,16 +642,18 @@ def _page_rows(item: PackageFile, raw: bytes, object_id: str) -> list[dict[str, 
         if not token.text.strip():
             continue
         box = bbox_from_polygon(token.polygon_norm)
-        rows.append(
-            {
-                "object_id": object_id,
-                "file_id": item.file_id,
-                "page": token.page,
-                "text": token.text,
-                "bbox": [box[0], box[1], box[2], box[3]],
-                "engine": token.engine.value,
-            }
-        )
+        row: dict[str, object] = {
+            "object_id": object_id,
+            "file_id": item.file_id,
+            "page": token.page,
+            "text": token.text,
+            "bbox": [box[0], box[1], box[2], box[3]],
+            "engine": token.engine.value,
+        }
+        recognizer = _recognizer_name(token.engine)
+        if recognizer is not None:
+            row["recognizer"] = recognizer
+        rows.append(row)
     return rows
 
 
@@ -707,7 +793,13 @@ def run_object(
     }
 
 
-def run_directory(source: Path, out_dir: Path, *, pages_text: bool = False) -> dict[str, object]:
+def run_directory(
+    source: Path,
+    out_dir: Path,
+    *,
+    pages_text: bool = False,
+    object_id: str | None = None,
+) -> dict[str, object]:
     """Разобрать вход и записать пакет. Не подтверждает находки."""
 
     _ensure_file_timeout()
@@ -720,8 +812,11 @@ def run_directory(source: Path, out_dir: Path, *, pages_text: bool = False) -> d
     if index is not None:
         grouped, skipped, resolutions = discover_index(root, index)
         mode = "files_index"
+        bases = {item_id: "files_index" for item_id in grouped}
     else:
-        grouped, skipped, resolutions = discover_folders(root)
+        grouped, skipped, resolutions, bases = discover_folders(
+            root, cli_object_id=object_id
+        )
         mode = "folders"
     registry = FileRuleRegistry()
     objects: list[dict[str, object]] = []
@@ -757,8 +852,9 @@ def run_directory(source: Path, out_dir: Path, *, pages_text: bool = False) -> d
             "matrix_version": registry.matrix_version,
             "dataset_version": os.environ.get("KONTUR_DATASET_VERSION", "").strip()
             or "unspecified",
-            "model_version": os.environ.get("KONTUR_MODEL_VERSION", "").strip() or "none",
+            "model_version": package_model_version(),
         },
+        "object_id_basis": bases,
         "objects": objects,
         "skipped": skipped,
         "stage_resolutions": resolutions,
@@ -779,6 +875,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument(
+        "--object-id",
+        default=None,
+        help="object_id, если нет files_index.jsonl и object.json",
+    )
+    parser.add_argument(
         "--pages-text",
         action="store_true",
         help="дополнительно pages_text_<obj>.jsonl: текст, bbox, engine",
@@ -786,7 +887,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     _ensure_file_timeout()
     try:
-        report = run_directory(args.input, args.out, pages_text=args.pages_text)
+        report = run_directory(
+            args.input,
+            args.out,
+            pages_text=args.pages_text,
+            object_id=args.object_id,
+        )
     except (ValueError, OSError, QuarantineViolation) as exc:
         print(str(exc), file=sys.stderr)
         return 2
