@@ -42,7 +42,7 @@
     "passes": ["number", "room_pass"],
     "room_compare": {
       "room_regex": "^(?:\\d{3}|0\\d{2}\\.\\d)$",
-      "feature_regex": "^(?:В|вытяж\\w*)$",
+      "feature_regex": "^(?:В\\d{0,2}|вытяж\\w*)$",
       "bind_radius": 0.08,
       "pair_jaccard_min": 0.5,
       "max_differences": 8
