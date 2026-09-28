@@ -5,7 +5,6 @@
 
 <p align="center">
   <a href="https://github.com/KonkovDV/Kontur/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/KonkovDV/Kontur/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="LICENSE"><img alt="Лицензия Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white">
   <a href="docker-compose.offline.yml"><img alt="Docker Compose офлайн" src="https://img.shields.io/badge/Docker_Compose-offline-2496ED?logo=docker&amp;logoColor=white"></a>
   <a href="contracts/openapi.yaml"><img alt="OpenAPI 3.1" src="https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&amp;logoColor=white"></a>
@@ -23,7 +22,8 @@
 файл, страницу, SHA-256 источника и область на листе. Решение принимает
 инспектор. Система его не заменяет и нарушение сама не подтверждает.
 
-Репозиторий публичный, лицензия кода Apache-2.0. Срез 28.09.2026.
+Репозиторий публичный. Код передаётся заказчику задачи, открытой лицензии
+на него нет. Срез 28.09.2026.
 Гейты приёмки I/J/K/L открыты.
 
 **Для жюри:** [пакет формы](submission/README.md) ·
@@ -404,7 +404,8 @@ docs/           ADR, архитектура, метрики, трассируе�
 | План работ | [`docs/WORK_PLAN.md`](docs/WORK_PLAN.md), [`docs/PLAN_2026_09.md`](docs/PLAN_2026_09.md) |
 | Срез 21.09, архив | [`docs/GH_SITUATION_2026_09_21.md`](docs/GH_SITUATION_2026_09_21.md) |
 
-## Лицензия
+## Права на код
 
-Код — Apache-2.0, [`LICENSE`](LICENSE). Модели и пакеты третьих сторон —
-[`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md).
+Код Контура передаётся заказчику задачи. Открытой лицензии на него в
+репозитории нет. Модели и пакеты третьих сторон остаются под лицензиями своих
+авторов — [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md).

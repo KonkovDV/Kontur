@@ -2,7 +2,8 @@
 
 **Ссылка для формы:** https://github.com/KonkovDV/Kontur
 
-Публичный репозиторий. Лицензия кода — Apache-2.0 (`LICENSE`).
+Публичный репозиторий. Код передаётся заказчику задачи, открытой лицензии
+на него нет.
 Гейты I/J/K/L открыты.
 
 ## Структура
@@ -33,7 +34,8 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
 
 ## Что фиксирует сборку
 
-Лицензия — Apache-2.0, [`LICENSE`](../../LICENSE). Сторонние пакеты —
+Код Контура передаётся заказчику без открытой лицензии. Сторонние пакеты
+и веса — под лицензиями своих авторов:
 [`THIRD_PARTY_NOTICES.md`](../../docs/THIRD_PARTY_NOTICES.md).
 Зависимости Python — [`backend/requirements.lock`](../../backend/requirements.lock).
 Web и gateway — [`web/package-lock.json`](../../web/package-lock.json),

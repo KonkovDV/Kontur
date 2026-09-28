@@ -1,6 +1,6 @@
 # Уведомления о сторонних компонентах
 
-Код Контура — Apache-2.0, см. `LICENSE`. Ниже лицензии зависимостей, которые реально указаны в `backend/pyproject.toml`, `web/package.json` и `gateway/package.json`. Версии Python сняты с метаданных установленных пакетов 23.09.2026 (`License` / `License-Expression`). Лицензии npm сняты командой `npm view <имя> license` в тот же день.
+Код Контура передаётся заказчику задачи, открытой лицензии на него нет. Ниже лицензии зависимостей, которые реально указаны в `backend/pyproject.toml`, `web/package.json` и `gateway/package.json`. Версии Python сняты с метаданных установленных пакетов 23.09.2026 (`License` / `License-Expression`). Лицензии npm сняты командой `npm view <имя> license` в тот же день.
 
 ## Python
 
@@ -39,4 +39,4 @@
 
 ## Образы compose
 
-PostgreSQL, Redis, RabbitMQ и MinIO в `docker-compose.yml` — чужие образы. Их тексты лицензий в этот репозиторий не копируются. Образ `minio/minio` на Docker Hub удалён; стенд берёт архивный `bitnamilegacy/minio`. Бинарник MinIO внутри него — GNU AGPL-3.0 и остаётся отдельным контейнером, в код Apache-2.0 он не входит.
+PostgreSQL, Redis, RabbitMQ и MinIO в `docker-compose.yml` — чужие образы. Их тексты лицензий в этот репозиторий не копируются. Образ `minio/minio` на Docker Hub удалён; стенд берёт архивный `bitnamilegacy/minio`. Бинарник MinIO внутри него — GNU AGPL-3.0 и остаётся отдельным контейнером, в код Контура он не входит.

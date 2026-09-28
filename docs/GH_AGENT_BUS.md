@@ -13,7 +13,7 @@ executable. Инварианты — [`../AGENTS.md`](../AGENTS.md). Срез �
 
 ## Зачем так, а не «чат в комментариях»
 
-Репозиторий публичный, лицензия кода Apache-2.0. Ruleset `main-pr-and-ci`
+Репозиторий публичный, код передаётся заказчику без открытой лицензии. Ruleset `main-pr-and-ci`
 (id 23890545) активен на `main`: PR обязателен, force-push и удаление ветки
 запрещены, обязательны checks `backend`, `contracts`, `db`, `claims`,
 `frontend`, `container-config`, `container-core`, `container-gateway`,
