@@ -96,7 +96,7 @@ JSON/DOCX/XML/PDF, чтение абзацев и таблиц DOCX, пакет�
 
 ## Состояние
 
-Срез 23.09.2026. Гейты I/J/K/L **открыты**.
+Срез 28.09.2026. Гейты I/J/K/L **открыты**.
 Coverage: 55 executable / 72 extractor_missing / 1 advisory / 4 source_missing из 132 объявленных.
 OCR `MEASURED`: движок есть, порог не взят. Frozen val нет. РиН ACK нет. Freeze инфры до 29.09.
 
@@ -143,8 +143,8 @@ ACK РиН нет.
 Веса OCR лежат в `vendor/ocr`. Сборка ядра сверяет SHA-256 и не скачивает их.
 Зависимости ядра и relay ставятся из `backend/requirements.lock` по хешам,
 без editable-установки. `scripts/offline_bundle.sh` сохраняет уже собранные
-образы в tar и пишет `SHA256SUMS`. Прогон 27.09.2026 на Windows Docker
-записан в [`docs/DEMO_COLD_START.md`](docs/DEMO_COLD_START.md): четыре
+образы в tar и пишет `SHA256SUMS`. Прогоны 27.09.2026 и 28.09.2026 на Windows Docker
+записаны в [`docs/DEMO_COLD_START.md`](docs/DEMO_COLD_START.md): четыре
 образа приложения удалены, возвращены через `docker load`, стенд поднят
 с `pull_policy: never` и `--no-build`, `healthz` ответил 200. Хост от сети
 не отключался. Это не чистая Linux-машина.
