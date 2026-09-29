@@ -64,9 +64,9 @@ gh issue view N --json title,labels,parent,subIssues,blockedBy,blocking,comments
 **Не начинать работу, пока не выполнен claim.**
 
 Issue [#86](https://github.com/KonkovDV/Kontur/issues/86) — снимок
-**21.09** (29 executable / 103 extractor_missing). Текущая разбивка —
-только `data/matrix/coverage_snapshot.json` и `coverage_counts` в
-`agent_handoff.json` (на 23.09: 44 / 83 / 1 / 4).
+**21.09** (29 executable / 103 extractor_missing). Срез 23.09 был
+44 / 83 / 1 / 4. Живая разбивка — `data/matrix/coverage_snapshot.json` и
+`coverage_counts` в `agent_handoff.json`: **55 / 72 / 1 / 4**.
 
 Проверка свежести контекста (защита от context drift):
 
@@ -380,8 +380,9 @@ gh run view RUN_ID --json status,conclusion,workflowName
 8. Не угадывать порядок редакций по «ред. 1 / ред. 2» без successor.
    Не угадывать, что голое число `1200` — миллиметры: перевод мм→м только
    при явном суффиксе. Площадь (`мм²`, `500×300`) не масштабировать как длину.
-9. Не перекрашивать 83 `extractor_missing`. Не ставить `ocr_text=AVAILABLE`.
-10. `export_agent_dumps.py` не гонять до 28.09; `export_git_sha` отстаёт нарочно.
+9. Не переводить `extractor_missing` в `executable` без нового экстрактора.
+   Живых без экстрактора 72. Не ставить `ocr_text=AVAILABLE`.
+10. `export_agent_dumps.py` не гонять до 14:00 29.09; `export_git_sha` отстаёт нарочно.
     Не править руками `train_public_engineering.json`.
 
 ---

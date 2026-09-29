@@ -19,7 +19,7 @@
 
 | Папка | Что внутри |
 |---|---|
-| [`01-repository/`](01-repository/README.md) | Клон, лицензия, команда сборки |
+| [`01-repository/`](01-repository/README.md) | Клон, сторонние лицензии, команда сборки |
 | [`02-documentation/`](02-documentation/README.md) | README, архитектура, метрики, пробелы |
 | [`03-presentation/`](03-presentation/README.md) | Дека и текстовая копия |
 | [`04-prototype/`](04-prototype/README.md) | Как поднять учебный стенд |
