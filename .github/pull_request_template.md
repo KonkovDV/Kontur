@@ -4,14 +4,7 @@ Relates to #
 
 -
 
-## Agent bus
-
-- [ ] Issue claimed (`kontur.agent_bus.v2`) before this branch
-- [ ] One PR for that issue; no concurrent PR from another agent
-- [ ] Host matches labels (`cloud-ok` vs `needs-local-files`)
-- [ ] TOCTOU check: re-read issue comments after claim; no earlier claim from another agent
-
-## Invariants (AGENTS.md 1–14)
+## Инварианты
 
 - [ ] Автомат/LLM не пишет `CONFIRMED_VIOLATION`
 - [ ] Предметные находки с evidence (или `MISSING_EVIDENCE` / `NOT_APPLICABLE`)

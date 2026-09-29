@@ -7,7 +7,7 @@ from kontur.evaluation.agent_dumps import repo_root
 
 def test_invariants_keep_inspector_verdict() -> None:
     root = repo_root()
-    text = (root / "AGENTS.md").read_text(encoding="utf-8")
+    text = (root / "docs" / "ARCHITECTURE.md").read_text(encoding="utf-8")
     assert "CONFIRMED_VIOLATION" in text
     assert "инспектор" in text.lower()
 

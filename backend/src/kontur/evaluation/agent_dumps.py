@@ -131,8 +131,8 @@ def build_handoff(
         "purpose": (
             "Снимок сопровождения. Не frozen val, не GOLD OCR, не scorecard ТЗ."
         ),
-        "human_doc": "AGENTS.md",
-        "invariants_doc": "AGENTS.md",
+        "human_doc": "docs/ARCHITECTURE.md",
+        "invariants_doc": "docs/ARCHITECTURE.md",
         "closes_gate_i": False,
         "closes_gate_j": False,
         "closes_gate_k": False,

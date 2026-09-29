@@ -8,7 +8,7 @@ import subprocess
 from kontur.evaluation.agent_dumps import repo_root
 
 _LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)|href=\"([^\"]+)\"|src=\"([^\"]+)\"")
-_PUBLIC = ("README.md", "AGENTS.md", "docs/", "submission/", "data/", "examples/")
+_PUBLIC = ("README.md", "docs/", "submission/", "data/", "examples/")
 
 
 def test_public_markdown_links_are_tracked() -> None:

@@ -20,8 +20,8 @@
 | TEST_HIDDEN | `OBJ-RECHNIKOV-7-7`, архив `РАЗМЕЧЕННЫЙ_TEST__213.zip` | Материал для порогов |
 | Frozen val | Held-out по `object_id`, JSONL с `gold_positive` / `predicted_positive`, Wilson | Синтетика 16/20 и skip без env |
 
-Разбиение train/validation в продукте — строго по `object_id`
-(инвариант 9, `AGENTS.md`). У организатора в `split_policy.json` есть только
+Разбиение train/validation в продукте — строго по `object_id`.
+У организатора в `split_policy.json` есть только
 `TRAIN_PUBLIC` и `TEST_HIDDEN`. Поля `validation` в инвентаре — пустой список.
 
 ## Что лежит в открытом gold
@@ -76,7 +76,7 @@ Harness замера: `backend/src/kontur/evaluation/frozen_val.py`, opt-in че
 на этих 6 строках.
 
 Публиковать P/R/F1 и recall критических по этому gold нельзя
-(`scripts/check_claims.py`, инвариант 12 `AGENTS.md`).
+(`scripts/check_claims.py`).
 
 ## Что поставка двигает вместо J
 

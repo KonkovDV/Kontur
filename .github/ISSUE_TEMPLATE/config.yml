@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Правила репозитория
-    url: https://github.com/KonkovDV/Kontur/blob/main/AGENTS.md
-    about: Инварианты сверки. Не дублировать новым issue без нужды.
+    url: https://github.com/KonkovDV/Kontur/blob/main/docs/ARCHITECTURE.md
+    about: Где вердикт, где инспектор, что не входит в зачёт.
   - name: Известные пробелы
     url: https://github.com/KonkovDV/Kontur/blob/main/docs/KNOWN_GAPS.md
     about: Что открыто и чем это не является.

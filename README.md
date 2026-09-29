@@ -406,7 +406,6 @@ docs/           ADR, архитектура, метрики, трассируе�
 
 | Тема | Файл |
 |---|---|
-| Инварианты репозитория | [`AGENTS.md`](AGENTS.md) |
 | Оперативный план 28–29.09 | [`docs/PLAN_2026_09_28_29.md`](docs/PLAN_2026_09_28_29.md) |
 | Пакет сдачи, машиночитаемый | [`docs/SUBMISSION_PACK.md`](docs/SUBMISSION_PACK.md) |
 | Карантин датасета | [`docs/DATA_QUARANTINE.md`](docs/DATA_QUARANTINE.md) |
