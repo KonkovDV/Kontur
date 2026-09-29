@@ -7,8 +7,10 @@
   <a href="https://github.com/KonkovDV/Kontur/blob/main/submission/03-presentation/Kontur.pdf"><img alt="Презентация в PDF" src="https://img.shields.io/badge/%D0%9F%D1%80%D0%B5%D0%B7%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F-PDF-EC1C24?style=for-the-badge&amp;logo=files&amp;logoColor=white"></a>
 </p>
 
-Поле формы — эта папка. 24 слайда по шаблону ЛЦТ 2026. Факты сверены с
-репозиторием 28.09.2026. Текстовая копия — [`demo_day_slides.md`](demo_day_slides.md).
+Поле формы — эта папка. В [`Kontur.pptx`](Kontur.pptx) и [`Kontur.pdf`](Kontur.pdf)
+30 слайдов, обновление 29.09.2026. Текстовая копия
+[`demo_day_slides.md`](demo_day_slides.md) описывает прежние 24 слайда и не
+перечисляет все слайды текущего файла.
 Ролик в этот пакет не входит.
 
 | Файл | Роль |
