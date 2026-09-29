@@ -1,0 +1,76 @@
+{
+  "code": "SPZU-034",
+  "section": "СПЗУ",
+  "name": "Точки и координаты подключения внешних сетей",
+  "unit": "Коорд.",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Смещение точки подключения наружной сети относительно ТУ и ПД > 0.5 м.",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Сводный план инженерных сетей (СПЗУ)"
+    },
+    "rd": {
+      "description": "Наружные сети (НВК/НТС); Разбивочные чертежи"
+    },
+    "id": {
+      "description": "Исполнительная геодезическая схема до точки врезки"
+    }
+  },
+  "extractor": {
+    "type": "exact_field",
+    "regex": null,
+    "anchors": [
+      "Точки и координаты подключения внешних сетей"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "eq",
+    "rounding": "none",
+    "unit_target": "Коорд."
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

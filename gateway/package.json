@@ -1,0 +1,21 @@
+{
+  "name": "kontur-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Node.js BFF: внешний контракт OpenAPI, аутентификация, RBAC, проксирование в Python-ядро (ТЗ п. 1.5)",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test src/limits.test.js",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "http-proxy-middleware": "^4.2.0",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "eslint": "^10.11.0"
+  }
+}

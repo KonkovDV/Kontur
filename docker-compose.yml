@@ -1,0 +1,264 @@
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+    environment:
+      POSTGRES_DB: kontur
+      POSTGRES_USER: kontur
+      POSTGRES_PASSWORD: kontur
+    ports: ["127.0.0.1:5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kontur -d kontur"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/src/kontur/infrastructure/db/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+
+  redis:
+    image: redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    mem_limit: 256m
+    cpus: 0.50
+    pids_limit: 128
+    # Кеш парсинга по хешу файла (ТЗ п. 9.1, шаг 5). Не durable queue.
+    ports: ["127.0.0.1:6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine@sha256:606d8c0d6b3c18d1da9afc53bc7cdb2a8d5486df91b5a9830e9e07626c9ae281
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+    # guest ограничен loopback; отдельный пользователь доступен сервисам Compose.
+    environment:
+      RABBITMQ_DEFAULT_USER: kontur
+      RABBITMQ_DEFAULT_PASS: kontur
+    # Quorum-очередь relay: at-least-once; event_id — ключ будущего inbox/dedup.
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+
+  minio:
+    # Docker Hub удалил minio/minio (404). Quay без логина отвечает 401.
+    # Архивный образ Bitnami сам поднимает MinIO от uid 1001.
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5@sha256:6dabb4a2088c9a79908de3bc05f4586c23ad2182c8908e7e3acbf61c1467fb20
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 256
+    environment:
+      MINIO_ROOT_USER: kontur
+      MINIO_ROOT_PASSWORD: kontur-dev-secret
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - minio:/bitnami/minio/data
+
+  core:
+    # Пакет жюри с хоста, не смена command сервиса:
+    # python -m kontur.cli.run_package --input <dir> --out <dir>
+    # Стенд жюри: 8 CPU и 8 ГБ. Раннер GitHub имеет 4 CPU, поэтому CI
+    # задаёт KONTUR_CORE_CPUS=2 и контейнер там стартует.
+    mem_limit: ${KONTUR_CORE_MEM_LIMIT:-8g}
+    cpus: ${KONTUR_CORE_CPUS:-8}
+    pids_limit: 256
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
+    command: uvicorn kontur.presentation.api:app --host 0.0.0.0 --port 8000
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
+      KONTUR_REDIS_URL: redis://redis:6379/0
+      KONTUR_AMQP_URL: amqp://kontur:kontur@rabbitmq:5672/
+      KONTUR_JWT_ISSUER: ${KONTUR_JWT_ISSUER}
+      KONTUR_JWT_AUDIENCE: ${KONTUR_JWT_AUDIENCE}
+      KONTUR_JWT_ALGORITHM: ${KONTUR_JWT_ALGORITHM:-RS256}
+      KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY}
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
+      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/healthz')
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    ports: ["127.0.0.1:8000:8000"]
+
+  outbox-relay:
+    mem_limit: 384m
+    cpus: 0.50
+    pids_limit: 128
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.relay
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
+      KONTUR_AMQP_URL: amqp://kontur:kontur@rabbitmq:5672/
+      KONTUR_OUTBOX_POLL_SECONDS: ${KONTUR_OUTBOX_POLL_SECONDS:-1}
+      KONTUR_OUTBOX_ERROR_SECONDS: ${KONTUR_OUTBOX_ERROR_SECONDS:-5}
+      KONTUR_AMQP_TIMEOUT_SECONDS: ${KONTUR_AMQP_TIMEOUT_SECONDS:-10}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  inbox-consumer:
+    mem_limit: 384m
+    cpus: 0.50
+    pids_limit: 128
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.relay
+    command: ["python", "/app/consume_inbox.py"]
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
+      KONTUR_AMQP_URL: amqp://kontur:kontur@rabbitmq:5672/
+      KONTUR_INBOX_EMPTY_SECONDS: ${KONTUR_INBOX_EMPTY_SECONDS:-1}
+      KONTUR_INBOX_ERROR_SECONDS: ${KONTUR_INBOX_ERROR_SECONDS:-5}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway:
+    mem_limit: 256m
+    cpus: 0.50
+    pids_limit: 128
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_CORE_URL: http://core:8000
+    depends_on:
+      core:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    ports: ["${KONTUR_BIND:-127.0.0.1}:3000:3000"]
+
+  package-out-init:
+    profiles: ["runner"]
+    mem_limit: 64m
+    cpus: 0.1
+    pids_limit: 32
+    image: kontur-package:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
+    user: "0:0"
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ${KONTUR_PACKAGE_OUT:-./out}:/out
+    entrypoint: ["chown", "10001:10001", "/out"]
+    network_mode: none
+  package-runner:
+    profiles: ["runner"]
+    mem_limit: ${KONTUR_CORE_MEM_LIMIT:-8g}
+    cpus: ${KONTUR_CORE_CPUS:-8}
+    pids_limit: 256
+    image: kontur-package:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
+    volumes:
+      - ${KONTUR_PACKAGE_INPUT:-./input}:/input:ro
+      - ${KONTUR_PACKAGE_OUT:-./out}:/out
+    entrypoint: ["python", "-m", "kontur.cli.run_package", "--input", "/input", "--out", "/out"]
+    network_mode: none
+    depends_on:
+      package-out-init:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
+  rabbitmq:
+  minio:

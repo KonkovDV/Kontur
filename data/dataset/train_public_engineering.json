@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0.0",
+  "observed_at": "2026-09-24",
+  "source": "python -m kontur.evaluation.train_public",
+  "in_git": true,
+  "purpose": "Инженерный снимок gold_evidence_mixed_as_rd на TRAIN_PUBLIC. Не frozen val, не порог ТЗ.",
+  "pred_jsonl": "data/dataset/train_public_pred.jsonl",
+  "why_zero_hits": "Выгрузка python -m kontur.evaluation.train_public. n_read=2, hits=0 из 6. IOS4-078: LOW_QUALITY (PD: якорь или число не найдены) IOS4-079: LOW_QUALITY (PD: якорь или число не найдены). closes_gate_j=false. Не порог ТЗ.",
+  "n_index": 203,
+  "n_read": 2,
+  "n_skip_stage": 11,
+  "n_skip_missing": 0,
+  "n_skip_excluded": 0,
+  "n_skip_overlay": 0,
+  "n_objects_scored": 1,
+  "stages_by_object": {
+    "OBJ-TYUMENSKAYA-5-GOLD-SEED": [
+      "PD",
+      "RD"
+    ],
+    "OBJ-NOVOSLOBODSKAYA": []
+  },
+  "stage_page_model": "gold_evidence_mixed_as_rd",
+  "gold_mixed_loaded_as": "RD",
+  "gold_file_ids": [
+    "F0171",
+    "F0201"
+  ],
+  "gold_finding_status": {
+    "IOS4-078": "LOW_QUALITY",
+    "IOS4-079": "LOW_QUALITY"
+  },
+  "gold_finding_rationale": {
+    "IOS4-078": "PD: якорь или число не найдены",
+    "IOS4-079": "PD: якорь или число не найдены"
+  },
+  "n_gold_matrix": 6,
+  "hits": 0,
+  "recall_point": 0.0,
+  "recall_low": 0.0,
+  "recall_n": 6,
+  "recall_meets_tz": false,
+  "closes_gate_j": false,
+  "gap_ios4_val_open": true,
+  "train_public_not_frozen_val": true,
+  "note": "6 матричных позитивов TRAIN_PUBLIC. Не публиковать как порог ТЗ."
+}

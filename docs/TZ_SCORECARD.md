@@ -1,0 +1,31 @@
+# Три контура готовности (не приёмка ТЗ)
+
+Машиночитаемый файл: [`data/dataset/tz_scorecard.json`](../data/dataset/tz_scorecard.json).
+Пересборка: `python scripts/export_agent_dumps.py`.
+
+Это **инженерный чеклист**, не Character Accuracy / Precision / Recall и не
+заявление, что порог раздела 14 измерен. Гейты I/J/K/L в scorecard всегда
+`false`. Поля «процентов готовности по ТЗ» нет.
+
+## Зачем три контура
+
+Одна цифра смешивает schema-valid правила, замер на GOLD и эксплуатацию.
+ТЗ так принимать нельзя.
+
+| Контур | Смысл | Сейчас |
+|---|---|---|
+| Code | Функции и автотесты | часть HTTP/матрицы/протокола; 55 executable из 132 |
+| Acceptance | Пороги на frozen/GOLD с 95% CI | не измерены; 6 gold-позитивов < n=16 для recall |
+| Production | OIDC, TLS, AV, backup, SLA | JWT containment и hardening контейнеров; ruleset `main-pr-and-ci` (id 23890545), обязательных ревью 0; не OIDC и не закрытие гейтов I/J/K/L |
+
+Конкурсный RC к 29.09.2026 — безопасный finalize, честный coverage, рекордер
+Gate K, измеренный Gate L **без** production SLA. Полные 100% ТЗ без GOLD,
+frozen val и пяти инспекторов **недостижимы**.
+
+OSINT Document AI (срез 28.09.2026, литература 21.09, не bake-off GOLD): [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md).
+Кластеры правил: [`extractor_families.json`](../data/matrix/extractor_families.json)
+(группировка по `extractor.type`, не 132/132 executable).
+Поштучный триаж семейств `exact_field` / `presence`:
+[`EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) и
+[`family_triage.json`](../data/matrix/family_triage.json). Живая разбивка —
+`executable` 55, `extractor_missing` 72, `advisory` 1, `source_missing` 4.

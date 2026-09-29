@@ -1,0 +1,76 @@
+{
+  "code": "ODI-115",
+  "section": "ОДИ",
+  "name": "Технические параметры и наличие инвалидных подъемников",
+  "unit": "—",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Исключение подъемника из РД или замена на модель без автоматического управления.",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Структурные схемы ОДИ; Спецификация"
+    },
+    "rd": {
+      "description": "Чертежи установки подъемников (АР/ТХ)"
+    },
+    "id": {
+      "description": "Технические паспорта; Декларации; Акты ПНР"
+    }
+  },
+  "extractor": {
+    "type": "exact_field",
+    "regex": null,
+    "anchors": [
+      "Технические параметры и наличие инвалидных подъемников"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "eq",
+    "rounding": "none",
+    "unit_target": null
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

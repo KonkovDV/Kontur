@@ -1,0 +1,99 @@
+{
+  "code": "PPM-103",
+  "section": "ППМ",
+  "name": "Пределы огнестойкости противопожарных дверей и ворот (EI)",
+  "unit": "мин",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Снижение предела огнестойкости (например, EI-60 на EI-30) в РД.",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Ведомость проемов в преградах (ППМ)"
+    },
+    "rd": {
+      "description": "Спецификация дверей; Маркировка EI (АР)"
+    },
+    "id": {
+      "description": "Сертификаты на двери; Акты монтажа"
+    }
+  },
+  "extractor": {
+    "type": "enum",
+    "regex": "(?:(?<=[EЕ]I)|(?<=[EЕ]I-)|(?<=[EЕ]I ))\\s*(?:120|150|180|15|30|45|60|90)(?![0-9])",
+    "anchors": [
+      "Предел огнестойкости",
+      "Противопожарная дверь",
+      "Противопожарные ворота"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "upper"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "class_not_lower",
+    "value": [
+      "15",
+      "30",
+      "45",
+      "60",
+      "90",
+      "120",
+      "150",
+      "180"
+    ],
+    "rounding": "none",
+    "unit_target": "мин"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [
+    {
+      "identifier": "ФЗ № 123-ФЗ",
+      "issuer": "Федеральное Собрание России",
+      "clause": "Статья 88 (требования к противопожарным преградам и заполнению проёмов)",
+      "effective_from": "2009-05-01",
+      "effective_to": null,
+      "mandatory": "law",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "same_class_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "better_class_in_rd_is_not_violation",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "lower_class_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    }
+  ]
+}

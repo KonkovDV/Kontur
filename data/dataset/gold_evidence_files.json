@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "observed_at": "2026-09-19",
+  "purpose": "CONFIRMED_VIOLATION_EVIDENCE открытого TRAIN_PUBLIC. Не TEST_HIDDEN. Не AUTO_FIELD_CANDIDATE.",
+  "source": "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../data/annotations.jsonl",
+  "hidden_test_contents_inspected": false,
+  "closes_gate_j": false,
+  "mixed_policy": "Gold-annotated RD_ID_MIXED грузим как RD (actual для PD↔RD). Не ID и не оба. Прочий MIXED по-прежнему skip.",
+  "n_fragments": 20,
+  "files": [
+    {
+      "file_id": "F0171",
+      "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED",
+      "stage_raw": "PD",
+      "loaded_as": "PD",
+      "codes": ["FREE-HEATING-001", "IOS4-078", "IOS4-079"],
+      "matrix_codes": ["IOS4-078", "IOS4-079"]
+    },
+    {
+      "file_id": "F0201",
+      "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED",
+      "stage_raw": "RD_ID_MIXED",
+      "loaded_as": "RD",
+      "codes": ["IOS4-078", "IOS4-079"],
+      "matrix_codes": ["IOS4-078", "IOS4-079"]
+    },
+    {
+      "file_id": "F0202",
+      "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED",
+      "stage_raw": "RD_ID_MIXED",
+      "loaded_as": "RD",
+      "codes": ["FREE-HEATING-001"],
+      "matrix_codes": []
+    }
+  ]
+}

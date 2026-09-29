@@ -1,0 +1,60 @@
+{
+  "code": "PZ-015",
+  "section": "ПЗ",
+  "name": "Категория надежности электроснабжения",
+  "unit": "Кат.",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Снижение категории (например, перевод ИТП с 1-й на 2-ю категорию) в РД относительно ПД.",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": ["PD", "RD"],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {"description": "Раздел ПЗ: Текст (Требования к надежности)"},
+    "rd": {"description": "Раздел ЭОМ: Принципиальная схема ВРУ/ГРЩ"},
+    "id": {"description": "Акт допуска Ростехнадзора"}
+  },
+  "extractor": {
+    "type": "enum",
+    "regex": "[1-3]",
+    "anchors": [
+      "Категория надежности электроснабжения"
+    ],
+    "normalization": ["nfc", "collapse_spaces"],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "class_not_lower",
+    "value": ["3", "2", "1"],
+    "rounding": "none",
+    "unit_target": "Кат."
+  },
+  "required_evidence": ["expected", "actual"],
+  "normative_refs": [
+    {
+      "identifier": "ПУЭ (гл. 1.2)",
+      "issuer": "Минэнерго России",
+      "clause": "Правила устройства электроустановок, гл. 1.2 (категории надежности)",
+      "effective_from": "2002-01-01",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {"name": "same_category_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE"},
+    {"name": "category_improved_is_not_violation", "expected_status": "AUTO_NO_DIFFERENCE"},
+    {"name": "category_lowered_gives_candidate", "expected_status": "CANDIDATE"},
+    {"name": "required_stage_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE"}
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "code": "POS-087",
+  "section": "ПОС",
+  "name": "Технологическая последовательность возведения",
+  "unit": "—",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Самовольное изменение критических технологий (например, монолит на сборный ЖБ).",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": "Технология возведения названа словом из закрытого списка (монолитная / сборная / сборно-монолитная) и в ПОС, и в технологической карте РД."
+  },
+  "sources": {
+    "pd": {
+      "discipline": [
+        "ПОС"
+      ],
+      "table": "Методы производства работ",
+      "description": "Текст ПОС: Методы производства работ"
+    },
+    "rd": {
+      "discipline": [
+        "ПОС",
+        "ППР"
+      ],
+      "table": "Технологическая карта",
+      "description": "Технологические карты (ППР)"
+    },
+    "id": {
+      "document_kind": [
+        "Общий журнал работ"
+      ],
+      "table": null,
+      "description": "Общий журнал работ (записи о ходе работ)"
+    }
+  },
+  "extractor": {
+    "type": "exact_field",
+    "regex": "(сборно-монолитн|монолитн|сборн)",
+    "anchors": [
+      "Технологическая последовательность возведения",
+      "Технология возведения",
+      "Метод возведения",
+      "Методы производства работ",
+      "Конструктивная схема каркаса"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "upper"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "eq",
+    "rounding": "none",
+    "unit_target": null
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [
+    {
+      "identifier": "ГрК РФ № 190-ФЗ",
+      "issuer": "Российская Федерация",
+      "clause": "ст. 52 ч. 7 (отклонение от проектной документации)",
+      "effective_from": "2005-01-10",
+      "effective_to": null,
+      "mandatory": "law",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "Постановление Правительства РФ № 87",
+      "issuer": "Правительство Российской Федерации",
+      "clause": "п. 23 (раздел 6 «Проект организации строительства»)",
+      "effective_from": "2008-02-16",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "СП 48.13330.2019",
+      "issuer": "Минстрой России",
+      "clause": "п. 6.2 (проект производства работ и технологические карты)",
+      "effective_from": "2020-06-25",
+      "effective_to": null,
+      "mandatory": "mandatory_list",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "same_technology_in_pos_and_ppr_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "monolithic_replaced_by_precast_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "rd_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "technology_outside_closed_list_gives_low_quality",
+      "expected_status": "LOW_QUALITY"
+    },
+    {
+      "name": "two_technologies_in_one_window_give_abstain",
+      "expected_status": "ABSTAIN"
+    }
+  ]
+}

@@ -1,0 +1,301 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e "backend[dev]"
+      - run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
+      - run: ruff check backend scripts
+      - run: mypy --strict backend/src
+      - run: pytest backend/tests -q
+
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install jsonschema pyyaml
+      - name: Схемы и OpenAPI разбираются
+        run: python scripts/check_contracts.py
+
+  db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kontur
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PostgreSQL adapter and Kontur core
+        run: pip install -e "backend[store]"
+      - name: Схема разворачивается, ограничения срабатывают
+        env:
+          PGPASSWORD: postgres
+        # checks.sql выполняет запрещённые действия и ждёт отказа СУБД.
+        # Если ограничение исчезло, скрипт падает с ошибкой KNT99.
+        run: |
+          psql -h localhost -p 5432 -U postgres -d kontur -v ON_ERROR_STOP=1 \
+            -f backend/src/kontur/infrastructure/db/schema.sql \
+            -f backend/src/kontur/infrastructure/db/checks.sql
+      - name: Live protocol materialization concurrency
+        env:
+          KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
+        run: python scripts/check_protocol_concurrency.py
+      - name: Live transactional inbox settlement
+        env:
+          KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
+        run: python scripts/check_inbox.py
+
+  claims:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Честность публичных формулировок
+        run: python scripts/check_claims.py
+
+  frontend:
+    # RT-2609-18: проверка типов TypeScript в web/
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Установить зависимости
+        run: npm ci
+      - name: Проверка типов TypeScript (noEmit в tsconfig.json)
+        run: npx tsc --noEmit
+      - name: Полосы списка находок
+        run: npm test
+
+  container-config:
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate base and offline compose contracts
+        run: |
+          set -euo pipefail
+
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.offline.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.demo.yml config --quiet
+          docker compose config --format json > /tmp/compose-base.json
+          docker compose -f docker-compose.yml -f docker-compose.offline.yml \
+            config --format json > /tmp/compose-offline.json
+
+          cat > /tmp/expected-compose-limits.json <<'JSON'
+          {
+            "core": {"mem_limit": 8589934592, "cpus": 8, "pids_limit": 256},
+            "gateway": {"mem_limit": 268435456, "cpus": 0.5, "pids_limit": 128},
+            "outbox-relay": {"mem_limit": 402653184, "cpus": 0.5, "pids_limit": 128},
+            "inbox-consumer": {"mem_limit": 402653184, "cpus": 0.5, "pids_limit": 128},
+            "postgres": {"mem_limit": 1073741824, "cpus": 1.0, "pids_limit": 256},
+            "redis": {"mem_limit": 268435456, "cpus": 0.5, "pids_limit": 128},
+            "rabbitmq": {"mem_limit": 1073741824, "cpus": 1.0, "pids_limit": 256},
+            "minio": {"mem_limit": 536870912, "cpus": 1.0, "pids_limit": 256}
+          }
+          JSON
+
+          assert_limits() {
+            local config="$1"
+            jq -e --slurpfile expected /tmp/expected-compose-limits.json '
+              def limits:
+                with_entries(.value |= {
+                  mem_limit: (.mem_limit | tonumber),
+                  cpus: (.cpus | tonumber),
+                  pids_limit: .pids_limit
+                });
+              (.services | keys | sort) == ($expected[0] | keys | sort)
+              and all(.services[];
+                has("mem_limit") and has("cpus") and has("pids_limit"))
+              and all(.services[];
+                ((.deploy? // {}) | has("resources") | not))
+              and ((.services | limits) == $expected[0])
+            ' "$config" >/dev/null
+          }
+
+          assert_limits /tmp/compose-base.json
+          assert_limits /tmp/compose-offline.json
+          jq -S '.services | with_entries(
+            .value |= {mem_limit, cpus, pids_limit}
+          )' /tmp/compose-base.json > /tmp/compose-base-limits.json
+          jq -S '.services | with_entries(
+            .value |= {mem_limit, cpus, pids_limit}
+          )' /tmp/compose-offline.json > /tmp/compose-offline-limits.json
+          cmp /tmp/compose-base-limits.json /tmp/compose-offline-limits.json
+
+  container-core:
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+      KONTUR_CORE_CPUS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build core image
+        run: docker compose build core
+      - name: Verify core runtime contract and multiprocessing spawn
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh core -ec '
+            test "$(id -u)" = 10001
+            test "$(id -g)" = 10001
+            if touch /app/.container-core-write-test; then
+              echo "expected /app to reject writes" >&2
+              exit 1
+            fi
+            touch /tmp/container-core-write-test
+            rm /tmp/container-core-write-test
+            touch /dev/shm/container-core-write-test
+            rm /dev/shm/container-core-write-test
+            tesseract --version >/dev/null
+            python -c '\''from kontur.infrastructure.ocr_rapid import weights_ready; assert weights_ready()'\''
+            python -c '\''from kontur.infrastructure.pdf_guard import run_pdf_parse_sync; result = run_pdf_parse_sync(len, b"kontur", timeout_s=10); assert result == 6, result'\''
+          '
+
+  container-gateway:
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+      KONTUR_CORE_CPUS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Gateway limit tests
+        working-directory: gateway
+        run: |
+          npm ci
+          npm test
+      - name: Build gateway image
+        run: docker compose build gateway
+      - name: Verify gateway runtime contract
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh gateway -ec '
+            test "$(id -u)" = 10001
+            test "$(id -g)" = 10001
+            if touch /app/.container-gateway-write-test; then
+              echo "expected /app to reject writes" >&2
+              exit 1
+            fi
+            touch /tmp/container-gateway-write-test
+            rm /tmp/container-gateway-write-test
+          '
+
+  container-smoke:
+    needs: [container-config, container-core, container-gateway]
+    runs-on: ubuntu-latest
+    env:
+      KONTUR_JWT_ISSUER: https://issuer.example.invalid/
+      KONTUR_JWT_AUDIENCE: kontur-api
+      KONTUR_JWT_ALGORITHM: RS256
+      KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
+      KONTUR_CORE_CPUS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start core and gateway
+        run: |
+          docker compose build core gateway
+          docker compose up -d --no-deps core gateway
+      - name: Verify health and hardened runtime configuration
+        run: |
+          set -euo pipefail
+
+          wait_for_health() {
+            local url="$1"
+            local attempt
+            for attempt in $(seq 1 30); do
+              if curl --fail --silent --show-error \
+                --connect-timeout 2 --max-time 5 "$url" >/dev/null; then
+                return 0
+              fi
+              if [ "$attempt" -eq 30 ]; then
+                echo "health check failed after $attempt attempts: $url" >&2
+                return 1
+              fi
+              sleep 2
+            done
+          }
+
+          assert_container() {
+            local service="$1"
+            local container_id
+            container_id="$(docker compose ps -q "$service")"
+            test -n "$container_id"
+            test "$(docker inspect --format '{{.Config.User}}' "$container_id")" = "10001:10001"
+            test "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$container_id")" = "true"
+            docker inspect --format '{{json .HostConfig.CapDrop}}' "$container_id" \
+              | jq -e 'map(ascii_upcase) | index("ALL") != null' >/dev/null
+            docker inspect --format '{{json .HostConfig.SecurityOpt}}' "$container_id" \
+              | jq -e 'any(. == "no-new-privileges:true")' >/dev/null
+            docker inspect --format '{{json .HostConfig.Tmpfs}}' "$container_id" \
+              | jq -e 'has("/tmp")' >/dev/null
+          }
+
+          wait_for_health http://127.0.0.1:8000/api/v1/healthz
+          wait_for_health http://127.0.0.1:3000/healthz
+          wait_for_health http://127.0.0.1:3000/api/v1/healthz
+
+          assert_container core
+          assert_container gateway
+
+          core_id="$(docker compose ps -q core)"
+          gateway_id="$(docker compose ps -q gateway)"
+          docker inspect --format '{{json .NetworkSettings.Ports}}' "$core_id" \
+            | jq -e '."8000/tcp" | length > 0 and all(.[]; .HostIp == "127.0.0.1")' >/dev/null
+          docker inspect --format '{{json .NetworkSettings.Ports}}' "$gateway_id" \
+            | jq -e '."3000/tcp" | length > 0 and all(.[]; .HostIp == "127.0.0.1")' >/dev/null
+      - name: Diagnose compose failure
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs core gateway
+      - name: Cleanup containers
+        if: always()
+        run: docker compose down -v --remove-orphans

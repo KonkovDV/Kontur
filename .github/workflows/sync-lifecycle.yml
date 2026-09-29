@@ -1,0 +1,39 @@
+name: sync-lifecycle-db
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  sync-lifecycle-db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kontur
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e "backend[store]"
+      - name: Apply source-of-truth schema
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d kontur -v ON_ERROR_STOP=1 \
+            -f backend/src/kontur/infrastructure/db/schema.sql
+      - name: Prove retry exhaustion and manual recovery
+        env:
+          KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
+        run: python scripts/check_sync_lifecycle.py

@@ -1,0 +1,92 @@
+{
+  "code": "OOS-099",
+  "section": "ООС",
+  "name": "Верфикация транспортных средств (ГЛОНАСС)",
+  "unit": "Статус",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Рейс самосвала без ГЛОНАСС-трекера или не зарегистрированного в РНИС.",
+  "coverage": "source_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": "Регистрация техники и трек ГЛОНАСС живут в РНИС и телеметрии АИС «ОСИГ». Перечень спецтехники в РД не доказывает факт рейса: нужен коннектор к РНИС."
+  },
+  "sources": {
+    "pd": {
+      "discipline": [
+        "ООС"
+      ],
+      "table": "Мероприятия по экологичной транспортировке",
+      "description": "Мероприятия по эко-транспортировке (ООС)"
+    },
+    "rd": {
+      "discipline": [
+        "ООС"
+      ],
+      "table": "Перечень спецтехники (ТРПО)",
+      "description": "Перечень спецтехники (ТРПО)"
+    },
+    "id": {
+      "document_kind": [
+        "Логи РНИС",
+        "Телеметрия АИС «ОСИГ»"
+      ],
+      "table": null,
+      "description": "Логи РНИС; Телеметрия в АИС \"ОСИГ\""
+    }
+  },
+  "extractor": {
+    "type": "exact_field",
+    "regex": null,
+    "anchors": [
+      "Верфикация транспортных средств (ГЛОНАСС)"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "upper"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "eq",
+    "rounding": "none",
+    "unit_target": "Статус"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [
+    {
+      "identifier": "Постановление Правительства Москвы № 257-ПП",
+      "issuer": "Правительство Москвы",
+      "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+      "effective_from": "2015-05-12",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "registry_evidence_is_outside_pd_rd_id_package",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "no_value_regex_fails_closed_to_low_quality",
+      "expected_status": "LOW_QUALITY"
+    }
+  ]
+}

@@ -1,0 +1,602 @@
+"""L1 Identity: основная надпись и метаданные файла.
+
+Ключ Exact Match (ТЗ п. 14.3, вопрос 10): `document_code`, `revision`, `sheet`.
+NFC и схлопывание пробелов; регистр в шифре значим. Пустой штамп остаётся
+null. Обозначение из имени файла пишется в `identity_code` с
+`code_basis=FILENAME` и не становится `document_code`. Конфликт штампа и
+имени не выбирает имя: это `needs_clarification`. Раздел из индекса
+пишется в `discipline` и не становится общим шифром томов.
+"""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Sequence
+from dataclasses import dataclass, replace
+from datetime import date, datetime
+
+from kontur.application.extractors.number import PageToken
+from kontur.application.normalize import fold_label, normalize_key_field
+from kontur.domain.geometry import bbox_from_polygon, reading_key
+from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage
+
+_HASH = re.compile(r"^[a-f0-9]{64}$")
+
+_CODE = re.compile(
+    r"(?:шифр|обозначение|\bshifr\b|\bcode\b)\s*[:.]?\s*"
+    r"([A-ZА-Я0-9][A-ZА-Я0-9./\-_]{2,})",
+    re.IGNORECASE,
+)
+_CODE_BARE = re.compile(r"\b(\d{3,8}-[A-ZА-Я]{1,6}(?:-\d{1,4})?)\b", re.IGNORECASE)
+# ГОСТ 21.101 на листах комплекта: АНО/150321/1-П-АР, не имя файла.
+_CODE_DESIGNATION = re.compile(
+    r"(?<![\w/])([A-ZА-ЯЁ]{2,12}/\d{3,8}/\d{1,4}-[A-ZА-ЯЁ]{1,6}-"
+    r"[A-ZА-ЯЁ]{1,8}\d{0,4}(?:\.\d+){0,4})(?!\w)",
+    re.IGNORECASE,
+)
+_REV = re.compile(r"(?:изм\.?|ред\.?|rev\.?)\s*[:.]?\s*(\d{1,3})\b", re.IGNORECASE)
+_SHEET = re.compile(
+    r"(?:лист|sheet)\s*[:.]?\s*([A-ZА-Я0-9][A-ZА-Я0-9.\-]{0,12})",
+    re.IGNORECASE,
+)
+_STAGE_LABELED = re.compile(
+    r"(?:стадия|stadia|stage)\s*[:.]?\s*(пд|рд|ид|pd|rd|id)\b",
+    re.IGNORECASE,
+)
+_STAGE_TOKEN = re.compile(r"(?:^|[_\-\s./])(pd|rd|id|пд|рд|ид)(?:[_\-\s./]|$)", re.IGNORECASE)
+_NOT_APPROVED = re.compile(r"\b(?:не\s+утв|not\s+approved|черновик)\b", re.IGNORECASE)
+_DATE = re.compile(r"\b(\d{2})[.](\d{2})[.](\d{4})\b")
+_APPROVAL_LABEL_PREFIX = re.compile(
+    r"^(?:утвердил|утвержд[её]н[аоы]?|approved|утв\.?)\s*[:.]?\s*(.*)$",
+    re.IGNORECASE,
+)
+_PERSON_NAME = re.compile(
+    r"(?:"
+    r"[A-ZА-ЯЁ][a-zа-яё\-]+\s+[A-ZА-ЯЁ]\.\s*[A-ZА-ЯЁ]\.?)"
+    r"|(?:[A-ZА-ЯЁ][a-zа-яё\-]+\s+[A-ZА-ЯЁ][a-zа-яё\-]+"
+    r"(?:\s+[A-ZА-ЯЁ][a-zа-яё\-]+)?)"
+)
+_STAMP_Y0 = 0.70
+_APPROVAL_ROW_DY = 0.04
+_APPROVAL_MAX_DX = 0.40
+
+_STAGE_MAP = {
+    "pd": DocStage.PD,
+    "пд": DocStage.PD,
+    "rd": DocStage.RD,
+    "рд": DocStage.RD,
+    "id": DocStage.ID,
+    "ид": DocStage.ID,
+}
+
+KEY_FIELDS: tuple[str, ...] = ("document_code", "revision", "sheet")
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentPassport:
+    file_id: str
+    file_hash: str
+    doc_stage: DocStage | None
+    pages: int
+    layer_kind: str
+    document_code: str | None = None
+    revision: str | None = None
+    sheet: str | None = None
+    discipline: str | None = None
+    approval_status: ApprovalStatus = ApprovalStatus.UNKNOWN
+    approval_basis: ApprovalBasis = ApprovalBasis.UNPROVEN
+    approval_date: date | None = None
+    object_id: str | None = None
+    rotate: int = 0
+    media_box: tuple[float, ...] | None = None
+    crop_box: tuple[float, ...] | None = None
+    has_embedded_text: bool = False
+    text_render_agreement: bool | None = None
+    extraction_confidence: float | None = None
+    identity_code: str | None = None
+    code_basis: str | None = None
+    needs_clarification: bool = False
+    clarification_reason: str | None = None
+    injection_clean: bool | None = None
+
+    def to_schema(self) -> dict[str, object]:
+        stage = self.doc_stage.value if self.doc_stage is not None else "UNKNOWN"
+        quality: dict[str, object] = {
+            "layer_kind": self.layer_kind,
+            "rotate": self.rotate,
+            "has_embedded_text": self.has_embedded_text,
+            "has_ocr_layer": False,
+            "text_render_agreement": self.text_render_agreement,
+        }
+        if self.media_box is not None:
+            quality["media_box"] = list(self.media_box)
+        if self.crop_box is not None:
+            quality["crop_box"] = list(self.crop_box)
+        if self.injection_clean is not None:
+            quality["injection_clean"] = self.injection_clean
+        payload: dict[str, object] = {
+            "file_id": self.file_id,
+            "file_hash": self.file_hash,
+            "object_id": self.object_id,
+            "doc_stage": stage,
+            "discipline": self.discipline,
+            "document_code": self.document_code,
+            "identity_code": self.identity_code,
+            "code_basis": self.code_basis,
+            "revision": self.revision,
+            "approval_status": self.approval_status.value,
+            "approval_basis": self.approval_basis.value,
+            "approval_date": self.approval_date.isoformat() if self.approval_date else None,
+            "sheet": self.sheet,
+            "pages": self.pages,
+            "predecessor_file_id": None,
+            "successor_file_id": None,
+            "quality": quality,
+            "extraction_confidence": self.extraction_confidence,
+        }
+        return payload
+
+
+def _join(tokens: Sequence[PageToken]) -> str:
+    ordered = sorted(tokens, key=lambda item: reading_key(item.page, item.polygon_norm))
+    return " ".join(item.text for item in ordered if item.text.strip())
+
+
+def _stamp_tokens(tokens: Sequence[PageToken]) -> tuple[PageToken, ...]:
+    """Нижняя четверть первой страницы: типичное место основной надписи ГОСТ."""
+
+    first_page = [item for item in tokens if item.page == 1]
+    pool: Sequence[PageToken] = first_page or tokens
+    bottom = [
+        item for item in pool if bbox_from_polygon(item.polygon_norm)[1] >= _STAMP_Y0
+    ]
+    return tuple(bottom) if bottom else tuple(pool)
+
+
+def _parse_approval_date(text: str) -> date | None:
+    match = _DATE.search(text)
+    if match is None:
+        return None
+    try:
+        return datetime(
+            int(match.group(3)),
+            int(match.group(2)),
+            int(match.group(1)),
+        ).date()
+    except ValueError:
+        return None
+
+
+def _title_block_approval(
+    tokens: Sequence[PageToken],
+) -> tuple[ApprovalStatus, date | None]:
+    """Искать явное заполнение графы утверждения в штампе любого листа.
+
+    Для APPROVED обязательны метка «Утвердил»/«утв.» и ФИО ответственного
+    в той же строке. Дата без ФИО, пустая графа, «Согласовано», «ГИП» или
+    «подп.» не являются достаточным признаком. Неоднозначность остаётся
+    UNKNOWN и далее приводит к CLARIFICATION_REQUIRED.
+    """
+
+    by_page: dict[int, list[PageToken]] = {}
+    for item in tokens:
+        if bbox_from_polygon(item.polygon_norm)[1] < _STAMP_Y0:
+            continue
+        by_page.setdefault(item.page, []).append(item)
+
+    for page_tokens in by_page.values():
+        joined = _join(page_tokens)
+        if _NOT_APPROVED.search(joined):
+            return ApprovalStatus.NOT_APPROVED, _parse_approval_date(joined)
+        for label in page_tokens:
+            match = _APPROVAL_LABEL_PREFIX.search(label.text.strip())
+            if match is None:
+                continue
+            left, bottom, _right, _top = bbox_from_polygon(label.polygon_norm)
+            values = [match.group(1).strip()] if match.group(1).strip() else []
+            for other in page_tokens:
+                if other is label:
+                    continue
+                ox0, oy0, _ox1, _oy1 = bbox_from_polygon(other.polygon_norm)
+                if ox0 <= left + 0.01:
+                    continue
+                if abs(oy0 - bottom) > _APPROVAL_ROW_DY:
+                    continue
+                if ox0 - left > _APPROVAL_MAX_DX:
+                    continue
+                values.append(other.text.strip())
+            evidence = " ".join(value for value in values if value)
+            if _NOT_APPROVED.search(evidence):
+                return ApprovalStatus.NOT_APPROVED, _parse_approval_date(evidence)
+            if _PERSON_NAME.search(evidence) is not None:
+                return ApprovalStatus.APPROVED, _parse_approval_date(evidence)
+    return ApprovalStatus.UNKNOWN, None
+
+
+def _first(pattern: re.Pattern[str], text: str) -> str | None:
+    match = pattern.search(text)
+    if match is None:
+        return None
+    return normalize_key_field(match.group(1))
+
+
+def _designation(text: str) -> tuple[str | None, bool]:
+    """Одно обозначение или большинство. Ничья — шифр не выбран."""
+
+    found = [normalize_key_field(item) for item in _CODE_DESIGNATION.findall(text)]
+    if not found:
+        return None, False
+    counts: dict[str, int] = {}
+    for item in found:
+        counts[item] = counts.get(item, 0) + 1
+    best = max(counts.values())
+    winners = [key for key, count in counts.items() if count == best]
+    if len(winners) == 1:
+        return winners[0], False
+    return None, True
+
+
+_SECTION_MARKS: frozenset[str] = frozenset(
+    {
+        "ПЗ",
+        "АР",
+        "КР",
+        "ОВ",
+        "КЖ",
+        "ОД",
+        "ПЗУ",
+        "ИОС",
+        "ПОС",
+        "ПОД",
+        "ЗУ",
+        "ППМ",
+        "ОДИ",
+        "ООС",
+        "СПЗУ",
+    }
+)
+_LATIN_SECTION: dict[str, str] = {
+    "PZ": "ПЗ",
+    "AR": "АР",
+    "KR": "КР",
+    "OV": "ОВ",
+    "KJ": "КЖ",
+    "OD": "ОД",
+    "PZU": "ПЗУ",
+    "IOS": "ИОС",
+    "POS": "ПОС",
+    "POD": "ПОД",
+    "ZU": "ЗУ",
+    "PPM": "ППМ",
+    "ODI": "ОДИ",
+    "OOS": "ООС",
+    "SPZU": "СПЗУ",
+}
+_SECTION_TOKEN = re.compile(r"[A-ZА-ЯЁ]{2,8}")
+
+
+def _filename_stem(filename: str | None) -> str:
+    if filename is None:
+        return ""
+    return filename.replace("\\", "/").rsplit("/", 1)[-1].rsplit(".", 1)[0].strip()
+
+
+def section_mark_from_filename(filename: str | None) -> str | None:
+    """Одна марка раздела в имени. Две разные марки — не выбираем."""
+
+    stem = _filename_stem(filename)
+    if not stem:
+        return None
+    found: list[str] = []
+    for raw in _SECTION_TOKEN.findall(stem.upper().replace("_", " ")):
+        mark = raw if raw in _SECTION_MARKS else _LATIN_SECTION.get(raw)
+        if mark is not None and mark not in found:
+            found.append(mark)
+    if len(found) != 1:
+        return None
+    return found[0]
+
+
+_PATH_PHRASES: tuple[tuple[str, str], ...] = (
+    ("пояснительная записка", "ПЗ"),
+    ("архитектурные решения", "АР"),
+    ("конструктивные и объемно-планировочные", "КР"),
+    ("отопление", "ОВ"),
+    ("схема планировочной организации", "ПЗУ"),
+    ("проект организации строительства", "ПОС"),
+)
+
+
+def _mark_from_section_field(section: str | None) -> str | None:
+    if not section:
+        return None
+    raw = section.strip().upper().replace(" ", "")
+    if raw in _SECTION_MARKS:
+        return raw
+    return _LATIN_SECTION.get(raw)
+
+
+def _marks_from_index_path(relative_path: str | None) -> frozenset[str]:
+    if not relative_path:
+        return frozenset()
+    folded = relative_path.casefold().replace("ё", "е")
+    return frozenset(mark for phrase, mark in _PATH_PHRASES if phrase in folded)
+
+
+def manifest_section_mark(
+    section: str | None, relative_path: str | None
+) -> tuple[str | None, bool]:
+    """Одна марка из индекса. OTHER и чужие коды — не марка. Спор сигналов — не выбор."""
+
+    from_field = _mark_from_section_field(section)
+    from_path = _marks_from_index_path(relative_path)
+    if len(from_path) > 1:
+        return None, True
+    path_mark = next(iter(from_path), None)
+    if from_field is not None and path_mark is not None and from_field != path_mark:
+        return None, True
+    return from_field or path_mark, False
+
+
+def cipher_from_filename(filename: str | None) -> str | None:
+    """Одно обозначение в имени файла. Несколько разных — не выбираем."""
+
+    if filename is None or not filename.strip():
+        return None
+    stem = _filename_stem(filename)
+    text = stem.replace("_", " ")
+    found = [
+        item
+        for item in (
+            *(normalize_key_field(raw) for raw in _CODE_DESIGNATION.findall(text)),
+            *(normalize_key_field(raw) for raw in _CODE_BARE.findall(text)),
+        )
+        if item
+    ]
+    unique = list(dict.fromkeys(found))
+    if len(unique) != 1:
+        return None
+    return unique[0]
+
+
+def cipher_from_text(text: str) -> str | None:
+    """Шифр из уже прочитанного текста. Имя файла сюда не подставляется."""
+
+    labeled = _first(_CODE, text) or _first(_CODE_BARE, text)
+    if labeled:
+        return labeled
+    code, _tie = _designation(text)
+    return code
+
+
+def cipher_is_ambiguous(text: str) -> bool:
+    """Несколько обозначений без большинства. Подписанный шифр это не спор."""
+
+    if _first(_CODE, text) or _first(_CODE_BARE, text):
+        return False
+    return _designation(text)[1]
+
+
+def cipher_reads_agree(codes: Sequence[str | None]) -> bool | None:
+    """None — меньше двух чтений. False — два разных шифра, код не выбираем."""
+
+    present = [item for item in codes if item]
+    if len(present) < 2:
+        return None
+    return all(item == present[0] for item in present)
+
+
+def _stage_from_text(text: str, *, labeled_only: bool) -> DocStage | None:
+    if labeled_only:
+        match = _STAGE_LABELED.search(text)
+        if match is None:
+            return None
+        return _STAGE_MAP[fold_label(match.group(1)).replace(" ", "")]
+    match = _STAGE_TOKEN.search(f" {text} ")
+    if match is None:
+        return None
+    return _STAGE_MAP[fold_label(match.group(1))]
+
+
+def stage_from_filename(filename: str) -> DocStage | None:
+    match = _STAGE_TOKEN.search(f" {filename} ")
+    if match is None:
+        return None
+    return _STAGE_MAP[fold_label(match.group(1))]
+
+
+def _approval(text: str) -> tuple[ApprovalStatus, date | None]:
+    """Обработать только явный запрет; положительный статус требует evidence."""
+
+    if _NOT_APPROVED.search(text):
+        return ApprovalStatus.NOT_APPROVED, _parse_approval_date(text)
+    return ApprovalStatus.UNKNOWN, None
+
+
+def read_passport(
+    tokens: Sequence[PageToken],
+    *,
+    file_id: str,
+    file_hash: str,
+    filename: str | None = None,
+    pages: int = 1,
+    layer_kind: str = "vector",
+    rotate: int = 0,
+    media_box: tuple[float, ...] | None = None,
+    crop_box: tuple[float, ...] | None = None,
+    object_id: str | None = None,
+    text_render_agreement: bool | None = None,
+    injection_clean: bool | None = None,
+    alternate_ciphers: Sequence[str] = (),
+) -> DocumentPassport:
+    """Прочитать паспорт. Не заполняет шифр из имени файла."""
+
+    if _HASH.fullmatch(file_hash) is None:
+        raise ValueError("file_hash паспорта обязан быть SHA-256")
+    has_text = any(item.text.strip() for item in tokens)
+    if layer_kind == "vector" and not has_text:
+        layer_kind = "raster"
+    region = _stamp_tokens(tokens) if tokens else ()
+    blob = _join(region)
+    full = _join(tokens)
+    search = blob or full
+
+    code = cipher_from_text(search)
+    ambiguous = code is None and cipher_is_ambiguous(search)
+    revision = _first(_REV, search)
+    sheet = _first(_SHEET, search)
+    stage = _stage_from_text(search, labeled_only=True) or _stage_from_text(
+        search, labeled_only=False
+    )
+    name_stage = stage_from_filename(filename) if filename else None
+    needs = False
+    reason: str | None = None
+    if cipher_reads_agree((code, *alternate_ciphers)) is False:
+        needs = True
+        reason = "шифр vector, eslav и Tesseract не совпали"
+        code = None
+    if text_render_agreement is False:
+        needs = True
+        reason = "текстовый слой расходится с растром: скрытый или перекрытый текст"
+        code = None
+        revision = None
+        sheet = None
+        stage = None
+    if stage is not None and name_stage is not None and stage is not name_stage:
+        needs = True
+        reason = (
+            f"стадия в штампе {stage.value}, в имени файла {name_stage.value}: "
+            "эталон не выбирается"
+        )
+        stage = None
+    elif stage is None and name_stage is not None:
+        stage = name_stage
+    if has_text and code is None and text_render_agreement is not False:
+        needs = True
+        reason = reason or (
+            "несколько обозначений без большинства, шифр не выбран"
+            if ambiguous
+            else "шифр в основной надписи не найден"
+        )
+    basis = ApprovalBasis.UNPROVEN
+    approval, approval_date = _approval(search)
+    if approval is not ApprovalStatus.UNKNOWN:
+        basis = ApprovalBasis.TITLE_BLOCK
+    if approval is ApprovalStatus.UNKNOWN:
+        later, later_date = _title_block_approval(tokens)
+        if later is not ApprovalStatus.UNKNOWN:
+            approval, approval_date = later, later_date or approval_date
+            basis = ApprovalBasis.TITLE_BLOCK
+    if text_render_agreement is False:
+        approval, approval_date = ApprovalStatus.UNKNOWN, None
+        basis = ApprovalBasis.UNPROVEN
+    name_code = cipher_from_filename(filename)
+    filename_discipline = section_mark_from_filename(filename)
+    if code is not None and name_code is not None and code != name_code:
+        needs = True
+        reason = reason or (
+            f"шифр в штампе {code}, в имени файла {name_code}: имя не подменяет штамп"
+        )
+        identity_code: str | None = code
+        code_basis: str | None = "STAMP"
+    elif code is not None:
+        identity_code = code
+        code_basis = "STAMP"
+    elif name_code is not None:
+        identity_code = name_code
+        code_basis = "FILENAME"
+    elif filename_discipline is not None:
+        identity_code = _filename_stem(filename) or None
+        code_basis = "FILENAME" if identity_code else None
+    else:
+        identity_code = None
+        code_basis = None
+        filename_discipline = None
+    filled = sum(1 for item in (code, revision, sheet) if item)
+    confidence = None
+    if has_text:
+        confidence = filled / len(KEY_FIELDS)
+    return DocumentPassport(
+        file_id=file_id,
+        file_hash=file_hash,
+        doc_stage=stage,
+        discipline=filename_discipline if code is None else None,
+        pages=pages,
+        layer_kind=layer_kind,
+        document_code=code,
+        identity_code=identity_code,
+        code_basis=code_basis,
+        revision=revision,
+        sheet=sheet,
+        approval_status=approval,
+        approval_basis=basis,
+        approval_date=approval_date,
+        object_id=object_id,
+        rotate=rotate,
+        media_box=media_box,
+        crop_box=crop_box,
+        has_embedded_text=has_text,
+        text_render_agreement=text_render_agreement,
+        injection_clean=injection_clean,
+        extraction_confidence=confidence,
+        needs_clarification=needs,
+        clarification_reason=reason,
+    )
+
+
+def _note_manifest(passport: DocumentPassport, note: str) -> DocumentPassport:
+    reason = passport.clarification_reason
+    if reason is None:
+        reason = note
+    elif note not in reason:
+        reason = f"{reason}; {note}"
+    return replace(passport, needs_clarification=True, clarification_reason=reason)
+
+
+def _manifest_identity(
+    filename: str | None, relative_path: str | None, file_id: str
+) -> str:
+    """Ключ тома. Голый stem и марка раздела склеивают разные папки."""
+
+    stem = _filename_stem(filename) or file_id
+    if relative_path:
+        normalized = relative_path.replace("\\", "/").strip("/")
+        leaf = _filename_stem(normalized.rsplit("/", 1)[-1]) or stem
+        parent = normalized.rsplit("/", 1)[0] if "/" in normalized else ""
+        body = f"{parent}/{leaf}" if parent else leaf
+    else:
+        body = stem
+    return f"{body}#{file_id}"
+
+
+def apply_manifest_section(
+    passport: DocumentPassport,
+    *,
+    section: str | None,
+    relative_path: str | None,
+    filename: str | None,
+) -> DocumentPassport:
+    """Раздел индекса в discipline. Марка не становится общим identity."""
+
+    mark, conflict = manifest_section_mark(section, relative_path)
+    if conflict:
+        return _note_manifest(
+            passport, "раздел индекса неоднозначен и не подменяет шифр"
+        )
+    if mark is None or passport.discipline == mark:
+        return passport
+    if passport.discipline is not None:
+        return _note_manifest(
+            passport, f"раздел индекса {mark} не подменяет {passport.discipline}"
+        )
+    identity = passport.identity_code
+    basis = passport.code_basis
+    if identity is None:
+        identity = _manifest_identity(filename, relative_path, passport.file_id)
+        basis = "MANIFEST_PATH"
+    return replace(
+        passport,
+        discipline=mark,
+        identity_code=identity,
+        code_basis=basis,
+    )

@@ -1,0 +1,42 @@
+# Уведомления о сторонних компонентах
+
+Код Контура передаётся заказчику задачи, открытой лицензии на него нет. Ниже лицензии зависимостей, которые реально указаны в `backend/pyproject.toml`, `web/package.json` и `gateway/package.json`. Версии Python сняты с метаданных установленных пакетов 23.09.2026 (`License` / `License-Expression`). Лицензии npm сняты командой `npm view <имя> license` в тот же день.
+
+## Python
+
+| Пакет | Версия на момент сверки | Лицензия |
+| --- | --- | --- |
+| fastapi | 0.141.1 | MIT |
+| uvicorn | 0.53.0 | BSD-3-Clause |
+| pydantic | 2.13.5 | MIT |
+| pypdfium2 | 5.13.0 | BSD-3-Clause и Apache-2.0 (так написано в метаданных; внутри — лицензии зависимостей, включая PDFium) |
+| pdfminer.six | 20260107 | MIT |
+| jsonschema | 4.26.0 | MIT |
+| PyYAML | 6.0.3 | MIT |
+| python-multipart | 0.0.32 | Apache-2.0 |
+| PyJWT | 2.14.0 | MIT |
+| pytesseract | 0.3.13 | Apache-2.0 |
+| Pillow | 12.3.0 | MIT-CMU |
+| pytest | 9.1.1 | MIT |
+| ruff | 0.16.3 | MIT |
+
+`rapidocr` и `onnxruntime` стоят в extra `ocr` и в образ ядра попадают на сборке вместе с весами PP-OCRv5 (детектор, классификатор поворота строки, распознаватель eslav) по `ocr_weights.lock.json`. Код RapidOCR — Apache-2.0, ONNX Runtime — MIT. Веса — конвертация моделей PaddleOCR (Apache-2.0, авторские права на модель у Baidu). В рантайме они не скачиваются. `ocr_text` остаётся `MEASURED`.
+
+## Образ ядра
+
+`backend/Dockerfile` ставит пакеты Debian `tesseract-ocr`, `tesseract-ocr-rus`, `tesseract-ocr-eng`. Движок Tesseract OCR (upstream) — Apache-2.0. Условия языковых данных — у этих пакетов Debian, отдельно в репозиторий они не копируются.
+
+## npm
+
+| Пакет | Лицензия |
+| --- | --- |
+| react, react-dom | MIT |
+| pdfjs-dist | Apache-2.0 |
+| vite | MIT |
+| express | MIT |
+| http-proxy-middleware | MIT |
+| pino | MIT |
+
+## Образы compose
+
+PostgreSQL, Redis, RabbitMQ и MinIO в `docker-compose.yml` — чужие образы. Их тексты лицензий в этот репозиторий не копируются. Образ `minio/minio` на Docker Hub удалён; стенд берёт архивный `bitnamilegacy/minio`. Бинарник MinIO внутри него — GNU AGPL-3.0 и остаётся отдельным контейнером, в код Контура он не входит.

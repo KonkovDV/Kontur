@@ -1,0 +1,118 @@
+{
+  "code": "ZU-130",
+  "section": "ЗУ",
+  "name": "Установка энергосберегающего осветительного оборудования",
+  "unit": "—",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Замена светодиодных светильников (LED) на люминесцентные или лампы накаливания.",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": "Тип источника света назван по-русски (светодиодный / люминесцентный / накаливания / газоразрядный). Латинская маркировка LED без русского слова не распознаётся и даёт LOW_QUALITY, а не вывод «нарушения нет»."
+  },
+  "sources": {
+    "pd": {
+      "discipline": [
+        "ЗУ",
+        "ИОС1"
+      ],
+      "table": "Спецификация светильников",
+      "description": "Спецификации светильников (ЗУ/ИОС1)"
+    },
+    "rd": {
+      "discipline": [
+        "ЭОМ"
+      ],
+      "table": "Спецификация оборудования, изделий и материалов",
+      "description": "Спецификация оборудования (ЭОМ)"
+    },
+    "id": {
+      "document_kind": [
+        "Сертификат соответствия",
+        "Товарная накладная"
+      ],
+      "table": null,
+      "description": "Сертификаты; Накладные; Фотофиксация"
+    }
+  },
+  "extractor": {
+    "type": "exact_field",
+    "regex": "(светодиодн|люминесцентн|накаливани|газоразрядн)",
+    "anchors": [
+      "Установка энергосберегающего осветительного оборудования",
+      "Тип светильника",
+      "Тип источника света",
+      "Спецификация светильников",
+      "Осветительное оборудование"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "upper"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "eq",
+    "rounding": "none",
+    "unit_target": null
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [
+    {
+      "identifier": "ФЗ № 261-ФЗ",
+      "issuer": "Российская Федерация",
+      "clause": "ст. 11 (требования энергетической эффективности зданий)",
+      "effective_from": "2009-11-23",
+      "effective_to": null,
+      "mandatory": "law",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "Постановление Правительства РФ № 87",
+      "issuer": "Правительство Российской Федерации",
+      "clause": "п. 27(1) (раздел 10(1) «Мероприятия по обеспечению соблюдения требований энергетической эффективности»)",
+      "effective_from": "2008-02-16",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "MEDIUM",
+  "tests": [
+    {
+      "name": "same_luminaire_type_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "led_replaced_by_incandescent_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "rd_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "latin_led_marking_only_gives_low_quality",
+      "expected_status": "LOW_QUALITY"
+    },
+    {
+      "name": "two_luminaire_types_in_one_window_give_abstain",
+      "expected_status": "ABSTAIN"
+    }
+  ]
+}

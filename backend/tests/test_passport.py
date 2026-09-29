@@ -1,0 +1,449 @@
+"""Gate C: паспорт L1. Пустые ключевые поля не выдумываются."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import jsonschema
+import pytest
+
+from kontur.application.extractors.number import PageToken
+from kontur.application.passport import KEY_FIELDS, apply_manifest_section, read_passport
+from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage
+
+HASH = "a" * 64
+SCHEMA_PATH = (
+    Path(__file__).resolve().parents[2] / "contracts" / "schemas" / "document_passport.schema.json"
+)
+SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+
+
+def _tok(text: str, x: float, y: float, *, page: int = 1) -> PageToken:
+    width, height = 0.18, 0.04
+    polygon = ((x, y), (x + width, y), (x + width, y + height), (x, y + height))
+    return PageToken(text=text, page=page, polygon_source=polygon, polygon_norm=polygon)
+
+
+def _read(*tokens: PageToken, filename: str | None = None, layer: str = "vector"):
+    return read_passport(
+        tokens,
+        file_id="file-pd",
+        file_hash=HASH,
+        filename=filename,
+        pages=1,
+        layer_kind=layer,
+    )
+
+
+def test_stamp_fills_key_fields_and_matches_schema() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("изм. 3", 0.32, 0.82),
+        _tok("лист 2", 0.50, 0.82),
+        _tok("стадия ПД", 0.08, 0.88),
+        _tok("утв. Тестов Т.Т. 16.09.2026", 0.32, 0.88),
+    )
+    assert passport.document_code == "12345-PZ"
+    assert passport.revision == "3"
+    assert passport.sheet == "2"
+    assert passport.doc_stage is DocStage.PD
+    assert passport.approval_status is ApprovalStatus.APPROVED
+    assert passport.approval_basis is ApprovalBasis.TITLE_BLOCK
+    assert str(passport.approval_date) == "2026-09-16"
+    assert passport.needs_clarification is False
+    assert passport.text_render_agreement is None
+    assert passport.extraction_confidence == pytest.approx(1.0)
+    jsonschema.Draft202012Validator(SCHEMA).validate(passport.to_schema())
+
+
+def test_filename_is_not_used_as_document_code() -> None:
+    passport = _read(_tok("лист 1", 0.08, 0.82), filename="12345-PZ_RD.pdf")
+    assert passport.document_code is None
+    assert passport.identity_code == "12345-PZ"
+    assert passport.code_basis == "FILENAME"
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason is not None
+    assert "шифр" in passport.clarification_reason
+
+
+def test_filename_section_is_discipline_not_a_shared_cipher() -> None:
+    passport = _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.2 ОВ (1).pdf")
+    assert passport.document_code is None
+    assert passport.identity_code == "Том 5.4.2 ОВ (1)"
+    assert passport.code_basis == "FILENAME"
+    assert passport.discipline == "ОВ"
+
+
+def test_two_section_marks_in_the_filename_are_not_chosen() -> None:
+    passport = _read(_tok("лист 1", 0.08, 0.82), filename="Том ОВ и КР.pdf")
+    assert passport.identity_code is None
+    assert passport.discipline is None
+    assert passport.document_code is None
+
+
+def test_filename_does_not_override_a_different_stamp() -> None:
+    passport = _read(_tok("шифр: 12345-PZ", 0.08, 0.82), filename="99999-OV.pdf")
+    assert passport.document_code == "12345-PZ"
+    assert passport.identity_code == "12345-PZ"
+    assert passport.code_basis == "STAMP"
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason is not None
+    assert "не подменяет" in passport.clarification_reason
+
+
+def test_disagreeing_cipher_reads_are_not_chosen() -> None:
+    passport = read_passport(
+        (
+            _tok("шифр: 12345-PZ", 0.08, 0.82),
+            _tok("изм. 3", 0.32, 0.82),
+            _tok("лист 2", 0.50, 0.82),
+        ),
+        file_id="file-pd",
+        file_hash=HASH,
+        pages=1,
+        alternate_ciphers=("12345-PZ", "99999-OV"),
+    )
+    assert passport.document_code is None
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason == "шифр vector, eslav и Tesseract не совпали"
+    assert passport.revision == "3"
+
+
+def test_matching_cipher_reads_keep_the_vector_code() -> None:
+    passport = read_passport(
+        (_tok("шифр: 12345-PZ", 0.08, 0.82),),
+        file_id="file-pd",
+        file_hash=HASH,
+        pages=1,
+        alternate_ciphers=("12345-PZ", "12345-PZ"),
+    )
+    assert passport.document_code == "12345-PZ"
+    assert passport.needs_clarification is False
+
+
+def test_stamp_and_filename_stage_conflict_clears_stage() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("стадия ПД", 0.40, 0.82),
+        filename="RD_12345-PZ.pdf",
+    )
+    assert passport.document_code == "12345-PZ"
+    assert passport.doc_stage is None
+    assert passport.needs_clarification is True
+    assert passport.to_schema()["doc_stage"] == "UNKNOWN"
+
+
+def test_filename_stage_used_only_when_stamp_is_silent() -> None:
+    passport = _read(_tok("шифр: 12345-PZ", 0.08, 0.82), filename="RD_12345.pdf")
+    assert passport.doc_stage is DocStage.RD
+
+
+def test_unsigned_podp_does_not_mean_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("подп. Тестов 01.02.2026", 0.40, 0.82),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+
+
+def test_empty_utverdil_header_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("Утвердил", 0.08, 0.90),
+        _tok("Согласовано", 0.08, 0.94),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_date is None
+
+
+def test_empty_utv_abbreviation_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("утв.", 0.08, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_date is None
+
+
+def test_utverdil_with_date_but_without_person_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("Утвердил", 0.08, 0.90),
+        _tok("08.04.2024", 0.22, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_date is None
+
+
+def test_inline_utv_with_date_but_without_person_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("утв. 08.04.2024", 0.08, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_date is None
+
+
+def test_filled_utverdil_on_later_sheet_is_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82, page=1),
+        _tok("Утвердил", 0.08, 0.92, page=6),
+        _tok("Тестов Т.Т.", 0.22, 0.92, page=6),
+        _tok("08.04.2024", 0.40, 0.92, page=6),
+    )
+    assert passport.approval_status is ApprovalStatus.APPROVED
+    assert str(passport.approval_date) == "2024-04-08"
+    assert passport.document_code == "12345-PZ"
+
+
+def test_inline_utverdil_with_person_is_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("Утвердил: Тестов Т.Т. 08.04.2024", 0.08, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.APPROVED
+    assert str(passport.approval_date) == "2024-04-08"
+
+
+def test_utverdil_with_full_name_is_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("Утвердил", 0.08, 0.90),
+        _tok("Тестов Тест Тестович", 0.22, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.APPROVED
+    assert passport.approval_date is None
+
+
+def test_volume_stamp_gip_surname_without_utverdil_stays_unproven() -> None:
+    """Макет штампа тома ПД: роли ГИП/ГАП/Разраб. и фамилия, без графы «Утвердил»."""
+
+    passport = _read(
+        _tok("Изм.", 0.10, 0.87),
+        _tok("Подпись", 0.31, 0.87),
+        _tok("Дата", 0.38, 0.87),
+        _tok("ГИП", 0.10, 0.89),
+        _tok("Тестов", 0.20, 0.89),
+        _tok("ГАП", 0.10, 0.90),
+        _tok("Тестова", 0.20, 0.90),
+        _tok("Разраб.", 0.10, 0.92),
+        _tok("Тестов", 0.20, 0.92),
+        _tok("Н.контроль", 0.10, 0.94),
+        _tok("Тестов", 0.20, 0.94),
+        _tok("Стадия", 0.75, 0.89),
+        _tok("П", 0.77, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_basis is ApprovalBasis.UNPROVEN
+
+
+def test_production_stamp_is_not_an_approval_basis() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("В производство работ", 0.08, 0.90),
+        _tok("заключение экспертизы", 0.08, 0.94),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_basis is ApprovalBasis.UNPROVEN
+
+
+def test_soglasovano_header_on_later_sheet_is_not_approved() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82, page=1),
+        _tok("Согласовано", 0.02, 0.90, page=2),
+        _tok("ГИП", 0.08, 0.92, page=2),
+        _tok("Тестов Т.Т.", 0.22, 0.92, page=2),
+    )
+    assert passport.approval_status is ApprovalStatus.UNKNOWN
+    assert passport.approval_basis is ApprovalBasis.UNPROVEN
+
+
+def test_not_approved_beats_approved_evidence() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("не утв", 0.08, 0.90),
+        _tok("Утвердил", 0.32, 0.90),
+        _tok("Тестов Т.Т.", 0.50, 0.90),
+    )
+    assert passport.approval_status is ApprovalStatus.NOT_APPROVED
+    assert passport.approval_basis is ApprovalBasis.TITLE_BLOCK
+
+
+def test_empty_vector_page_is_raster_not_ocr() -> None:
+    passport = _read(layer="vector")
+    assert passport.layer_kind == "raster"
+    assert passport.has_embedded_text is False
+    assert passport.document_code is None
+    assert passport.extraction_confidence is None
+    jsonschema.Draft202012Validator(SCHEMA).validate(passport.to_schema())
+
+
+def test_code_on_title_block_only_not_taken_from_header() -> None:
+    passport = _read(
+        _tok("шифр: 99999-AR", 0.08, 0.10),
+        _tok("лист 4", 0.08, 0.82),
+    )
+    assert passport.document_code is None
+    assert passport.sheet == "4"
+    assert passport.needs_clarification is True
+
+
+def test_second_page_tokens_do_not_replace_first_page_stamp() -> None:
+    passport = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82, page=1),
+        _tok("шифр: 00000-XX", 0.08, 0.82, page=2),
+    )
+    assert passport.document_code == "12345-PZ"
+
+
+def test_uppercase_hash_is_rejected() -> None:
+    with pytest.raises(ValueError, match="SHA-256"):
+        read_passport((), file_id="f", file_hash="A" * 64)
+
+
+def test_key_fields_tuple_is_the_exact_match_contract() -> None:
+    assert KEY_FIELDS == ("document_code", "revision", "sheet")
+
+
+def test_gost_designation_in_the_stamp_is_the_cipher() -> None:
+    passport = _read(_tok("АНО/150321/1-П-АР", 0.55, 0.86))
+    assert passport.document_code == "АНО/150321/1-П-АР"
+    assert passport.needs_clarification is False
+
+
+def test_repeated_designation_beats_a_single_cross_reference() -> None:
+    passport = _read(
+        _tok("АНО/150321/1-П-ПЗ1.1", 0.55, 0.82),
+        _tok("АНО/150321/1-П-ПЗ1.1", 0.55, 0.88),
+        _tok("АНО/150321/1-П-СМ11.1", 0.20, 0.84),
+    )
+    assert passport.document_code == "АНО/150321/1-П-ПЗ1.1"
+
+
+def test_tied_designations_are_not_chosen() -> None:
+    passport = _read(
+        _tok("АНО/150321/1-П-АР", 0.55, 0.82),
+        _tok("АНО/150321/1-П-КР4.1.1", 0.55, 0.88),
+    )
+    assert passport.document_code is None
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason == (
+        "несколько обозначений без большинства, шифр не выбран"
+    )
+
+
+def test_index_section_is_discipline_not_a_shared_cipher() -> None:
+    first = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.1.pdf"),
+        section="OV",
+        relative_path="ПД/5.4 Отопление, вентиляция/Том 5.4.1.pdf",
+        filename="Том 5.4.1.pdf",
+    )
+    second = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.2.pdf"),
+        section="OV",
+        relative_path="ПД/5.4 Отопление, вентиляция/Том 5.4.2.pdf",
+        filename="Том 5.4.2.pdf",
+    )
+    assert first.document_code is None
+    assert second.document_code is None
+    assert first.discipline == "ОВ"
+    assert second.discipline == "ОВ"
+    assert first.identity_code == "ПД/5.4 Отопление, вентиляция/Том 5.4.1#file-pd"
+    assert second.identity_code == "ПД/5.4 Отопление, вентиляция/Том 5.4.2#file-pd"
+    assert first.identity_code != "ОВ"
+    assert first.code_basis == "MANIFEST_PATH"
+    jsonschema.Draft202012Validator(SCHEMA).validate(first.to_schema())
+
+
+def test_other_index_section_does_not_invent_a_mark() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="книга.pdf"),
+        section="OTHER",
+        relative_path="ПД/прочее/книга.pdf",
+        filename="книга.pdf",
+    )
+    assert passport.discipline is None
+    assert passport.identity_code is None
+    assert passport.code_basis is None
+    assert passport.document_code is None
+
+
+def test_explanatory_note_folder_is_pz_not_other() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 1.2.pdf"),
+        section="OTHER",
+        relative_path="ПД/1 Пояснительная записка/Том 1.2.pdf",
+        filename="Том 1.2.pdf",
+    )
+    assert passport.discipline == "ПЗ"
+    assert passport.identity_code == "ПД/1 Пояснительная записка/Том 1.2#file-pd"
+    assert passport.document_code is None
+    assert passport.code_basis == "MANIFEST_PATH"
+
+
+def test_same_filename_stem_in_two_folders_is_not_one_cipher() -> None:
+    left = apply_manifest_section(
+        read_passport(
+            (_tok("лист 1", 0.08, 0.82),),
+            file_id="vol-a",
+            file_hash=HASH,
+            filename="Том 1.pdf",
+            pages=1,
+            layer_kind="vector",
+        ),
+        section="OV",
+        relative_path="ПД/5.4 Отопление/Том 1.pdf",
+        filename="Том 1.pdf",
+    )
+    right = apply_manifest_section(
+        read_passport(
+            (_tok("лист 1", 0.08, 0.82),),
+            file_id="vol-b",
+            file_hash=HASH,
+            filename="Том 1.pdf",
+            pages=1,
+            layer_kind="vector",
+        ),
+        section="OV",
+        relative_path="ПД/5.4.2 Отопление/Том 1.pdf",
+        filename="Том 1.pdf",
+    )
+    assert left.discipline == "ОВ"
+    assert right.discipline == "ОВ"
+    assert left.identity_code == "ПД/5.4 Отопление/Том 1#vol-a"
+    assert right.identity_code == "ПД/5.4.2 Отопление/Том 1#vol-b"
+    assert left.identity_code != right.identity_code
+    assert left.document_code is None
+    assert right.document_code is None
+
+
+def test_disagreeing_index_signals_do_not_choose_a_mark() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 3.pdf"),
+        section="OV",
+        relative_path="ПД/3 Архитектурные решения/Том 3.pdf",
+        filename="Том 3.pdf",
+    )
+    assert passport.discipline is None
+    assert passport.identity_code is None
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason is not None
+    assert "неоднозначен" in passport.clarification_reason
+
+
+def test_index_section_does_not_replace_filename_discipline() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.2 ОВ (1).pdf"),
+        section="KR",
+        relative_path=None,
+        filename="Том 5.4.2 ОВ (1).pdf",
+    )
+    assert passport.discipline == "ОВ"
+    assert passport.identity_code == "Том 5.4.2 ОВ (1)"
+    assert passport.code_basis == "FILENAME"
+    assert passport.document_code is None
+    assert passport.needs_clarification is True
+    assert passport.clarification_reason is not None
+    assert "не подменяет" in passport.clarification_reason

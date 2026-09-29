@@ -1,0 +1,60 @@
+{
+  "code": "PZ-021",
+  "section": "ПЗ",
+  "name": "Класс энергетической эффективности",
+  "unit": "Буква",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Снижение класса энергоэффективности (например, с А на B) в РД относительно ПД.",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": ["PD", "RD"],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {"description": "Раздел ПЗ: Текст \"Энергоэффективность\""},
+    "rd": {"description": "Раздел АР/ОВ: Требования в \"Общих данных\""},
+    "id": {"description": "Энергетический паспорт (фактический по замерам)"}
+  },
+  "extractor": {
+    "type": "enum",
+    "regex": "A\\+{0,2}|[B-G]",
+    "anchors": [
+      "Класс энергетической эффективности"
+    ],
+    "normalization": ["nfc", "collapse_spaces", "upper"],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "class_not_lower",
+    "value": ["G", "F", "E", "D", "C", "B", "A", "A+", "A++"],
+    "rounding": "none",
+    "unit_target": "Буква"
+  },
+  "required_evidence": ["expected", "actual"],
+  "normative_refs": [
+    {
+      "identifier": "ФЗ № 261-ФЗ",
+      "issuer": "Федеральное Собрание России",
+      "clause": "Статья 11 (вребования энергетической эффективности зданий)",
+      "effective_from": "2009-11-23",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {"name": "same_energy_class_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE"},
+    {"name": "better_class_in_rd_is_not_violation", "expected_status": "AUTO_NO_DIFFERENCE"},
+    {"name": "lower_energy_class_gives_candidate", "expected_status": "CANDIDATE"},
+    {"name": "required_stage_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE"}
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "code": "POD-095",
+  "section": "ПОД",
+  "name": "Мероприятия по пылеподавлению и снижению шума",
+  "unit": "—",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Отсутствие систем гидроорошения или защитных экранов в РД при демонтаже стен.",
+  "coverage": "advisory",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": "Семейство presence: экстрактор подтверждает наличие раздела о пылеподавлении, но compare_presence не умеет выдавать CANDIDATE. Расхождение «ПД требует орошение — РД его не содержит» остаётся за инспектором."
+  },
+  "sources": {
+    "pd": {
+      "discipline": [
+        "ПОД"
+      ],
+      "table": "Требования к орошению и защитным экранам",
+      "description": "Текст ПОД: Требования к орошению/экранам"
+    },
+    "rd": {
+      "discipline": [
+        "ПОД",
+        "ППР"
+      ],
+      "table": "Технологическая карта; схема водяных пушек",
+      "description": "Технологические карты; Места водных пушек (ППР)"
+    },
+    "id": {
+      "document_kind": [
+        "Журнал производственного экологического контроля"
+      ],
+      "table": null,
+      "description": "Журнал производственного экоконтроля (замеры шума/пыли)"
+    }
+  },
+  "extractor": {
+    "type": "presence",
+    "regex": null,
+    "anchors": [
+      "Мероприятия по пылеподавлению и снижению шума",
+      "Пылеподавление",
+      "Гидроорошение",
+      "Водяная пушка",
+      "Шумозащитный экран",
+      "Защитный экран"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "upper"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "present",
+    "rounding": "none",
+    "unit_target": null
+  },
+  "required_evidence": [
+    "actual"
+  ],
+  "normative_refs": [
+    {
+      "identifier": "Постановление Правительства РФ № 87",
+      "issuer": "Правительство Российской Федерации",
+      "clause": "п. 24 (раздел 7 «Проект организации работ по сносу или демонтажу»)",
+      "effective_from": "2008-02-16",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "СанПиН 2.1.3684-21",
+      "issuer": "Роспотребнадзор",
+      "clause": "разд. X (санитарные требования при обращении с отходами сноса)",
+      "effective_from": "2021-03-01",
+      "effective_to": null,
+      "mandatory": "mandatory_list",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "СП 51.13330.2011",
+      "issuer": "Минрегион России",
+      "clause": "разд. 12 (защита от шума на строительной площадке)",
+      "effective_from": "2011-05-20",
+      "effective_to": null,
+      "mandatory": "mandatory_list",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "MEDIUM",
+  "tests": [
+    {
+      "name": "dust_suppression_declared_in_both_stages_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "anchor_absent_in_rd_gives_low_quality",
+      "expected_status": "LOW_QUALITY"
+    },
+    {
+      "name": "rd_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "presence_family_never_produces_candidate",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    }
+  ]
+}

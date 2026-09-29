@@ -1,0 +1,91 @@
+{
+  "code": "OOS-100",
+  "section": "ООС",
+  "name": "Фиксация рейсов через мобильный КПТС",
+  "unit": "Статус",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Выезд самосвала с отходами без генерации QR-кода в \"Мобильном КПТС\".",
+  "coverage": "source_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": "Факт рейса фиксируется QR-кодом в системе «Мобильный КПТС». Лог-данные КПТС не входят в ИД: нужен коннектор к внешней системе."
+  },
+  "sources": {
+    "pd": {
+      "discipline": [
+        "ООС"
+      ],
+      "table": "Требования к весовому контролю",
+      "description": "Требования к весовому контролю (ООС)"
+    },
+    "rd": {
+      "discipline": [
+        "ППР"
+      ],
+      "table": "Схема размещения постов КПП",
+      "description": "Места размещения постов КПП (ППР)"
+    },
+    "id": {
+      "document_kind": [
+        "Лог-данные «Мобильный КПТС»"
+      ],
+      "table": null,
+      "description": "Лог-данные \"Мобильный КПТС\""
+    }
+  },
+  "extractor": {
+    "type": "exact_field",
+    "regex": null,
+    "anchors": [
+      "Фиксация рейсов через мобильный КПТС"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "upper"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "eq",
+    "rounding": "none",
+    "unit_target": "Статус"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [
+    {
+      "identifier": "Постановление Правительства Москвы № 257-ПП",
+      "issuer": "Правительство Москвы",
+      "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+      "effective_from": "2015-05-12",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "registry_evidence_is_outside_pd_rd_id_package",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "no_value_regex_fails_closed_to_low_quality",
+      "expected_status": "LOW_QUALITY"
+    }
+  ]
+}

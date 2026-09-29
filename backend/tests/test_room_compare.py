@@ -1,0 +1,357 @@
+"""Сравнение помещений на токенах. Пороги из правила, не из gold."""
+
+from __future__ import annotations
+
+from kontur.application.evaluate import StagePage, _room_rule, evaluate_free_search, evaluate_rule
+from kontur.application.extractors.number import PageToken
+from kontur.application.room_compare import compare_room_tokens
+from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef, ExtractionEngine
+from kontur.domain.statuses import Completeness, FindingStatus
+from kontur.evaluation.submission import location_from_group
+from kontur.infrastructure.matrix.registry import FileRuleRegistry
+
+HASH = "a" * 64
+
+
+def _box(x: float, y: float) -> tuple[tuple[float, float], ...]:
+    return ((x, y), (x + 0.02, y), (x + 0.02, y + 0.02), (x, y + 0.02))
+
+
+def _token(text: str, x: float, y: float, page: int = 1) -> PageToken:
+    polygon = _box(x, y)
+    return PageToken(text=text, page=page, polygon_source=polygon, polygon_norm=polygon)
+
+
+def _settings() -> dict[str, object]:
+    rule = FileRuleRegistry().get("IOS4-078")
+    extractor = rule["extractor"]
+    assert isinstance(extractor, dict)
+    raw = extractor["room_compare"]
+    assert isinstance(raw, dict)
+    return raw
+
+
+def _doc(stage: DocStage, file_id: str | None = None, code: str = "ОВ") -> DocumentRef:
+    return DocumentRef(
+        file_id=file_id or f"f-{stage.value}",
+        file_hash=HASH,
+        doc_stage=stage,
+        document_code=code,
+        revision="1",
+        approval_status=ApprovalStatus.APPROVED,
+    )
+
+
+def test_missing_feature_is_candidate_and_shared_feature_is_quiet() -> None:
+    pd = (
+        _token("101", 0.2, 0.2),
+        _token("В", 0.23, 0.2),
+        _token("102", 0.5, 0.5),
+        _token("В", 0.53, 0.5),
+    )
+    rd = (
+        _token("101", 0.2, 0.2),
+        _token("102", 0.5, 0.5),
+        _token("В", 0.53, 0.5),
+    )
+    diffs = compare_room_tokens(pd, rd, _settings())
+    kinds = {item.room: item.kind for item in diffs}
+    assert kinds["101"] == "candidate"
+    assert "102" not in kinds
+
+
+def test_room_only_on_rd_is_suspicion() -> None:
+    pd = (_token("101", 0.2, 0.2), _token("В", 0.23, 0.2))
+    rd = (
+        _token("101", 0.2, 0.2),
+        _token("В", 0.23, 0.2),
+        _token("103", 0.7, 0.7),
+    )
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert any(item.kind == "suspicion" and item.room == "103" for item in diffs)
+
+
+def test_duplicate_room_abstains() -> None:
+    pd = (_token("101", 0.2, 0.2), _token("101", 0.6, 0.6))
+    rd = (_token("101", 0.2, 0.2),)
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert [item.kind for item in diffs] == ["abstain"]
+
+
+def test_same_tokens_do_not_depend_on_calling_twice() -> None:
+    tokens = (_token("140", 0.2, 0.2), _token("В", 0.23, 0.2))
+    first = compare_room_tokens(tokens, tokens, _settings())
+    second = compare_room_tokens(tokens, tokens, _settings())
+    assert [item.kind for item in first] == [item.kind for item in second] == ["match"]
+
+
+def test_room_only_on_pd_is_suspicion() -> None:
+    pd = (
+        _token("101", 0.2, 0.2),
+        _token("В", 0.23, 0.2),
+        _token("104", 0.4, 0.4),
+    )
+    rd = (_token("101", 0.2, 0.2), _token("В", 0.23, 0.2))
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert any(item.kind == "suspicion" and item.room == "104" for item in diffs)
+
+
+def test_feature_only_on_rd_is_suspicion() -> None:
+    pd = (_token("101", 0.2, 0.2),)
+    rd = (_token("101", 0.2, 0.2), _token("В", 0.23, 0.2))
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert any(item.kind == "suspicion" and item.room == "101" for item in diffs)
+
+
+def test_duplicate_does_not_steal_another_sheet() -> None:
+    pd = (
+        _token("101", 0.2, 0.2, page=1),
+        _token("101", 0.6, 0.6, page=1),
+        _token("201", 0.2, 0.2, page=2),
+        _token("В", 0.23, 0.2, page=2),
+        _token("202", 0.5, 0.5, page=2),
+    )
+    rd = (
+        _token("201", 0.2, 0.2, page=5),
+        _token("202", 0.5, 0.5, page=5),
+        _token("101", 0.2, 0.2, page=9),
+    )
+    diffs = compare_room_tokens(pd, rd, _settings())
+    kinds = {item.room: item.kind for item in diffs}
+    assert kinds["201"] == "candidate"
+    assert any(item.kind == "abstain" for item in diffs)
+
+
+def test_glued_room_token_splits_and_section_does_not() -> None:
+    pd = (_token("001.1001.1", 0.2, 0.2), _token("500×300", 0.5, 0.5))
+    rd = (_token("001.1", 0.2, 0.2),)
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert any(item.kind == "abstain" for item in diffs)
+    assert all(item.room != "500" for item in diffs)
+    assert all(item.room != "300" for item in diffs)
+
+
+def test_fragment_keeps_source_polygon_and_ocr_engine() -> None:
+    rule = dict(FileRuleRegistry().get("IOS4-078"))
+    extractor = dict(rule["extractor"])  # type: ignore[arg-type]
+    extractor["type"] = "room_compare"
+    rule["extractor"] = extractor
+    source = ((10.0, 20.0), (30.0, 20.0), (30.0, 40.0), (10.0, 40.0))
+    norm = _box(0.2, 0.2)
+    room = PageToken(
+        text="140",
+        page=1,
+        polygon_source=source,
+        polygon_norm=norm,
+        engine=ExtractionEngine.OCR,
+    )
+    pd = StagePage(document=_doc(DocStage.PD), tokens=(room, _token("В", 0.23, 0.2)))
+    rd = StagePage(document=_doc(DocStage.RD), tokens=(_token("140", 0.2, 0.2),))
+    result = evaluate_rule(
+        rule,
+        object_id="OBJ-ROOM",
+        pages={DocStage.PD: pd, DocStage.RD: rd},
+        completeness={
+            DocStage.PD: Completeness.UPLOADED,
+            DocStage.RD: Completeness.UPLOADED,
+            DocStage.ID: Completeness.MISSING,
+        },
+    )
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.evidence_group is not None
+    assert result.evidence_group.fragments[0].room_id == "140"
+    assert location_from_group(result.evidence_group) == "140"
+    fragment = result.evidence_group.fragments[0]
+    assert fragment.polygon_source == source
+    assert fragment.polygon_norm == norm
+    assert fragment.extracted.engine is ExtractionEngine.OCR
+
+
+def test_live_number_pass_keeps_section_and_adds_room() -> None:
+    rule = FileRuleRegistry().get("IOS4-078")
+    section = (
+        _token("сечение", 0.10, 0.80),
+        _token("воздуховода", 0.20, 0.80),
+        _token("500×300", 0.40, 0.80),
+    )
+    pd = StagePage(
+        document=_doc(DocStage.PD),
+        tokens=section + (_token("140", 0.20, 0.20), _token("В", 0.23, 0.20)),
+    )
+    rd = StagePage(
+        document=_doc(DocStage.RD),
+        tokens=section + (_token("140", 0.20, 0.20),),
+    )
+    result = evaluate_rule(
+        rule,
+        object_id="OBJ-ROOM",
+        pages={DocStage.PD: pd, DocStage.RD: rd},
+        completeness={
+            DocStage.PD: Completeness.UPLOADED,
+            DocStage.RD: Completeness.UPLOADED,
+            DocStage.ID: Completeness.MISSING,
+        },
+    )
+    rooms = [item for item in result.also if item.finding.finding_status is FindingStatus.CANDIDATE]
+    assert rooms
+    assert rooms[0].evidence_group is not None
+    assert rooms[0].evidence_group.fragments[0].room_id == "140"
+    assert location_from_group(rooms[0].evidence_group) == "140"
+
+
+def test_two_by_two_volumes_keep_the_best_room_pair() -> None:
+    rule = FileRuleRegistry().get("IOS4-078")
+    pages = {
+        DocStage.PD: (
+            StagePage(
+                document=_doc(DocStage.PD, "pd-a", "ОВ-A"),
+                tokens=(
+                    _token("101", 0.2, 0.2),
+                    _token("В", 0.23, 0.2),
+                    _token("102", 0.5, 0.5),
+                    _token("В", 0.53, 0.5),
+                ),
+            ),
+            StagePage(
+                document=_doc(DocStage.PD, "pd-b", "ОВ-B"),
+                tokens=(_token("901", 0.2, 0.2), _token("В", 0.23, 0.2)),
+            ),
+        ),
+        DocStage.RD: (
+            StagePage(
+                document=_doc(DocStage.RD, "rd-a", "ОВ-A"),
+                tokens=(
+                    _token("101", 0.2, 0.2),
+                    _token("102", 0.5, 0.5),
+                    _token("В", 0.53, 0.5),
+                ),
+            ),
+            StagePage(
+                document=_doc(DocStage.RD, "rd-b", "ОВ-B"),
+                tokens=(_token("404", 0.2, 0.2), _token("В", 0.23, 0.2)),
+            ),
+        ),
+    }
+    result = _room_rule(rule, pages, "OBJ-ROOM")
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.evidence_group is not None
+    assert result.evidence_group.fragments[0].room_id == "101"
+    assert {item.document.file_id for item in result.evidence_group.fragments} == {"pd-a", "rd-a"}
+
+
+def test_disjoint_volume_pairs_both_compare() -> None:
+    rule = FileRuleRegistry().get("IOS4-078")
+    pages = {
+        DocStage.PD: (
+            StagePage(
+                document=_doc(DocStage.PD, "pd-a", "ОВ-A"),
+                tokens=(_token("101", 0.2, 0.2), _token("В", 0.23, 0.2)),
+            ),
+            StagePage(
+                document=_doc(DocStage.PD, "pd-b", "ОВ-B"),
+                tokens=(_token("202", 0.2, 0.2), _token("В", 0.23, 0.2)),
+            ),
+        ),
+        DocStage.RD: (
+            StagePage(
+                document=_doc(DocStage.RD, "rd-a", "ОВ-A"),
+                tokens=(_token("101", 0.2, 0.2),),
+            ),
+            StagePage(
+                document=_doc(DocStage.RD, "rd-b", "ОВ-B"),
+                tokens=(_token("202", 0.2, 0.2),),
+            ),
+        ),
+    }
+    result = _room_rule(rule, pages, "OBJ-ROOM")
+    rooms: list[str] = []
+    for item in (result, *result.also):
+        group = item.evidence_group
+        if group is None:
+            continue
+        rooms.append(group.fragments[0].room_id or "")
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert sorted(rooms) == ["101", "202"]
+
+
+def test_free_search_room_diff_stays_suspicion() -> None:
+    rule = {
+        "code": "FREE-HEATING-001",
+        "matrix_version": "draft-0",
+        "extractor": {"type": "room_compare", "room_compare": _settings()},
+    }
+    pages = {
+        DocStage.PD: StagePage(
+            document=_doc(DocStage.PD),
+            tokens=(_token("101", 0.2, 0.2), _token("В", 0.23, 0.2)),
+        ),
+        DocStage.RD: StagePage(
+            document=_doc(DocStage.RD),
+            tokens=(_token("101", 0.2, 0.2),),
+        ),
+    }
+    found = evaluate_free_search(rule, pages, "OBJ-ROOM")
+    assert len(found) == 1
+    assert found[0].finding.finding_status is FindingStatus.SUSPICION
+    assert found[0].evidence_group is not None
+    assert found[0].evidence_group.fragments[0].room_id == "101"
+
+
+def test_latin_b_matches_cyrillic_feature_regex() -> None:
+    pd = (_token("101", 0.2, 0.2), _token("B", 0.23, 0.2))
+    rd = (_token("101", 0.2, 0.2),)
+    diffs = compare_room_tokens(pd, rd, _settings())
+    assert any(item.kind == "candidate" and item.room == "101" for item in diffs)
+
+
+def test_one_rd_sheet_does_not_drop_the_second_pd_sheet() -> None:
+    pd = (
+        _token("101", 0.2, 0.2, page=1),
+        _token("В", 0.23, 0.2, page=1),
+        _token("202", 0.2, 0.2, page=2),
+        _token("В", 0.23, 0.2, page=2),
+    )
+    rd = (
+        _token("101", 0.2, 0.2, page=9),
+        _token("202", 0.5, 0.5, page=9),
+    )
+    kinds = {item.room: item.kind for item in compare_room_tokens(pd, rd, _settings())}
+    assert kinds["101"] == "candidate"
+    assert kinds["202"] == "candidate"
+
+
+def test_unrelated_sheet_does_not_emit_its_rooms() -> None:
+    pd = (
+        _token("101", 0.2, 0.2, page=1),
+        _token("В", 0.23, 0.2, page=1),
+        _token("102", 0.5, 0.5, page=1),
+    )
+    rd = (
+        _token("101", 0.2, 0.2, page=2),
+        _token("600", 0.2, 0.2, page=3),
+        _token("601", 0.5, 0.5, page=3),
+    )
+    kinds = {item.room: item.kind for item in compare_room_tokens(pd, rd, _settings())}
+    assert kinds["101"] == "candidate"
+    assert "600" not in kinds
+    assert "601" not in kinds
+
+
+def test_conflicting_pairs_abstain_that_room_only() -> None:
+    pd = (
+        _token("101", 0.2, 0.2, page=1),
+        _token("В", 0.23, 0.2, page=1),
+        _token("202", 0.2, 0.2, page=2),
+        _token("В", 0.23, 0.2, page=2),
+        _token("101", 0.2, 0.2, page=3),
+        _token("В", 0.23, 0.2, page=3),
+    )
+    rd = (
+        _token("101", 0.2, 0.2, page=5),
+        _token("202", 0.2, 0.2, page=6),
+        _token("101", 0.2, 0.2, page=7),
+        _token("В", 0.23, 0.2, page=7),
+    )
+    kinds = {item.room: item.kind for item in compare_room_tokens(pd, rd, _settings())}
+    assert kinds["101"] == "abstain"
+    assert kinds["202"] == "candidate"

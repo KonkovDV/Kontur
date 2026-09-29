@@ -1,0 +1,17 @@
+# Учебный стенд на loopback. Не production: токен без подписи только здесь.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+#
+# Интерфейс: http://127.0.0.1:3000
+# Ядро через шлюз: http://127.0.0.1:3000/api/v1/healthz
+
+services:
+  core:
+    environment:
+      KONTUR_ALLOW_INSECURE_DEV_AUTH: "true"
+
+  gateway:
+    build:
+      args:
+        VITE_DEMO_BANNER: учебный стенд
+        VITE_DEMO_TOKEN: inspector-1@OBJ-DEMO-COLD-START/INSPECTOR

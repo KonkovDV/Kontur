@@ -1,0 +1,76 @@
+{
+  "code": "POD-096",
+  "section": "ПОД",
+  "name": "Узлы временного расчленения сохраняемых конструкций",
+  "unit": "—",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Занижение сечений элементов расчленения в РД; отсутствие актов монтажа.",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Чертежи временных подпорок (ПОД)"
+    },
+    "rd": {
+      "description": "Детальные узлы крепелей; Спецификация (КР/ППР)"
+    },
+    "id": {
+      "description": "Акты АОСР на устройство креплений; Фотофиксация"
+    }
+  },
+  "extractor": {
+    "type": "enum",
+    "regex": null,
+    "anchors": [
+      "Узлы временного расчленения сохраняемых конструкций"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "class_not_lower",
+    "rounding": "none",
+    "unit_target": null
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

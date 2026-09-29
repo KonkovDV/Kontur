@@ -1,0 +1,118 @@
+{
+  "package_version": "lct2026-task10-20260915",
+  "split_rule": "Изоляция по object_id: все документы, страницы и редакции одного объекта лежат в одном наборе. Пересечение train/validation по object_id = 0 (docs/DATA_QUARANTINE.md, п. 3).",
+  "split_status": "partially_known_from_split_policy",
+  "address_hint_status": "Адрес выведен из имени архива и организатором не подтверждён: источник истины — титул и штамп документа.",
+  "organizer_split_policy": {
+    "source": "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/.../02_ФОРМАТ_ДАННЫХ_И_ПРИМЕРЫ/data/split_policy.json (и дубль в hackathon_gold_20260811)",
+    "organizer_vocabulary": "TRAIN_PUBLIC / TEST_HIDDEN / ORGANIZER_ONLY — термины организатора; внутренний словарь этого файла: train / validation / null (test не назначается до инвентаризации)",
+    "train_public_objects": ["OBJ-TYUMENSKAYA-5-GOLD-SEED", "OBJ-NOVOSLOBODSKAYA"],
+    "test_hidden_objects": ["OBJ-RECHNIKOV-7-7"],
+    "excluded_file_ids": ["F0149", "F0418"],
+    "organizer_has_validation_split": false,
+    "validation_objects": [],
+    "note": "F0149 — дубль по SHA-256; F0418 — повреждённый PDF (Invalid XRef). Оба вне корпуса. Организатор не задал validation: только TRAIN_PUBLIC и TEST_HIDDEN. Публичный gold — 15 проверок TRAIN_PUBLIC, не frozen val (docs/ORGANIZER_GOLD.md).",
+    "leakage_caveat": "Документы OBJ-RECHNIKOV-7-7 (213 шт., UNLABELED) физически лежат в открытом пакете 01_ДОКУМЕНТАЦИЯ. Ответов там нет, но corpus скрытого теста открыт: для обучения/порогов использовать запрещено — только конкурсный прогон. Dataset builder обязан работать по allowlist train-объектов, не по blocklist карантина."
+  },
+  "objects": [
+    {
+      "object_id": "10_Полярная_25_СОШ1100к7",
+      "archive": "10_Полярная_25_СОШ1100к7.tar",
+      "address_hint": "ул. Полярная, 25 — СОШ №1100, корп. 7",
+      "size_kb": 20465301,
+      "split": null,
+      "present_in_files": true,
+      "files_layout": "unpacked_dir_no_tar"
+    },
+    {
+      "object_id": "11_Полярная_16",
+      "archive": "11_Полярная_16.tar",
+      "address_hint": "ул. Полярная, 16",
+      "size_kb": 10034977,
+      "split": null
+    },
+    {
+      "object_id": "12_Полярная_25_ДОО220к9",
+      "archive": "12_Полярная_25_ДОО220к9.tar",
+      "address_hint": "ул. Полярная, 25 — ДОО №220, корп. 9",
+      "size_kb": 5858623,
+      "split": null
+    },
+    {
+      "object_id": "13_УНДМС",
+      "archive": "13_УНДМС.tar",
+      "address_hint": null,
+      "size_kb": 15738775,
+      "split": null
+    },
+    {
+      "object_id": "14_Алтуфьевское_79Б",
+      "archive": "14_Алтуфьевское_79Б.tar",
+      "address_hint": "Алтуфьевское шоссе, 79Б",
+      "size_kb": 783176,
+      "split": null
+    },
+    {
+      "object_id": "15_Полярная_17",
+      "archive": "15_Полярная_17.tar",
+      "address_hint": "ул. Полярная, 17",
+      "size_kb": 2980787,
+      "split": null
+    },
+    {
+      "object_id": "16_Лосевская_3А",
+      "archive": "16_Лосевская_3А.tar",
+      "address_hint": "ул. Лосевская, 3А",
+      "size_kb": 2559123,
+      "split": null
+    },
+    {
+      "object_id": "17_Изумрудная_12",
+      "archive": "17_Изумрудная_12.tar",
+      "address_hint": "ул. Изумрудная, 12",
+      "size_kb": 1367298,
+      "split": null
+    },
+    {
+      "object_id": "18_Октябрьская_103",
+      "archive": "18_Октябрьская_103.tar",
+      "address_hint": "ул. Октябрьская, 103",
+      "size_kb": 1049196,
+      "split": null
+    },
+    {
+      "object_id": "OBJ-NOVOSLOBODSKAYA",
+      "archive": "01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА.tar",
+      "address_hint": "Новослободская",
+      "size_kb": null,
+      "split": "train",
+      "files": 145,
+      "dataset_role": "UNLABELED_POOL",
+      "organizer_label": "TRAIN_PUBLIC",
+      "note": "Корпус из document_manifest.jsonl сводного пакета. 145 файлов: ID 99, PD 36, RD 10."
+    },
+    {
+      "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED",
+      "archive": "01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА.tar",
+      "address_hint": "Пример нарушений на чертежах",
+      "size_kb": null,
+      "split": "train",
+      "files": 58,
+      "dataset_role": "GOLD_SEED",
+      "organizer_label": "TRAIN_PUBLIC",
+      "note": "Единственный объект с подтверждёнными нарушениями: VIO-0001 (IOS4-079), VIO-0002 (FREE-HEATING-001, вне матрицы), VIO-0003 (IOS4-078). Привязка к матрице — кандидат, требует эксперта (паспорт разметки v0.1)."
+    },
+    {
+      "object_id": "OBJ-RECHNIKOV-7-7",
+      "archive": "01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА.tar",
+      "address_hint": "ул. Речников, 7-7",
+      "size_kb": null,
+      "split": null,
+      "files": 213,
+      "dataset_role": "UNLABELED_POOL",
+      "organizer_label": "TEST_HIDDEN",
+      "note": "Скрытый тест по split_policy организатора (см. organizer_split_policy.test_hidden_objects). Внутренний split намеренно null: объект не входит ни в train, ни в validation. Документы открыты, разметка — нет (ORGANIZER_ONLY). Не использовать для обучения, подбора порогов, prompt, препроцессинга."
+    }
+  ],
+  "pending": []
+}

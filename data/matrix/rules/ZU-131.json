@@ -1,0 +1,82 @@
+{
+  "code": "ZU-131",
+  "section": "ЗУ",
+  "name": "Удельный годовой расход тепловой энергии на отопление",
+  "unit": "кВт·ч/м²",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Превышение удельного годового расхода энергии в РД над лимитом из ПД.",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Итоговая таблица Паспорта ЗУ"
+    },
+    "rd": {
+      "description": "Лист \"Общие данные\"; Таблица нагрузок (ОВ)"
+    },
+    "id": {
+      "description": "Фактический энергопаспорт"
+    }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": null,
+    "anchors": [
+      "Удельный годовой расход тепловой энергии на отопление",
+      "Удельный расход тепловой энергии на отопление и вентиляцию",
+      "Удельный расход тепловой энергии на отопление"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "decimal_comma",
+      "strip_unit"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "delta",
+    "tolerance_abs": 0.0,
+    "tolerance_rel": null,
+    "rounding": "half_up",
+    "unit_target": "кВт·ч/м²"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_value_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "value_changed_beyond_tolerance_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "unreadable_value_gives_low_quality",
+      "expected_status": "LOW_QUALITY"
+    }
+  ]
+}

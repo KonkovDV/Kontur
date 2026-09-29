@@ -1,0 +1,126 @@
+{
+  "code": "POD-091",
+  "section": "ПОД",
+  "name": "Методы и технологическая последовательность демонтажа",
+  "unit": "—",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Самовольное изменение метода (например, с плазменного на обрушение экскаватором).",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": "Метод демонтажа назван словом из закрытого списка и в тексте ПОД, и в технологической карте на разборку."
+  },
+  "sources": {
+    "pd": {
+      "discipline": [
+        "ПОД"
+      ],
+      "table": "Описание методов демонтажа",
+      "description": "Текст ПОД: Описание методов"
+    },
+    "rd": {
+      "discipline": [
+        "ПОД",
+        "ППР"
+      ],
+      "table": "Технологическая карта на разборку",
+      "description": "Технологические карты на разборку (ППР)"
+    },
+    "id": {
+      "document_kind": [
+        "Общий журнал работ"
+      ],
+      "table": null,
+      "description": "Общий журнал работ (фактические технологии)"
+    }
+  },
+  "extractor": {
+    "type": "exact_field",
+    "regex": "(плазменн|алмазн|канатн|гидроклин|термическ|обрушени|механизированн|поэлементн|ручн)",
+    "anchors": [
+      "Методы и технологическая последовательность демонтажа",
+      "Метод демонтажа",
+      "Методы демонтажа",
+      "Способ демонтажа",
+      "Технология разборки"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "upper"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "eq",
+    "rounding": "none",
+    "unit_target": null
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [
+    {
+      "identifier": "ГрК РФ № 190-ФЗ",
+      "issuer": "Российская Федерация",
+      "clause": "ст. 55.31 (снос объекта капитального строительства)",
+      "effective_from": "2018-08-04",
+      "effective_to": null,
+      "mandatory": "law",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "Постановление Правительства РФ № 87",
+      "issuer": "Правительство Российской Федерации",
+      "clause": "п. 24 (раздел 7 «Проект организации работ по сносу или демонтажу»)",
+      "effective_from": "2008-02-16",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "СП 325.1325800.2017",
+      "issuer": "Минстрой России",
+      "clause": "п. 5 (правила производства работ при демонтаже)",
+      "effective_from": "2018-06-18",
+      "effective_to": null,
+      "mandatory": "voluntary",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "same_demolition_method_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "plasma_cutting_replaced_by_collapse_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "rd_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "method_outside_closed_list_gives_low_quality",
+      "expected_status": "LOW_QUALITY"
+    },
+    {
+      "name": "two_methods_in_one_window_give_abstain",
+      "expected_status": "ABSTAIN"
+    }
+  ]
+}

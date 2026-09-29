@@ -1,0 +1,76 @@
+{
+  "code": "PPM-111",
+  "section": "ППМ",
+  "name": "Расположение и пределы огнестойкости клапанов (ОЗК)",
+  "unit": "мин (EI)",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Отсутствие ОЗК в местах пересечения воздуховодами противопожарных преград в РД.",
+  "coverage": "extractor_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Схемы вентиляции с ОЗК (ППМ/ИОС)"
+    },
+    "rd": {
+      "description": "Планы разводки; Маркировка клапанов (ОВ)"
+    },
+    "id": {
+      "description": "Паспорта на клапаны; Акты монтажа ОЗК"
+    }
+  },
+  "extractor": {
+    "type": "presence",
+    "regex": null,
+    "anchors": [
+      "Расположение и пределы огнестойкости клапанов (ОЗК)"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "present",
+    "rounding": "none",
+    "unit_target": null
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_or_compliant_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "triggering_difference_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "parameter_not_applicable_on_object",
+      "expected_status": "NOT_APPLICABLE"
+    }
+  ]
+}

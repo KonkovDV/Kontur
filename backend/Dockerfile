@@ -1,0 +1,46 @@
+FROM python:3.12-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
+
+# Закрытый контур: без обращений к внешним сервисам в рантайме.
+# .git в образ не копируется: SHA передаётся на сборке.
+ARG GIT_SHA=unspecified
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 KONTUR_GIT_SHA=${GIT_SHA}
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        tesseract-ocr-rus \
+        tesseract-ocr-eng \
+        fonts-dejavu-core \
+        libgomp1 \
+        libglib2.0-0 \
+        libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY backend/pyproject.toml ./
+COPY backend/src ./src
+COPY contracts ./contracts
+COPY data/matrix ./data/matrix
+COPY data/dataset/gold_inventory.json ./data/dataset/gold_inventory.json
+COPY vendor/ocr /opt/kontur/ocr
+COPY scripts/fetch_ocr_weights.py /tmp/fetch_ocr_weights.py
+COPY backend/requirements.lock /tmp/requirements.lock
+RUN python /tmp/fetch_ocr_weights.py \
+        --lock /app/src/kontur/infrastructure/ocr_weights.lock.json \
+        --dest /opt/kontur/ocr \
+    && rm /tmp/fetch_ocr_weights.py \
+    && pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock \
+    && pip install --no-cache-dir --no-deps --no-build-isolation .
+ENV KONTUR_OCR_WEIGHTS=/opt/kontur/ocr
+
+# Create the runtime identity only after privileged package installation. Keep
+# /app root-owned: the application may write only to explicitly mounted paths
+# or runtime tmpfs locations.
+RUN groupadd --gid 10001 app \
+    && useradd --uid 10001 --gid 10001 --no-create-home \
+        --home-dir /nonexistent --shell /usr/sbin/nologin app
+
+USER 10001:10001
+
+EXPOSE 8000
+CMD ["uvicorn", "kontur.presentation.api:app", "--host", "0.0.0.0", "--port", "8000"]

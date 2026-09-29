@@ -1,0 +1,189 @@
+{
+  "schema_version": "1.0.0",
+  "observed_at": "2026-09-20",
+  "package_version": "lct2026-task10-20260915",
+  "purpose": "Машиночитаемый снимок открытого gold организатора. Не корпус frozen validation. Не содержимое TEST_HIDDEN.",
+  "human_doc": "docs/ORGANIZER_GOLD.md",
+  "sources_open_only": [
+    "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../VALIDATION.json",
+    "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../QA_SUMMARY.json",
+    "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../data/public_gold_checks.jsonl",
+    "files/РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203/.../data/annotations.jsonl",
+    "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/.../data/split_policy.json",
+    "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/.../data/public_train_checks.jsonl",
+    "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/.../ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0/",
+    "data/dataset/package_manifest.json"
+  ],
+  "hidden_test_contents_inspected": false,
+  "verdict": {
+    "documents_received": true,
+    "frozen_validation_corpus_for_132": false,
+    "closes_gate_j": false,
+    "closes_gate_i": false,
+    "closes_gate_k": false,
+    "closes_gate_l": false,
+    "summary": "Организатор прислал документы и публичный gold-seed TRAIN_PUBLIC. Это не held-out validation по object_id и не разметка 106 критических параметров. Пороги ТЗ по нижней границе Wilson на этом gold недостижимы даже при нуле промахов."
+  },
+  "organizer_split": {
+    "train_public": ["OBJ-TYUMENSKAYA-5-GOLD-SEED", "OBJ-NOVOSLOBODSKAYA"],
+    "test_hidden": ["OBJ-RECHNIKOV-7-7"],
+    "validation": [],
+    "excluded_file_ids": ["F0149", "F0418"],
+    "do_not_release": [
+      "all_gold_checks.jsonl",
+      "review_queue.jsonl",
+      "evidence_index.jsonl for TEST_HIDDEN"
+    ],
+    "note": "split_policy.json задаёт TRAIN_PUBLIC и TEST_HIDDEN. Сплита validation у организатора нет. Внутренний split=validation в objects.json для открытых объектов не назначен: оба — train."
+  },
+  "workspace_observation": {
+    "root": "files/",
+    "in_git": false,
+    "present_top_level": [
+      "01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА",
+      "02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА",
+      "10. Мосстройнадзор.pdf",
+      "10_Полярная_25_СОШ1100к7",
+      "ЛЦТ2026 Шаблон презентации.pptx",
+      "РАЗМЕЧЕННЫЙ_TRAIN_PUBLIC_203",
+      "РАЗМЕЧЕННЫЙ_TEST__213"
+    ],
+    "object_archives_10_18_present": false,
+    "object_archive_10_present": true,
+    "object_archives_11_18_present": false,
+    "participant_package_without_answers_v2_present": true,
+    "closed_organizer_answers_zip_present": true,
+    "data_incoming_empty": true,
+    "data_work_empty": true,
+    "hidden_test_unpacked_beside_train": true,
+    "action_on_unpacked_hidden_test": "Считать карантином. Перенести в data/quarantine/. Не открывать annotated_documents скрытого теста. Не использовать для порогов.",
+    "action_on_closed_organizer_zip": "Не распаковывать ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip для порогов, prompt и regex."
+  },
+  "participant_package_without_answers_v2": {
+    "observed_at": "2026-09-19",
+    "relative_path": "files/01_ПАКЕТ_УЧАСТНИКАМ_3_ОБЪЕКТА/ХАКАТОН_УЧАСТНИКАМ_ГОТОВО_К_ПЕРЕДАЧЕ/ПАКЕТ_УЧАСТНИКАМ_БЕЗ_ОТВЕТОВ_v2.0/",
+    "sha256sums_verified": 18,
+    "tz_appendices_byte_identical_to_00_TZ": true,
+    "data_byte_identical_to_02_FORMAT": true,
+    "public_train_checks_n": 10,
+    "omits_no_violation_TRAIN_0011_0015": true,
+    "positive_evidence_file_ids": ["F0171", "F0201", "F0202"],
+    "ground_truth_index_file_id": "F0194",
+    "closes_gate_j": false,
+    "note": "Участнический пакет без ответов скрытого теста. 10 публичных позитивов совпадают с TRAIN-0001…0010 из public_gold_checks.jsonl. Пять NO_VIOLATION Новослободской остаются только в размеченном TRAIN_PUBLIC zip и score_eligible=false."
+  },
+  "missing_from_files_for_tz_acceptance": {
+    "frozen_val_held_out_object_id": true,
+    "gold_ocr_approved_for_training": true,
+    "approved_pd_revision_for_tyumen_f0171": true,
+    "object_archives_10_18": true,
+    "object_archive_10_missing": false,
+    "delivery_archive_sha256": true,
+    "rin_sandbox_contract": true,
+    "written_organizer_answers_3_19": true,
+    "closes_gate_i": false,
+    "closes_gate_j": false,
+    "note": "Код по ТЗ можно продолжать на текущих PDF и матрице. Пороги I/J этой поставкой не закрываются. Объект 10 на диске есть, но без публичного gold; 11–18 отсутствуют. Набор 10–18 не заменяет frozen val."
+  },
+  "object_10_polyarnaya_school": {
+    "observed_at": "2026-09-20",
+    "relative_path": "files/10_Полярная_25_СОШ1100к7/",
+    "layout": "unpacked_dir_no_tar",
+    "inner_dir": "Полярная ул., 25_СОШ1100к.7",
+    "n_files": 3762,
+    "bytes": 20855847698,
+    "by_stage_dir": {"PD": 130, "RD": 142, "ID": 3490},
+    "n_pdf": 3102,
+    "n_dwg": 15,
+    "has_organizer_gold": false,
+    "split": null,
+    "in_train_public": false,
+    "in_test_hidden": false,
+    "closes_gate_j": false,
+    "note": "Две папки ПД: «изначальная» и «к ЗОС» (+ .sig). Не TRAIN_PUBLIC. Не frozen val. DWG в ИД остаётся NOT_SUPPORTED до ответа на вопрос 6."
+  },
+  "train_public_annotations": {
+    "expected_files": 203,
+    "n_annotations": 30318,
+    "all_split": "TRAIN_PUBLIC",
+    "by_type": {
+      "DOCUMENT_FIELD": 17167,
+      "MATRIX_FIELD": 13119,
+      "CONFIRMED_VIOLATION_EVIDENCE": 20,
+      "SECOND_REVIEW_CHECK": 12
+    },
+    "by_status": {
+      "AUTO_FIELD_CANDIDATE": 30286,
+      "FINAL_GOLD_EXISTENCE": 20,
+      "SECOND_REVIEW_REQUIRED": 12
+    },
+    "matrix_field_distinct_codes": 131,
+    "matrix_field_is_gold": false,
+    "matrix_field_status": "AUTO_FIELD_CANDIDATE",
+    "pages_without_native_text_layer": 11731,
+    "native_text_pages": 14379,
+    "qa_visualized_source_pages_note": "QA_SUMMARY: visualized source corpus 26110 pages; VALIDATION.json source_pages_visualized 10142"
+  },
+  "public_gold_checks": {
+    "n": 15,
+    "violation_present": 10,
+    "no_violation": 5,
+    "score_eligible_true": 10,
+    "score_eligible_false": 5,
+    "free_search_score_eligible": 4,
+    "score_eligible_violation_present_in_matrix": 6,
+    "confirmed_negative_in_passport": 0,
+    "unlabeled_is_not_no_violation": true,
+    "rows": [
+      {"check_id": "TRAIN-0001", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-079", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX", "location": "012", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 104}, {"stage": "RD", "file_id": "F0201", "pdf_page_number": 17}]},
+      {"check_id": "TRAIN-0002", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "FREE-HEATING-001", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "FREE_SEARCH", "location": "267", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 99}, {"stage": "RD", "file_id": "F0202", "pdf_page_number": 17}]},
+      {"check_id": "TRAIN-0003", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "FREE-HEATING-001", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "FREE_SEARCH", "location": "270", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 99}, {"stage": "RD", "file_id": "F0202", "pdf_page_number": 17}]},
+      {"check_id": "TRAIN-0004", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "FREE-HEATING-001", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "FREE_SEARCH", "location": "271", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 99}, {"stage": "RD", "file_id": "F0202", "pdf_page_number": 17}]},
+      {"check_id": "TRAIN-0005", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "FREE-HEATING-001", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "FREE_SEARCH", "location": "272", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 99}, {"stage": "RD", "file_id": "F0202", "pdf_page_number": 17}]},
+      {"check_id": "TRAIN-0006", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX", "location": "140", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 88}, {"stage": "RD", "file_id": "F0201", "pdf_page_number": 18}]},
+      {"check_id": "TRAIN-0007", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX", "location": "142", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 88}, {"stage": "RD", "file_id": "F0201", "pdf_page_number": 18}]},
+      {"check_id": "TRAIN-0008", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX", "location": "147", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 88}, {"stage": "RD", "file_id": "F0201", "pdf_page_number": 18}]},
+      {"check_id": "TRAIN-0009", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX", "location": "198", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 88}, {"stage": "RD", "file_id": "F0201", "pdf_page_number": 18}]},
+      {"check_id": "TRAIN-0010", "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED", "parameter_code": "IOS4-078", "violation_label": "VIOLATION_PRESENT", "score_eligible": true, "gold_status": "FINAL_GOLD_EXISTENCE", "matrix_scope": "MATRIX", "location": "314", "evidence": [{"stage": "PD", "file_id": "F0171", "pdf_page_number": 88}, {"stage": "RD", "file_id": "F0201", "pdf_page_number": 18}]},
+      {"check_id": "TRAIN-0011", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "PZ-009", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX", "location": "Отметка 0.000"},
+      {"check_id": "TRAIN-0012", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "KR-055", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX", "location": "Стена в грунте"},
+      {"check_id": "TRAIN-0013", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "KR-055", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX", "location": "Фундаментная плита"},
+      {"check_id": "TRAIN-0014", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "KR-055", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX", "location": "Вертикальные конструкции подземной части"},
+      {"check_id": "TRAIN-0015", "object_id": "OBJ-NOVOSLOBODSKAYA", "parameter_code": "KR-058", "violation_label": "NO_VIOLATION", "score_eligible": false, "gold_status": "GOLD_READY_SECOND_REVIEW", "matrix_scope": "MATRIX", "location": "Фундаментная плита"}
+    ]
+  },
+  "gold_evidence_fragments": {
+    "n": 20,
+    "status": "FINAL_GOLD_EXISTENCE",
+    "object_id": "OBJ-TYUMENSKAYA-5-GOLD-SEED",
+    "by_code": {
+      "IOS4-078": 10,
+      "FREE-HEATING-001": 8,
+      "IOS4-079": 2
+    }
+  },
+  "derived_constraints": {
+    "tz_recall_threshold": 0.8,
+    "wilson_z": 1.96,
+    "perfect_n_min_to_meet_tz_recall": 16,
+    "matrix_score_eligible_positives": 6,
+    "perfect_six_meets_tz_recall": false,
+    "critical_106_labeled": false
+  },
+  "gate_moves": {
+    "J": "Не закрывается этим gold. Harness: backend/tests/test_frozen_val.py. Публикация P/R/F1 запрещена.",
+    "I": "Пилот 300 стр. есть. Docker-замер SILVER (make ocr-pilot): Wilson ниже порога приёмки; не GOLD; Речников не брали; capabilities OCR = UNAVAILABLE; гейт I открыт.",
+    "K": "PDF Тюменской, Новослободской и объекта 10 — материал для 5 инспекторов. Сессий нет. Объект 10 не gold.",
+    "L": "GHA live k6 измерен (docs/PERFORMANCE.md); не production SLA. Документы поставки p95 не меняют."
+  },
+  "forbidden": [
+    "Считать AUTO_FIELD_CANDIDATE / MATRIX_FIELD золотой разметкой сверки",
+    "Открывать РАЗМЕЧЕННЫЙ_TEST__213 и annotated_documents скрытого теста",
+    "Распаковывать ПАКЕТ_ОРГАНИЗАТОРА_ЗАКРЫТЫЙ_v2.0.zip для порогов, prompt и regex",
+    "Подбирать пороги, prompt, regex по OBJ-RECHNIKOV-7-7",
+    "Закрывать GAP-IOS4-VAL или гейт J публикацией F1/P/R по 15 строкам или по пакету без ответов v2.0",
+    "Считать распакованный объект 10_Полярная_25_СОШ1100к7 frozen val или gold 132",
+    "Назначать внутренний validation тем же object_id, что train, без изоляции",
+    "Считать 10 public_train_checks пакета без ответов заменой 15 public_gold_checks"
+  ]
+}

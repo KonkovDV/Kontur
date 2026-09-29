@@ -1,0 +1,101 @@
+{
+  "code": "OOS-101",
+  "section": "ООС",
+  "name": "Сверка легитимности полной утилизации",
+  "unit": "Статус",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Выгрузка отходов на полигон, не входящий в ТРПО или без лицензии ГРОО.",
+  "coverage": "source_missing",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": "Легитимность полигона проверяется по ГРОО и электронным отметкам полигона. Ни ГРОО, ни отметки не входят в пакет ПД/РД/ИД: нужен коннектор к реестру."
+  },
+  "sources": {
+    "pd": {
+      "discipline": [
+        "ООС"
+      ],
+      "table": "Перечень конечных объектов размещения (КПО/полигоны)",
+      "description": "Перечень конечных объектов (КПО/полигоны) (ООС)"
+    },
+    "rd": {
+      "discipline": [
+        "ООС"
+      ],
+      "table": "Договоры с полигонами (ТРПО)",
+      "description": "Договоры с полигонами (ТРПО)"
+    },
+    "id": {
+      "document_kind": [
+        "Электронные отметки полигона",
+        "Выписка ГРОО"
+      ],
+      "table": null,
+      "description": "Электронные отметки полигона; ГРОО"
+    }
+  },
+  "extractor": {
+    "type": "exact_field",
+    "regex": null,
+    "anchors": [
+      "Сверка легитимности полной утилизации"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "upper"
+    ],
+    "dual_read_required": false
+  },
+  "comparator": {
+    "operator": "eq",
+    "rounding": "none",
+    "unit_target": "Статус"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [
+    {
+      "identifier": "ФЗ № 89-ФЗ",
+      "issuer": "Российская Федерация",
+      "clause": "ст. 12 ч. 6, ст. 9 (ГРОО и лицензирование обращения с отходами)",
+      "effective_from": "1998-06-24",
+      "effective_to": null,
+      "mandatory": "law",
+      "layer": "organizer_matrix"
+    },
+    {
+      "identifier": "Постановление Правительства Москвы № 257-ПП",
+      "issuer": "Правительство Москвы",
+      "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+      "effective_from": "2015-05-12",
+      "effective_to": null,
+      "mandatory": "bylaw",
+      "layer": "organizer_matrix"
+    }
+  ],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "registry_evidence_is_outside_pd_rd_id_package",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "no_value_regex_fails_closed_to_low_quality",
+      "expected_status": "LOW_QUALITY"
+    }
+  ]
+}

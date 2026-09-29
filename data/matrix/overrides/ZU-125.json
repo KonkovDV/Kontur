@@ -1,0 +1,83 @@
+{
+  "code": "ZU-125",
+  "section": "ЗУ",
+  "name": "Толщина теплоизоляционного слоя наружных стен",
+  "unit": "мм",
+  "matrix_version": "draft-0",
+  "source_trigger_logic": "Уменьшение толщины утеплителя в РД, ведущее к падению сопротивления теплопередаче.",
+  "coverage": "executable",
+  "applicability": {
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
+    "object_types": [],
+    "condition": null
+  },
+  "sources": {
+    "pd": {
+      "description": "Теплоизоляционный расчет; Разрезы стен (ЗУ/АР)"
+    },
+    "rd": {
+      "description": "Спецификация фасадных систем; Разрезы стен (АР)"
+    },
+    "id": {
+      "description": "Акты АОСР на утепление; Паспорта на утеплитель"
+    }
+  },
+  "extractor": {
+    "type": "number",
+    "regex": null,
+    "anchors": [
+      "Толщина теплоизоляционного слоя наружных стен",
+      "Толщина теплоизоляционного слоя",
+      "Толщина утеплителя наружных стен",
+      "Толщина утеплителя стен"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "decimal_comma",
+      "strip_unit"
+    ],
+    "dual_read_required": true
+  },
+  "comparator": {
+    "operator": "delta",
+    "tolerance_abs": 0.0,
+    "tolerance_rel": null,
+    "rounding": "half_up",
+    "unit_target": "мм"
+  },
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
+  "normative_refs": [],
+  "failure_mapping": {
+    "source_absent": "MISSING_EVIDENCE",
+    "not_comparable": "NOT_COMPARABLE",
+    "revision_conflict": "CLARIFICATION_REQUIRED",
+    "low_quality": "LOW_QUALITY",
+    "reads_disagree": "ABSTAIN"
+  },
+  "review_priority": "HIGH",
+  "tests": [
+    {
+      "name": "equal_value_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "value_changed_beyond_tolerance_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "required_stage_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "unreadable_value_gives_low_quality",
+      "expected_status": "LOW_QUALITY"
+    }
+  ]
+}

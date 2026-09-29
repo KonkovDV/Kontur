@@ -1,0 +1,149 @@
+# Холодный запуск демо (issue #78)
+
+Репетиция 4-минутного сценария на чистой машине. Не Polar, не TEST_HIDDEN,
+не закрытие гейтов I/J/K. Видео запасного демо пишет человек.
+
+Доказуемая репетиция — in-process pytest (синтетические кириллические PDF),
+не объект `10_Полярная_25_СОШ1100к7`. Coverage на момент среза:
+55 executable / 72 extractor_missing / 1 advisory / 4 source_missing из 132
+объявленных. Это разбивка, не заявление, что вся матрица executable.
+
+## Что считается успехом
+
+1. `docker compose up -d` поднимает postgres, redis, rabbitmq, minio, core,
+   outbox-relay, inbox-consumer, gateway.
+2. Загрузка ПД (черновик без штампа, затем утверждённая редакция), РД, ИД.
+3. Паспорт читает штамп «Утвердил» + ФИО. Явный «не утв.» не эталон.
+   Одна ПД без сведений об утверждении — `CLARIFICATION_REQUIRED`, пока
+   инспектор не назначит эталон. Две редакции ПД без
+   successor — `CLARIFICATION_REQUIRED`, пока инспектор не назначит эталон.
+   Голова — не последний загруженный файл. Разные шифры стадии — отдельные
+   головы, не конфликт комплекта.
+4. Три кандидата: `PZ-001`, `KR-055`, `AR-041`. Автомат не пишет
+   `CONFIRMED_VIOLATION`.
+5. Инспектор confirm/reject с комментарием; REJECT — с `reason_code`.
+6. `verify` → `complete` → `finalize` → protocol v1 (`PROTOCOL_FINALIZED`).
+   Прямой `complete` из `READY` — 409. Карман `AUTO_NO_DIFFERENCE` на провод ТЗ не выходит.
+7. Outbox `PENDING`, destination `RIN`. Confirm брокера ≠ бизнес-ACK РиН.
+
+Стоп: Polar как frozen val; открытие TEST_HIDDEN; «гейт K закрыт» без пяти
+сессий; `KONTUR_ALLOW_INSECURE_DEV_AUTH` в production.
+
+## Репетиция без Docker (CI и Windows)
+
+```text
+python -m pytest backend/tests/test_demo_cold_start.py -q --tb=short
+python scripts/demo_cold_start.py
+```
+
+На Linux с GNU make: `make demo-rehearsal`.
+
+## Compose на чистой машине
+
+Нужны Docker Compose v2, Python ≥3.11, TTF с кириллицей (DejaVu/Arial).
+JWT по умолчанию проверяется. Для локального прогона **только** на loopback:
+
+```text
+copy .env.example .env          # Windows; иначе cp
+```
+
+В `.env` для этой репетиции: `KONTUR_ALLOW_INSECURE_DEV_AUTH=true`.
+Это не OIDC и не production. Порты ядра — `127.0.0.1:8000`.
+
+```text
+docker compose up -d
+curl -s http://127.0.0.1:8000/api/v1/healthz
+```
+
+Токен legacy (тот же флаг): `inspector-1@OBJ-DEMO-COLD-START/INSPECTOR`.
+Фикстуры PDF даёт pytest; для HTTP их можно выгрузить из теста или собрать
+тем же `cyrillic_pdf`, что в `backend/tests/pdf_fixtures.py`.
+
+Порядок загрузки (один `process_id` со второго запроса):
+
+1. `doc_stage=PD` — черновик без штампа.
+2. `doc_stage=PD` — утверждённый лист (эталон).
+3. `doc_stage=RD` — расхождения по трём полям.
+4. `doc_stage=ID` — совпадает с утверждённой ПД (стадия загружена, не эталон ПД).
+
+Дальше: `GET .../status` → `GET .../findings/{id}/evidence-card` (ПД и РД с
+polygon, пустая ИД — нет фрагмента) → `POST .../findings/{id}/review` на
+`pipe-PZ-001`, `pipe-KR-055`, `pipe-AR-041` → `POST .../verify` →
+`POST .../complete` → `POST .../finalize` → `GET .../protocol`.
+В `sections` нет `preliminary_no_difference`. Явный «не утв.» не назначается эталоном.
+
+Outbox остаётся `PENDING`, пока relay не подтвердит брокер. Это не `SYNCED`.
+
+## Три такта репетиции
+
+Живой прогон `test_demo_rehearsal_confirm_reject_protocol_outbox`. Набор кодов не меняется.
+
+1. До выбора эталона две головы ПД одного шифра без successor дают `CLARIFICATION_REQUIRED`. Это не нарушение и не `MISSING_EVIDENCE`.
+2. После выбора утверждённого листа кандидаты ровно `PZ-001`, `KR-055`, `AR-041`. Автомат не пишет `CONFIRMED_VIOLATION`.
+3. Инспектор подтверждает `PZ-001` и `KR-055` и снимает `AR-041` действием `REJECT` с `reason_code`.
+
+Устный показ может взять один из этих кандидатов, отказ по `AR-041` и уточнение до выбора эталона. Это не пять сессий и не закрытие Gate K.
+
+## Запись прогона 27.09.2026
+
+Хост: Windows, Docker Engine 29.8.0, Compose v5.5.1, 20 CPU, память демона
+16677773312 байт. Образы собраны с `KONTUR_GIT_SHA=438b63fd85759822ffb899cd41ca2ef92296cfba`.
+Словарь `vendor/ocr/ppocrv5_eslav_dict.txt` в этой ревизии закреплён как LF:
+без этого рабочая копия Windows ломает SHA-256 замка и сборка ядра падает.
+
+Локальный tar `out/kontur_images.tar` в git не входит. Размер 2606031360 байт,
+SHA-256 `60c7a93b37620fee98d9041b80f149a2a6957633f099a1aa9003843a1b9a0c4e`.
+Четыре образа приложения удалены. `docker load` вернул их; id ядра снова
+`sha256:be1385030b54ddad5411bb2748f1132bcfc7f22bb3dbcb6e07dd7e6ee9f729c8`.
+Базовые образы postgres, redis, rabbitmq и minio на хосте уже были.
+
+Команда подъёма, без `--build`:
+
+```text
+docker compose -f docker-compose.yml -f docker-compose.demo.yml -f docker-compose.offline.yml up -d --no-build
+```
+
+`http://127.0.0.1:8000/api/v1/healthz` и `http://127.0.0.1:3000/api/v1/healthz`
+ответили 200 `{"status":"ok"}`. SHA в контейнере совпал со сборкой, потому что
+переменная была в окружении шелла. Строка compose
+`KONTUR_GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}` без этой переменной затирала
+SHA образа. Она убрана: `up` оставляет SHA сборки, статус процесса его читает.
+Тома `pgdata`, `rabbitmq` и `minio` не стирались. Сеть хоста не отключалась:
+`pull_policy: never` и `--no-build` не дают registry и пересборку. Это не
+чистая Linux-машина без сети. Гейты I/J/K/L этот прогон не закрывает.
+
+## Запись прогона 28.09.2026
+
+Повтор после срезов 28.09. Хост тот же: Windows, Docker Engine 29.8.0,
+Compose v5.5.1, 20 CPU, память демона 16677756928 байт. Образы собраны с
+`KONTUR_GIT_SHA=b6645cd1cebfde245ad4e7dbc576c4b385895632`.
+
+Локальный tar `out/kontur_images.tar` в git не входит. Размер 1811542016 байт,
+SHA-256 `f0333651b3cddbaa1da0080ed8af127b8975567995822e756f113dc28366b8e3`.
+Четыре образа приложения удалены. `docker load` вернул их; id ядра снова
+`sha256:69aafa1c1196dca26b7bd19537a9152b06785c33a99ef35d28cf1a598b79c832`.
+Базовые образы postgres, redis, rabbitmq и minio на хосте уже были.
+Тома не стирались.
+
+Команда подъёма, без `--build`:
+
+```text
+docker compose -f docker-compose.yml -f docker-compose.demo.yml -f docker-compose.offline.yml up -d --no-build
+```
+
+`http://127.0.0.1:8000/api/v1/healthz`, `http://127.0.0.1:3000/healthz` и
+`http://127.0.0.1:3000/api/v1/healthz` ответили 200 `{"status":"ok"}`.
+В контейнере ядра `KONTUR_GIT_SHA` совпал со сборкой. Docker отметил core и
+gateway `healthy`. Сеть хоста не отключалась. Это не чистая Linux-машина
+без сети. Гейты I/J/K/L этот прогон не закрывает. Пакет сдачи в `out/`
+собрался с покрытием 55 / 72 / 1 / 4 и `closes_gate_k=false`. Это не порог ТЗ.
+
+## Что это не закрывает
+
+| Тема | Статус |
+|---|---|
+| Гейт I (OCR) | открыт, `ocr_text=MEASURED`, замер ниже порога |
+| Гейт J (frozen val) | открыт; Polar не gold |
+| Гейт K (пять сессий) | открыт; рекордер не сессии |
+| Видео | человек |
+| РиН ACK | нет sandbox-контракта |
