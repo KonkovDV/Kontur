@@ -1,7 +1,12 @@
 # OCR Bake-off: выбор production primary + verifier (гейт I, 24.09.2026)
 
-**Решение:** `primary=VECTOR_PDFIUM`, `verifier=RASTER_REGION_CROP`
-**Порог приёмки:** CA ≥ 0.97 (гейт I)
+**Решение 24.09:** `primary=VECTOR_PDFIUM`, `verifier=RASTER_REGION_CROP`.
+Таблица кандидатов ниже — это решение бейк-оффа, не замер SILVER.
+**Сейчас:** `ocr_text=MEASURED`, гейт I открыт. SILVER, n=5935, текстовый слой:
+нижняя граница Wilson доли строк с CA не ниже 0,95 около 0,663, для 0,97 около
+0,632. Пороги не взяты. Это не GOLD.
+
+**Порог, который искал бейк-офф:** CA ≥ 0.97. Порог ТЗ раздела 14 — CA не ниже 0,95.
 **Stop-condition:** CA verifier < 0.95 → усиливать region crops и классический OCR, не дообучать VLM.
 
 ## Кандидаты
@@ -52,7 +57,7 @@
 |---|---|---|
 | GAP-OCR-ROT | Поворот/перекос скана | Векторный слой есть, OCR-пайплайна нет |
 | GAP-STAMP | Штамп поверх текста | Цветная печать выбеливается. Толстое чёрное кольцо на кропе — `LOW_QUALITY`, coverage=0. Волосная рамка и чёрное по чёрному без кольца не сегментируются |
-| GAP-CAP-OCR | OCR в запросе = `UNAVAILABLE` | Region-crop в коде; SILVER Docker-замер порог не берёт; не GOLD |
+| GAP-CAP-OCR | OCR в запросе = `MEASURED` | Region-crop в коде; SILVER порог не берёт; не GOLD. Ранние прогоны ниже писали `UNAVAILABLE` |
 | OCR-пилот 300 стр. | `02_ЭТАЛОННАЯ_РАЗМЕТКА_И_МЕТОДИКА/ocr_pilot_20260811` | SILVER, n=5935 кропов без Речникова, `make ocr-pilot`; гейт I открыт |
 
 ## Замер SILVER в Docker (19.09.2026)
@@ -62,7 +67,7 @@ Eligible: `PDF_TEXT_LAYER`, без `OBJ-RECHNIKOV-7-7`. Не GOLD
 (`approved_for_training=false`). JSON вне git: `out/ocr_pilot_ca.json`.
 
 Нижняя граница Wilson доли строк с CA ≥ порога приёмки **ниже** минимума ТЗ.
-`closes_gate_i=false`. `ocr_text` остаётся `UNAVAILABLE`. Таблица кандидатов
+`closes_gate_i=false`. На 19.09 `ocr_text` был `UNAVAILABLE`. Таблица кандидатов
 выше — решение бейк-оффа, не этот прогон.
 
 Baseline (`ocr_image_bytes` без апскейла, OEM по умолчанию, PSM 7):
@@ -82,7 +87,7 @@ mean_ca≈0.760, tz_low≈0.581, gate_i_low≈0.538. Доля строк над 
 n=3013, mean_ca≈0.713, tz_low≈0.471, gate_i_low≈0.426.
 Без строк с долей `<=>?@` ≥ 0.08 и без кириллицы: n=2965, tz_low≈0.479, gate_i_low≈0.433.
 Только строки с цифрой и без кириллицы: n=423, tz_low≈0.379.
-Порог не взят. `ocr_text` остаётся `UNAVAILABLE`.
+Порог не взят. На 23.09 `ocr_text` ещё был `UNAVAILABLE`.
 
 Локальный прогон 26.09.2026, тот же корпус SILVER `PDF_TEXT_LAYER`, Tesseract на машине разработчика, 6 потоков.
 Толстое чёрное кольцо из знаменателя не вычиталось: таких кропов 0, coverage=1.

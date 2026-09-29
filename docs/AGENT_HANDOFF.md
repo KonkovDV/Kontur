@@ -124,7 +124,7 @@ capacity. Продуктовая очередь PR пуста. #85 Dependabot �
 #80 закрыт (adversarial-пакет в #128). Не открывать заново: VLM и запрет
 класть текст страницы в system prompt — это #84. `runner_id=0` = не настоящий CI-прогон.
 #81 branch protection (ruleset `main-pr-and-ci` закрывает критерий; не гейт),
-#82 family extractors (**все 83 `extractor_missing` разобраны** по трём триаж-док.; новых правил без геометрии нет), #83 split,
+#82 family extractors (триаж семейств закрыт; живых `extractor_missing` 72, без нового экстрактора не переводить), #83 split,
 #84 VLM isolation.
 GAP-EMB добавлен в `docs/KNOWN_GAPS.md` на ветке `feat/adversarial-pdf-pack` (commit `7ec43b7`).
 
@@ -153,7 +153,7 @@ GAP-EMB добавлен в `docs/KNOWN_GAPS.md` на ветке `feat/adversari
   `protocol.schema.json` с `additionalProperties: false` такие поля не содержит
   (ADR-0009). Guard выгрузки — `PROTOCOL_FINALIZED` + hex `payload_sha256`.
 - Не открывать #80 заново: пакет влит, VLM остаётся в #84. `runner_id=0` — не настоящий прогон.
-- Переводить `extractor_missing` в `executable` без нового экстрактора: все 83 разобраны, блокер документирован.
+- Переводить `extractor_missing` в `executable` без нового экстрактора: живых без экстрактора 72, блокер в триаже.
 - Считать разные шифры одной стадии конфликтом всего комплекта или одним
   последним файлом стадии. Не угадывать порядок по «ред. N» без successor.
   Не переводить голое число в мм. Не считать последний загруженный файл
