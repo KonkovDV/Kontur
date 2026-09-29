@@ -1,4 +1,4 @@
-"""Выгрузка снимков для следующего ИИ: coverage, handoff, индекс TRAIN_PUBLIC."""
+"""Выгрузка снимков: покрытие, сопровождение, индекс TRAIN_PUBLIC."""
 
 from __future__ import annotations
 
