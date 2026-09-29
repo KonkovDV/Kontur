@@ -402,13 +402,11 @@ docs/           ADR, архитектура, метрики, трассируе�
 | Производительность и нагрузка | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
 | Лицензии сторонних пакетов | [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md) |
 
-Для разработчиков и ИИ-агентов:
+Для сопровождения:
 
 | Тема | Файл |
 |---|---|
 | Инварианты репозитория | [`AGENTS.md`](AGENTS.md) |
-| Handoff следующего агента | [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md), [`agent_handoff.json`](data/dataset/agent_handoff.json) |
-| Шина нескольких ИИ | [`docs/GH_AGENT_BUS.md`](docs/GH_AGENT_BUS.md) |
 | Оперативный план 28–29.09 | [`docs/PLAN_2026_09_28_29.md`](docs/PLAN_2026_09_28_29.md) |
 | Пакет сдачи, машиночитаемый | [`docs/SUBMISSION_PACK.md`](docs/SUBMISSION_PACK.md) |
 | Карантин датасета | [`docs/DATA_QUARANTINE.md`](docs/DATA_QUARANTINE.md) |

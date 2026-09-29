@@ -150,11 +150,10 @@ def test_committed_dumps_match_builder() -> None:
         item for item in file_tracks["production"] if item["id"] == "branch_protection"
     )
     assert file_branch == live_branch
-    doc = root / "docs" / "AGENT_HANDOFF.md"
+    doc = root / "docs" / "PLAN_2026_09_28_29.md"
     assert doc.is_file()
     text = doc.read_text(encoding="utf-8")
-    assert "agent_handoff.json" in text
-    assert "не закрыт" in text.lower() or "открыт" in text.lower()
+    assert "Гейты I/J/K/L открыты" in text
 
 
 def test_summarize_index_skips_mixed_without_files() -> None:

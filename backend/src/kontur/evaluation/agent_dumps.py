@@ -129,9 +129,9 @@ def build_handoff(
         "export_git_sha": git_sha(base),
         "deadline": "2026-09-29T23:59:00+03:00",
         "purpose": (
-            "Handoff для следующего ИИ. Не frozen val, не GOLD OCR, не scorecard ТЗ."
+            "Снимок сопровождения. Не frozen val, не GOLD OCR, не scorecard ТЗ."
         ),
-        "human_doc": "docs/AGENT_HANDOFF.md",
+        "human_doc": "AGENTS.md",
         "invariants_doc": "AGENTS.md",
         "closes_gate_i": False,
         "closes_gate_j": False,
@@ -234,7 +234,6 @@ def build_handoff(
             "extractor_family_triage": "docs/EXTRACTOR_FAMILY_TRIAGE.md",
             "class_ladder_triage_doc": "docs/CLASS_LADDER_TRIAGE.md",
             "number_family_triage_doc": "docs/NUMBER_FAMILY_TRIAGE.md",
-            "gh_agent_bus": "docs/GH_AGENT_BUS.md",
             "submission_pack": "docs/SUBMISSION_PACK.md",
             "adr_0009": "docs/adr/0009-atomic-protocol-materialization.md",
             "adr_0010": "docs/adr/0010-outbox-relay-to-broker.md",
