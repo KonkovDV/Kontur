@@ -96,6 +96,25 @@ def load_frozen_val_jsonl(path: Path) -> tuple[FrozenValRow, ...]:
     return tuple(rows)
 
 
+def summarize_frozen_val(rows: Sequence[FrozenValRow] | None) -> dict[str, object]:
+    """Сводка по правилам. Нет корпуса — замер не публикуется и гейт J не закрывается."""
+
+    if not rows:
+        return {
+            "measured": False,
+            "rules": 0,
+            "closes_gate_j": False,
+        }
+    codes = sorted({row.rule_code for row in rows})
+    met = [recall_meets_tz(recall_for_rule(rows, code)) for code in codes]
+    return {
+        "measured": True,
+        "rules": len(codes),
+        "rules_meeting_wilson_lower_bound": sum(1 for item in met if item),
+        "closes_gate_j": bool(met) and all(met),
+    }
+
+
 def recall_for_rule(rows: Sequence[FrozenValRow], rule_code: str) -> Interval:
     subset = [row for row in rows if row.rule_code == rule_code]
     return critical_recall(

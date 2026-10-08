@@ -1,0 +1,58 @@
+"""Таблица ТЗ п. 11 не превращает пустую строку в пропуск."""
+
+from __future__ import annotations
+
+from kontur.evaluation.tz11 import (
+    CLAIMED,
+    IN_LIMIT,
+    NOT_QUOTABLE,
+    OVER,
+    UNMEASURED,
+    evaluate,
+    measure_local,
+    timings_evidence,
+)
+
+
+def test_an_empty_table_does_not_measure_gate_l() -> None:
+    evidence = timings_evidence(evaluate({}))
+    assert evidence["within_limits"] is False
+    assert evidence["measured"] is False
+    assert "4" in evidence["unmeasured"]
+    assert "12" in evidence["unmeasured"]
+
+
+def test_a_row_over_the_budget_fails_even_when_other_rows_are_missing() -> None:
+    evidence = timings_evidence(evaluate({"1": 200.0}))
+    assert evidence["measured"] is True
+    assert evidence["within_limits"] is False
+    assert evidence["over"] == ["1"]
+    verdicts = {item["row"]: item["verdict"] for item in evidence["rows"]}
+    assert verdicts["1"] == OVER
+    assert verdicts["5"] == UNMEASURED
+    assert verdicts["12"] == CLAIMED
+
+
+def test_compare_without_all_parameters_is_not_quotable() -> None:
+    results = evaluate({"4": {"value": 10.0, "parameters_total": 55, "parameters_expected": 132}})
+    row = next(item for item in results if item.row.row_id == "4")
+    assert row.verdict == NOT_QUOTABLE
+    evidence = timings_evidence(results)
+    assert "4" in evidence["over"]
+
+
+def test_api_latency_without_a_hundred_users_is_not_the_status_row() -> None:
+    results = evaluate({"10": {"value": 0.018, "vu": 1, "endpoint": "healthz"}})
+    row = next(item for item in results if item.row.row_id == "10")
+    assert row.verdict == NOT_QUOTABLE
+
+
+def test_local_protocol_and_parameter_rows_are_numbers() -> None:
+    measured = measure_local()
+    assert measured["5"]["value"] < 30
+    assert measured["7"]["value"] < 0.5
+    evidence = timings_evidence(evaluate(measured))
+    verdicts = {item["row"]: item["verdict"] for item in evidence["rows"]}
+    assert verdicts["5"] == IN_LIMIT
+    assert verdicts["7"] == IN_LIMIT
+    assert evidence["within_limits"] is False

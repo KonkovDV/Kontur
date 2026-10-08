@@ -147,6 +147,19 @@ def tz_character_accuracy_met(interval: Interval) -> bool:
     return meets_threshold("character_accuracy", interval)
 
 
+def judge_recorded_ocr(interval: Interval, *, gold: bool = False) -> dict[str, object]:
+    """Порог ТЗ по нижней границе Wilson. SILVER при `gold=False` гейт не закрывает."""
+
+    met = tz_character_accuracy_met(interval)
+    return {
+        "n": interval.n,
+        "low": interval.low,
+        "threshold": TZ_THRESHOLDS["character_accuracy"],
+        "threshold_met": met,
+        "closes_gate_i": met and gold,
+    }
+
+
 def score_crop_bytes(
     lines: Sequence[OcrPilotLine],
     crops: Mapping[str, bytes],
