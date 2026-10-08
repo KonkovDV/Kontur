@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_on": "2026-09-26",
+  "generated_on": "2026-10-08",
   "purpose": "Engineering completeness tracks. Not TZ acceptance and not published P/R/F1/CA.",
   "closes_gate_i": false,
   "closes_gate_j": false,
@@ -40,8 +40,8 @@
       },
       {
         "id": "rin_sandbox",
-        "state": "unmet",
-        "detail": "retry policy only; no sandbox contract"
+        "state": "partial",
+        "detail": "HTTPS client inside the contour; missing URL stays LOCAL_ONLY; no signed sandbox"
       },
       {
         "id": "async_rabbit_outbox_workers",
@@ -90,22 +90,22 @@
       {
         "id": "jwt_rs256",
         "state": "partial",
-        "detail": "static key containment; not OIDC/JWKS"
+        "detail": "RS256 via static PEM or KONTUR_JWKS_URL; no OIDC login flow"
       },
       {
         "id": "container_hardening",
         "state": "partial",
-        "detail": "PR #60 non-root loopback; not TLS 1.3"
+        "detail": "PR #60 non-root loopback; gateway TLS 1.3 only when cert and key are set"
       },
       {
         "id": "oidc_jwks",
-        "state": "unmet",
-        "detail": "no rotation"
+        "state": "partial",
+        "detail": "KONTUR_JWKS_URL verifies the token; key rotation is not operated"
       },
       {
         "id": "antivirus",
-        "state": "unmet",
-        "detail": "intake MIME/zip-bomb only"
+        "state": "partial",
+        "detail": "clamd INSTREAM when KONTUR_CLAMD_HOST is set; unset is NOT_CONFIGURED"
       },
       {
         "id": "branch_protection",

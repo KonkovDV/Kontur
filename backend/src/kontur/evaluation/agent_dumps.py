@@ -336,7 +336,11 @@ def build_tz_scorecard(
             "partial",
             "PR #64 plus lock/sha/outbox; live PG race in CI; no kind=materialized",
         ),
-        _scorecard_item("rin_sandbox", "unmet", "retry policy only; no sandbox contract"),
+        _scorecard_item(
+            "rin_sandbox",
+            "partial",
+            "HTTPS client inside the contour; missing URL stays LOCAL_ONLY; no signed sandbox",
+        ),
         _scorecard_item(
             "async_rabbit_outbox_workers",
             "partial",
@@ -357,14 +361,26 @@ def build_tz_scorecard(
         _scorecard_item("gate_l_tz", "unmet", "GHA /status measured; not production SLA"),
     ]
     production_items = [
-        _scorecard_item("jwt_rs256", "partial", "static key containment; not OIDC/JWKS"),
+        _scorecard_item(
+            "jwt_rs256",
+            "partial",
+            "RS256 via static PEM or KONTUR_JWKS_URL; no OIDC login flow",
+        ),
         _scorecard_item(
             "container_hardening",
             "partial",
-            "PR #60 non-root loopback; not TLS 1.3",
+            "PR #60 non-root loopback; gateway TLS 1.3 only when cert and key are set",
         ),
-        _scorecard_item("oidc_jwks", "unmet", "no rotation"),
-        _scorecard_item("antivirus", "unmet", "intake MIME/zip-bomb only"),
+        _scorecard_item(
+            "oidc_jwks",
+            "partial",
+            "KONTUR_JWKS_URL verifies the token; key rotation is not operated",
+        ),
+        _scorecard_item(
+            "antivirus",
+            "partial",
+            "clamd INSTREAM when KONTUR_CLAMD_HOST is set; unset is NOT_CONFIGURED",
+        ),
         _scorecard_item(
             "branch_protection",
             "partial",
