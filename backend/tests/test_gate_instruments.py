@@ -136,14 +136,35 @@ def test_missing_frozen_val_is_not_a_closed_gate() -> None:
     assert report["closes_gate_j"] is False
 
 
-def test_frozen_val_closes_only_when_every_rule_meets_the_bound() -> None:
+def test_frozen_val_closes_when_every_section_meets_the_bound() -> None:
     rows = [
         FrozenValRow("OBJ-A", "PZ-001", True, True),
         FrozenValRow("OBJ-B", "PZ-001", True, True),
     ] * 20
-    met = summarize_frozen_val(rows)
+    met = summarize_frozen_val(rows, sections={"PZ-001": "ПЗ"})
     assert met["closes_gate_j"] is True
+    assert met["sections"] == 1
     missed = summarize_frozen_val(
-        [FrozenValRow("OBJ-A", "PZ-001", True, False) for _ in range(20)]
+        [FrozenValRow("OBJ-A", "PZ-001", True, False) for _ in range(20)],
+        sections={"PZ-001": "ПЗ"},
     )
     assert missed["closes_gate_j"] is False
+
+
+def test_a_weak_rule_does_not_block_a_section_that_meets_the_bound() -> None:
+    """20/20 и 18/20 по отдельности: второе правило ниже 0,80, раздел 38/40 — выше."""
+
+    sections = {"PZ-001": "ПЗ", "PZ-002": "ПЗ", "KR-010": "КР"}
+    strong = [FrozenValRow("OBJ-A", "PZ-001", True, True) for _ in range(20)]
+    weak = [FrozenValRow("OBJ-A", "PZ-002", True, True) for _ in range(18)]
+    weak.append(FrozenValRow("OBJ-A", "PZ-002", True, False))
+    weak.append(FrozenValRow("OBJ-B", "PZ-002", True, False))
+    together = summarize_frozen_val([*strong, *weak], sections=sections)
+    assert together["rules_meeting_wilson_lower_bound"] == 1
+    assert together["closes_gate_j"] is True
+    other = [FrozenValRow("OBJ-C", "KR-010", True, True) for _ in range(6)]
+    blocked = summarize_frozen_val([*strong, *weak, *other], sections=sections)
+    assert blocked["closes_gate_j"] is False
+    by_section = blocked["by_section"]
+    assert isinstance(by_section, dict)
+    assert by_section["КР"]["meets"] is False

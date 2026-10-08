@@ -14,10 +14,12 @@ import json
 import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from kontur.evaluation.inventory import require_path_open
 from kontur.evaluation.metrics import Interval, meets_threshold, wilson
+from kontur.infrastructure.matrix.registry import FileRuleRegistry
 
 FROZEN_VAL_ENV = "KONTUR_FROZEN_VAL_PATH"
 
@@ -96,22 +98,74 @@ def load_frozen_val_jsonl(path: Path) -> tuple[FrozenValRow, ...]:
     return tuple(rows)
 
 
-def summarize_frozen_val(rows: Sequence[FrozenValRow] | None) -> dict[str, object]:
-    """Сводка по правилам. Нет корпуса — замер не публикуется и гейт J не закрывается."""
+@lru_cache(maxsize=1)
+def _matrix_sections() -> dict[str, str]:
+    """Раздел правила из матрицы. Нет каталога — пустая карта, не выдуманный раздел."""
+
+    try:
+        registry = FileRuleRegistry()
+    except FileNotFoundError:
+        return {}
+    found: dict[str, str] = {}
+    for code in registry.all_codes():
+        raw = registry.get(code).get("section")
+        text = str(raw).strip() if raw else ""
+        found[code] = text or code.split("-", 1)[0]
+    return found
+
+
+def _section_name(rule_code: str, sections: Mapping[str, str]) -> str:
+    found = sections.get(rule_code, "").strip()
+    if found:
+        return found
+    head = rule_code.split("-", 1)[0].strip()
+    return head or rule_code
+
+
+def summarize_frozen_val(
+    rows: Sequence[FrozenValRow] | None,
+    *,
+    sections: Mapping[str, str] | None = None,
+) -> dict[str, object]:
+    """Сводка по разделам матрицы, не по каждому коду.
+
+    Организатор считает recall по разделам. Одно редкое правило не валит
+    раздел, если нижняя граница Wilson по разделу взяла порог. Нет корпуса —
+    замер не публикуется и гейт J не закрывается. Пустой раздел не проходит.
+    """
 
     if not rows:
         return {
             "measured": False,
             "rules": 0,
+            "sections": 0,
             "closes_gate_j": False,
         }
+    known = dict(sections) if sections is not None else _matrix_sections()
     codes = sorted({row.rule_code for row in rows})
-    met = [recall_meets_tz(recall_for_rule(rows, code)) for code in codes]
+    grouped: dict[str, list[FrozenValRow]] = {}
+    for row in rows:
+        grouped.setdefault(_section_name(row.rule_code, known), []).append(row)
+    by_section: dict[str, dict[str, object]] = {}
+    section_met: list[bool] = []
+    for name in sorted(grouped):
+        subset = grouped[name]
+        interval = critical_recall(
+            [row.gold_positive for row in subset],
+            [row.predicted_positive for row in subset],
+        )
+        met = recall_meets_tz(interval)
+        section_met.append(met)
+        by_section[name] = {"n": interval.n, "low": interval.low, "meets": met}
+    rule_met = [recall_meets_tz(recall_for_rule(rows, code)) for code in codes]
     return {
         "measured": True,
         "rules": len(codes),
-        "rules_meeting_wilson_lower_bound": sum(1 for item in met if item),
-        "closes_gate_j": bool(met) and all(met),
+        "sections": len(grouped),
+        "rules_meeting_wilson_lower_bound": sum(1 for item in rule_met if item),
+        "sections_meeting_wilson_lower_bound": sum(1 for item in section_met if item),
+        "by_section": by_section,
+        "closes_gate_j": bool(section_met) and all(section_met),
     }
 
 
