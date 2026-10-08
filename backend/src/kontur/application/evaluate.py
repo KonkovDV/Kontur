@@ -754,25 +754,35 @@ def _provision_evaluations(
     rd_pages = _volume_list(pages.get(DocStage.RD))
     if not pd_pages or not rd_pages:
         return ()
-    hits = provision_hits(
-        tuple(token for page in pd_pages for token in page.tokens),
-        tuple(token for page in rd_pages for token in page.tokens),
-    )
+    pd_tokens, pd_owner = _isolate_sheets(pd_pages)
+    rd_tokens, rd_owner = _isolate_sheets(rd_pages)
+    hits = provision_hits(pd_tokens, rd_tokens)
     built: list[RuleEvaluation] = []
     for hit in hits:
-        pd = _page_owning(pd_pages, hit.pd)
-        rd = _page_owning(rd_pages, hit.rd)
-        if pd is None or rd is None:
+        pd_owned = pd_owner.get(id(hit.pd))
+        rd_owned = rd_owner.get(id(hit.rd))
+        if pd_owned is None or rd_owned is None:
             continue
-        built.append(_provision_evaluation(rule, hit, pd, rd, object_id))
+        pd, pd_token = pd_owned
+        rd, rd_token = rd_owned
+        located = replace(hit, pd=pd_token, rd=rd_token)
+        built.append(_provision_evaluation(rule, located, pd, rd, object_id))
     return tuple(built)
 
 
-def _page_owning(pages: Sequence[StagePage], token: object) -> StagePage | None:
-    for page in pages:
-        if any(item is token for item in page.tokens):
-            return page
-    return None
+def _isolate_sheets(
+    pages: Sequence[StagePage],
+) -> tuple[tuple[PageToken, ...], dict[int, tuple[StagePage, PageToken]]]:
+    """Свой номер листа на файл: одинаковая страница разных томов не склеивается."""
+
+    tokens: list[PageToken] = []
+    owners: dict[int, tuple[StagePage, PageToken]] = {}
+    for index, page in enumerate(pages, start=1):
+        for token in page.tokens:
+            tagged = replace(token, page=index)
+            owners[id(tagged)] = (page, token)
+            tokens.append(tagged)
+    return tuple(tokens), owners
 
 
 def _provision_evaluation(

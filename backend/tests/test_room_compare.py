@@ -535,6 +535,37 @@ def test_wrapped_room_list_keeps_the_numbers_from_the_next_line() -> None:
     assert rooms == {"267", "270", "271", "272"}
 
 
+def test_same_page_number_in_another_volume_does_not_erase_the_room() -> None:
+    """Лист 17 чужого тома со словом «полов» не отменяет лист 17, где элемента нет."""
+
+    rule = {
+        "code": "FREE-HEATING-001",
+        "matrix_version": "draft-0",
+        "extractor": {"type": "room_compare", "provision": True, "room_compare": _settings()},
+    }
+    pages = {
+        DocStage.PD: StagePage(
+            document=_doc(DocStage.PD, "pd-note"),
+            tokens=_words("пом.", "267", "предусмотрена", "система", "подогрева", "полов."),
+        ),
+        DocStage.RD: (
+            StagePage(
+                document=_doc(DocStage.RD, "rd-other"),
+                tokens=(_token("267", 0.20, 0.40), _token("полов", 0.40, 0.40)),
+            ),
+            StagePage(
+                document=_doc(DocStage.RD, "rd-plan"),
+                tokens=(_token("267", 0.20, 0.40),),
+            ),
+        ),
+    }
+    found = evaluate_free_search(rule, pages, "OBJ-ROOM")
+    rooms = {location_from_group(item.evidence_group) for item in found if item.evidence_group}
+    assert rooms == {"267"}
+    assert found[0].evidence_group is not None
+    assert found[0].evidence_group.resolved_revisions[1].file_id == "rd-plan"
+
+
 def test_project_clause_stays_quiet_when_rd_names_the_element() -> None:
     rule = {
         "code": "FREE-HEATING-001",

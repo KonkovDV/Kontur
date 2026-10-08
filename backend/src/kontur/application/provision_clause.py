@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from kontur.application.extractors.number import PageToken
@@ -64,46 +64,47 @@ def provision_hits(
 ) -> tuple[ProvisionHit, ...]:
     """Помещение названо в обеих стадиях, элемент из фразы ПД в РД не найден."""
 
-    pd_text, pd_ordered = _text(pd_tokens)
-    rd_text, rd_ordered = _text(rd_tokens)
-    if not pd_text or not rd_text:
+    if not pd_tokens or not rd_tokens:
         return ()
-    rd_pages = _folded_pages(rd_ordered)
+    rd_ordered = _text(rd_tokens)[1]
+    folded = _folded_pages(rd_ordered)
+    by_page: dict[int, list[PageToken]] = {}
+    for token in pd_tokens:
+        by_page.setdefault(token.page, []).append(token)
     hits: list[ProvisionHit] = []
     seen: set[str] = set()
-    for match in _CLAUSE.finditer(pd_text):
-        element = _focus_element(match.group("element"))
-        stems = _stems(element)
-        if not stems:
-            continue
-        quote = match.group(0).strip()
-        rooms = list(_split_rooms(match.group("rooms")))
-        if rooms:
-            anchor = _room_token(pd_ordered, rooms[0])
-            if anchor is not None:
-                for extra in _wrapped_rooms(anchor, pd_ordered):
-                    if extra not in rooms:
-                        rooms.append(extra)
-        for room in rooms:
-            if room in seen:
+    for page in sorted(by_page):
+        pd_text, pd_ordered = _text(by_page[page])
+        for match in _CLAUSE.finditer(pd_text):
+            element = _focus_element(match.group("element"))
+            stems = _stems(element)
+            if not stems:
                 continue
-            pd_token = _room_token(pd_ordered, room)
-            rd_token = _room_token(rd_ordered, room)
-            if pd_token is None or rd_token is None:
-                continue
-            sheet = rd_pages.get(rd_token.page, "")
-            if any(stem in sheet for stem in stems):
-                continue
-            seen.add(room)
-            hits.append(
-                ProvisionHit(
-                    room=room,
-                    element=element,
-                    quote=quote[:180],
-                    pd=pd_token,
-                    rd=rd_token,
+            quote = match.group(0).strip()
+            rooms = list(_split_rooms(match.group("rooms")))
+            if rooms:
+                anchor = _room_token(pd_ordered, rooms[0])
+                if anchor is not None:
+                    for extra in _wrapped_rooms(anchor, pd_ordered):
+                        if extra not in rooms:
+                            rooms.append(extra)
+            for room in rooms:
+                if room in seen:
+                    continue
+                pd_token = _room_token(pd_ordered, room)
+                rd_token = _sheet_without_stems(rd_ordered, room, stems, folded)
+                if pd_token is None or rd_token is None:
+                    continue
+                seen.add(room)
+                hits.append(
+                    ProvisionHit(
+                        room=room,
+                        element=element,
+                        quote=quote[:180],
+                        pd=pd_token,
+                        rd=rd_token,
+                    )
                 )
-            )
     return tuple(hits)
 
 
@@ -170,6 +171,28 @@ def _wrapped_rooms(origin: PageToken, tokens: Sequence[PageToken]) -> tuple[str,
         return ()
     head = min(band, key=lambda item: _center(item)[0])
     return tuple(_ROOM_NUMBER.findall(head.text))
+
+
+def _sheet_without_stems(
+    tokens: Sequence[PageToken],
+    room: str,
+    stems: Sequence[str],
+    folded: Mapping[int, str],
+) -> PageToken | None:
+    """Лист, где номер есть, а слов элемента нет. Чужой лист комнату не оправдывает."""
+
+    exact: list[PageToken] = []
+    embedded: list[PageToken] = []
+    for token in tokens:
+        if token.text.strip(" ,;()") == room:
+            exact.append(token)
+        elif room in _ROOM_NUMBER.findall(token.text):
+            embedded.append(token)
+    for token in exact or embedded:
+        sheet = folded.get(token.page, "")
+        if not any(stem in sheet for stem in stems):
+            return token
+    return None
 
 
 def _room_token(tokens: Sequence[PageToken], room: str) -> PageToken | None:
