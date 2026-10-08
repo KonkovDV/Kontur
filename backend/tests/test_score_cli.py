@@ -343,9 +343,17 @@ def test_zero_negatives_are_not_printed_as_zero_fpr() -> None:
     assert isinstance(fpr, dict)
     assert fpr["n"] == 0
     assert fpr["defined"] is False
-    assert fpr["point"] == 0.0
+    assert fpr["point"] is None
+    assert fpr["low"] is None
+    assert block["fpr_composition"] == []
+    assert block["acceptance_rule"] == "wilson_bound"
+    missing = block["not_measured"]
+    assert isinstance(missing, list)
+    assert "false_positive_rate" in missing
+    assert "NO_VIOLATION" in str(block["fpr_denominator_name"])
     tail = _line("MATRIX", block).split("FPR", 1)[1]
-    assert "не определён (n=0)" in tail
+    assert "не измерен (n=0)" in tail
+    assert "не_измерено=" in tail
     assert "0.000" not in tail
 
 
@@ -397,6 +405,11 @@ def test_supplied_gold_is_not_stored_and_does_not_close_the_gate() -> None:
     assert isinstance(matrix, dict)
     assert matrix["hits"] == 40
     assert matrix["tz_recall_met"] is True
+    gaps = report["not_measured"]
+    assert isinstance(gaps, dict)
+    matrix_gaps = gaps["matrix"]
+    assert isinstance(matrix_gaps, list)
+    assert "false_positive_rate" in matrix_gaps
 
 
 def test_supplied_score_rejects_an_empty_reference_and_a_bad_submission() -> None:
@@ -483,6 +496,12 @@ def test_second_review_negatives_enter_fpr_and_do_not_meet_the_threshold() -> No
     assert quiet["n_negative"] == 5
     assert quiet["false_positives"] == 0
     assert quiet["tz_fpr_met"] is False
+    composition = quiet["fpr_composition"]
+    assert isinstance(composition, list)
+    assert composition == sorted(composition)
+    assert len(composition) == 5
+    assert "OBJ-NOVOSLOBODSKAYA | PZ-009" in composition
+    assert composition.count("OBJ-NOVOSLOBODSKAYA | KR-055") == 3
     submissions = [
         {
             "object_id": "OBJ-NOVOSLOBODSKAYA",

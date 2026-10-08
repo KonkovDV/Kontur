@@ -2,15 +2,18 @@
 
 Считаются по evidence_group, никогда по страницам или файлам. Точечная оценка
 публикуется только вместе с размером выборки, coverage и 95% доверительным
-интервалом. Порог считается достигнутым по нижней границе интервала; для FPR —
-по верхней.
+интервалом. Порог биномиальных долей берётся по нижней границе интервала;
+для FPR — по верхней. Character Accuracy ТЗ — отдельная микро-доля по
+символам эталона, не доля строк и не точечный recall.
 """
 
 from __future__ import annotations
 
 import math
+import random
 import re
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from kontur.application.normalize import normalize_key_field
@@ -54,6 +57,45 @@ class Interval:
     low: float
     high: float
     n: int
+
+
+@dataclass(frozen=True, slots=True)
+class PooledCharacterAccuracy:
+    """Микро-оценка корпуса OCR.
+
+    CA = 1 − ΣЛевенштейн / Σсимволов эталона. Ноль символов даёт CA и CER
+    равными None, не 1.0. WER — по токенам. ``line_exact_match`` — доля
+    строк, совпавших целиком; это не Exact Match ключевых полей.
+    """
+
+    point: float | None
+    cer: float | None
+    wer: float | None
+    line_exact_match: float | None
+    edit_distance: int
+    ref_chars: int
+    token_distance: int
+    ref_tokens: int
+    exact_lines: int
+    n_lines: int
+
+
+@dataclass(frozen=True, slots=True)
+class LineBootstrap:
+    """Перцентильный интервал микро-CA. Единица ресэмпла — строка, не символ.
+
+    `decides_threshold` всегда ложь: при одинаковых строках ширина нулевая,
+    и такой интервал не заменяет границу Уилсона.
+    """
+
+    point: float
+    low: float
+    high: float
+    n_lines: int
+
+    @property
+    def decides_threshold(self) -> bool:
+        return False
 
 
 def wilson(successes: int, n: int, z: float = 1.96) -> Interval:
@@ -225,41 +267,155 @@ def evidence_localization_interval(
     return wilson(successes, len(pairs))
 
 
-def character_accuracy(reference: str, hypothesis: str) -> float:
-    """1 − CER. Unicode NFC, схлопывание повторных пробелов.
+_WS = re.compile(r"\s+")
+_TOKEN = re.compile(r"\S+")
 
-    Регистр не сворачивается: шифры и редакции чувствительны к регистру
-    (ТЗ п. 9.1). Не смешивать с Exact Match полей.
+
+def prepare_ocr_text(value: str) -> str:
+    """NFC и любая пробельная последовательность в один пробел.
+
+    Регистр сохраняется. Знаки, точки, дефисы и косая черта не выбрасываются:
+    «ИОС4.2-кор3» и «ИОС42кор3» — разные чтения. Латинские двойники кириллицы
+    не схлопываются: это другой замер, не CA ТЗ.
     """
 
-    def _prepare(s: str) -> str:
-        """NFC + схлопывание двойных пробелов + зачистка краёв."""
-        return re.sub(r"  +", " ", unicodedata.normalize("NFC", s)).strip()
+    return _WS.sub(" ", unicodedata.normalize("NFC", value)).strip()
 
-    ref = _prepare(reference)
-    hyp = _prepare(hypothesis)
 
-    # Быстрые пути
+def _edit_distance(left: Sequence[object], right: Sequence[object]) -> int:
+    """Расстояние правок, O(m·n) время и O(n) память."""
+
+    if len(left) < len(right):
+        left, right = right, left
+    previous = list(range(len(right) + 1))
+    for i, left_item in enumerate(left, start=1):
+        current = [i]
+        for j, right_item in enumerate(right, start=1):
+            current.append(
+                min(
+                    previous[j] + 1,
+                    current[j - 1] + 1,
+                    previous[j - 1] + (left_item != right_item),
+                )
+            )
+        previous = current
+    return previous[-1]
+
+
+def levenshtein(left: str, right: str) -> int:
+    """Символьное расстояние Левенштейна."""
+
+    if left == right:
+        return 0
+    return _edit_distance(left, right)
+
+
+def character_accuracy(reference: str, hypothesis: str) -> float:
+    """Построчный 1 − CER. Unicode NFC, схлопывание повторных пробелов.
+
+    Регистр не сворачивается: шифры и редакции чувствительны к регистру
+    (ТЗ п. 9.1). Не смешивать с Exact Match полей и с микро-CA по корпусу:
+    среднее построчных CA не равно 1 − ΣЛевенштейн / Σсимволов.
+    """
+
+    ref = prepare_ocr_text(reference)
+    hyp = prepare_ocr_text(hypothesis)
     if not ref and not hyp:
         return 1.0
     if not ref:
-        # Пустой эталон при непустой гипотезе — CER не определён, возвращаем 0.
         return 0.0
     if ref == hyp:
         return 1.0
+    return max(0.0, 1.0 - levenshtein(ref, hyp) / len(ref))
 
-    # Wagner–Fischer Levenshtein, O(m·n) time, O(n) space
-    m = len(ref)
-    n_hyp = len(hyp)
-    prev = list(range(n_hyp + 1))
-    for i, rc in enumerate(ref, 1):
-        curr = [i] + [0] * n_hyp
-        for j, hc in enumerate(hyp, 1):
-            if rc == hc:
-                curr[j] = prev[j - 1]
-            else:
-                curr[j] = 1 + min(prev[j], curr[j - 1], prev[j - 1])
-        prev = curr
 
-    cer = prev[n_hyp] / m
-    return max(0.0, 1.0 - cer)
+def _line_cost(reference: str, hypothesis: str) -> tuple[int, int]:
+    """Расстояние и число символов эталона. Пустой эталон в знаменатель не входит."""
+
+    ref = prepare_ocr_text(reference)
+    if not ref:
+        return (0, 0)
+    return (levenshtein(ref, prepare_ocr_text(hypothesis)), len(ref))
+
+
+def pooled_character_accuracy(
+    pairs: Sequence[tuple[str, str]],
+) -> PooledCharacterAccuracy:
+    """Микро-CA, CER, WER и доля точных строк.
+
+    Пустой эталон в сумму символов не входит. Ноль строк даёт EM = None,
+    не 1.0. Ноль токенов даёт WER = None.
+    """
+
+    distance = 0
+    chars = 0
+    token_distance = 0
+    ref_tokens = 0
+    exact_lines = 0
+    for reference, hypothesis in pairs:
+        ref = prepare_ocr_text(reference)
+        hyp = prepare_ocr_text(hypothesis)
+        if ref == hyp:
+            exact_lines += 1
+        if ref:
+            distance += levenshtein(ref, hyp)
+            chars += len(ref)
+        ref_token_list = _TOKEN.findall(ref)
+        token_distance += _edit_distance(ref_token_list, _TOKEN.findall(hyp))
+        ref_tokens += len(ref_token_list)
+    point = None if chars <= 0 else max(0.0, 1.0 - distance / chars)
+    return PooledCharacterAccuracy(
+        point=point,
+        cer=None if point is None else 1.0 - point,
+        wer=None if ref_tokens <= 0 else token_distance / ref_tokens,
+        line_exact_match=None if not pairs else exact_lines / len(pairs),
+        edit_distance=distance,
+        ref_chars=chars,
+        token_distance=token_distance,
+        ref_tokens=ref_tokens,
+        exact_lines=exact_lines,
+        n_lines=len(pairs),
+    )
+
+
+def pooled_ca_line_bootstrap(
+    pairs: Sequence[tuple[str, str]],
+    *,
+    rounds: int = 1000,
+    seed: int = 7,
+) -> LineBootstrap | None:
+    """95% перцентильный интервал микро-CA при ресэмпле строк.
+
+    Символ испытанием Бернулли не считается: соседние символы строки зависимы.
+    Нет символов эталона — интервала нет, не [0; 1] и не 1.0.
+    """
+
+    costs = [_line_cost(reference, hypothesis) for reference, hypothesis in pairs]
+    if sum(chars for _distance, chars in costs) <= 0 or rounds <= 0:
+        return None
+    observed = pooled_character_accuracy(pairs)
+    if observed.point is None:
+        return None
+    rng = random.Random(seed)  # noqa: S311 — ресэмпл, не криптография
+    n_lines = len(costs)
+    stats: list[float] = []
+    for _ in range(rounds):
+        distance = 0
+        chars = 0
+        for _draw in range(n_lines):
+            line_distance, line_chars = costs[rng.randrange(n_lines)]
+            distance += line_distance
+            chars += line_chars
+        if chars <= 0:
+            continue
+        stats.append(max(0.0, 1.0 - distance / chars))
+    if not stats:
+        return None
+    stats.sort()
+    last = len(stats) - 1
+    return LineBootstrap(
+        point=observed.point,
+        low=stats[int(0.025 * last)],
+        high=stats[int(0.975 * last)],
+        n_lines=n_lines,
+    )

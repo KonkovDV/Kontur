@@ -12,6 +12,11 @@
 Ответ вне submission.schema.json числа не получает.
 Матрица и свободный поиск не смешиваются. Порог ТЗ здесь не объявляется взятым.
 Интервал F1 — кластерный bootstrap по object_id и только при 10+ кластерах.
+Один уровень полноты: метка ответа и есть утверждение. Второго поля
+«названо, но не утверждено» в схеме нет, поэтому такой атом не считается
+одновременно ложным срабатыванием и пропуском.
+Пустой знаменатель публикуется как «не измерено», не как 0.
+Состав знаменателя FPR — список строк, которые в него вошли.
 """
 
 from __future__ import annotations
@@ -30,7 +35,15 @@ from jsonschema import Draft202012Validator, ValidationError  # type: ignore[imp
 
 from kontur.evaluation.dataset_package import is_hidden_test_object
 from kontur.evaluation.inventory import is_quarantined
-from kontur.evaluation.metrics import IOU_THRESHOLD, Polygon, f1, iou, meets_threshold, wilson
+from kontur.evaluation.metrics import (
+    IOU_THRESHOLD,
+    Interval,
+    Polygon,
+    f1,
+    iou,
+    meets_threshold,
+    wilson,
+)
 from kontur.evaluation.train_public import load_run_inventory
 
 _MIN_CLUSTERS = 10
@@ -271,6 +284,20 @@ class _ScoreRow:
     predicted_positive: bool
 
 
+def _published_rate(interval: Interval) -> dict[str, object]:
+    """Пустая выборка — не число 0. Точка 0 при n > 0 остаётся нулём."""
+
+    if interval.n <= 0:
+        return {"point": None, "low": None, "high": None, "n": 0, "defined": False}
+    return {
+        "point": interval.point,
+        "low": interval.low,
+        "high": interval.high,
+        "n": interval.n,
+        "defined": True,
+    }
+
+
 def _confusion(sample: Sequence[_ScoreRow]) -> tuple[int, int, int]:
     """TP, FP, FN по строкам разметки. Точка и bootstrap считают одно и то же."""
 
@@ -381,6 +408,7 @@ def score_scope(
     unscored = 0
     scorable_pos: list[Mapping[str, object]] = []
     scorable_neg: list[Mapping[str, object]] = []
+    fpr_composition: list[str] = []
     score_rows: list[_ScoreRow] = []
 
     def row_key(row: Mapping[str, object]) -> tuple[str, ...] | None:
@@ -418,6 +446,7 @@ def score_scope(
         if key is None:
             continue
         scorable_neg.append(row)
+        fpr_composition.append(" | ".join(key))
         predicted_positive = predictions.get(key) == _POSITIVE
         score_rows.append(
             _ScoreRow(
@@ -434,6 +463,20 @@ def score_scope(
     localization_n = len(scorable_pos) - localization_unscored
     localization = wilson(localized_hits, localization_n)
     f1_interval = cluster_f1_interval(score_rows)
+    not_measured: list[str] = []
+    if recall.n == 0:
+        not_measured.append("recall")
+    if precision.n == 0:
+        not_measured.append("precision")
+    if fpr.n == 0:
+        not_measured.append("false_positive_rate")
+    if localization.n == 0:
+        not_measured.append("evidence_localization")
+    if f1_interval is None:
+        not_measured.append("f1_bootstrap")
+    fpr_denominator_name = "NO_VIOLATION и (fpr_denominator или score_eligible)"
+    if by_location:
+        fpr_denominator_name += " с непустым location"
     report: dict[str, object] = {
         "n_positive": len(scorable_pos),
         "hits": hits,
@@ -442,13 +485,7 @@ def score_scope(
         "false_positives": row_false_positive,
         "localized_hits": localized_hits,
         "localization_unscored": localization_unscored,
-        "localization": {
-            "point": localization.point,
-            "low": localization.low,
-            "high": localization.high,
-            "n": localization.n,
-            "defined": localization.n > 0,
-        },
+        "localization": _published_rate(localization),
         "f1_interval": (
             None if f1_interval is None else {"low": f1_interval[0], "high": f1_interval[1]}
         ),
@@ -457,25 +494,19 @@ def score_scope(
             if f1_interval is None
             else "кластерный bootstrap по object_id, не нижние границы precision и recall"
         ),
-        "recall": {"point": recall.point, "low": recall.low, "high": recall.high, "n": recall.n},
-        "precision": {
-            "point": precision.point,
-            "low": precision.low,
-            "high": precision.high,
-            "n": precision.n,
-        },
+        "recall": _published_rate(recall),
+        "precision": _published_rate(precision),
         "f1_point": point_f1,
-        "fpr": {
-            "point": fpr.point,
-            "low": fpr.low,
-            "high": fpr.high,
-            "n": fpr.n,
-            "defined": fpr.n > 0,
-        },
+        "fpr": _published_rate(fpr),
+        "fpr_composition": sorted(fpr_composition),
+        "fpr_unit": "gold_row",
         "unlabeled_positive": unlabeled,
         "tz_recall_met": meets_threshold("recall", recall),
         "tz_precision_met": meets_threshold("precision", precision) if precision.n else False,
         "tz_fpr_met": meets_threshold("false_positive_rate", fpr) if fpr.n else False,
+        "acceptance_rule": "wilson_bound",
+        "fpr_denominator_name": fpr_denominator_name,
+        "not_measured": not_measured,
     }
     if by_location:
         report["unscored_without_location"] = unscored
@@ -529,6 +560,12 @@ def score_bundle(
         _predictions_by_location(submissions) if by_location else _predictions(submissions)
     )
     location_in_gold = any(_gold_location(row) is not None for row in rows)
+    matrix = score_scope(
+        _scope_rows(rows, "MATRIX"), predictions, submissions, by_location=by_location
+    )
+    free_search = score_scope(
+        _scope_rows(rows, "FREE_SEARCH"), predictions, submissions, by_location=by_location
+    )
     return {
         "closes_gate_j": False,
         "stored": False,
@@ -540,12 +577,12 @@ def score_bundle(
         "unlabeled_positive": _unlabeled_positive(
             rows, predictions, by_location=by_location, unknown_codes=True
         ),
-        "matrix": score_scope(
-            _scope_rows(rows, "MATRIX"), predictions, submissions, by_location=by_location
-        ),
-        "free_search": score_scope(
-            _scope_rows(rows, "FREE_SEARCH"), predictions, submissions, by_location=by_location
-        ),
+        "matrix": matrix,
+        "free_search": free_search,
+        "not_measured": {
+            "matrix": matrix["not_measured"],
+            "free_search": free_search["not_measured"],
+        },
     }
 
 
@@ -584,10 +621,26 @@ def _line(title: str, block: Mapping[str, object]) -> str:
     point_f1 = block["f1_point"]
     if not isinstance(point_f1, float):
         raise TypeError(title)
+
+    def _fmt(name: str, rate: Mapping[str, object]) -> str:
+        point = rate.get("point")
+        if point is None or rate.get("defined") is False:
+            return f"{name} не измерен (n={rate.get('n', 0)})"
+        low = rate.get("low")
+        high = rate.get("high")
+        numbers = (point, low, high)
+        if not all(isinstance(item, float) for item in numbers):
+            raise TypeError(title)
+        return f"{name}={point:.3f} [{low:.3f}; {high:.3f}]"
+
+    denominator = block.get("fpr_denominator_name")
+    composition = block.get("fpr_composition")
+    composition_n = len(composition) if isinstance(composition, list) else 0
+    denominator_text = f", знаменатель: {denominator}, строк={composition_n}"
     if fpr.get("defined") is False or fpr.get("n") == 0:
-        fpr_text = "FPR не определён (n=0)"
+        fpr_text = f"FPR не измерен (n=0){denominator_text}"
     else:
-        fpr_text = f"FPR n={fpr['n']} {fpr['point']:.3f} [{fpr['low']:.3f}; {fpr['high']:.3f}]"
+        fpr_text = f"{_fmt('FPR', fpr)}{denominator_text}"
     localization_block = block.get("localization")
     if not isinstance(localization_block, dict) or localization_block.get("defined") is False:
         localization_text = "локализация не определена"
@@ -605,14 +658,15 @@ def _line(title: str, block: Mapping[str, object]) -> str:
         f1_text = f"F1={point_f1:.3f} bootstrap [{interval['low']:.3f}; {interval['high']:.3f}]"
     return (
         f"{title}: n={recall['n']} hits={block['hits']} "
-        f"R={recall['point']:.3f} [{recall['low']:.3f}; {recall['high']:.3f}] "
-        f"P n={precision['n']} {precision['point']:.3f} "
-        f"[{precision['low']:.3f}; {precision['high']:.3f}] "
+        f"{_fmt('R', recall)} "
+        f"P n={precision['n']} {_fmt('P', precision)} "
         f"{f1_text} "
         f"{fpr_text} "
         f"abstain={block['abstentions']} {localization_text} "
         f"localization_unscored={block['localization_unscored']} "
-        f"порог_ТЗ={block['tz_recall_met']}"
+        f"порог_ТЗ={block['tz_recall_met']} "
+        f"правило={block.get('acceptance_rule', 'wilson_bound')} "
+        f"не_измерено={block.get('not_measured', [])}"
     )
 
 

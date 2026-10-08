@@ -15,6 +15,7 @@ from kontur.evaluation.ocr_pilot import (
     OcrPilotLine,
     accuracy_interval,
     eligible_for_ca,
+    judge_pooled_ocr,
     load_recognition_lines,
     resolve_pilot_path,
     score_crop_bytes,
@@ -119,3 +120,42 @@ def test_empty_pairs_do_not_meet_threshold() -> None:
     interval = accuracy_interval(())
     assert interval.n == 0
     assert not tz_character_accuracy_met(interval)
+
+
+def test_pooled_point_on_one_line_does_not_close_gate_i() -> None:
+    report = judge_pooled_ocr([("абвгдеёжзи", "абвгдеёжзи")], gold=True)
+    assert report["point_meets_threshold"] is True
+    assert report["defined"] is True
+    assert report["closes_gate_i"] is False
+    line_pass = report["line_pass_rate"]
+    assert isinstance(line_pass, dict)
+    assert line_pass["wilson_lower_meets_threshold"] is False
+
+
+def test_line_pass_hides_a_long_miss_so_pooled_ca_blocks_the_gate() -> None:
+    """990 коротких попаданий и 10 длинных промахов: доля строк высока, микро-CA нет."""
+
+    pairs = [("А", "А")] * 990 + [("Б" * 100, "В" * 100)] * 10
+    report = judge_pooled_ocr(pairs, gold=True)
+    line_pass = report["line_pass_rate"]
+    assert isinstance(line_pass, dict)
+    assert line_pass["wilson_lower_meets_threshold"] is True
+    assert report["point_meets_threshold"] is False
+    assert report["closes_gate_i"] is False
+
+
+def test_gold_needs_both_the_pooled_point_and_the_line_sample() -> None:
+    pairs = [("АБ", "АБ")] * 80
+    gold = judge_pooled_ocr(pairs, gold=True)
+    silver = judge_pooled_ocr(pairs, gold=False)
+    assert gold["point_meets_threshold"] is True
+    assert gold["closes_gate_i"] is True
+    assert silver["closes_gate_i"] is False
+    assert silver["silver_not_gold"] is True
+
+
+def test_empty_corpus_stays_unmeasured_even_as_gold() -> None:
+    report = judge_pooled_ocr((), gold=True)
+    assert report["point"] is None
+    assert report["defined"] is False
+    assert report["closes_gate_i"] is False

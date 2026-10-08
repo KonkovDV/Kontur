@@ -1,9 +1,14 @@
-"""Замер Character Accuracy на OCR-пилоте. SILVER ≠ GOLD, гейт I не закрывается.
+"""Замер OCR на пилоте. SILVER ≠ GOLD, гейт I не закрывается.
 
 Корпус: `ocr_pilot_20260811` (zip). Речников (`OBJ-RECHNIKOV-7-7`) и карантин
 скрытого теста не читаются. Эталон — `PDF_TEXT_LAYER`, не предразметка
 Tesseract (иначе CA циклическая). `approved_for_training=false` у всех 300
-страниц: нижняя граница Wilson здесь — инженерный отчёт, не приёмка ТЗ.
+страниц.
+
+Character Accuracy ТЗ — микро-доля 1 − ΣЛевенштейн / Σсимволов. Доля строк
+с построчным CA не ниже 0,95 — другая величина; её Уилсон публикуется рядом
+и сам по себе гейт не закрывает. Оба условия плюс GOLD нужны, чтобы закрыть
+гейт I. На этом корпусе `gold` ложь.
 
 Opt-in: `KONTUR_OCR_PILOT_PATH`. Без пути pytest skip, цифры не публикуются.
 """
@@ -24,8 +29,12 @@ from kontur.evaluation.inventory import QuarantineViolation, require_path_open
 from kontur.evaluation.metrics import (
     TZ_THRESHOLDS,
     Interval,
+    LineBootstrap,
+    PooledCharacterAccuracy,
     character_accuracy,
     meets_threshold,
+    pooled_ca_line_bootstrap,
+    pooled_character_accuracy,
     wilson,
 )
 from kontur.infrastructure.ocr_bakeoff import CA_GATE_I_THRESHOLD
@@ -144,19 +153,104 @@ def gate_i_interval(pairs: Sequence[tuple[str, str]]) -> Interval:
 
 
 def tz_character_accuracy_met(interval: Interval) -> bool:
+    """Нижняя граница Уилсона по доле строк. Это не микро-CA."""
+
     return meets_threshold("character_accuracy", interval)
 
 
 def judge_recorded_ocr(interval: Interval, *, gold: bool = False) -> dict[str, object]:
-    """Порог ТЗ по нижней границе Wilson. SILVER при `gold=False` гейт не закрывает."""
+    """Уилсон доли строк. SILVER при `gold=False` гейт не закрывает.
+
+    Интервал здесь — доля строк, а не микро-CA. Для приёмки по формуле ТЗ
+    нужен `judge_pooled_ocr`.
+    """
 
     met = tz_character_accuracy_met(interval)
     return {
+        "estimand": "line_pass_rate",
         "n": interval.n,
         "low": interval.low,
         "threshold": TZ_THRESHOLDS["character_accuracy"],
         "threshold_met": met,
-        "closes_gate_i": met and gold,
+        "gold": gold,
+        "closes_gate_i": False,
+    }
+
+
+def _bootstrap_block(interval: LineBootstrap | None) -> dict[str, object] | None:
+    if interval is None:
+        return None
+    return {
+        "low": interval.low,
+        "high": interval.high,
+        "n_lines": interval.n_lines,
+        "unit": "line",
+        "decides_threshold": interval.decides_threshold,
+    }
+
+
+def character_accuracy_report(pairs: Sequence[tuple[str, str]]) -> dict[str, object]:
+    """Микро-CA и рядом — доля строк. Гейт этим отчётом не закрывается."""
+
+    pooled: PooledCharacterAccuracy = pooled_character_accuracy(pairs)
+    line_pass = accuracy_interval(pairs)
+    bootstrap = pooled_ca_line_bootstrap(pairs)
+    point_meets = (
+        pooled.point is not None and pooled.point >= TZ_THRESHOLDS["character_accuracy"]
+    )
+    line_pass_met = tz_character_accuracy_met(line_pass)
+    return {
+        "estimand": "pooled_micro",
+        "formula": "1 - sum(Levenshtein) / sum(reference_chars)",
+        "point": pooled.point,
+        "cer": pooled.cer,
+        "wer": pooled.wer,
+        "line_exact_match": pooled.line_exact_match,
+        "edit_distance": pooled.edit_distance,
+        "ref_chars": pooled.ref_chars,
+        "token_distance": pooled.token_distance,
+        "ref_tokens": pooled.ref_tokens,
+        "exact_lines": pooled.exact_lines,
+        "n_lines": pooled.n_lines,
+        "defined": pooled.point is not None,
+        "threshold": TZ_THRESHOLDS["character_accuracy"],
+        "point_meets_threshold": point_meets,
+        "line_bootstrap_95": _bootstrap_block(bootstrap),
+        "line_pass_rate": {
+            "estimand": "share_of_lines_with_per_line_ca_at_least_threshold",
+            "point": line_pass.point,
+            "low": line_pass.low,
+            "high": line_pass.high,
+            "n": line_pass.n,
+            "wilson_lower_meets_threshold": line_pass_met,
+        },
+        "closes_gate_i": False,
+    }
+
+
+def judge_pooled_ocr(
+    pairs: Sequence[tuple[str, str]],
+    *,
+    gold: bool = False,
+) -> dict[str, object]:
+    """Гейт I: микро-CA ≥ 0,95, Уилсон доли строк ≥ 0,95, и эталон — GOLD.
+
+    Одной точки на двух символах мало. Одной доли строк мало: короткие
+    верные строки прячут длинный промах, и микро-CA при этом ниже порога.
+    """
+
+    report = character_accuracy_report(pairs)
+    line_pass = report["line_pass_rate"]
+    line_pass_met = (
+        isinstance(line_pass, dict)
+        and line_pass.get("wilson_lower_meets_threshold") is True
+    )
+    closes = bool(gold and report["point_meets_threshold"] is True and line_pass_met)
+    return {
+        **report,
+        "gold": gold,
+        "silver_not_gold": not gold,
+        "closes_gate_i": closes,
     }
 
 
@@ -336,6 +430,7 @@ def main() -> int:
     gate_i = gate_i_interval(pairs)
     accuracies = [character_accuracy(reference, hypothesis) for reference, hypothesis in pairs]
     mean_ca = sum(accuracies) / len(accuracies) if accuracies else 0.0
+    pooled = judge_pooled_ocr(pairs, gold=False)
     report = {
         "pilot_path": str(path),
         "engine": engine,
@@ -345,6 +440,7 @@ def main() -> int:
         "coverage": coverage,
         "workers": workers,
         "mean_ca": mean_ca,
+        "character_accuracy": pooled,
         "tz_point": tz.point,
         "tz_low": tz.low,
         "tz_high": tz.high,
@@ -356,8 +452,10 @@ def main() -> int:
         "silver_not_gold": True,
         "closes_gate_i": False,
         "note": (
-            "SILVER PDF_TEXT_LAYER, без Речникова. Толстое чёрное кольцо "
-            "не входит в знаменатель. Не порог ТЗ. Гейт I открыт."
+            "character_accuracy — микро-CA по символам эталона. "
+            "tz_* и gate_i_* — доля строк с построчным CA не ниже порога "
+            "и её Уилсон; это другая величина. SILVER PDF_TEXT_LAYER, "
+            "без Речникова. Гейт I открыт."
         ),
     }
     out_raw = os.environ.get(OCR_PILOT_OUT_ENV, "").strip()

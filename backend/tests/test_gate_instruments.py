@@ -126,7 +126,8 @@ def test_silver_ocr_does_not_close_gate_i_even_when_the_bound_is_high() -> None:
     weak = judge_recorded_ocr(wilson(1, 100), gold=True)
     assert silver["threshold_met"] is True
     assert silver["closes_gate_i"] is False
-    assert gold["closes_gate_i"] is True
+    assert gold["threshold_met"] is True
+    assert gold["closes_gate_i"] is False
     assert weak["closes_gate_i"] is False
 
 
