@@ -62,6 +62,29 @@ def test_pdf_text_layer_on_train_object_is_eligible() -> None:
     assert eligible_for_ca(_line()) is True
 
 
+def test_vertical_and_broken_encoding_become_line_flags(tmp_path: Path) -> None:
+    jsonl = tmp_path / "data" / "recognition_lines.jsonl"
+    jsonl.parent.mkdir()
+    jsonl.write_text(
+        json.dumps(
+            {
+                "line_id": "L1",
+                "object_id": "OBJ-NOVOSLOBODSKAYA",
+                "text_raw": "ось",
+                "crop_path": "a.png",
+                "source_provenance": "PDF_TEXT_LAYER",
+                "orientation": "ROTATED_OR_VERTICAL",
+                "encoding_flags": ["CID_PLACEHOLDER"],
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    lines = load_recognition_lines(tmp_path)
+    assert lines[0].flags == ("VERTICAL", "LOW_QUALITY")
+
+
 def test_jsonl_without_object_id_is_invalid(tmp_path: Path) -> None:
     jsonl = tmp_path / "data" / "recognition_lines.jsonl"
     jsonl.parent.mkdir()

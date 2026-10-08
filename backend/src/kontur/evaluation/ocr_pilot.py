@@ -56,6 +56,7 @@ class OcrPilotLine:
     reference: str
     crop_path: str
     source_provenance: str
+    flags: tuple[str, ...] = ()
 
 
 def resolve_pilot_path(env: Mapping[str, str] | None = None) -> Path | None:
@@ -304,6 +305,21 @@ def judge_pooled_ocr(
     }
 
 
+def _crop_jobs(
+    lines: Sequence[OcrPilotLine],
+    crops: Mapping[str, bytes],
+) -> list[tuple[str, bytes, tuple[str, ...]]]:
+    jobs: list[tuple[str, bytes, tuple[str, ...]]] = []
+    for line in lines:
+        if not eligible_for_ca(line):
+            continue
+        payload = crops.get(line.crop_path)
+        if payload is None:
+            continue
+        jobs.append((line.reference, payload, line.flags))
+    return jobs
+
+
 def score_crop_bytes(
     lines: Sequence[OcrPilotLine],
     crops: Mapping[str, bytes],
@@ -314,35 +330,45 @@ def score_crop_bytes(
 ) -> tuple[tuple[str, str], ...]:
     """(reference, hypothesis) только по eligible строкам, для которых есть crop."""
 
-    jobs: list[tuple[str, bytes]] = []
-    for line in lines:
-        if not eligible_for_ca(line):
-            continue
-        payload = crops.get(line.crop_path)
-        if payload is None:
-            continue
-        jobs.append((line.reference, payload))
+    pairs, _flags = _score_crops(lines, crops, ocr, workers=workers, progress=progress)
+    return pairs
+
+
+def _score_crops(
+    lines: Sequence[OcrPilotLine],
+    crops: Mapping[str, bytes],
+    ocr: Callable[[bytes], str],
+    *,
+    workers: int = 1,
+    progress: Callable[[int, int], None] | None = None,
+) -> tuple[tuple[tuple[str, str], ...], tuple[tuple[str, ...], ...]]:
+    jobs = _crop_jobs(lines, crops)
     total = len(jobs)
     if total == 0:
-        return ()
+        return (), ()
     if workers <= 1:
         pairs: list[tuple[str, str]] = []
-        for index, (reference, payload) in enumerate(jobs, start=1):
+        flags: list[tuple[str, ...]] = []
+        for index, (reference, payload, line_flags) in enumerate(jobs, start=1):
             pairs.append((reference, ocr(payload)))
+            flags.append(line_flags)
             if progress is not None:
                 progress(index, total)
-        return tuple(pairs)
+        return tuple(pairs), tuple(flags)
     ordered: list[tuple[str, str]] = [("", "")] * total
+    ordered_flags: list[tuple[str, ...]] = [job[2] for job in jobs]
     done = 0
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        pending = {pool.submit(ocr, payload): index for index, (_ref, payload) in enumerate(jobs)}
+        pending = {
+            pool.submit(ocr, payload): index for index, (_ref, payload, _flags) in enumerate(jobs)
+        }
         for future in as_completed(pending):
             index = pending[future]
             ordered[index] = (jobs[index][0], future.result())
             done += 1
             if progress is not None:
                 progress(done, total)
-    return tuple(ordered)
+    return tuple(ordered), tuple(ordered_flags)
 
 
 def load_crop_bytes(path: Path, lines: Sequence[OcrPilotLine]) -> dict[str, bytes]:
@@ -389,6 +415,18 @@ def _from_zip(path: Path) -> tuple[OcrPilotLine, ...]:
     return _parse_jsonl(raw)
 
 
+def _pilot_flags(payload: Mapping[str, object]) -> tuple[str, ...]:
+    """Флаги строки пилота. Печать в jsonl не размечена и здесь не выдумывается."""
+
+    found: list[str] = []
+    if str(payload.get("orientation") or "").upper() == "ROTATED_OR_VERTICAL":
+        found.append("VERTICAL")
+    encoding = payload.get("encoding_flags")
+    if isinstance(encoding, list) and encoding:
+        found.append("LOW_QUALITY")
+    return tuple(found)
+
+
 def _parse_jsonl(raw: str) -> tuple[OcrPilotLine, ...]:
     rows: list[OcrPilotLine] = []
     for index, line in enumerate(raw.splitlines(), start=1):
@@ -409,6 +447,7 @@ def _parse_jsonl(raw: str) -> tuple[OcrPilotLine, ...]:
                 reference=str(payload.get("text_raw") or ""),
                 crop_path=str(payload.get("crop_path") or "").replace("\\", "/"),
                 source_provenance=str(payload.get("source_provenance") or ""),
+                flags=_pilot_flags(payload),
             )
         )
     return tuple(rows)
@@ -475,12 +514,14 @@ def main() -> int:
         file=sys.stderr,
         flush=True,
     )
-    pairs = score_crop_bytes(lines, readable, scorer, workers=workers, progress=_progress)
+    pairs, line_flags = _score_crops(
+        lines, readable, scorer, workers=workers, progress=_progress
+    )
     tz = accuracy_interval(pairs)
     gate_i = gate_i_interval(pairs)
     accuracies = [character_accuracy(reference, hypothesis) for reference, hypothesis in pairs]
     mean_ca = sum(accuracies) / len(accuracies) if accuracies else 0.0
-    pooled = judge_pooled_ocr(pairs, gold=False)
+    pooled = judge_pooled_ocr(pairs, gold=False, line_flags=line_flags)
     report = {
         "pilot_path": str(path),
         "engine": engine,
