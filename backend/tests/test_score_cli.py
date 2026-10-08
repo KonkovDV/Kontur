@@ -53,8 +53,10 @@ def test_one_code_hits_every_duplicate_row_and_does_not_meet_tz(tmp_path: Path) 
     assert matrix["tz_recall_met"] is False
     fpr = matrix["fpr"]
     assert isinstance(fpr, dict)
-    assert fpr["defined"] is False
-    assert fpr["n"] == 0
+    assert fpr["defined"] is True
+    assert fpr["n"] == 5
+    assert matrix["false_positives"] == 0
+    assert matrix["tz_fpr_met"] is False
     default = score_directory(tmp_path)
     assert default["match"] == "object_id+parameter_code+location"
     default_matrix = default["matrix"]
@@ -384,6 +386,52 @@ def test_ineligible_negative_is_not_a_false_positive() -> None:
     fpr = block["fpr"]
     assert isinstance(fpr, dict)
     assert fpr["defined"] is False
+
+
+def test_second_review_negatives_enter_fpr_and_do_not_meet_the_threshold() -> None:
+    from kontur.cli.score import _predictions
+
+    codes = ("PZ-009", "KR-055", "KR-055", "KR-055", "KR-058")
+    locations = (
+        "Отметка 0.000",
+        "Стена в грунте",
+        "Фундаментная плита",
+        "Вертикальные конструкции подземной части",
+        "Фундаментная плита",
+    )
+    rows = [
+        {
+            "object_id": "OBJ-NOVOSLOBODSKAYA",
+            "parameter_code": code,
+            "violation_label": "NO_VIOLATION",
+            "matrix_scope": "MATRIX",
+            "score_eligible": False,
+            "fpr_denominator": True,
+            "location": location,
+        }
+        for code, location in zip(codes, locations, strict=True)
+    ]
+    quiet = score_scope(rows, {}, [])
+    assert quiet["n_positive"] == 0
+    assert quiet["n_negative"] == 5
+    assert quiet["false_positives"] == 0
+    assert quiet["tz_fpr_met"] is False
+    submissions = [
+        {
+            "object_id": "OBJ-NOVOSLOBODSKAYA",
+            "checks": [
+                {
+                    "parameter_code": "PZ-009",
+                    "location": "Отметка 0.000",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "evidence": [{"stage": "PD", "file_id": "f", "pdf_page_number": 1}],
+                }
+            ],
+        }
+    ]
+    fired = score_scope(rows, _predictions(submissions), submissions)
+    assert fired["false_positives"] == 1
+    assert fired["tz_fpr_met"] is False
 
 
 def test_other_row_page_is_not_a_localization() -> None:

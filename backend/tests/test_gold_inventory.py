@@ -64,6 +64,16 @@ def test_public_gold_counts_are_internally_consistent() -> None:
     assert checks["free_search_score_eligible"] == 4
     assert checks["score_eligible_violation_present_in_matrix"] == 6
     assert checks["confirmed_negative_in_passport"] == 0
+    negatives = [
+        row
+        for row in rows
+        if isinstance(row, Mapping) and row["violation_label"] == "NO_VIOLATION"
+    ]
+    assert len(negatives) == 5
+    assert {row["parameter_code"] for row in negatives} == {"PZ-009", "KR-055", "KR-058"}
+    assert all(
+        row["score_eligible"] is False and row["fpr_denominator"] is True for row in negatives
+    )
     assert checks["unlabeled_is_not_no_violation"] is True
 
     ids = [row["check_id"] for row in rows if isinstance(row, Mapping)]

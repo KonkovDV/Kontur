@@ -88,11 +88,21 @@ def _load_submissions(folder: Path) -> list[dict[str, object]]:
 
 
 def _row_eligible(row: Mapping[str, object]) -> bool:
-    """Нет поля — синтетическая строка теста. Явный false в счёт не входит."""
+    """Нет поля — синтетическая строка теста. Явный false в recall не входит."""
 
     if "score_eligible" not in row:
         return True
     return row.get("score_eligible") is True
+
+
+def _fpr_row(row: Mapping[str, object]) -> bool:
+    """Отрицательная строка знаменателя FPR. Вторая проверка не становится позитивом."""
+
+    if row.get("violation_label") != "NO_VIOLATION":
+        return False
+    if row.get("fpr_denominator") is True:
+        return True
+    return _row_eligible(row)
 
 
 def _predictions(submissions: Sequence[Mapping[str, object]]) -> dict[tuple[str, ...], str]:
@@ -356,12 +366,13 @@ def score_scope(
     *,
     by_location: bool = False,
 ) -> dict[str, object]:
+    source = list(rows)
     unlabeled = _unlabeled_positive(
-        rows, predictions, by_location=by_location, unknown_codes=False
+        source, predictions, by_location=by_location, unknown_codes=False
     )
-    rows = [row for row in rows if _row_eligible(row)]
-    positives = [row for row in rows if row.get("violation_label") == _POSITIVE]
-    negatives = [row for row in rows if row.get("violation_label") == "NO_VIOLATION"]
+    eligible = [row for row in source if _row_eligible(row)]
+    positives = [row for row in eligible if row.get("violation_label") == _POSITIVE]
+    negatives = [row for row in source if _fpr_row(row)]
     hits = 0
     abstain = 0
     localized_hits = 0
