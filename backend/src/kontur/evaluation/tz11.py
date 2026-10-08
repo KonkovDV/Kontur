@@ -73,6 +73,12 @@ def _drawing_unmet(measurement: Mapping[str, Any]) -> str:
     return ""
 
 
+def _incremental_unmet(measurement: Mapping[str, Any]) -> str:
+    if measurement.get("incremental") is not True:
+        return "строка 9 считается по инкрементальному обновлению; полная пересборка не цитируется"
+    return ""
+
+
 @dataclass(frozen=True, slots=True)
 class Row:
     row_id: str
@@ -99,7 +105,7 @@ ROWS: tuple[Row, ...] = (
     Row("6", "Отправка в ИАИС РиН", 30.0, 10.0),
     Row("7", "NLP-анализ одного параметра", 0.5, 0.1),
     Row("8", "CV-анализ одного чертежа", 30.0, 10.0, unmet=_drawing_unmet),
-    Row("9", "Инкрементальное обновление протокола", 60.0, 15.0),
+    Row("9", "Инкрементальное обновление протокола", 60.0, 15.0, unmet=_incremental_unmet),
     Row("10", "Отклик API, 95-й процентиль", 0.2, 0.05, unmet=_api_unmet),
     Row("11", "Одновременная работа пользователей", 100.0, None, kind=MINIMUM, unit="чел."),
     Row("12", "Доступность системы", None, None, kind=CLAIM, unit="%"),
@@ -268,6 +274,14 @@ def measure_local() -> dict[str, dict[str, object]]:
         "7": {
             "value": _time_one_parameter(),
             "note": "локально: extract_number одного параметра на векторных токенах",
+        },
+        "9": {
+            "value": _time_protocol(),
+            "incremental": False,
+            "note": (
+                "локально: повторная полная сборка протокола; "
+                "отдельного инкрементального пути нет"
+            ),
         },
     }
 

@@ -47,6 +47,12 @@ def test_api_latency_without_a_hundred_users_is_not_the_status_row() -> None:
     assert row.verdict == NOT_QUOTABLE
 
 
+def test_incremental_row_is_quotable_only_for_an_incremental_path() -> None:
+    results = evaluate({"9": {"value": 1.0, "incremental": True}})
+    row = next(item for item in results if item.row.row_id == "9")
+    assert row.verdict == IN_LIMIT
+
+
 def test_local_protocol_and_parameter_rows_are_numbers() -> None:
     measured = measure_local()
     assert measured["5"]["value"] < 30
@@ -55,4 +61,7 @@ def test_local_protocol_and_parameter_rows_are_numbers() -> None:
     verdicts = {item["row"]: item["verdict"] for item in evidence["rows"]}
     assert verdicts["5"] == IN_LIMIT
     assert verdicts["7"] == IN_LIMIT
+    assert verdicts["9"] == NOT_QUOTABLE
+    assert isinstance(measured["9"]["value"], float)
     assert evidence["within_limits"] is False
+    assert "9" in evidence["over"]
