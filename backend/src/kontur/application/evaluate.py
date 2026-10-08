@@ -726,8 +726,21 @@ def evaluate_free_search(
         )
     extractor = rule.get("extractor")
     if isinstance(extractor, dict) and extractor.get("provision") is True:
-        kept.extend(_provision_evaluations(rule, pages, object_id))
+        known = {room for item in kept for room in _room_ids(item)}
+        for extra in _provision_evaluations(rule, pages, object_id):
+            rooms = _room_ids(extra)
+            if rooms and rooms <= known:
+                continue
+            kept.append(extra)
+            known.update(rooms)
     return tuple(kept)
+
+
+def _room_ids(item: RuleEvaluation) -> set[str]:
+    group = item.evidence_group
+    if group is None:
+        return set()
+    return {fragment.room_id for fragment in group.fragments if fragment.room_id}
 
 
 def _provision_evaluations(

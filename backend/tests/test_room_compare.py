@@ -456,6 +456,85 @@ def test_project_clause_is_a_suspicion_when_rd_never_names_the_element() -> None
     assert all(item.finding.finding_status is FindingStatus.SUSPICION for item in found)
 
 
+def test_split_room_list_in_one_token_still_names_every_room() -> None:
+    """Как в томе 5.4.2: «(пом. 267, 270,» и «271, 272)» — два куска, четыре номера."""
+
+    rule = {
+        "code": "FREE-HEATING-001",
+        "matrix_version": "draft-0",
+        "extractor": {"type": "room_compare", "provision": True, "room_compare": _settings()},
+    }
+    pages = {
+        DocStage.PD: StagePage(
+            document=_doc(DocStage.PD),
+            tokens=_words(
+                "(пом. 267, 270,",
+                "271, 272)",
+                "предусмотрена",
+                "система",
+                "подогрева",
+                "полов",
+                "(теплые",
+                "полы)",
+                "совмещенная",
+                "с",
+                "системой",
+                "радиаторного",
+                "отопления.",
+            ),
+        ),
+        DocStage.RD: StagePage(
+            document=_doc(DocStage.RD),
+            tokens=(
+                _token("267", 0.20, 0.40),
+                _token("270", 0.30, 0.40),
+                _token("271", 0.40, 0.40),
+                _token("272", 0.50, 0.40),
+                _token("отопления", 0.20, 0.80, page=2),
+            ),
+        ),
+    }
+    found = evaluate_free_search(rule, pages, "OBJ-ROOM")
+    rooms = {location_from_group(item.evidence_group) for item in found if item.evidence_group}
+    assert rooms == {"267", "270", "271", "272"}
+
+
+def test_wrapped_room_list_keeps_the_numbers_from_the_next_line() -> None:
+    """Перенос строки рвёт «267, 270,» и «271, 272)» и вставляет чужую фразу между ними."""
+
+    rule = {
+        "code": "FREE-HEATING-001",
+        "matrix_version": "draft-0",
+        "extractor": {"type": "room_compare", "provision": True, "room_compare": _settings()},
+    }
+    pages = {
+        DocStage.PD: StagePage(
+            document=_doc(DocStage.PD),
+            tokens=(
+                _token("(пом. 267, 270,", 0.70, 0.30),
+                _token("В помещениях раздевальных", 0.10, 0.315),
+                _token("271, 272)", 0.05, 0.34),
+                _token("предусмотрена", 0.20, 0.34),
+                _token("система", 0.35, 0.34),
+                _token("подогрева", 0.45, 0.34),
+                _token("полов.", 0.55, 0.34),
+            ),
+        ),
+        DocStage.RD: StagePage(
+            document=_doc(DocStage.RD),
+            tokens=(
+                _token("267", 0.20, 0.40),
+                _token("270", 0.30, 0.40),
+                _token("271", 0.40, 0.40),
+                _token("272", 0.50, 0.40),
+            ),
+        ),
+    }
+    found = evaluate_free_search(rule, pages, "OBJ-ROOM")
+    rooms = {location_from_group(item.evidence_group) for item in found if item.evidence_group}
+    assert rooms == {"267", "270", "271", "272"}
+
+
 def test_project_clause_stays_quiet_when_rd_names_the_element() -> None:
     rule = {
         "code": "FREE-HEATING-001",
