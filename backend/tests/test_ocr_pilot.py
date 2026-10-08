@@ -14,6 +14,7 @@ from kontur.evaluation.ocr_pilot import (
     OCR_PILOT_ENV,
     OcrPilotLine,
     accuracy_interval,
+    character_accuracy_report,
     eligible_for_ca,
     judge_pooled_ocr,
     load_recognition_lines,
@@ -152,6 +153,21 @@ def test_gold_needs_both_the_pooled_point_and_the_line_sample() -> None:
     assert gold["closes_gate_i"] is True
     assert silver["closes_gate_i"] is False
     assert silver["silver_not_gold"] is True
+
+
+def test_abstain_drops_coverage_and_stamp_is_its_own_slice() -> None:
+    report = character_accuracy_report(
+        [("АБ", "АБ"), ("ВГ", "")],
+        line_flags=[("STAMP",), ("ABSTAIN",)],
+    )
+    assert report["coverage"] == pytest.approx(0.5)
+    by_flag = report["by_flag"]
+    assert isinstance(by_flag, dict)
+    stamp = by_flag["STAMP"]
+    assert isinstance(stamp, dict)
+    assert stamp["n_lines"] == 1
+    assert stamp["point"] == pytest.approx(1.0)
+    assert report["closes_gate_i"] is False
 
 
 def test_empty_corpus_stays_unmeasured_even_as_gold() -> None:

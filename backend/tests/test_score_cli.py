@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from kontur.cli.score import (
     _line,
     _ScoreRow,
@@ -574,6 +576,142 @@ def test_other_row_page_is_not_a_localization() -> None:
     assert block["hits"] == 1
     assert block["localized_hits"] == 0
     assert block["localization_unscored"] == 0
+
+
+def test_three_fpr_names_do_not_share_one_denominator() -> None:
+    from kontur.cli.score import _predictions
+
+    tz_row = {
+        "object_id": "OBJ-N",
+        "parameter_code": "KR-055",
+        "violation_label": "NO_VIOLATION",
+        "score_eligible": False,
+        "fpr_denominator": True,
+        "location": "Стена",
+    }
+    gate_row = {
+        "object_id": "OBJ-N",
+        "parameter_code": "KR-058",
+        "violation_label": "NO_VIOLATION",
+        "score_eligible": True,
+        "location": "Плита",
+    }
+    outside = {
+        "object_id": "OBJ-N",
+        "parameter_code": "PZ-009",
+        "violation_label": "NO_VIOLATION",
+        "score_eligible": False,
+        "location": "Отметка",
+    }
+    block = score_scope([tz_row, gate_row, outside], _predictions([]), [])
+    sets = block["fpr_sets"]
+    assert isinstance(sets, dict)
+    tz = sets["FPR_ТЗ"]
+    gate = sets["FPR_ворот"]
+    extended = sets["FPR_расш"]
+    assert isinstance(tz, dict) and isinstance(gate, dict) and isinstance(extended, dict)
+    assert tz["n"] == 2
+    assert tz["decides_threshold"] is True
+    assert gate["n"] == 1
+    assert gate["decides_threshold"] is False
+    assert extended["n"] == 3
+    assert extended["decides_threshold"] is False
+    assert block["tz_fpr_met"] is False
+
+
+def test_named_hit_without_confirmation_fails_the_approved_level() -> None:
+    from kontur.cli.score import _predictions
+
+    row = {
+        "object_id": "OBJ-A",
+        "parameter_code": "PZ-001",
+        "violation_label": "VIOLATION_PRESENT",
+        "score_eligible": True,
+        "location": "1",
+    }
+    submission = [
+        {
+            "object_id": "OBJ-A",
+            "checks": [
+                {
+                    "parameter_code": "PZ-001",
+                    "location": "1",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "evidence": [{"stage": "PD", "file_id": "f", "pdf_page_number": 1}],
+                }
+            ],
+        }
+    ]
+    block = score_scope([row], _predictions(submission), submission)
+    levels = block["levels"]
+    assert isinstance(levels, dict)
+    named = levels["named"]
+    approved = levels["approved"]
+    assert isinstance(named, dict) and isinstance(approved, dict)
+    assert named["tp"] == 1
+    assert named["decides_gate_j"] is False
+    assert approved["tp"] == 0
+    assert approved["fp"] == 1
+    assert approved["decides_gate_j"] is True
+    assert approved["tz_recall_met"] is False
+    assert block["tz_recall_met"] is False
+    assert "sensitivity" in block["not_measured"]
+
+
+def test_source_verified_localization_does_not_move_the_strict_count() -> None:
+    from kontur.cli.score import _predictions_by_location
+
+    strict = [[0.0, 0.0], [0.1, 0.0], [0.1, 0.1], [0.0, 0.1]]
+    other = [[0.5, 0.5], [1.0, 0.5], [1.0, 1.0], [0.5, 1.0]]
+    row = {
+        "object_id": "OBJ-X",
+        "parameter_code": "IOS4-078",
+        "violation_label": "VIOLATION_PRESENT",
+        "location": "140",
+        "evidence": [{"file_id": "F1", "pdf_page_number": 2, "polygon_norm": strict}],
+        "localization_adjudication": {
+            "reason": "POSSIBLE_GOLD_LOCALIZATION_CONFLICT",
+            "file_id": "F1",
+            "pdf_page_number": 2,
+            "polygon_norm": other,
+        },
+    }
+    submission = [
+        {
+            "object_id": "OBJ-X",
+            "checks": [
+                {
+                    "parameter_code": "IOS4-078",
+                    "location": "140",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "confidence": 0.95,
+                    "evidence": [
+                        {
+                            "stage": "PD",
+                            "file_id": "F1",
+                            "pdf_page_number": 2,
+                            "polygon_norm": other,
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
+    block = score_scope(
+        [row],
+        _predictions_by_location(submission),
+        submission,
+        by_location=True,
+    )
+    assert block["localized_hits"] == 0
+    verified = block["localization_source_verified"]
+    assert isinstance(verified, dict)
+    assert verified["n"] == 1
+    assert verified["point"] == pytest.approx(1.0)
+    sensitivity = block["sensitivity"]
+    assert isinstance(sensitivity, dict)
+    assert sensitivity["decides_threshold"] is False
+    assert sensitivity["n_claims"] == 1
 
 
 def test_f1_interval_is_withheld_below_ten_clusters() -> None:

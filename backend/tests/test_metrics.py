@@ -18,6 +18,7 @@ from kontur.evaluation.metrics import (
     meets_threshold,
     pooled_ca_line_bootstrap,
     pooled_character_accuracy,
+    score_key_fields,
     wilson,
 )
 
@@ -136,6 +137,42 @@ def test_character_accuracy_is_not_binary() -> None:
 def test_character_accuracy_is_case_sensitive() -> None:
     """Регистр не сворачивается: шифр документа чувствителен к регистру."""
     assert character_accuracy("PZ-001", "pz-001") != pytest.approx(1.0)
+
+
+def test_key_field_kind_below_quota_stays_out_of_the_summary() -> None:
+    short = score_key_fields([{"kind": "CIPHER", "reference": "PZ-001", "hypothesis": "PZ-001"}])
+    assert short["defined"] is False
+    assert short["threshold_met"] is False
+    assert "CIPHER" in short["kinds_below_quota"]
+
+
+def test_stage_field_ignores_case_and_cipher_keeps_it() -> None:
+    scored = score_key_fields(
+        [
+            {"kind": "STAGE", "reference": "ПД", "hypothesis": "пд"},
+            {"kind": "CIPHER", "reference": "PZ-001", "hypothesis": "pz-001"},
+        ]
+    )
+    by_kind = {item["kind"]: item for item in scored["by_kind"]}  # type: ignore[union-attr]
+    assert by_kind["STAGE"]["em"] == pytest.approx(1.0)
+    assert by_kind["CIPHER"]["em"] == pytest.approx(0.0)
+
+
+def test_thirty_perfect_ciphers_do_not_meet_the_field_threshold() -> None:
+    fields = [
+        {"kind": "CIPHER", "reference": "PZ-001", "hypothesis": "PZ-001"} for _ in range(30)
+    ]
+    scored = score_key_fields(fields)
+    cipher = next(item for item in scored["by_kind"] if item["kind"] == "CIPHER")  # type: ignore[union-attr]
+    assert cipher["measured"] is True
+    assert scored["defined"] is True
+    assert scored["n"] == 30
+    assert scored["threshold_met"] is False
+
+
+def test_unknown_key_field_kind_is_rejected() -> None:
+    with pytest.raises(ValueError, match="ROOM"):
+        score_key_fields([{"kind": "ROOM", "reference": "1", "hypothesis": "1"}])
 
 
 def test_pooled_ca_weights_by_characters_not_by_lines() -> None:

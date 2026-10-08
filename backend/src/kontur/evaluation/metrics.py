@@ -13,7 +13,7 @@ import math
 import random
 import re
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from kontur.application.normalize import normalize_key_field
@@ -140,6 +140,82 @@ def key_field_exact_match_interval(
 
     successes = sum(1 for gold, predicted in pairs if key_field_exact_match(gold, predicted))
     return wilson(successes, len(pairs))
+
+
+FIELD_KINDS: tuple[str, ...] = (
+    "CIPHER",
+    "STAGE",
+    "REVISION",
+    "SHEET_PAGE",
+    "ROOM_ELEMENT",
+)
+FIELD_QUOTA = 30
+_CASE_SIGNIFICANT_FIELD: dict[str, bool] = {
+    "CIPHER": True,
+    "ROOM_ELEMENT": True,
+    "STAGE": False,
+    "REVISION": False,
+    "SHEET_PAGE": False,
+}
+
+
+def _field_text(value: object, *, case_significant: bool) -> str:
+    text = prepare_ocr_text(str(value or ""))
+    return text if case_significant else text.casefold()
+
+
+def score_key_fields(fields: Sequence[Mapping[str, object]]) -> dict[str, object]:
+    """Exact Match по пяти видам полей. Вид с n < 30 в сводку 0,90 не входит.
+
+    Регистр значим у шифра и номера помещения. Стадия, редакция и лист
+    сравниваются без регистра. Знаки в шифре не выбрасываются.
+    """
+
+    counts: dict[str, list[int]] = {kind: [0, 0] for kind in FIELD_KINDS}
+    for item in fields:
+        kind = str(item.get("kind") or "").upper()
+        if kind not in counts:
+            raise ValueError(f"неизвестный вид поля {kind!r}")
+        case_significant = _CASE_SIGNIFICANT_FIELD[kind]
+        reference = _field_text(item.get("reference"), case_significant=case_significant)
+        hypothesis = _field_text(item.get("hypothesis"), case_significant=case_significant)
+        counts[kind][1] += 1
+        if reference == hypothesis and reference:
+            counts[kind][0] += 1
+    by_kind: list[dict[str, object]] = []
+    summary_matches = 0
+    summary_n = 0
+    below_quota: list[str] = []
+    for kind in FIELD_KINDS:
+        matches, n = counts[kind]
+        measured = n >= FIELD_QUOTA
+        if measured:
+            summary_matches += matches
+            summary_n += n
+        else:
+            below_quota.append(kind)
+        by_kind.append(
+            {
+                "kind": kind,
+                "matches": matches,
+                "n": n,
+                "em": None if n == 0 else matches / n,
+                "quota": FIELD_QUOTA,
+                "measured": measured,
+            }
+        )
+    interval = wilson(summary_matches, summary_n)
+    return {
+        "by_kind": by_kind,
+        "em": None if summary_n == 0 else summary_matches / summary_n,
+        "matches": summary_matches,
+        "n": summary_n,
+        "defined": summary_n > 0,
+        "quota": FIELD_QUOTA,
+        "kinds_below_quota": below_quota,
+        "threshold_met": meets_threshold("key_field_exact_match", interval) if summary_n else False,
+        "decides_threshold": summary_n > 0,
+    }
 
 
 def _open_ring(polygon: Polygon) -> Polygon:

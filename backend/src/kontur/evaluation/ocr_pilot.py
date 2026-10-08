@@ -189,9 +189,50 @@ def _bootstrap_block(interval: LineBootstrap | None) -> dict[str, object] | None
     }
 
 
-def character_accuracy_report(pairs: Sequence[tuple[str, str]]) -> dict[str, object]:
-    """Микро-CA и рядом — доля строк. Гейт этим отчётом не закрывается."""
+_OCR_FLAGS = ("VERTICAL", "STAMP", "LOW_QUALITY")
 
+
+def _flag_rows(
+    pairs: Sequence[tuple[str, str]],
+    line_flags: Sequence[Sequence[str]] | None,
+) -> list[tuple[str, ...]]:
+    if line_flags is None:
+        return [() for _ in pairs]
+    flags = [tuple(str(item) for item in row) for row in line_flags]
+    if len(flags) != len(pairs):
+        raise ValueError("line_flags: число флагов не равно числу строк")
+    return flags
+
+
+def _flag_slice(
+    pairs: Sequence[tuple[str, str]],
+    flags: Sequence[tuple[str, ...]],
+    name: str,
+) -> dict[str, object] | None:
+    subset = [pair for pair, row in zip(pairs, flags, strict=True) if name in row]
+    if not subset:
+        return None
+    pooled = pooled_character_accuracy(subset)
+    return {
+        "n_lines": pooled.n_lines,
+        "point": pooled.point,
+        "cer": pooled.cer,
+        "defined": pooled.point is not None,
+    }
+
+
+def character_accuracy_report(
+    pairs: Sequence[tuple[str, str]],
+    *,
+    line_flags: Sequence[Sequence[str]] | None = None,
+) -> dict[str, object]:
+    """Микро-CA и рядом — доля строк. Гейт этим отчётом не закрывается.
+
+    ``ABSTAIN`` остаётся в знаменателе CA и выходит из coverage.
+    Срезы VERTICAL, STAMP и LOW_QUALITY порог не решают.
+    """
+
+    flags = _flag_rows(pairs, line_flags)
     pooled: PooledCharacterAccuracy = pooled_character_accuracy(pairs)
     line_pass = accuracy_interval(pairs)
     bootstrap = pooled_ca_line_bootstrap(pairs)
@@ -199,6 +240,12 @@ def character_accuracy_report(pairs: Sequence[tuple[str, str]]) -> dict[str, obj
         pooled.point is not None and pooled.point >= TZ_THRESHOLDS["character_accuracy"]
     )
     line_pass_met = tz_character_accuracy_met(line_pass)
+    covered = sum(1 for row in flags if "ABSTAIN" not in row)
+    by_flag = {
+        name: block
+        for name in _OCR_FLAGS
+        if (block := _flag_slice(pairs, flags, name)) is not None
+    }
     return {
         "estimand": "pooled_micro",
         "formula": "1 - sum(Levenshtein) / sum(reference_chars)",
@@ -224,6 +271,8 @@ def character_accuracy_report(pairs: Sequence[tuple[str, str]]) -> dict[str, obj
             "n": line_pass.n,
             "wilson_lower_meets_threshold": line_pass_met,
         },
+        "coverage": (covered / len(pairs)) if pairs else None,
+        "by_flag": by_flag,
         "closes_gate_i": False,
     }
 
@@ -232,6 +281,7 @@ def judge_pooled_ocr(
     pairs: Sequence[tuple[str, str]],
     *,
     gold: bool = False,
+    line_flags: Sequence[Sequence[str]] | None = None,
 ) -> dict[str, object]:
     """Гейт I: микро-CA ≥ 0,95, Уилсон доли строк ≥ 0,95, и эталон — GOLD.
 
@@ -239,7 +289,7 @@ def judge_pooled_ocr(
     верные строки прячут длинный промах, и микро-CA при этом ниже порога.
     """
 
-    report = character_accuracy_report(pairs)
+    report = character_accuracy_report(pairs, line_flags=line_flags)
     line_pass = report["line_pass_rate"]
     line_pass_met = (
         isinstance(line_pass, dict)
