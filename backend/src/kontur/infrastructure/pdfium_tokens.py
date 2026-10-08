@@ -74,8 +74,14 @@ def _iter_rects(textpage: pdfium.PdfTextPage) -> Iterator[tuple[str, Polygon]]:
         yield text, _quad(float(left), float(bottom), float(right), float(top))
 
 
-def extract_pdf_bytes(data: bytes) -> PdfDocumentTokens:
-    """Разобрать PDF из памяти. Повреждённый файл — исключение, не пустой успех."""
+def extract_pdf_bytes(data: bytes, *, max_pages: int | None = None) -> PdfDocumentTokens:
+    """Разобрать PDF из памяти. Повреждённый файл — исключение, не пустой успех.
+
+    ``max_pages`` обрезает разбор. ``None`` читает документ целиком.
+    """
+
+    if max_pages is not None and max_pages < 1:
+        raise ValueError("max_pages должен быть положительным")
 
     if not data:
         raise ValueError("PDF не разбирается: пустой файл")
@@ -87,6 +93,8 @@ def extract_pdf_bytes(data: bytes) -> PdfDocumentTokens:
     try:
         pages: list[PdfPageTokens] = []
         for index, page in enumerate(document):
+            if max_pages is not None and index >= max_pages:
+                break
             media = _box(tuple(page.get_mediabox()))
             crop_raw = page.get_cropbox()
             crop = _box(tuple(crop_raw)) if crop_raw is not None else media

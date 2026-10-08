@@ -76,6 +76,17 @@ def test_same_bytes_keep_identity_under_rename() -> None:
     assert first.file_hash != file_sha256(data + b"\x00")
 
 
+def test_max_pages_stops_before_the_rest_of_the_document() -> None:
+    pdf = pdfium.PdfDocument.new()
+    pdf.new_page(100, 100)
+    pdf.new_page(100, 100)
+    buffer = io.BytesIO()
+    pdf.save(buffer)
+    pdf.close()
+    extracted = extract_pdf_bytes(buffer.getvalue(), max_pages=1)
+    assert len(extracted.pages) == 1
+
+
 def test_extract_path_matches_bytes_hash(tmp_path: Path) -> None:
     data = ascii_pdf("CODE 12345-PZ")
     renamed = tmp_path / "moved" / "other-name.pdf"

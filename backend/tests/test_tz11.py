@@ -47,6 +47,26 @@ def test_api_latency_without_a_hundred_users_is_not_the_status_row() -> None:
     assert row.verdict == NOT_QUOTABLE
 
 
+def test_a_real_hundred_page_text_pdf_can_be_quoted() -> None:
+    results = evaluate(
+        {"2": {"value": 1.0, "pages": 100, "text_layer": True, "synthetic": False}}
+    )
+    row = next(item for item in results if item.row.row_id == "2")
+    assert row.verdict == IN_LIMIT
+
+
+def test_synthetic_hundred_pages_are_timed_and_not_quoted() -> None:
+    measured = measure_local()
+    row_measurement = measured["2"]
+    assert row_measurement["pages"] == 100
+    assert row_measurement["synthetic"] is True
+    assert isinstance(row_measurement["value"], float)
+    results = evaluate(measured)
+    row = next(item for item in results if item.row.row_id == "2")
+    assert row.verdict == NOT_QUOTABLE
+    assert "2" in timings_evidence(results)["over"]
+
+
 def test_incremental_row_is_quotable_only_for_an_incremental_path() -> None:
     results = evaluate({"9": {"value": 1.0, "incremental": True}})
     row = next(item for item in results if item.row.row_id == "9")

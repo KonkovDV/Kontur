@@ -79,6 +79,17 @@ def _incremental_unmet(measurement: Mapping[str, Any]) -> str:
     return ""
 
 
+def _pdf_unmet(measurement: Mapping[str, Any]) -> str:
+    pages = measurement.get("pages")
+    if isinstance(pages, bool) or not isinstance(pages, int) or not 1 <= pages <= 100:
+        return "строка 2 считается по PDF от 1 до 100 страниц"
+    if measurement.get("text_layer") is not True:
+        return "строка 2 считается по PDF с текстовым слоем"
+    if measurement.get("synthetic") is True:
+        return "синтетический текстовый PDF не цитируется как строка 2"
+    return ""
+
+
 @dataclass(frozen=True, slots=True)
 class Row:
     row_id: str
@@ -98,7 +109,7 @@ class Row:
 
 ROWS: tuple[Row, ...] = (
     Row("1", "Загрузка 10 файлов по 50 МБ", 120.0, 30.0),
-    Row("2", "Распознавание PDF до 100 страниц", 180.0, 30.0),
+    Row("2", "Распознавание PDF до 100 страниц", 180.0, 30.0, unmet=_pdf_unmet),
     Row("3", "Полный анализ комплекта до 500 страниц", 600.0, 60.0),
     Row("4", "Сравнение 132 параметров", 120.0, 30.0, unmet=_compare_unmet),
     Row("5", "Формирование протокола", 30.0, 10.0),
@@ -259,6 +270,54 @@ def _format_span(value: float, unit: str) -> str:
     return f"{value:.0f} {unit}"
 
 
+def _text_layer_pdf(page_count: int) -> bytes:
+    """PDF с одной латинской строкой на странице. Не чертёж и не скан."""
+
+    import ctypes
+    import io
+
+    import pypdfium2 as pdfium  # type: ignore[import-untyped]
+    import pypdfium2.raw as pdfium_c  # type: ignore[import-untyped]
+
+    pdf = pdfium.PdfDocument.new()
+    try:
+        for index in range(page_count):
+            page = pdf.new_page(400, 400)
+            obj = pdfium_c.FPDFPageObj_NewTextObj(pdf, b"Helvetica", 12)
+            raw = f"PAGE {index + 1}\x00".encode("utf-16-le")
+            chars = (ctypes.c_ushort * (len(raw) // 2)).from_buffer_copy(raw)
+            pdfium_c.FPDFText_SetText(obj, chars)
+            pdfium_c.FPDFPageObj_Transform(obj, 1, 0, 0, 1, 40, 40)
+            pdfium_c.FPDFPage_InsertObject(page, obj)
+            pdfium_c.FPDFPage_GenerateContent(page)
+        buffer = io.BytesIO()
+        pdf.save(buffer)
+        return buffer.getvalue()
+    finally:
+        pdf.close()
+
+
+def _time_pdf_recognition(page_count: int = 100) -> dict[str, object]:
+    from kontur.infrastructure.pdfium_tokens import extract_pdf_bytes
+
+    data = _text_layer_pdf(page_count)
+    started = perf_counter()
+    document = extract_pdf_bytes(data, max_pages=page_count)
+    elapsed = perf_counter() - started
+    recognized = len(document.pages)
+    text_pages = sum(1 for page in document.pages if page.has_embedded_text)
+    return {
+        "value": elapsed,
+        "pages": recognized,
+        "text_layer": text_pages == recognized and recognized > 0,
+        "synthetic": True,
+        "note": (
+            f"локально: {recognized} страниц текстового слоя, по одной строке; "
+            "не альбом чертежей и не сканы"
+        ),
+    }
+
+
 def measure_local() -> dict[str, dict[str, object]]:
     """Строки, которые снимаются в процессе: протокол и один параметр.
 
@@ -267,6 +326,7 @@ def measure_local() -> dict[str, dict[str, object]]:
     """
 
     return {
+        "2": _time_pdf_recognition(),
         "5": {
             "value": _time_protocol(),
             "note": "локально: сборка протокола, JSON, DOCX, XML и PDF одного объекта",
