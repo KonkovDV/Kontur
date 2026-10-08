@@ -79,6 +79,17 @@ def _incremental_unmet(measurement: Mapping[str, Any]) -> str:
     return ""
 
 
+def _upload_unmet(measurement: Mapping[str, Any]) -> str:
+    files = measurement.get("files")
+    each = measurement.get("each_bytes")
+    accepted = measurement.get("accepted")
+    if files != 10 or each != 50 * 1024 * 1024:
+        return "строка 1 считается по 10 файлам по 50 МБ"
+    if accepted != 10:
+        return "пакет 10×50 МБ не принят: лимит одного пакета 200 МБ"
+    return ""
+
+
 def _pdf_unmet(measurement: Mapping[str, Any]) -> str:
     pages = measurement.get("pages")
     if isinstance(pages, bool) or not isinstance(pages, int) or not 1 <= pages <= 100:
@@ -108,7 +119,7 @@ class Row:
 
 
 ROWS: tuple[Row, ...] = (
-    Row("1", "Загрузка 10 файлов по 50 МБ", 120.0, 30.0),
+    Row("1", "Загрузка 10 файлов по 50 МБ", 120.0, 30.0, unmet=_upload_unmet),
     Row("2", "Распознавание PDF до 100 страниц", 180.0, 30.0, unmet=_pdf_unmet),
     Row("3", "Полный анализ комплекта до 500 страниц", 600.0, 60.0),
     Row("4", "Сравнение 132 параметров", 120.0, 30.0, unmet=_compare_unmet),
@@ -318,6 +329,26 @@ def _time_pdf_recognition(page_count: int = 100) -> dict[str, object]:
     }
 
 
+def _time_batch_upload() -> dict[str, object]:
+    """Десять файлов по 50 МБ одним пакетом. Приём их отклоняет, время отказа не строка 1."""
+
+    from kontur.application.intake import MAX_FILE_BYTES, UploadCandidate, evaluate_batch
+
+    candidates = [
+        UploadCandidate(filename=f"volume-{index}.pdf", size_bytes=MAX_FILE_BYTES, header=b"%PDF-")
+        for index in range(10)
+    ]
+    started = perf_counter()
+    decision = evaluate_batch(candidates)
+    return {
+        "value": perf_counter() - started,
+        "files": len(candidates),
+        "each_bytes": MAX_FILE_BYTES,
+        "accepted": len(decision.accepted),
+        "note": "локально: один пакет 10×50 МБ; лимит пакета 200 МБ, загрузка не принята",
+    }
+
+
 def _time_parameter_compare() -> dict[str, object]:
     """Исполняемые правила на пустом комплекте. Это не сравнение всех 132."""
 
@@ -352,6 +383,7 @@ def measure_local() -> dict[str, dict[str, object]]:
     """
 
     return {
+        "1": _time_batch_upload(),
         "2": _time_pdf_recognition(),
         "4": _time_parameter_compare(),
         "5": {

@@ -14,6 +14,25 @@ from kontur.evaluation.tz11 import (
 )
 
 
+def test_ten_files_of_fifty_megabytes_are_refused_as_one_batch() -> None:
+    measured = measure_local()
+    upload = measured["1"]
+    assert upload["files"] == 10
+    assert upload["accepted"] == 0
+    results = evaluate(measured)
+    row = next(item for item in results if item.row.row_id == "1")
+    assert row.verdict == NOT_QUOTABLE
+    assert "1" in timings_evidence(results)["over"]
+
+
+def test_an_accepted_ten_file_upload_can_be_quoted() -> None:
+    results = evaluate(
+        {"1": {"value": 1.0, "files": 10, "each_bytes": 50 * 1024 * 1024, "accepted": 10}}
+    )
+    row = next(item for item in results if item.row.row_id == "1")
+    assert row.verdict == IN_LIMIT
+
+
 def test_an_empty_table_does_not_measure_gate_l() -> None:
     evidence = timings_evidence(evaluate({}))
     assert evidence["within_limits"] is False
@@ -23,7 +42,18 @@ def test_an_empty_table_does_not_measure_gate_l() -> None:
 
 
 def test_a_row_over_the_budget_fails_even_when_other_rows_are_missing() -> None:
-    evidence = timings_evidence(evaluate({"1": 200.0}))
+    evidence = timings_evidence(
+        evaluate(
+            {
+                "1": {
+                    "value": 200.0,
+                    "files": 10,
+                    "each_bytes": 50 * 1024 * 1024,
+                    "accepted": 10,
+                }
+            }
+        )
+    )
     assert evidence["measured"] is True
     assert evidence["within_limits"] is False
     assert evidence["over"] == ["1"]
