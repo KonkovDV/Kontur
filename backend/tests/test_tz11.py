@@ -14,6 +14,22 @@ from kontur.evaluation.tz11 import (
 )
 
 
+def test_rin_without_an_address_is_not_a_delivery() -> None:
+    measured = measure_local()
+    delivery = measured["6"]
+    assert delivery["delivered"] is False
+    results = evaluate(measured)
+    row = next(item for item in results if item.row.row_id == "6")
+    assert row.verdict == NOT_QUOTABLE
+    assert "6" in timings_evidence(results)["over"]
+
+
+def test_an_accepted_rin_delivery_can_be_quoted() -> None:
+    results = evaluate({"6": {"value": 1.0, "delivered": True}})
+    row = next(item for item in results if item.row.row_id == "6")
+    assert row.verdict == IN_LIMIT
+
+
 def test_ten_files_of_fifty_megabytes_are_refused_as_one_batch() -> None:
     measured = measure_local()
     upload = measured["1"]

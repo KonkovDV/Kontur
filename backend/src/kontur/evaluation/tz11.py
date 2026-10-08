@@ -79,6 +79,12 @@ def _incremental_unmet(measurement: Mapping[str, Any]) -> str:
     return ""
 
 
+def _rin_unmet(measurement: Mapping[str, Any]) -> str:
+    if measurement.get("delivered") is not True:
+        return "строка 6 считается по протоколу, который принял приёмник; LOCAL_ONLY не сдача"
+    return ""
+
+
 def _upload_unmet(measurement: Mapping[str, Any]) -> str:
     files = measurement.get("files")
     each = measurement.get("each_bytes")
@@ -124,7 +130,7 @@ ROWS: tuple[Row, ...] = (
     Row("3", "Полный анализ комплекта до 500 страниц", 600.0, 60.0),
     Row("4", "Сравнение 132 параметров", 120.0, 30.0, unmet=_compare_unmet),
     Row("5", "Формирование протокола", 30.0, 10.0),
-    Row("6", "Отправка в ИАИС РиН", 30.0, 10.0),
+    Row("6", "Отправка в ИАИС РиН", 30.0, 10.0, unmet=_rin_unmet),
     Row("7", "NLP-анализ одного параметра", 0.5, 0.1),
     Row("8", "CV-анализ одного чертежа", 30.0, 10.0, unmet=_drawing_unmet),
     Row("9", "Инкрементальное обновление протокола", 60.0, 15.0, unmet=_incremental_unmet),
@@ -329,6 +335,20 @@ def _time_pdf_recognition(page_count: int = 100) -> dict[str, object]:
     }
 
 
+def _time_rin_delivery() -> dict[str, object]:
+    """Без адреса приёма протокол остаётся локальным. Это не сдача в РиН."""
+
+    from kontur.infrastructure.rin_client import RinStatus, deliver_protocol
+
+    started = perf_counter()
+    result = deliver_protocol(b"{}", url="", event_id="tz11-rin")
+    return {
+        "value": perf_counter() - started,
+        "delivered": result.status is RinStatus.SENT,
+        "note": result.detail,
+    }
+
+
 def _time_batch_upload() -> dict[str, object]:
     """Десять файлов по 50 МБ одним пакетом. Приём их отклоняет, время отказа не строка 1."""
 
@@ -386,6 +406,7 @@ def measure_local() -> dict[str, dict[str, object]]:
         "1": _time_batch_upload(),
         "2": _time_pdf_recognition(),
         "4": _time_parameter_compare(),
+        "6": _time_rin_delivery(),
         "5": {
             "value": _time_protocol(),
             "note": "локально: сборка протокола, JSON, DOCX, XML и PDF одного объекта",
