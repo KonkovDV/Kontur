@@ -14,7 +14,10 @@
       "delta": -150.5,
       "rationale": "учебный срез: площадь застройки ПД 1250,5 м², РД 1100 м², допуск 0",
       "source_id": "demo-pd-pz",
-      "evidence_refs": ["eg-demo-pz-001-PD", "eg-demo-pz-001-RD"],
+      "evidence_refs": [
+        "eg-demo-pz-001-PD",
+        "eg-demo-pz-001-RD"
+      ],
       "disagreement_kind": "VALUE_DELTA",
       "versions": {
         "matrix_version": "draft-0",
@@ -41,8 +44,42 @@
             "sheet": "ТЭП"
           },
           "page": 1,
-          "polygon_source": [[72, 420], [220, 420], [220, 448], [72, 448]],
-          "polygon_norm": [[0.12, 0.58], [0.38, 0.58], [0.38, 0.66], [0.12, 0.66]],
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.58
+            ],
+            [
+              0.38,
+              0.58
+            ],
+            [
+              0.38,
+              0.66
+            ],
+            [
+              0.12,
+              0.66
+            ]
+          ],
           "extracted": {
             "raw_token": "1250,5",
             "normalized_value": 1250.5,
@@ -51,7 +88,9 @@
             "engine_version": "pdfium",
             "confidence": 0.92,
             "grounded_in_source_tokens": true,
-            "second_read": { "agrees": true }
+            "second_read": {
+              "agrees": true
+            }
           }
         },
         {
@@ -67,8 +106,42 @@
             "sheet": "ОД"
           },
           "page": 1,
-          "polygon_source": [[72, 400], [200, 400], [200, 428], [72, 428]],
-          "polygon_norm": [[0.12, 0.52], [0.34, 0.52], [0.34, 0.60], [0.12, 0.60]],
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.52
+            ],
+            [
+              0.34,
+              0.52
+            ],
+            [
+              0.34,
+              0.6
+            ],
+            [
+              0.12,
+              0.6
+            ]
+          ],
           "extracted": {
             "raw_token": "1100",
             "normalized_value": 1100,
@@ -77,7 +150,9 @@
             "engine_version": "pdfium",
             "confidence": 0.9,
             "grounded_in_source_tokens": true,
-            "second_read": { "agrees": true }
+            "second_read": {
+              "agrees": true
+            }
           }
         }
       ]
@@ -122,7 +197,10 @@
       "actual_value": "B25",
       "rationale": "учебный срез: класс бетона ПД B30, РД B25",
       "source_id": "demo-pd-kr",
-      "evidence_refs": ["eg-demo-kr-055-PD", "eg-demo-kr-055-RD"],
+      "evidence_refs": [
+        "eg-demo-kr-055-PD",
+        "eg-demo-kr-055-RD"
+      ],
       "disagreement_kind": "VALUE_DELTA",
       "versions": {
         "matrix_version": "draft-0",
@@ -149,8 +227,42 @@
             "sheet": "КЖ"
           },
           "page": 1,
-          "polygon_source": [[80, 360], [160, 360], [160, 388], [80, 388]],
-          "polygon_norm": [[0.14, 0.48], [0.28, 0.48], [0.28, 0.56], [0.14, 0.56]],
+          "polygon_source": [
+            [
+              80,
+              360
+            ],
+            [
+              160,
+              360
+            ],
+            [
+              160,
+              388
+            ],
+            [
+              80,
+              388
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.14,
+              0.48
+            ],
+            [
+              0.28,
+              0.48
+            ],
+            [
+              0.28,
+              0.56
+            ],
+            [
+              0.14,
+              0.56
+            ]
+          ],
           "extracted": {
             "raw_token": "B30",
             "normalized_value": "B30",
@@ -174,8 +286,42 @@
             "sheet": "КЖ"
           },
           "page": 1,
-          "polygon_source": [[80, 340], [160, 340], [160, 368], [80, 368]],
-          "polygon_norm": [[0.14, 0.42], [0.28, 0.42], [0.28, 0.50], [0.14, 0.50]],
+          "polygon_source": [
+            [
+              80,
+              340
+            ],
+            [
+              160,
+              340
+            ],
+            [
+              160,
+              368
+            ],
+            [
+              80,
+              368
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.14,
+              0.42
+            ],
+            [
+              0.28,
+              0.42
+            ],
+            [
+              0.28,
+              0.5
+            ],
+            [
+              0.14,
+              0.5
+            ]
+          ],
           "extracted": {
             "raw_token": "B25",
             "normalized_value": "B25",
@@ -216,7 +362,10 @@
       "delta": -0.4,
       "rationale": "учебный срез: ширина проёма ПД 1,2 м, РД 0,8 м при пороге ≥ 0,9 м",
       "source_id": "demo-pd-ar",
-      "evidence_refs": ["eg-demo-ar-041-PD", "eg-demo-ar-041-RD"],
+      "evidence_refs": [
+        "eg-demo-ar-041-PD",
+        "eg-demo-ar-041-RD"
+      ],
       "disagreement_kind": "VALUE_DELTA",
       "versions": {
         "matrix_version": "draft-0",
@@ -243,8 +392,42 @@
             "sheet": "ВД"
           },
           "page": 2,
-          "polygon_source": [[90, 300], [180, 300], [180, 328], [90, 328]],
-          "polygon_norm": [[0.16, 0.36], [0.32, 0.36], [0.32, 0.44], [0.16, 0.44]],
+          "polygon_source": [
+            [
+              90,
+              300
+            ],
+            [
+              180,
+              300
+            ],
+            [
+              180,
+              328
+            ],
+            [
+              90,
+              328
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.16,
+              0.36
+            ],
+            [
+              0.32,
+              0.36
+            ],
+            [
+              0.32,
+              0.44
+            ],
+            [
+              0.16,
+              0.44
+            ]
+          ],
           "extracted": {
             "raw_token": "1,2",
             "normalized_value": 1.2,
@@ -268,8 +451,42 @@
             "sheet": "ВД"
           },
           "page": 2,
-          "polygon_source": [[90, 280], [170, 280], [170, 308], [90, 308]],
-          "polygon_norm": [[0.16, 0.30], [0.30, 0.30], [0.30, 0.38], [0.16, 0.38]],
+          "polygon_source": [
+            [
+              90,
+              280
+            ],
+            [
+              170,
+              280
+            ],
+            [
+              170,
+              308
+            ],
+            [
+              90,
+              308
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.16,
+              0.3
+            ],
+            [
+              0.3,
+              0.3
+            ],
+            [
+              0.3,
+              0.38
+            ],
+            [
+              0.16,
+              0.38
+            ]
+          ],
           "extracted": {
             "raw_token": "0,8",
             "normalized_value": 0.8,
@@ -310,7 +527,10 @@
       "delta": -70000,
       "rationale": "учебный срез: сечение 500×300 против 400×200",
       "source_id": "demo-pd-ov",
-      "evidence_refs": ["eg-demo-ios4-078-PD", "eg-demo-ios4-078-RD"],
+      "evidence_refs": [
+        "eg-demo-ios4-078-PD",
+        "eg-demo-ios4-078-RD"
+      ],
       "disagreement_kind": "VALUE_DELTA",
       "versions": {
         "matrix_version": "draft-0",
@@ -337,8 +557,42 @@
             "sheet": "ОВ"
           },
           "page": 1,
-          "polygon_source": [[100, 240], [220, 240], [220, 268], [100, 268]],
-          "polygon_norm": [[0.18, 0.22], [0.40, 0.22], [0.40, 0.30], [0.18, 0.30]],
+          "polygon_source": [
+            [
+              100,
+              240
+            ],
+            [
+              220,
+              240
+            ],
+            [
+              220,
+              268
+            ],
+            [
+              100,
+              268
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.18,
+              0.22
+            ],
+            [
+              0.4,
+              0.22
+            ],
+            [
+              0.4,
+              0.3
+            ],
+            [
+              0.18,
+              0.3
+            ]
+          ],
           "extracted": {
             "raw_token": "500×300",
             "normalized_value": 150000,
@@ -362,8 +616,42 @@
             "sheet": "ОВ"
           },
           "page": 1,
-          "polygon_source": [[100, 220], [210, 220], [210, 248], [100, 248]],
-          "polygon_norm": [[0.18, 0.16], [0.36, 0.16], [0.36, 0.24], [0.18, 0.24]],
+          "polygon_source": [
+            [
+              100,
+              220
+            ],
+            [
+              210,
+              220
+            ],
+            [
+              210,
+              248
+            ],
+            [
+              100,
+              248
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.18,
+              0.16
+            ],
+            [
+              0.36,
+              0.16
+            ],
+            [
+              0.36,
+              0.24
+            ],
+            [
+              0.18,
+              0.24
+            ]
+          ],
           "extracted": {
             "raw_token": "400×200",
             "normalized_value": 80000,
@@ -387,6 +675,1662 @@
       }
     },
     "audit": [],
+    "closes_gate_k": false
+  },
+  {
+    "schema_version": "kontur.evidence_card.v1",
+    "process_id": "demo-gate-k",
+    "finding": {
+      "finding_id": "demo-pz-002",
+      "evidence_group_id": "eg-demo-pz-002",
+      "rule_code": "PZ-002",
+      "finding_status": "CANDIDATE",
+      "review_priority": "HIGH",
+      "counts_as_violation": false,
+      "expected_value": 8400,
+      "actual_value": 7900,
+      "delta": -500,
+      "rationale": "учебный срез: площадь участка ПД 8400, РД 7900",
+      "source_id": "demo-pd-1",
+      "evidence_refs": [
+        "eg-demo-pz-002-PD",
+        "eg-demo-pz-002-RD"
+      ],
+      "disagreement_kind": "VALUE_DELTA",
+      "versions": {
+        "matrix_version": "draft-0",
+        "rule_version": "0.1.0",
+        "model_version": "none"
+      }
+    },
+    "evidence_group": {
+      "evidence_group_id": "eg-demo-pz-002",
+      "object_id": "OBJ-DEMO-GATE-K",
+      "rule_code": "PZ-002",
+      "matrix_version": "draft-0",
+      "fragments": [
+        {
+          "fragment_id": "eg-demo-pz-002-PD",
+          "role": "expected",
+          "document": {
+            "file_id": "demo-pd-1",
+            "file_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc_stage": "PD",
+            "document_code": "PZ-002",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ТЭП"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.23
+            ],
+            [
+              0.38,
+              0.23
+            ],
+            [
+              0.38,
+              0.29000000000000004
+            ],
+            [
+              0.12,
+              0.29000000000000004
+            ]
+          ],
+          "extracted": {
+            "raw_token": "8400",
+            "normalized_value": 8400,
+            "unit": "м²",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.92,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        },
+        {
+          "fragment_id": "eg-demo-pz-002-RD",
+          "role": "actual",
+          "document": {
+            "file_id": "demo-rd-1",
+            "file_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "doc_stage": "RD",
+            "document_code": "PZ-002",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ОД"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.23
+            ],
+            [
+              0.38,
+              0.23
+            ],
+            [
+              0.38,
+              0.29000000000000004
+            ],
+            [
+              0.12,
+              0.29000000000000004
+            ]
+          ],
+          "extracted": {
+            "raw_token": "7900",
+            "normalized_value": 7900,
+            "unit": "м²",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.9,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "code": "PZ-002",
+      "name": "Площадь участка",
+      "unit": "м²",
+      "comparator": {
+        "operator": "delta",
+        "tolerance_abs": 0.0,
+        "tolerance_rel": null,
+        "rounding": "half_up",
+        "unit_target": "м²"
+      }
+    },
+    "audit": [
+      {
+        "actor_id": "insp-demo",
+        "action": "SELECT_REVISION",
+        "payload": {
+          "file_id": "demo-pd-pz",
+          "doc_stage": "PD",
+          "stamp_approval": "APPROVED",
+          "comment": "учебный эталон"
+        }
+      }
+    ],
+    "closes_gate_k": false
+  },
+  {
+    "schema_version": "kontur.evidence_card.v1",
+    "process_id": "demo-gate-k",
+    "finding": {
+      "finding_id": "demo-kr-054",
+      "evidence_group_id": "eg-demo-kr-054",
+      "rule_code": "KR-054",
+      "finding_status": "CANDIDATE",
+      "review_priority": "HIGH",
+      "counts_as_violation": false,
+      "expected_value": 400,
+      "actual_value": 380,
+      "delta": -20,
+      "rationale": "учебный срез: толщина стены ПД 400, РД 380",
+      "source_id": "demo-pd-2",
+      "evidence_refs": [
+        "eg-demo-kr-054-PD",
+        "eg-demo-kr-054-RD"
+      ],
+      "disagreement_kind": "VALUE_DELTA",
+      "versions": {
+        "matrix_version": "draft-0",
+        "rule_version": "0.1.0",
+        "model_version": "none"
+      }
+    },
+    "evidence_group": {
+      "evidence_group_id": "eg-demo-kr-054",
+      "object_id": "OBJ-DEMO-GATE-K",
+      "rule_code": "KR-054",
+      "matrix_version": "draft-0",
+      "fragments": [
+        {
+          "fragment_id": "eg-demo-kr-054-PD",
+          "role": "expected",
+          "document": {
+            "file_id": "demo-pd-2",
+            "file_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc_stage": "PD",
+            "document_code": "KR-054",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ТЭП"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.26
+            ],
+            [
+              0.38,
+              0.26
+            ],
+            [
+              0.38,
+              0.32
+            ],
+            [
+              0.12,
+              0.32
+            ]
+          ],
+          "extracted": {
+            "raw_token": "400",
+            "normalized_value": 400,
+            "unit": "мм",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.92,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        },
+        {
+          "fragment_id": "eg-demo-kr-054-RD",
+          "role": "actual",
+          "document": {
+            "file_id": "demo-rd-2",
+            "file_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "doc_stage": "RD",
+            "document_code": "KR-054",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ОД"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.26
+            ],
+            [
+              0.38,
+              0.26
+            ],
+            [
+              0.38,
+              0.32
+            ],
+            [
+              0.12,
+              0.32
+            ]
+          ],
+          "extracted": {
+            "raw_token": "380",
+            "normalized_value": 380,
+            "unit": "мм",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.9,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "code": "KR-054",
+      "name": "Толщина наружной стены",
+      "unit": "мм",
+      "comparator": {
+        "operator": "delta",
+        "tolerance_abs": 0.0,
+        "tolerance_rel": null,
+        "rounding": "half_up",
+        "unit_target": "м²"
+      }
+    },
+    "audit": [
+      {
+        "actor_id": "insp-demo",
+        "action": "SELECT_REVISION",
+        "payload": {
+          "file_id": "demo-pd-pz",
+          "doc_stage": "PD",
+          "stamp_approval": "APPROVED",
+          "comment": "учебный эталон"
+        }
+      }
+    ],
+    "closes_gate_k": false
+  },
+  {
+    "schema_version": "kontur.evidence_card.v1",
+    "process_id": "demo-gate-k",
+    "finding": {
+      "finding_id": "demo-ar-040",
+      "evidence_group_id": "eg-demo-ar-040",
+      "rule_code": "AR-040",
+      "finding_status": "CANDIDATE",
+      "review_priority": "HIGH",
+      "counts_as_violation": false,
+      "expected_value": 2.4,
+      "actual_value": 2.1,
+      "delta": -0.2999999999999998,
+      "rationale": "учебный срез: ширина коридора ПД 2.4, РД 2.1",
+      "source_id": "demo-pd-3",
+      "evidence_refs": [
+        "eg-demo-ar-040-PD",
+        "eg-demo-ar-040-RD"
+      ],
+      "disagreement_kind": "VALUE_DELTA",
+      "versions": {
+        "matrix_version": "draft-0",
+        "rule_version": "0.1.0",
+        "model_version": "none"
+      }
+    },
+    "evidence_group": {
+      "evidence_group_id": "eg-demo-ar-040",
+      "object_id": "OBJ-DEMO-GATE-K",
+      "rule_code": "AR-040",
+      "matrix_version": "draft-0",
+      "fragments": [
+        {
+          "fragment_id": "eg-demo-ar-040-PD",
+          "role": "expected",
+          "document": {
+            "file_id": "demo-pd-3",
+            "file_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc_stage": "PD",
+            "document_code": "AR-040",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ТЭП"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.29000000000000004
+            ],
+            [
+              0.38,
+              0.29000000000000004
+            ],
+            [
+              0.38,
+              0.35000000000000003
+            ],
+            [
+              0.12,
+              0.35000000000000003
+            ]
+          ],
+          "extracted": {
+            "raw_token": "2.4",
+            "normalized_value": 2.4,
+            "unit": "м",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.92,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        },
+        {
+          "fragment_id": "eg-demo-ar-040-RD",
+          "role": "actual",
+          "document": {
+            "file_id": "demo-rd-3",
+            "file_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "doc_stage": "RD",
+            "document_code": "AR-040",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ОД"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.29000000000000004
+            ],
+            [
+              0.38,
+              0.29000000000000004
+            ],
+            [
+              0.38,
+              0.35000000000000003
+            ],
+            [
+              0.12,
+              0.35000000000000003
+            ]
+          ],
+          "extracted": {
+            "raw_token": "2.1",
+            "normalized_value": 2.1,
+            "unit": "м",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.9,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "code": "AR-040",
+      "name": "Ширина коридора",
+      "unit": "м",
+      "comparator": {
+        "operator": "delta",
+        "tolerance_abs": 0.0,
+        "tolerance_rel": null,
+        "rounding": "half_up",
+        "unit_target": "м²"
+      }
+    },
+    "audit": [
+      {
+        "actor_id": "insp-demo",
+        "action": "SELECT_REVISION",
+        "payload": {
+          "file_id": "demo-pd-pz",
+          "doc_stage": "PD",
+          "stamp_approval": "APPROVED",
+          "comment": "учебный эталон"
+        }
+      }
+    ],
+    "closes_gate_k": false
+  },
+  {
+    "schema_version": "kontur.evidence_card.v1",
+    "process_id": "demo-gate-k",
+    "finding": {
+      "finding_id": "demo-ios1-068",
+      "evidence_group_id": "eg-demo-ios1-068",
+      "rule_code": "IOS1-068",
+      "finding_status": "CANDIDATE",
+      "review_priority": "HIGH",
+      "counts_as_violation": false,
+      "expected_value": 110,
+      "actual_value": 90,
+      "delta": -20,
+      "rationale": "учебный срез: диаметр стояка ПД 110, РД 90",
+      "source_id": "demo-pd-4",
+      "evidence_refs": [
+        "eg-demo-ios1-068-PD",
+        "eg-demo-ios1-068-RD"
+      ],
+      "disagreement_kind": "VALUE_DELTA",
+      "versions": {
+        "matrix_version": "draft-0",
+        "rule_version": "0.1.0",
+        "model_version": "none"
+      }
+    },
+    "evidence_group": {
+      "evidence_group_id": "eg-demo-ios1-068",
+      "object_id": "OBJ-DEMO-GATE-K",
+      "rule_code": "IOS1-068",
+      "matrix_version": "draft-0",
+      "fragments": [
+        {
+          "fragment_id": "eg-demo-ios1-068-PD",
+          "role": "expected",
+          "document": {
+            "file_id": "demo-pd-4",
+            "file_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc_stage": "PD",
+            "document_code": "IOS1-068",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ТЭП"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.32
+            ],
+            [
+              0.38,
+              0.32
+            ],
+            [
+              0.38,
+              0.38
+            ],
+            [
+              0.12,
+              0.38
+            ]
+          ],
+          "extracted": {
+            "raw_token": "110",
+            "normalized_value": 110,
+            "unit": "мм",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.92,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        },
+        {
+          "fragment_id": "eg-demo-ios1-068-RD",
+          "role": "actual",
+          "document": {
+            "file_id": "demo-rd-4",
+            "file_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "doc_stage": "RD",
+            "document_code": "IOS1-068",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ОД"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.32
+            ],
+            [
+              0.38,
+              0.32
+            ],
+            [
+              0.38,
+              0.38
+            ],
+            [
+              0.12,
+              0.38
+            ]
+          ],
+          "extracted": {
+            "raw_token": "90",
+            "normalized_value": 90,
+            "unit": "мм",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.9,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "code": "IOS1-068",
+      "name": "Диаметр стояка",
+      "unit": "мм",
+      "comparator": {
+        "operator": "delta",
+        "tolerance_abs": 0.0,
+        "tolerance_rel": null,
+        "rounding": "half_up",
+        "unit_target": "м²"
+      }
+    },
+    "audit": [
+      {
+        "actor_id": "insp-demo",
+        "action": "SELECT_REVISION",
+        "payload": {
+          "file_id": "demo-pd-pz",
+          "doc_stage": "PD",
+          "stamp_approval": "APPROVED",
+          "comment": "учебный эталон"
+        }
+      }
+    ],
+    "closes_gate_k": false
+  },
+  {
+    "schema_version": "kontur.evidence_card.v1",
+    "process_id": "demo-gate-k",
+    "finding": {
+      "finding_id": "demo-spzu-024",
+      "evidence_group_id": "eg-demo-spzu-024",
+      "rule_code": "SPZU-024",
+      "finding_status": "CANDIDATE",
+      "review_priority": "HIGH",
+      "counts_as_violation": false,
+      "expected_value": 5,
+      "actual_value": 3,
+      "delta": -2,
+      "rationale": "учебный срез: отступ от границы ПД 5, РД 3",
+      "source_id": "demo-pd-5",
+      "evidence_refs": [
+        "eg-demo-spzu-024-PD",
+        "eg-demo-spzu-024-RD"
+      ],
+      "disagreement_kind": "VALUE_DELTA",
+      "versions": {
+        "matrix_version": "draft-0",
+        "rule_version": "0.1.0",
+        "model_version": "none"
+      }
+    },
+    "evidence_group": {
+      "evidence_group_id": "eg-demo-spzu-024",
+      "object_id": "OBJ-DEMO-GATE-K",
+      "rule_code": "SPZU-024",
+      "matrix_version": "draft-0",
+      "fragments": [
+        {
+          "fragment_id": "eg-demo-spzu-024-PD",
+          "role": "expected",
+          "document": {
+            "file_id": "demo-pd-5",
+            "file_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc_stage": "PD",
+            "document_code": "SPZU-024",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ТЭП"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.35
+            ],
+            [
+              0.38,
+              0.35
+            ],
+            [
+              0.38,
+              0.41
+            ],
+            [
+              0.12,
+              0.41
+            ]
+          ],
+          "extracted": {
+            "raw_token": "5",
+            "normalized_value": 5,
+            "unit": "м",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.92,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        },
+        {
+          "fragment_id": "eg-demo-spzu-024-RD",
+          "role": "actual",
+          "document": {
+            "file_id": "demo-rd-5",
+            "file_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "doc_stage": "RD",
+            "document_code": "SPZU-024",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ОД"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.35
+            ],
+            [
+              0.38,
+              0.35
+            ],
+            [
+              0.38,
+              0.41
+            ],
+            [
+              0.12,
+              0.41
+            ]
+          ],
+          "extracted": {
+            "raw_token": "3",
+            "normalized_value": 3,
+            "unit": "м",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.9,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "code": "SPZU-024",
+      "name": "Отступ от границы",
+      "unit": "м",
+      "comparator": {
+        "operator": "delta",
+        "tolerance_abs": 0.0,
+        "tolerance_rel": null,
+        "rounding": "half_up",
+        "unit_target": "м²"
+      }
+    },
+    "audit": [
+      {
+        "actor_id": "insp-demo",
+        "action": "SELECT_REVISION",
+        "payload": {
+          "file_id": "demo-pd-pz",
+          "doc_stage": "PD",
+          "stamp_approval": "APPROVED",
+          "comment": "учебный эталон"
+        }
+      }
+    ],
+    "closes_gate_k": false
+  },
+  {
+    "schema_version": "kontur.evidence_card.v1",
+    "process_id": "demo-gate-k",
+    "finding": {
+      "finding_id": "demo-pz-015",
+      "evidence_group_id": "eg-demo-pz-015",
+      "rule_code": "PZ-015",
+      "finding_status": "CANDIDATE",
+      "review_priority": "HIGH",
+      "counts_as_violation": false,
+      "expected_value": 5,
+      "actual_value": 4,
+      "delta": -1,
+      "rationale": "учебный срез: этажность ПД 5, РД 4",
+      "source_id": "demo-pd-6",
+      "evidence_refs": [
+        "eg-demo-pz-015-PD",
+        "eg-demo-pz-015-RD"
+      ],
+      "disagreement_kind": "VALUE_DELTA",
+      "versions": {
+        "matrix_version": "draft-0",
+        "rule_version": "0.1.0",
+        "model_version": "none"
+      }
+    },
+    "evidence_group": {
+      "evidence_group_id": "eg-demo-pz-015",
+      "object_id": "OBJ-DEMO-GATE-K",
+      "rule_code": "PZ-015",
+      "matrix_version": "draft-0",
+      "fragments": [
+        {
+          "fragment_id": "eg-demo-pz-015-PD",
+          "role": "expected",
+          "document": {
+            "file_id": "demo-pd-6",
+            "file_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc_stage": "PD",
+            "document_code": "PZ-015",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ТЭП"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.38
+            ],
+            [
+              0.38,
+              0.38
+            ],
+            [
+              0.38,
+              0.44
+            ],
+            [
+              0.12,
+              0.44
+            ]
+          ],
+          "extracted": {
+            "raw_token": "5",
+            "normalized_value": 5,
+            "unit": "эт",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.92,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        },
+        {
+          "fragment_id": "eg-demo-pz-015-RD",
+          "role": "actual",
+          "document": {
+            "file_id": "demo-rd-6",
+            "file_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "doc_stage": "RD",
+            "document_code": "PZ-015",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ОД"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.38
+            ],
+            [
+              0.38,
+              0.38
+            ],
+            [
+              0.38,
+              0.44
+            ],
+            [
+              0.12,
+              0.44
+            ]
+          ],
+          "extracted": {
+            "raw_token": "4",
+            "normalized_value": 4,
+            "unit": "эт",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.9,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "code": "PZ-015",
+      "name": "Этажность",
+      "unit": "эт",
+      "comparator": {
+        "operator": "delta",
+        "tolerance_abs": 0.0,
+        "tolerance_rel": null,
+        "rounding": "half_up",
+        "unit_target": "м²"
+      }
+    },
+    "audit": [
+      {
+        "actor_id": "insp-demo",
+        "action": "SELECT_REVISION",
+        "payload": {
+          "file_id": "demo-pd-pz",
+          "doc_stage": "PD",
+          "stamp_approval": "APPROVED",
+          "comment": "учебный эталон"
+        }
+      }
+    ],
+    "closes_gate_k": false
+  },
+  {
+    "schema_version": "kontur.evidence_card.v1",
+    "process_id": "demo-gate-k",
+    "finding": {
+      "finding_id": "demo-kr-060",
+      "evidence_group_id": "eg-demo-kr-060",
+      "rule_code": "KR-060",
+      "finding_status": "CANDIDATE",
+      "review_priority": "HIGH",
+      "counts_as_violation": false,
+      "expected_value": 0.15,
+      "actual_value": 0.0,
+      "delta": -0.15,
+      "rationale": "учебный срез: отметка пола ПД 0.15, РД 0.0",
+      "source_id": "demo-pd-7",
+      "evidence_refs": [
+        "eg-demo-kr-060-PD",
+        "eg-demo-kr-060-RD"
+      ],
+      "disagreement_kind": "VALUE_DELTA",
+      "versions": {
+        "matrix_version": "draft-0",
+        "rule_version": "0.1.0",
+        "model_version": "none"
+      }
+    },
+    "evidence_group": {
+      "evidence_group_id": "eg-demo-kr-060",
+      "object_id": "OBJ-DEMO-GATE-K",
+      "rule_code": "KR-060",
+      "matrix_version": "draft-0",
+      "fragments": [
+        {
+          "fragment_id": "eg-demo-kr-060-PD",
+          "role": "expected",
+          "document": {
+            "file_id": "demo-pd-7",
+            "file_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc_stage": "PD",
+            "document_code": "KR-060",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ТЭП"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.41000000000000003
+            ],
+            [
+              0.38,
+              0.41000000000000003
+            ],
+            [
+              0.38,
+              0.47000000000000003
+            ],
+            [
+              0.12,
+              0.47000000000000003
+            ]
+          ],
+          "extracted": {
+            "raw_token": "0.15",
+            "normalized_value": 0.15,
+            "unit": "м",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.92,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        },
+        {
+          "fragment_id": "eg-demo-kr-060-RD",
+          "role": "actual",
+          "document": {
+            "file_id": "demo-rd-7",
+            "file_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "doc_stage": "RD",
+            "document_code": "KR-060",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ОД"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.41000000000000003
+            ],
+            [
+              0.38,
+              0.41000000000000003
+            ],
+            [
+              0.38,
+              0.47000000000000003
+            ],
+            [
+              0.12,
+              0.47000000000000003
+            ]
+          ],
+          "extracted": {
+            "raw_token": "0.0",
+            "normalized_value": 0.0,
+            "unit": "м",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.9,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "code": "KR-060",
+      "name": "Отметка чистого пола",
+      "unit": "м",
+      "comparator": {
+        "operator": "delta",
+        "tolerance_abs": 0.0,
+        "tolerance_rel": null,
+        "rounding": "half_up",
+        "unit_target": "м²"
+      }
+    },
+    "audit": [
+      {
+        "actor_id": "insp-demo",
+        "action": "SELECT_REVISION",
+        "payload": {
+          "file_id": "demo-pd-pz",
+          "doc_stage": "PD",
+          "stamp_approval": "APPROVED",
+          "comment": "учебный эталон"
+        }
+      }
+    ],
+    "closes_gate_k": false
+  },
+  {
+    "schema_version": "kontur.evidence_card.v1",
+    "process_id": "demo-gate-k",
+    "finding": {
+      "finding_id": "demo-ar-043",
+      "evidence_group_id": "eg-demo-ar-043",
+      "rule_code": "AR-043",
+      "finding_status": "CANDIDATE",
+      "review_priority": "HIGH",
+      "counts_as_violation": false,
+      "expected_value": 3.3,
+      "actual_value": 3.0,
+      "delta": -0.2999999999999998,
+      "rationale": "учебный срез: высота этажа ПД 3.3, РД 3.0",
+      "source_id": "demo-pd-8",
+      "evidence_refs": [
+        "eg-demo-ar-043-PD",
+        "eg-demo-ar-043-RD"
+      ],
+      "disagreement_kind": "VALUE_DELTA",
+      "versions": {
+        "matrix_version": "draft-0",
+        "rule_version": "0.1.0",
+        "model_version": "none"
+      }
+    },
+    "evidence_group": {
+      "evidence_group_id": "eg-demo-ar-043",
+      "object_id": "OBJ-DEMO-GATE-K",
+      "rule_code": "AR-043",
+      "matrix_version": "draft-0",
+      "fragments": [
+        {
+          "fragment_id": "eg-demo-ar-043-PD",
+          "role": "expected",
+          "document": {
+            "file_id": "demo-pd-8",
+            "file_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc_stage": "PD",
+            "document_code": "AR-043",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ТЭП"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.44
+            ],
+            [
+              0.38,
+              0.44
+            ],
+            [
+              0.38,
+              0.5
+            ],
+            [
+              0.12,
+              0.5
+            ]
+          ],
+          "extracted": {
+            "raw_token": "3.3",
+            "normalized_value": 3.3,
+            "unit": "м",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.92,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        },
+        {
+          "fragment_id": "eg-demo-ar-043-RD",
+          "role": "actual",
+          "document": {
+            "file_id": "demo-rd-8",
+            "file_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "doc_stage": "RD",
+            "document_code": "AR-043",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ОД"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.44
+            ],
+            [
+              0.38,
+              0.44
+            ],
+            [
+              0.38,
+              0.5
+            ],
+            [
+              0.12,
+              0.5
+            ]
+          ],
+          "extracted": {
+            "raw_token": "3.0",
+            "normalized_value": 3.0,
+            "unit": "м",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.9,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "code": "AR-043",
+      "name": "Высота этажа",
+      "unit": "м",
+      "comparator": {
+        "operator": "delta",
+        "tolerance_abs": 0.0,
+        "tolerance_rel": null,
+        "rounding": "half_up",
+        "unit_target": "м²"
+      }
+    },
+    "audit": [
+      {
+        "actor_id": "insp-demo",
+        "action": "SELECT_REVISION",
+        "payload": {
+          "file_id": "demo-pd-pz",
+          "doc_stage": "PD",
+          "stamp_approval": "APPROVED",
+          "comment": "учебный эталон"
+        }
+      }
+    ],
+    "closes_gate_k": false
+  },
+  {
+    "schema_version": "kontur.evidence_card.v1",
+    "process_id": "demo-gate-k",
+    "finding": {
+      "finding_id": "demo-ios4-076",
+      "evidence_group_id": "eg-demo-ios4-076",
+      "rule_code": "IOS4-076",
+      "finding_status": "CANDIDATE",
+      "review_priority": "HIGH",
+      "counts_as_violation": false,
+      "expected_value": 1200,
+      "actual_value": 900,
+      "delta": -300,
+      "rationale": "учебный срез: расход притока ПД 1200, РД 900",
+      "source_id": "demo-pd-9",
+      "evidence_refs": [
+        "eg-demo-ios4-076-PD",
+        "eg-demo-ios4-076-RD"
+      ],
+      "disagreement_kind": "VALUE_DELTA",
+      "versions": {
+        "matrix_version": "draft-0",
+        "rule_version": "0.1.0",
+        "model_version": "none"
+      }
+    },
+    "evidence_group": {
+      "evidence_group_id": "eg-demo-ios4-076",
+      "object_id": "OBJ-DEMO-GATE-K",
+      "rule_code": "IOS4-076",
+      "matrix_version": "draft-0",
+      "fragments": [
+        {
+          "fragment_id": "eg-demo-ios4-076-PD",
+          "role": "expected",
+          "document": {
+            "file_id": "demo-pd-9",
+            "file_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "doc_stage": "PD",
+            "document_code": "IOS4-076",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ТЭП"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              420
+            ],
+            [
+              220,
+              420
+            ],
+            [
+              220,
+              448
+            ],
+            [
+              72,
+              448
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.47000000000000003
+            ],
+            [
+              0.38,
+              0.47000000000000003
+            ],
+            [
+              0.38,
+              0.53
+            ],
+            [
+              0.12,
+              0.53
+            ]
+          ],
+          "extracted": {
+            "raw_token": "1200",
+            "normalized_value": 1200,
+            "unit": "м³/ч",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.92,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        },
+        {
+          "fragment_id": "eg-demo-ios4-076-RD",
+          "role": "actual",
+          "document": {
+            "file_id": "demo-rd-9",
+            "file_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "doc_stage": "RD",
+            "document_code": "IOS4-076",
+            "revision": "1",
+            "approval_status": "APPROVED",
+            "sheet": "ОД"
+          },
+          "page": 1,
+          "polygon_source": [
+            [
+              72,
+              400
+            ],
+            [
+              200,
+              400
+            ],
+            [
+              200,
+              428
+            ],
+            [
+              72,
+              428
+            ]
+          ],
+          "polygon_norm": [
+            [
+              0.12,
+              0.47000000000000003
+            ],
+            [
+              0.38,
+              0.47000000000000003
+            ],
+            [
+              0.38,
+              0.53
+            ],
+            [
+              0.12,
+              0.53
+            ]
+          ],
+          "extracted": {
+            "raw_token": "900",
+            "normalized_value": 900,
+            "unit": "м³/ч",
+            "engine": "vector",
+            "engine_version": "pdfium",
+            "confidence": 0.9,
+            "grounded_in_source_tokens": true,
+            "second_read": {
+              "agrees": true
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "code": "IOS4-076",
+      "name": "Расход притока",
+      "unit": "м³/ч",
+      "comparator": {
+        "operator": "delta",
+        "tolerance_abs": 0.0,
+        "tolerance_rel": null,
+        "rounding": "half_up",
+        "unit_target": "м²"
+      }
+    },
+    "audit": [
+      {
+        "actor_id": "insp-demo",
+        "action": "SELECT_REVISION",
+        "payload": {
+          "file_id": "demo-pd-pz",
+          "doc_stage": "PD",
+          "stamp_approval": "APPROVED",
+          "comment": "учебный эталон"
+        }
+      }
+    ],
     "closes_gate_k": false
   },
   {

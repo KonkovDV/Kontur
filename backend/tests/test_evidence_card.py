@@ -31,6 +31,7 @@ from kontur.domain.models import (
     Finding,
 )
 from kontur.domain.statuses import Completeness, DisagreementKind, FindingStatus, ReviewPriority
+from kontur.evaluation.usability_audit import MIN_CARDS
 
 REPO = Path(__file__).resolve().parents[2]
 SCHEMAS = REPO / "contracts" / "schemas"
@@ -270,7 +271,7 @@ def test_group_rejects_a_single_role() -> None:
 def test_demo_cards_validate_and_do_not_close_gate_k() -> None:
     cards = json.loads(DEMO_CARDS.read_text(encoding="utf-8"))
     assert isinstance(cards, list)
-    assert len(cards) == 5
+    assert len(cards) == MIN_CARDS == 14
     validator = _validator()
     statuses = []
     for card in cards:
@@ -278,7 +279,7 @@ def test_demo_cards_validate_and_do_not_close_gate_k() -> None:
         assert card["closes_gate_k"] is False
         statuses.append(card["finding"]["finding_status"])
     assert statuses.count("MISSING_EVIDENCE") == 1
-    assert statuses.count("CANDIDATE") == 4
+    assert statuses.count("CANDIDATE") == 13
     assert "CONFIRMED_VIOLATION" not in statuses
 
 
