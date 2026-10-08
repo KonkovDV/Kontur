@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0.0",
+  "matrix_version": "draft-0",
+  "purpose": "Поштучный триаж девяти правил enum с coverage extractor_missing. Не отчёт о покрытии и не закрытие гейта J.",
+  "closes_gate_j": false,
+  "method": [
+    "В выборку входят правила extractor.type=enum и coverage=extractor_missing.",
+    "Исполняемым правило становится только если одно значение из закрытого шаблона лежит в текстовом слое обеих обязательных стадий.",
+    "Схема, спецификация по элементам, пара разнородных величин и смесь текста с чертежом остаются extractor_missing.",
+    "regex не заполняется в этом триаже: шаблон не выдумывается из названия параметра."
+  ],
+  "reason_codes": {
+    "per_device_schematic": "Номинал свой у каждого аппарата на схеме, единственного значения в текстовом слое обеих стадий нет.",
+    "per_cable_schedule": "Сечение и марка свои у каждой линии кабельного журнала.",
+    "station_characteristics": "Параметр собирает несколько характеристик станции, а не один код.",
+    "per_element_rebar": "Диаметр свой у каждой колонны или пилона в спецификации армирования.",
+    "protection_per_element": "Вид защиты задаётся указанием и спецификацией по конструкциям, не одним кодом в обеих стадиях.",
+    "mass_and_class": "Масса и класс опасности — две величины. Одно поле enum их не сравнивает.",
+    "graphic_node": "Доказательство — чертёж узла, не закрытый текст.",
+    "per_fan_table": "Производительность своя у каждого вентилятора в таблице систем.",
+    "mixed_text_and_drawing": "Часть источников — текст, часть — чертёж ограждения. По текстовой половине вывод не делается."
+  },
+  "decision_counts": {
+    "kept_extractor_missing": 9,
+    "promoted_executable": 0
+  },
+  "entries": [
+    {
+      "code": "IOS1-068",
+      "name": "Номинальная аппаратная защита ВРУ/ГРЩ",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_device_schematic"
+    },
+    {
+      "code": "IOS1-069",
+      "name": "Сечение жил и маркировка распределительных кабелей",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_cable_schedule"
+    },
+    {
+      "code": "IOS2-073",
+      "name": "Характеристики насосных станций хоз-питьевого водоснабжения",
+      "decision": "kept_extractor_missing",
+      "reason_code": "station_characteristics"
+    },
+    {
+      "code": "KR-062",
+      "name": "Диаметр продольной (рабочей) арматуры в колоннах/пилонах",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_element_rebar"
+    },
+    {
+      "code": "KR-066",
+      "name": "Антикоррозионная и огнезащитная обработка конструкций",
+      "decision": "kept_extractor_missing",
+      "reason_code": "protection_per_element"
+    },
+    {
+      "code": "POD-094",
+      "name": "Масса и класс опасности образующихся отходов",
+      "decision": "kept_extractor_missing",
+      "reason_code": "mass_and_class"
+    },
+    {
+      "code": "POD-096",
+      "name": "Узлы временного расчленения сохраняемых конструкций",
+      "decision": "kept_extractor_missing",
+      "reason_code": "graphic_node"
+    },
+    {
+      "code": "PPM-112",
+      "name": "Производительность вентиляторов ДУ и подпора воздуха",
+      "decision": "kept_extractor_missing",
+      "reason_code": "per_fan_table"
+    },
+    {
+      "code": "SPZU-036",
+      "name": "Тип и высотные параметры ограждения территории",
+      "decision": "kept_extractor_missing",
+      "reason_code": "mixed_text_and_drawing"
+    }
+  ]
+}
