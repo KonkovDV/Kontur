@@ -53,7 +53,9 @@ from kontur.application.extractors.text import (
     extract_presence,
     extract_text,
 )
+from kontur.application.geometry_path import MEASUREMENT_REQUIRED, geometry_after_printed_miss
 from kontur.application.pipeline import Stage, StageResult, run
+from kontur.application.provision_clause import ProvisionHit, provision_hits
 from kontur.application.revision_resolver import (
     IdentityHead,
     ResolveStatus,
@@ -70,6 +72,7 @@ from kontur.application.room_compare import (
     room_block,
 )
 from kontur.application.scenarios import CompletenessMap, status_for_missing_stage
+from kontur.application.suspicion import assess_dual_read_disagree
 from kontur.domain.coordinates import PageFrame
 from kontur.domain.geometry import polygon_in_unit_square
 from kontur.domain.idempotency import comparison_key
@@ -233,9 +236,53 @@ def stage_candidates(
     return tuple(raw)
 
 
+# Слова раздела, как в реестре дисциплин AeroBIM: разные подписи одного тома.
+# Канон — марка Контура, не латинский код чужого репозитория.
+_WORD_MARK: dict[str, str] = {
+    "ОТОПЛЕНИЕ": "ОВ",
+    "ВЕНТИЛЯЦИЯ": "ОВ",
+    "ОВИК": "ОВ",
+    "HVAC": "ОВ",
+    "HEATING": "ОВ",
+    "VENTILATION": "ОВ",
+    "АРХИТЕКТУРА": "АР",
+    "АРХИТЕКТУРНЫЕ": "АР",
+    "ARCHITECTURE": "АР",
+    "КОНСТРУКЦИИ": "КР",
+    "STRUCTURES": "КР",
+}
+
+
+# Индекс снимается только с короткой марки. ИОС4 не схлопывается в ИОС:
+# ИОС5.1 и ИОС5.4 — разные тома.
+_INDEX_BASES = frozenset({"ОВ", "АР", "КР", "КЖ", "ПЗ", "ПЗУ", "ПОС", "ПОД"})
+
+
 def _kind_aliases(raw: str) -> frozenset[str]:
+    """Марка, индекс короткой марки (ОВ2.1 → ОВ) и синоним (отопление → ОВ)."""
+
     folded = raw.strip().upper().replace(" ", "")
-    return frozenset({folded, _KIND_LATIN.get(folded, folded)})
+    if not folded:
+        return frozenset()
+    parts = {folded}
+    latin = _KIND_LATIN.get(folded)
+    if latin is not None:
+        parts.add(latin)
+    tail = _MARK_TAIL.fullmatch(folded)
+    if tail is not None and tail.group(1) in _INDEX_BASES:
+        parts.add(tail.group(1))
+        mapped = _KIND_LATIN.get(tail.group(1))
+        if mapped is not None:
+            parts.add(mapped)
+    for token in tuple(parts):
+        word = _WORD_MARK.get(token)
+        if word is None:
+            continue
+        parts.add(word)
+        mapped = _KIND_LATIN.get(word)
+        if mapped is not None:
+            parts.add(mapped)
+    return frozenset(parts)
 
 
 def _wanted_kind_tokens(rule: dict[str, object], stage: DocStage) -> frozenset[str]:
@@ -677,7 +724,119 @@ def evaluate_free_search(
                 finding=replace(item.finding, finding_status=FindingStatus.SUSPICION),
             )
         )
+    extractor = rule.get("extractor")
+    if isinstance(extractor, dict) and extractor.get("provision") is True:
+        kept.extend(_provision_evaluations(rule, pages, object_id))
     return tuple(kept)
+
+
+def _provision_evaluations(
+    rule: dict[str, object],
+    pages: Mapping[DocStage, StagePage | Sequence[StagePage]],
+    object_id: str,
+) -> tuple[RuleEvaluation, ...]:
+    """Подозрение: проект назвал элемент у помещения, в РД этих слов нет."""
+
+    pd_pages = _volume_list(pages.get(DocStage.PD))
+    rd_pages = _volume_list(pages.get(DocStage.RD))
+    if not pd_pages or not rd_pages:
+        return ()
+    hits = provision_hits(
+        tuple(token for page in pd_pages for token in page.tokens),
+        tuple(token for page in rd_pages for token in page.tokens),
+    )
+    built: list[RuleEvaluation] = []
+    for hit in hits:
+        pd = _page_owning(pd_pages, hit.pd)
+        rd = _page_owning(rd_pages, hit.rd)
+        if pd is None or rd is None:
+            continue
+        built.append(_provision_evaluation(rule, hit, pd, rd, object_id))
+    return tuple(built)
+
+
+def _page_owning(pages: Sequence[StagePage], token: object) -> StagePage | None:
+    for page in pages:
+        if any(item is token for item in page.tokens):
+            return page
+    return None
+
+
+def _provision_evaluation(
+    rule: dict[str, object],
+    hit: ProvisionHit,
+    pd: StagePage,
+    rd: StagePage,
+    object_id: str,
+) -> RuleEvaluation:
+    label = f"помещение {hit.room}"
+    group_id = (
+        f"{object_id}:{rule['code']}:{pd.document.file_id}:"
+        f"{rd.document.file_id}:{hit.room}:provision"
+    )
+    fragments = (
+        _token_fragment(
+            group_id, "pd-clause", EvidenceRole.EXPECTED, pd.document, hit.pd, hit.room, hit.element
+        ),
+        _token_fragment(
+            group_id, "rd-room", EvidenceRole.ACTUAL, rd.document, hit.rd, hit.room, label
+        ),
+    )
+    group = EvidenceGroup(
+        evidence_group_id=group_id,
+        object_id=object_id,
+        rule_code=str(rule["code"]),
+        matrix_version=str(rule["matrix_version"]),
+        fragments=fragments,
+        resolved_revisions=(pd.document, rd.document),
+    )
+    rationale = f"помещение {hit.room}: в ПД «{hit.element}», в РД этих слов нет"
+    finding = Finding(
+        finding_id=str(uuid4()),
+        rule_code=str(rule["code"]),
+        finding_status=FindingStatus.SUSPICION,
+        review_priority=_priority(rule),
+        matrix_version=str(rule["matrix_version"]),
+        rule_version="0.1.0",
+        model_version="none",
+        evidence_group_id=group_id,
+        expected_value=hit.element,
+        actual_value=None,
+        rationale=rationale,
+        source_id=pd.document.file_id,
+        evidence_refs=tuple(item.fragment_id for item in fragments),
+    )
+    _assert_machine_status(FindingStatus.SUSPICION)
+    return RuleEvaluation(finding=finding, evidence_group=group, stages=())
+
+
+def _token_fragment(
+    group_id: str,
+    suffix: str,
+    role: EvidenceRole,
+    document: DocumentRef,
+    token: PageToken,
+    room: str,
+    label: str,
+) -> EvidenceFragment:
+    return EvidenceFragment(
+        fragment_id=f"{group_id}-{suffix}",
+        role=role,
+        document=document,
+        page=token.page,
+        polygon_source=token.polygon_source,
+        polygon_norm=token.polygon_norm,
+        extracted=Extraction(
+            raw_token=token.text,
+            engine=token.engine,
+            engine_version="provision-clause-0",
+            confidence=1.0,
+            normalized_value=label,
+            grounded_in_source_tokens=True,
+            second_read_agrees=True,
+        ),
+        room_id=room,
+    )
 
 
 def _room_rule(
@@ -898,6 +1057,9 @@ def _has_extracted_value(
         return extract_text(page.tokens, rule) is not None
     if extractor_type == "number":
         return extract_number(page.tokens, rule) is not None
+    if extractor_type == "element_table":
+        parsed = parse_element_table(page.tokens)
+        return isinstance(parsed, dict) and bool(parsed)
     if extractor_type == "multi_field":
         return not isinstance(parse_fields(page.tokens, rule), str)
     return False
@@ -945,6 +1107,34 @@ def _element_table_rule(
     sheets: dict[DocStage, StagePage] = {}
     for stage in _required_stages(rule):
         raw = pages.get(stage)
+        if isinstance(raw, tuple):
+            narrowed = _narrow_volumes(rule, stage, raw, "element_table")
+            if isinstance(narrowed, str):
+                return _halt(
+                    rule,
+                    Stage.L4_REVISION,
+                    _mapped(rule, "revision_conflict", FindingStatus.CLARIFICATION_REQUIRED),
+                    narrowed,
+                    prior=identity_ok,
+                )
+            if narrowed is None:
+                return _halt(
+                    rule,
+                    Stage.L2_EXTRACTION,
+                    _mapped(rule, "low_quality", FindingStatus.LOW_QUALITY),
+                    f"{stage.value}: ведомость не найдена",
+                    prior=identity_ok,
+                )
+            raw = narrowed
+        if raw is None:
+            return _halt(
+                rule,
+                Stage.L2_EXTRACTION,
+                _mapped(rule, "source_absent", FindingStatus.MISSING_EVIDENCE),
+                f"{stage.value}: страница не передана",
+                prior=identity_ok,
+                missing_stage=stage,
+            )
         if not isinstance(raw, StagePage):
             return _halt(
                 rule,
@@ -1115,6 +1305,98 @@ def _multi_field_rule(
         pages=sheets,
     )
     return RuleEvaluation(finding=finding, evidence_group=group, stages=stages)
+
+
+def _read_fragment(
+    group_id: str,
+    suffix: str,
+    role: EvidenceRole,
+    document: DocumentRef,
+    hit: NumberHit,
+    value: object,
+) -> EvidenceFragment:
+    shown = value if isinstance(value, str | float | bool) else str(value)
+    return EvidenceFragment(
+        fragment_id=f"{group_id}-{suffix}",
+        role=role,
+        document=document,
+        page=hit.page,
+        polygon_source=hit.polygon_source,
+        polygon_norm=hit.polygon_norm,
+        extracted=Extraction(
+            raw_token=hit.extraction.raw_token,
+            engine=hit.extraction.engine,
+            engine_version=hit.extraction.engine_version,
+            confidence=hit.extraction.confidence,
+            normalized_value=shown,
+            grounded_in_source_tokens=True,
+            second_read_agrees=False,
+        ),
+    )
+
+
+def _dual_read_suspicion(
+    rule: dict[str, object],
+    hit: NumberHit,
+    page: StagePage,
+    object_id: str,
+) -> RuleEvaluation | None:
+    """Подход 2 п. 9.5 рядом с ABSTAIN. Вердикт компаратора не подменяет."""
+
+    second = hit.extraction.confidence_features.get("second_read")
+    group_id = f"{object_id}:{rule['code']}:{page.document.file_id}:dual-read"
+    signal = assess_dual_read_disagree(
+        str(rule["code"]),
+        group_id,
+        first_value=hit.extraction.normalized_value,
+        second_value=second,
+    )
+    if signal is None:
+        return None
+    fragments = (
+        _read_fragment(
+            group_id,
+            "first",
+            EvidenceRole.EXPECTED,
+            page.document,
+            hit,
+            hit.extraction.normalized_value,
+        ),
+        _read_fragment(
+            group_id,
+            "second",
+            EvidenceRole.ACTUAL,
+            page.document,
+            hit,
+            second,
+        ),
+    )
+    group = EvidenceGroup(
+        evidence_group_id=group_id,
+        object_id=object_id,
+        rule_code=str(rule["code"]),
+        matrix_version=str(rule["matrix_version"]),
+        fragments=fragments,
+        resolved_revisions=(page.document,),
+    )
+    finding = Finding(
+        finding_id=str(uuid4()),
+        rule_code=str(rule["code"]),
+        finding_status=FindingStatus.SUSPICION,
+        review_priority=_priority(rule),
+        matrix_version=str(rule["matrix_version"]),
+        rule_version="0.1.0",
+        model_version="none",
+        evidence_group_id=group_id,
+        expected_value=hit.extraction.normalized_value
+        if isinstance(hit.extraction.normalized_value, str | float | bool)
+        else None,
+        rationale=signal.detail,
+        source_id=page.document.file_id,
+        evidence_refs=tuple(item.fragment_id for item in fragments),
+    )
+    _assert_machine_status(FindingStatus.SUSPICION)
+    return RuleEvaluation(finding=finding, evidence_group=group, stages=())
 
 
 def evaluate_rule(
@@ -1548,8 +1830,23 @@ def evaluate_rule(
             )
             missing = detail
         else:
-            number_hit = extract_number(stage_page.tokens, rule)
             missing = "якорь или число не найдены"
+            recovered = geometry_after_printed_miss(rule, stage_page.tokens)
+            if recovered == MEASUREMENT_REQUIRED:
+                number_hit = None
+                missing = MEASUREMENT_REQUIRED
+            elif isinstance(recovered, NumberHit):
+                number_hit = recovered
+            else:
+                number_hit = extract_number(stage_page.tokens, rule)
+        if number_hit is None and missing == MEASUREMENT_REQUIRED:
+            return _halt(
+                rule,
+                Stage.L2_EXTRACTION,
+                _mapped(rule, "not_comparable", FindingStatus.NOT_COMPARABLE),
+                f"{stage.value}: {MEASUREMENT_REQUIRED}",
+                prior=identity_ok,
+            )
         if number_hit is None:
             return _with_room_pass(
                 _halt(
@@ -1577,13 +1874,17 @@ def evaluate_rule(
                 if extractor_type == "geometry"
                 else "два чтения числа не совпали"
             )
-            return _halt(
+            halt = _halt(
                 rule,
                 Stage.L2_EXTRACTION,
                 _mapped(rule, "reads_disagree", FindingStatus.ABSTAIN),
                 f"{stage.value}: {disagree}",
                 prior=identity_ok,
             )
+            extra = _dual_read_suspicion(rule, number_hit, stage_page, object_id)
+            if extra is None:
+                return halt
+            return replace(halt, also=(extra,))
         if (
             extractor_type != "geometry"
             and dual_req

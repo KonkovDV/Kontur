@@ -333,6 +333,17 @@ def test_tied_designations_are_not_chosen() -> None:
     )
 
 
+def test_ventilation_folder_is_the_same_discipline_as_heating() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.2.pdf"),
+        section=None,
+        relative_path="ПД/5.4 Вентиляция/Том 5.4.2.pdf",
+        filename="Том 5.4.2.pdf",
+    )
+    assert passport.discipline == "ОВ"
+    assert passport.document_code is None
+
+
 def test_index_section_is_discipline_not_a_shared_cipher() -> None:
     first = apply_manifest_section(
         _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.1.pdf"),

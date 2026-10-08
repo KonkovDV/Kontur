@@ -209,8 +209,9 @@ python -m kontur.cli.score --submissions <каталог>
 |---|---|
 | PDF | Текстовый слой; пустой слой — локальный OCR |
 | DOCX | Абзацы и таблицы. Рамки, content control и колонтитулы помечаются пропущенными |
-| XML | Принимается, не разбирается: `ACCEPTED_UNPARSED` |
-| Архив | `ARCHIVE_NOT_EXPANDED`: распаковать до загрузки |
+| XML | Текстовые узлы. Схема пояснительной записки не разбирается. DOCTYPE отклоняется |
+| Zip | PDF, DOCX и XML из архива идут в сверку. Бомба отклоняется |
+| 7z, rar | `ARCHIVE_NOT_EXPANDED`: распаковать в zip до загрузки |
 | DWG | `UNSUPPORTED_FORMAT`, организатор его не требует |
 | Файл больше 50 МБ | `FILE_TOO_LARGE` на шлюзе |
 | Пакет больше 200 МБ | `BATCH_LIMIT_EXCEEDED` |

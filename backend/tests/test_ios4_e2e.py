@@ -484,3 +484,46 @@ def test_ios4_binds_hvac_subsection_among_other_engineering_volumes() -> None:
         "pd-hvac",
         "rd-ov",
     }
+
+
+def test_worded_hvac_discipline_pairs_and_architecture_does_not() -> None:
+    """«отопление» и «ОВ2.1» — тот же раздел, что ОВ. «архитектура» не подменяет его."""
+
+    rule = _REGISTRY.get("IOS4-078")
+    pd = replace(
+        _doc(DocStage.PD, "heat"),
+        file_id="pd-heat",
+        document_code="",
+        discipline="отопление",
+    )
+    rd = replace(
+        _doc(DocStage.RD, "ov21"),
+        file_id="rd-ov21",
+        document_code="",
+        discipline="ОВ2.1",
+    )
+    ar = replace(
+        _doc(DocStage.PD, "arch"),
+        file_id="pd-arch",
+        document_code="",
+        discipline="архитектура",
+    )
+    result = evaluate_rule(
+        rule,
+        object_id=OBJECT_ID,
+        pages={
+            DocStage.PD: (
+                StagePage(document=ar, tokens=_line("воздуховод", "сечение", "100×100", "мм")),
+                StagePage(document=pd, tokens=_line("воздуховод", "сечение", "500×300", "мм")),
+            ),
+            DocStage.RD: StagePage(
+                document=rd, tokens=_line("воздуховод", "сечение", "400×200", "мм")
+            ),
+        },
+        completeness=_completeness(),
+        revision_pool=[pd, rd, ar],
+    )
+    assert result.finding.finding_status is FindingStatus.CANDIDATE
+    assert result.finding.source_id == "pd-heat"
+    assert result.finding.expected_value == 150_000.0
+    assert result.finding.actual_value == 80_000.0

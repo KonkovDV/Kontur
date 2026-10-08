@@ -1,9 +1,11 @@
 """Сравнение признака по номеру помещения. Пороги только из правила.
 
-Все пары листов с Жаккаром не ниже порога правила. Конфликт вердикта
-по одному номеру — abstain этого номера. Латинские омоглифы метки
-сворачиваются до регэкспа правила. Пороги из JSON не подбираются по gold.
-Не пишет finding_status.
+Все пары листов с Жаккаром не ниже порога правила. Номер, который так и не
+попал ни в одну такую пару, сравнивается отдельно: порог при этом не
+опускается. Конфликт вердикта по одному номеру — abstain этого номера.
+Столбец экспликации не считается вторым экземпляром номера. Латинские
+омоглифы метки сворачиваются до регэкспа правила. Пороги из JSON не
+подбираются по gold. Не пишет finding_status.
 """
 
 from __future__ import annotations
@@ -15,12 +17,20 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 
 from kontur.application.extractors.number import PageToken
+from kontur.domain.geometry import (
+    bbox_from_polygon,
+    reading_key,
+    union_rect_polygon,
+    y_overlap,
+)
 from kontur.domain.models import ExtractionEngine, Polygon
 
 _REQUIRED = ("room_regex", "feature_regex", "bind_radius", "pair_jaccard_min", "max_differences")
+_MAX_JOIN = 4
+_TOUCH_GAP = 0.015
 
 # Латиница, которую на листе путают с кириллической меткой.
-# B читается как В, P как П: так устроены feature_regex ИОС4, не золотые страницы.
+# B читается как В, E как Е, P как П: так пишутся марки ВЕ и П, не порог gold.
 _LATIN_LOOKALIKES = str.maketrans(
     {
         "A": "А",
@@ -117,10 +127,17 @@ def compare_room_tokens(
     rd_pages, rd_dups = _pages(rd_tokens, room_re, feature_re, radius, boxes)
     out = list(pd_dups)
     out.extend(rd_dups)
+    blocked: set[str] = set()
     if pd_pages and rd_pages:
         for pd_rooms, rd_rooms in _pair(pd_pages, rd_pages, jaccard_min):
-            out.extend(_pair_diffs(pd_rooms, rd_rooms, max_diff))
-    return collapse_room_diffs(out)
+            diffs = _pair_diffs(pd_rooms, rd_rooms, max_diff)
+            out.extend(diffs)
+            if any(item.kind == "abstain" and not item.room for item in diffs):
+                blocked.update(set(pd_rooms) & set(rd_rooms))
+    collapsed = list(collapse_room_diffs(out))
+    settled = {item.room for item in collapsed if item.room} | blocked
+    collapsed.extend(_across_sheets(pd_pages, rd_pages, settled))
+    return collapse_room_diffs(collapsed)
 
 
 def _as_float(value: object) -> float:
@@ -272,6 +289,186 @@ def _inside_box(point: tuple[float, float], box: tuple[float, float, float, floa
     return box[0] <= point[0] <= box[2] and box[1] <= point[1] <= box[3]
 
 
+def _label_match(text: str, room_re: re.Pattern[str], feature_re: re.Pattern[str]) -> bool:
+    stripped = text.strip()
+    return (
+        room_re.fullmatch(stripped) is not None or feature_re.fullmatch(stripped) is not None
+    )
+
+
+def _touching(left: PageToken, right: PageToken) -> bool:
+    """Соседние куски одной строки. Порог зазора не из gold и не из правила."""
+
+    if left.page != right.page or not y_overlap(left.polygon_norm, right.polygon_norm):
+        return False
+    left_box = bbox_from_polygon(left.polygon_norm)
+    right_box = bbox_from_polygon(right.polygon_norm)
+    if left_box[0] <= right_box[0]:
+        gap = right_box[0] - left_box[2]
+    else:
+        gap = left_box[0] - right_box[2]
+    return -0.005 <= gap <= _TOUCH_GAP
+
+
+def _joined(parts: Sequence[PageToken], text: str) -> PageToken:
+    engines = {item.engine for item in parts}
+    engine = engines.pop() if len(engines) == 1 else ExtractionEngine.VECTOR
+    return replace(
+        parts[0],
+        text=text,
+        engine=engine,
+        polygon_source=union_rect_polygon(tuple(item.polygon_source for item in parts)),
+        polygon_norm=union_rect_polygon(tuple(item.polygon_norm for item in parts)),
+    )
+
+
+def _join_touching(
+    tokens: Sequence[PageToken],
+    room_re: re.Pattern[str],
+    feature_re: re.Pattern[str],
+) -> list[PageToken]:
+    """Склеить куски, которые вместе совпадают с регэкспом правила.
+
+    «14»+«0» читается как номер, «В»+«2» как метка, «тёплый»+«пол» как признак.
+    Более длинное совпадение той же строки побеждает короткое. Чужой токен не глотается.
+    """
+
+    ordered = sorted(tokens, key=lambda item: reading_key(item.page, item.polygon_norm))
+    joined: list[PageToken] = []
+    index = 0
+    while index < len(ordered):
+        run = [ordered[index]]
+        best_end = index
+        best_text = ordered[index].text
+        cursor = index
+        while cursor + 1 < len(ordered) and len(run) < _MAX_JOIN:
+            nxt = ordered[cursor + 1]
+            if not _touching(run[-1], nxt):
+                break
+            run.append(nxt)
+            cursor += 1
+            texts = [item.text for item in run]
+            for candidate in ("".join(texts), " ".join(texts)):
+                if _label_match(candidate, room_re, feature_re):
+                    best_end = cursor
+                    best_text = candidate
+        if best_end > index:
+            joined.append(_joined(ordered[index : best_end + 1], best_text))
+            index = best_end + 1
+            continue
+        joined.append(ordered[index])
+        index += 1
+    return joined
+
+
+def _split_room_lists(
+    tokens: Sequence[PageToken],
+    room_re: re.Pattern[str],
+) -> list[PageToken]:
+    """«267, 270» — два номера одной подписи. «500×300» не режется."""
+
+    split: list[PageToken] = []
+    for token in tokens:
+        parts = [part.strip() for part in re.split(r"[,;]", token.text) if part.strip()]
+        if len(parts) < 2 or any(room_re.fullmatch(part) is None for part in parts):
+            split.append(token)
+            continue
+        split.extend(replace(token, text=part) for part in parts)
+    return split
+
+
+def _column_indexes(rooms: Sequence[PageToken]) -> set[int]:
+    """Номера столбца. Шаг берётся с этого листа: самый плотный межстрочный зазор.
+
+    Три таких шага ещё столбец (пропущенная строка). Два номера в разных
+    местах листа столбцом не становятся.
+    """
+
+    boxes = [bbox_from_polygon(item.polygon_norm) for item in rooms]
+    centers = [((box[0] + box[2]) / 2, (box[1] + box[3]) / 2) for box in boxes]
+    aligned: list[tuple[int, int, float]] = []
+    for index, box in enumerate(boxes):
+        width = max(box[2] - box[0], 1e-6)
+        height = max(box[3] - box[1], 1e-6)
+        cx, cy = centers[index]
+        for other_index in range(index + 1, len(boxes)):
+            other = boxes[other_index]
+            ox, oy = centers[other_index]
+            align = max(width, other[2] - other[0], 1e-6)
+            line = max(height, other[3] - other[1], 1e-6)
+            dy = abs(oy - cy)
+            if abs(ox - cx) <= align and dy > line:
+                aligned.append((index, other_index, dy))
+    if not aligned:
+        return set()
+    step = min(gap for _left, _right, gap in aligned)
+    limit = step * 3
+    neighbors: dict[int, int] = {}
+    for left, right, gap in aligned:
+        if gap > limit:
+            continue
+        neighbors[left] = neighbors.get(left, 0) + 1
+        neighbors[right] = neighbors.get(right, 0) + 1
+    return {index for index, hits in neighbors.items() if hits >= 2}
+
+
+def _same_inscription(left: PageToken, right: PageToken) -> bool:
+    """Два штриха одной подписи. Далёкие копии — разные места."""
+
+    left_box = bbox_from_polygon(left.polygon_norm)
+    right_box = bbox_from_polygon(right.polygon_norm)
+    span = max(
+        left_box[2] - left_box[0],
+        left_box[3] - left_box[1],
+        right_box[2] - right_box[0],
+        right_box[3] - right_box[1],
+        1e-6,
+    )
+    distance = math.dist(_center(left.polygon_norm), _center(right.polygon_norm))
+    # Нулевая дистанция — куски одной разрезанной строки, не второй штрих.
+    return 1e-9 < distance <= span * 10
+
+
+def _clusters(items: Sequence[PageToken]) -> list[list[PageToken]]:
+    groups: list[list[PageToken]] = []
+    for item in items:
+        placed = False
+        for group in groups:
+            if any(_same_inscription(item, other) for other in group):
+                group.append(item)
+                placed = True
+                break
+        if not placed:
+            groups.append([item])
+    return groups
+
+
+def _choose_rooms(rooms: Sequence[PageToken]) -> tuple[list[PageToken], list[str]]:
+    """Один номер на листе. Столбец экспликации не делает второй экземпляр.
+
+    Два номера вне столбца и далеко друг от друга — abstain: это разные места.
+    Повтор вплотную — одна подпись.
+    """
+
+    column = _column_indexes(rooms)
+    isolated: dict[str, list[PageToken]] = {}
+    stacked: dict[str, list[PageToken]] = {}
+    for index, item in enumerate(rooms):
+        name = item.text.strip()
+        bucket = stacked if index in column else isolated
+        bucket.setdefault(name, []).append(item)
+    chosen: list[PageToken] = []
+    repeated: list[str] = []
+    for name in sorted(set(isolated) | set(stacked)):
+        lone = _clusters(isolated.get(name, []))
+        rows = _clusters(stacked.get(name, []))
+        if len(lone) > 1 or (not lone and len(rows) > 1):
+            repeated.append(name)
+            continue
+        chosen.append(lone[0][0] if lone else rows[0][0])
+    return chosen, repeated
+
+
 def _pages(
     tokens: Sequence[PageToken],
     room_re: re.Pattern[str],
@@ -291,29 +488,28 @@ def _pages(
     pages: dict[int, dict[str, RoomSpot]] = {}
     abstains: list[RoomDiff] = []
     for page, items in by_page.items():
-        expanded = _expand(items, room_re, feature_re)
+        expanded = _expand(
+            _join_touching(_split_room_lists(items, room_re), room_re, feature_re),
+            room_re,
+            feature_re,
+        )
         rooms = [item for item in expanded if room_re.fullmatch(item.text.strip())]
         features = [item for item in expanded if feature_re.fullmatch(item.text.strip())]
-        counts: dict[str, int] = {}
-        for item in rooms:
-            counts[item.text.strip()] = counts.get(item.text.strip(), 0) + 1
-        for name, count in sorted(counts.items()):
-            if count > 1:
-                abstains.append(
-                    RoomDiff(
-                        "abstain",
-                        name,
-                        None,
-                        None,
-                        f"помещение {name}: номер повторяется на листе",
-                    )
+        chosen, repeated = _choose_rooms(rooms)
+        for name in repeated:
+            abstains.append(
+                RoomDiff(
+                    "abstain",
+                    name,
+                    None,
+                    None,
+                    f"помещение {name}: номер повторяется на листе",
                 )
-        owned = _owned_features(rooms, features, radius)
+            )
+        owned = _owned_features(chosen, features, radius)
         bound: dict[str, RoomSpot] = {}
-        for item in rooms:
+        for item in chosen:
             name = item.text.strip()
-            if counts[name] > 1:
-                continue
             feature = owned.get(name)
             feature_source = None if feature is None else feature.polygon_source
             feature_norm = None if feature is None else feature.polygon_norm
@@ -338,7 +534,11 @@ def _owned_features(
     features: Sequence[PageToken],
     radius: float,
 ) -> dict[str, PageToken]:
-    """Признак достаётся одному ближайшему номеру. Ничья радиуса — никому."""
+    """Признак достаётся ближайшему номеру.
+
+    Ничья двух разных пузырей — никому. Ничья номеров одной подписи
+    «271, 272» покрывает всю подпись.
+    """
 
     owned: dict[str, PageToken] = {}
     for feature in features:
@@ -359,9 +559,85 @@ def _owned_features(
         if not ranked:
             continue
         if len(ranked) > 1 and ranked[1][0] <= ranked[0][0] + 1e-9:
+            nearest = ranked[0][0]
+            tied = [name for dist, name in ranked if dist <= nearest + 1e-9]
+            if _same_list(tied, rooms):
+                for name in tied:
+                    owned.setdefault(name, feature)
             continue
         owned.setdefault(ranked[0][1], feature)
     return owned
+
+
+def _same_list(names: Sequence[str], rooms: Sequence[PageToken]) -> bool:
+    """Ничья на одной подписи «271, 272». Два разных пузыря — не список."""
+
+    wanted = set(names)
+    centers = {
+        _center(item.polygon_norm)
+        for item in rooms
+        if item.text.strip() in wanted
+    }
+    return len(centers) == 1
+
+
+def _prefer_marked(
+    pages: Mapping[int, Mapping[str, RoomSpot]],
+) -> dict[str, RoomSpot]:
+    """Метка на любом листе стадии. Лист без буквы метку не отменяет."""
+
+    chosen: dict[str, RoomSpot] = {}
+    for rooms in pages.values():
+        for name, spot in rooms.items():
+            current = chosen.get(name)
+            if current is None or (
+                current.feature_polygon is None and spot.feature_polygon is not None
+            ):
+                chosen[name] = spot
+    return chosen
+
+
+def _across_sheets(
+    pd_pages: Mapping[int, Mapping[str, RoomSpot]],
+    rd_pages: Mapping[int, Mapping[str, RoomSpot]],
+    settled: set[str],
+) -> list[RoomDiff]:
+    """Номер есть на обеих стадиях, но пара листов его не разобрала.
+
+    Порог Жаккара здесь не читается и не опускается.
+    """
+
+    pd_spots = _prefer_marked(pd_pages)
+    rd_spots = _prefer_marked(rd_pages)
+    found: list[RoomDiff] = []
+    for room in sorted(set(pd_spots) & set(rd_spots)):
+        if room in settled:
+            continue
+        pd_spot = pd_spots[room]
+        rd_spot = rd_spots[room]
+        pd_mark = pd_spot.feature_polygon is not None
+        rd_mark = rd_spot.feature_polygon is not None
+        if pd_mark and not rd_mark:
+            found.append(
+                RoomDiff(
+                    "candidate",
+                    room,
+                    pd_spot,
+                    rd_spot,
+                    f"помещение {room}: признак есть в ПД и нет в РД",
+                )
+            )
+        elif rd_mark and not pd_mark:
+            found.append(
+                RoomDiff(
+                    "suspicion",
+                    room,
+                    pd_spot,
+                    rd_spot,
+                    f"помещение {room}: признак есть в РД и нет в ПД",
+                )
+            )
+    return found
 
 
 def _pair(

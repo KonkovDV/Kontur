@@ -25,10 +25,10 @@ from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 from referencing import Registry, Resource
 
 from kontur.application.docx_text import DocxReadError, read_docx_bytes
-from kontur.application.intake import accepted_unparsed_detail
 from kontur.application.passport import apply_manifest_section, read_passport
 from kontur.application.protocol import assemble_protocol, protocol_for_http
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
+from kontur.application.xml_text import XmlReadError, read_xml_bytes
 from kontur.domain.geometry import bbox_from_polygon
 from kontur.domain.models import DocStage, EvidenceGroup, ExtractionEngine, Finding
 from kontur.domain.statuses import Completeness, ProcessState
@@ -525,17 +525,48 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
     parse_error = None
     suffix = item.path.suffix.lower()
     if suffix == ".xml":
+        try:
+            parsed_xml = read_xml_bytes(raw)
+        except XmlReadError as exc:
+            parse_error = str(exc)
+        else:
+            if not parsed_xml.tokens:
+                parse_error = "XML: текст не прочитан"
+            else:
+                try:
+                    passport = read_passport(
+                        parsed_xml.tokens,
+                        file_id=item.file_id,
+                        file_hash=digest,
+                        filename=item.path.name,
+                        pages=1,
+                        layer_kind="vector",
+                        object_id=object_id,
+                    )
+                    passport = apply_manifest_section(
+                        passport,
+                        section=item.manifest_section,
+                        relative_path=item.manifest_path,
+                        filename=item.path.name,
+                    )
+                    cipher = passport.document_code
+                    identity_code = passport.identity_code
+                    code_basis = passport.code_basis
+                    revision = passport.revision
+                    sheet = passport.sheet
+                except ValueError as exc:
+                    parse_error = str(exc)
         return {
             "object_id": object_id,
             "file_id": item.file_id,
             "doc_stage": item.stage.value,
-            "cipher": None,
-            "identity_code": None,
-            "code_basis": None,
-            "revision": None,
-            "sheet": None,
+            "cipher": cipher,
+            "identity_code": identity_code,
+            "code_basis": code_basis,
+            "revision": revision,
+            "sheet": sheet,
             "room": None,
-            "parse_error": accepted_unparsed_detail(suffix),
+            "parse_error": parse_error,
         }
     if suffix == ".docx":
         try:

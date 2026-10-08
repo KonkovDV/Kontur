@@ -316,6 +316,25 @@ def test_missing_sidewalk_stage_is_missing_evidence() -> None:
     assert result.evidence_group is None
 
 
+def test_table_is_read_from_the_volume_that_has_marks() -> None:
+    pd_table = _doc(DocStage.PD, "ИОС2-1", "ios2-pd")
+    pd_other = _doc(DocStage.PD, "ИОС2-2", "ios2-other")
+    rd = _doc(DocStage.RD, "ИОС2-1", "ios2-rd")
+    rows = (("В1.1", "25"), ("В1.2", "32"))
+    result = evaluate_rule(
+        _rule("IOS2-071"),
+        object_id="OBJ-IOS2-071",
+        pages={
+            DocStage.PD: (_table_page(pd_other, ()), _table_page(pd_table, rows)),
+            DocStage.RD: _table_page(rd, rows),
+        },
+        completeness=_completeness(),
+    )
+    assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+    assert result.evidence_group is not None
+    assert result.evidence_group.resolved_revisions[0].file_id == "ios2-pd"
+
+
 def test_two_pd_of_one_sidewalk_cipher_are_not_compared() -> None:
     first = _doc(DocStage.PD, "СПЗУ-1", "walk-pd-1")
     second = _doc(DocStage.PD, "СПЗУ-1", "walk-pd-2")

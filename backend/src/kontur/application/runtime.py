@@ -452,10 +452,27 @@ class ProcessWorkspace:
             blobs=record.blobs,
             inspector_approved_file_ids=frozenset(record.inspector_approved_file_ids),
         )
-        for item in record.files:
-            stamp = report.stamp_by_file_id.get(item.file_id)
+        known = {stored.file_id for stored in record.files}
+        for expanded in report.expanded_files:
+            record.blobs[expanded.file_id] = report.expanded_blobs[expanded.file_id]
+            if expanded.file_id in known:
+                continue
+            known.add(expanded.file_id)
+            record.files.append(
+                AcceptedFile(
+                    file_id=expanded.file_id,
+                    file_hash=expanded.file_hash,
+                    filename=expanded.filename,
+                    doc_stage=expanded.doc_stage,
+                    size_bytes=len(report.expanded_blobs[expanded.file_id]),
+                    manifest_section=expanded.manifest_section,
+                    manifest_path=expanded.manifest_path,
+                )
+            )
+        for stored in record.files:
+            stamp = report.stamp_by_file_id.get(stored.file_id)
             if stamp is not None:
-                item.stamp_approval = stamp
+                stored.stamp_approval = stamp
         for finding in report.findings:
             self.put_finding(record.process_id, finding)
         record.evidence_groups = {

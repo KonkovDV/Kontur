@@ -32,6 +32,8 @@ RUN python /tmp/fetch_ocr_weights.py \
     && pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock \
     && pip install --no-cache-dir --no-deps --no-build-isolation .
 ENV KONTUR_OCR_WEIGHTS=/opt/kontur/ocr
+# Импорт из /app/src, а не из site-packages: data/matrix лежит рядом с src.
+ENV PYTHONPATH=/app/src
 
 # Create the runtime identity only after privileged package installation. Keep
 # /app root-owned: the application may write only to explicitly mounted paths
