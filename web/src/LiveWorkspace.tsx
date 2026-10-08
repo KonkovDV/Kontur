@@ -223,10 +223,35 @@ export function LiveWorkspace({ token }: Props) {
     setStatus(nextStatus);
   }
 
+  function postUi(action: string, fields: Record<string, unknown>) {
+    if (!processId) return;
+    void fetch(`/api/v1/processes/${processId}/audit/ui`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action,
+        client_ts: new Date().toISOString(),
+        ...fields,
+      }),
+    }).catch(() => undefined);
+  }
+
   async function openFinding(findingId: string) {
     if (!processId) return;
     setActiveId(findingId);
     setClicks(1);
+    postUi("UI_CLICK", {
+      screen: "queue",
+      target: "finding",
+      check_id: findingId,
+      click_index: 1,
+    });
+    postUi("UI_CARD_OPEN", {
+      screen: "card",
+      target: "finding",
+      check_id: findingId,
+      click_index: 1,
+    });
     setComment("");
     setReason("");
     setError("");
@@ -362,6 +387,12 @@ export function LiveWorkspace({ token }: Props) {
       elapsed_ms: now.getTime() - startedAt.getTime(),
     };
     if (action === "REJECT") next.reason_code = reason;
+    postUi("UI_DECISION_SUBMIT", {
+      screen: "card",
+      target: `decision-${action}`,
+      check_id: active.finding_id,
+      click_index: clicks + 1,
+    });
     setDecisions((current) => [
       ...current.filter((item) => item.finding_id !== active.finding_id),
       next,

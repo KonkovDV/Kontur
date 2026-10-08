@@ -274,6 +274,27 @@ def audit_event_log(payload: Mapping[str, object] | Sequence[object]) -> dict[st
     }
 
 
+def ui_journal(
+    records: Sequence[tuple[str, str, Mapping[str, object]]],
+) -> dict[str, object]:
+    """Журнал UI_* для audit_event_log. Учебный: клиент не закрывает гейт K."""
+
+    entries: list[dict[str, object]] = []
+    for actor, action, payload in records:
+        if not action.startswith("UI_"):
+            continue
+        entries.append(
+            {
+                "action": action,
+                "user_id": actor,
+                "timestamp": str(payload.get("client_ts") or ""),
+                "object_id": payload.get("object_id"),
+                "details": dict(payload),
+            }
+        )
+    return {"teaching_data": True, "entries": entries}
+
+
 def load_session_dir(folder: Path) -> tuple[dict[str, object], ...]:
     sessions: list[dict[str, object]] = []
     for path in sorted(folder.glob("*.json")):

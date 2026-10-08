@@ -38,6 +38,7 @@ from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError, protocol_status
 from kontur.domain.statuses import Completeness, ProcessState, ReasonCode
 from kontur.evaluation.demo_kit import DRAFT_FILE_ID, ETALON_FILE_ID, install_demo_kit
+from kontur.evaluation.usability_audit import ui_journal
 from kontur.infrastructure.access_control import AccessDeniedError, check_object_access
 from kontur.infrastructure.db.process_store import (
     ProtocolConflictError,
@@ -754,7 +755,55 @@ def get_audit(
             {"actor_id": actor_id, "action": action, "payload": payload}
             for actor_id, action, payload in record.audit.records
         ],
+        "ui_journal": ui_journal(record.audit.records),
     }
+
+
+_UI_ACTIONS = frozenset({"UI_CLICK", "UI_CARD_OPEN", "UI_DECISION_SUBMIT", "UI_HOTKEY"})
+
+
+class UiEventBody(BaseModel):
+    action: str
+    screen: str = ""
+    target: str = ""
+    check_id: str = ""
+    click_index: int | None = None
+    client_ts: str = ""
+
+
+@app.post("/api/v1/processes/{process_id}/audit/ui", response_model=None)
+def record_ui_event(
+    process_id: str,
+    body: UiEventBody,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    """Клик инспектора в журнал. Не закрывает гейт K и не пишет вердикт."""
+
+    subject, _granted, object_id = _require("recordUiEvent", authorization)
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    if body.action not in _UI_ACTIONS:
+        return JSONResponse(status_code=422, content={"detail": "неизвестное UI-событие"})
+    if isinstance(body.click_index, bool) or (
+        body.click_index is not None and body.click_index < 0
+    ):
+        return JSONResponse(status_code=422, content={"detail": "click_index должен быть целым"})
+    if len(body.screen) > 40 or len(body.target) > 80 or len(body.check_id) > 80:
+        return JSONResponse(status_code=422, content={"detail": "поле UI-события слишком длинное"})
+    record.audit.record(
+        subject,
+        body.action,
+        {
+            "screen": body.screen,
+            "target": body.target,
+            "check_id": body.check_id,
+            "click_index": body.click_index,
+            "client_ts": body.client_ts,
+            "object_id": record.object_id,
+        },
+    )
+    return {"stored": True, "closes_gate_k": False}
 
 
 @app.get(

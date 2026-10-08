@@ -63,6 +63,7 @@ OBJECT_BOUND_OPERATIONS = frozenset(
         "getProtocolXml",
         "getProtocolPdf",
         "getAuditLog",
+        "recordUiEvent",
         "getEvidenceCard",
         "reviewFinding",
         "confirmCandidates",

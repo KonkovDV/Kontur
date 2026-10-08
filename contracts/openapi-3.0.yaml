@@ -472,6 +472,52 @@ paths:
                 $ref: '#/components/schemas/AuditLog'
         '404':
           description: Процесс не найден
+  /processes/{process_id}/audit/ui:
+    post:
+      summary: Клик или решение инспектора в журнал
+      description: 'Событие UI_CLICK, UI_CARD_OPEN, UI_DECISION_SUBMIT или UI_HOTKEY. Журнал учебный: closes_gate_k из этого вызова не становится true. Вердикт находки сюда не пишется.
+
+        '
+      operationId: recordUiEvent
+      x-required-roles:
+      - INSPECTOR
+      - SUPERVISOR
+      - ADMIN
+      parameters:
+      - $ref: '#/components/parameters/ProcessId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - action
+              properties:
+                action:
+                  type: string
+                screen:
+                  type: string
+                target:
+                  type: string
+                check_id:
+                  type: string
+                click_index:
+                  type: integer
+                  minimum: 0
+                client_ts:
+                  type: string
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Событие не из списка UI
+        '200':
+          description: Событие записано. Гейт K не закрыт.
+        '404':
+          description: Процесс не найден
   /processes/{process_id}/findings/{finding_id}/evidence-card:
     get:
       summary: Карточка доказательства (две панели, не протокол ТЗ)

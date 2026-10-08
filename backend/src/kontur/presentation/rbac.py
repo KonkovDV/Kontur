@@ -55,6 +55,7 @@ REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "getProtocolXml": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProtocolPdf": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getAuditLog": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
+    "recordUiEvent": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getEvidenceCard": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "reviewFinding": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "confirmCandidates": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
