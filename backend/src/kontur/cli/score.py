@@ -6,7 +6,8 @@
 Локализация — IoU полигона на file_id и странице той же gold-строки.
 Страница другой строки того же кода попаданием не считается.
 Строка без эталонного полигона, файла или страницы в знаменатель не входит.
-`score_eligible` не true в попадание и FPR не входит.
+`score_eligible` не true в попадание не входит. В FPR такая строка входит
+только с `fpr_denominator`.
 Позитив без метки — unlabeled_positive, не ложное и не истинное срабатывание.
 Ответ вне submission.schema.json числа не получает.
 Матрица и свободный поиск не смешиваются. Порог ТЗ здесь не объявляется взятым.
@@ -481,21 +482,59 @@ def score_scope(
     return report
 
 
-def score_directory(folder: Path, *, match: str = "location") -> dict[str, object]:
+def _plain_rows(rows: Sequence[object]) -> list[dict[str, object]]:
+    """Строки из запроса. Путь к файлу не читается."""
+
+    if not rows:
+        raise ValueError("нет строк эталона")
+    checked: list[dict[str, object]] = []
+    for index, item in enumerate(rows, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"rows[{index}]: ожидался объект")
+        if not str(item.get("object_id") or "").strip():
+            raise ValueError(f"rows[{index}]: нет object_id")
+        if not str(item.get("parameter_code") or "").strip():
+            raise ValueError(f"rows[{index}]: нет parameter_code")
+        checked.append(item)
+    return checked
+
+
+def _checked_submissions(submissions: Sequence[object]) -> list[dict[str, object]]:
+    validator = _submission_validator()
+    checked: list[dict[str, object]] = []
+    for index, item in enumerate(submissions, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"submissions[{index}]: ожидался объект")
+        try:
+            validator.validate(item)
+        except ValidationError as exc:
+            raise ValueError(f"submissions[{index}]: {exc.message}") from exc
+        checked.append(item)
+    return checked
+
+
+def score_bundle(
+    rows: Sequence[Mapping[str, object]],
+    submissions: Sequence[Mapping[str, object]],
+    *,
+    match: str,
+    corpus: str,
+) -> dict[str, object]:
+    """Счёт по уже прочитанным строкам. Диск здесь не открывается."""
+
     if match not in {"code", "location"}:
         raise ValueError("match: code или location")
-    inventory = load_run_inventory()
-    rows = _rows(inventory)
-    submissions = _load_submissions(folder)
     by_location = match == "location"
     predictions = (
         _predictions_by_location(submissions) if by_location else _predictions(submissions)
     )
     location_in_gold = any(_gold_location(row) is not None for row in rows)
-    report = {
+    return {
         "closes_gate_j": False,
-        "corpus": "public_gold_checks",
-        "not_frozen_val": True,
+        "stored": False,
+        "publishes_metrics": False,
+        "corpus": corpus,
+        "not_frozen_val": corpus != "request",
         "match": "object_id+parameter_code+location" if by_location else "object_id+parameter_code",
         "location_in_gold": location_in_gold,
         "unlabeled_positive": _unlabeled_positive(
@@ -508,7 +547,32 @@ def score_directory(folder: Path, *, match: str = "location") -> dict[str, objec
             _scope_rows(rows, "FREE_SEARCH"), predictions, submissions, by_location=by_location
         ),
     }
-    return report
+
+
+def score_directory(folder: Path, *, match: str = "location") -> dict[str, object]:
+    inventory = load_run_inventory()
+    return score_bundle(
+        _rows(inventory),
+        _load_submissions(folder),
+        match=match,
+        corpus="public_gold_checks",
+    )
+
+
+def score_supplied(
+    rows: Sequence[object],
+    submissions: Sequence[object],
+    *,
+    match: str = "location",
+) -> dict[str, object]:
+    """Счёт эталона из запроса. Тело не пишется на диск и гейт J не закрывает."""
+
+    return score_bundle(
+        _plain_rows(rows),
+        _checked_submissions(submissions),
+        match=match,
+        corpus="request",
+    )
 
 
 def _line(title: str, block: Mapping[str, object]) -> str:

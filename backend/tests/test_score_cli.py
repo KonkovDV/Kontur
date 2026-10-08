@@ -5,7 +5,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from kontur.cli.score import _line, _ScoreRow, cluster_f1_interval, score_directory, score_scope
+from kontur.cli.score import (
+    _line,
+    _ScoreRow,
+    cluster_f1_interval,
+    score_directory,
+    score_scope,
+    score_supplied,
+)
 
 
 def test_empty_submissions_stay_zero_of_six(tmp_path: Path) -> None:
@@ -353,6 +360,66 @@ def test_invalid_submission_does_not_receive_a_score(tmp_path: Path) -> None:
         assert "submission_bad.json" in str(exc)
     else:
         raise AssertionError("невалидный ответ получил отчёт")
+
+
+def _supplied_submission(object_id: str, code: str, location: str) -> dict[str, object]:
+    return {
+        "object_id": object_id,
+        "checks": [
+            {
+                "parameter_code": code,
+                "location": location,
+                "violation_label": "VIOLATION_PRESENT",
+                "evidence": [{"stage": "PD", "file_id": "f", "pdf_page_number": 1}],
+            }
+        ],
+    }
+
+
+def test_supplied_gold_is_not_stored_and_does_not_close_the_gate() -> None:
+    rows = [
+        {
+            "object_id": "OBJ-CALLER",
+            "parameter_code": "PZ-001",
+            "violation_label": "VIOLATION_PRESENT",
+            "matrix_scope": "MATRIX",
+            "score_eligible": True,
+            "location": "1",
+        }
+        for _ in range(40)
+    ]
+    report = score_supplied(rows, [_supplied_submission("OBJ-CALLER", "PZ-001", "1")])
+    assert report["stored"] is False
+    assert report["publishes_metrics"] is False
+    assert report["closes_gate_j"] is False
+    assert report["corpus"] == "request"
+    matrix = report["matrix"]
+    assert isinstance(matrix, dict)
+    assert matrix["hits"] == 40
+    assert matrix["tz_recall_met"] is True
+
+
+def test_supplied_score_rejects_an_empty_reference_and_a_bad_submission() -> None:
+    try:
+        score_supplied([], [])
+    except ValueError as exc:
+        assert "нет строк эталона" in str(exc)
+    else:
+        raise AssertionError("пустой эталон получил счёт")
+    row = {
+        "object_id": "OBJ-CALLER",
+        "parameter_code": "PZ-001",
+        "violation_label": "VIOLATION_PRESENT",
+        "matrix_scope": "MATRIX",
+        "score_eligible": True,
+        "location": "1",
+    }
+    try:
+        score_supplied([row], [{"object_id": "OBJ-CALLER"}])
+    except ValueError as exc:
+        assert "submissions[1]" in str(exc)
+    else:
+        raise AssertionError("ответ без проверки получил счёт")
 
 
 def test_ineligible_negative_is_not_a_false_positive() -> None:

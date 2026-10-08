@@ -44,6 +44,7 @@ HTTP_FORBIDDEN: int = 403
 REQUIRED_ROLES: dict[str, frozenset[Role]] = {
     "uploadDocuments": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "getSystemCapabilities": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
+    "scoreEvaluation": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "getProcessStatus": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),
     "loadDemoKit": frozenset({Role.INSPECTOR, Role.SUPERVISOR}),
     "getProcessDocuments": frozenset({Role.INSPECTOR, Role.SUPERVISOR, Role.ADMIN}),

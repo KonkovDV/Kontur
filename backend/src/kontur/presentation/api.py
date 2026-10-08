@@ -31,6 +31,7 @@ from kontur.application.protocol_export import (
 )
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
+from kontur.cli.score import score_supplied
 from kontur.domain.capabilities import capabilities_payload
 from kontur.domain.models import DocStage, Finding
 from kontur.domain.state_machines import TransitionError
@@ -271,6 +272,26 @@ def system_capabilities(
 ) -> dict[str, object]:
     _require("getSystemCapabilities", authorization)
     return capabilities_payload()
+
+
+class EvaluationScoreBody(BaseModel):
+    rows: list[dict[str, object]]
+    submissions: list[dict[str, object]]
+    match: str = "location"
+
+
+@app.post("/api/v1/evaluation/score", response_model=None)
+def evaluation_score(
+    body: EvaluationScoreBody,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    """Счёт эталона из тела. Файл не открывается, тело не сохраняется."""
+
+    _require("scoreEvaluation", authorization)
+    try:
+        return score_supplied(body.rows, body.submissions, match=body.match)
+    except ValueError as exc:
+        return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 @app.post("/api/v1/documents/upload", status_code=202, response_model=None)

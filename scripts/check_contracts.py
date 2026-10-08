@@ -47,7 +47,9 @@ OPERATION_METHODS = frozenset(
 )
 GLOBAL_SECURITY = [{"bearerAuth": []}]
 PUBLIC_OPERATIONS = frozenset({"healthz"})
-NON_OBJECT_PROTECTED_OPERATIONS = frozenset({"getSystemCapabilities"})
+NON_OBJECT_PROTECTED_OPERATIONS = frozenset(
+    {"getSystemCapabilities", "scoreEvaluation"}
+)
 OBJECT_BOUND_OPERATIONS = frozenset(
     {
         "uploadDocuments",
