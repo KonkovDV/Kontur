@@ -50,8 +50,8 @@
       },
       {
         "id": "split_finding",
-        "state": "unmet",
-        "detail": "GAP-SPLIT NotImplementedError"
+        "state": "met",
+        "detail": "инспектор делит кандидата на части, у каждой своё доказательство"
       }
     ],
     "acceptance": [

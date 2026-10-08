@@ -342,7 +342,11 @@ def build_tz_scorecard(
             "partial",
             "outbox+inbox workers in compose; ACK after commit; HTTP inline; not Rin",
         ),
-        _scorecard_item("split_finding", "unmet", "GAP-SPLIT NotImplementedError"),
+        _scorecard_item(
+            "split_finding",
+            "met",
+            "инспектор делит кандидата на части, у каждой своё доказательство",
+        ),
     ]
     acceptance_items = [
         _scorecard_item("gold_ocr", "unmet", "ocr_text MEASURED; SILVER is not GOLD"),
