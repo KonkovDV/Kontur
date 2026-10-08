@@ -21,6 +21,7 @@ from kontur.evaluation.ocr_pilot import (
     resolve_pilot_path,
     score_crop_bytes,
     tz_character_accuracy_met,
+    vertical_geometry,
 )
 
 
@@ -83,6 +84,25 @@ def test_vertical_and_broken_encoding_become_line_flags(tmp_path: Path) -> None:
     )
     lines = load_recognition_lines(tmp_path)
     assert lines[0].flags == ("VERTICAL", "LOW_QUALITY")
+
+
+def test_vertical_short_side_is_counted_without_searching_for_an_angle() -> None:
+    lines = (
+        OcrPilotLine(
+            line_id="L1",
+            page_id="P1",
+            object_id="OBJ-NOVOSLOBODSKAYA",
+            reference="12",
+            crop_path="a.png",
+            source_provenance="PDF_TEXT_LAYER",
+            flags=("VERTICAL",),
+            bbox_pdf_pt=(838.195, 65.514, 840.647, 69.2),
+        ),
+    )
+    report = vertical_geometry(lines)
+    assert report["n"] == 1
+    assert report["n_shorter_than_6pt"] == 1
+    assert report["rotation_search"] is False
 
 
 def test_jsonl_without_object_id_is_invalid(tmp_path: Path) -> None:

@@ -57,12 +57,14 @@ class OcrPilotLine:
     crop_path: str
     source_provenance: str
     flags: tuple[str, ...] = ()
+    bbox_pdf_pt: tuple[float, float, float, float] | None = None
 
 
 def resolve_pilot_path(env: Mapping[str, str] | None = None) -> Path | None:
     """Путь к zip/каталогу пилота или None. Карантин — исключение."""
 
-    raw = (env or os.environ).get(OCR_PILOT_ENV)
+    source = os.environ if env is None else env
+    raw = source.get(OCR_PILOT_ENV)
     if not raw or not raw.strip():
         return None
     return require_path_open(Path(raw))
@@ -415,6 +417,52 @@ def _from_zip(path: Path) -> tuple[OcrPilotLine, ...]:
     return _parse_jsonl(raw)
 
 
+def _bbox_pdf_pt(payload: Mapping[str, object]) -> tuple[float, float, float, float] | None:
+    raw = payload.get("bbox_pdf_pt")
+    if not isinstance(raw, list) or len(raw) != 4:
+        return None
+    numbers: list[float] = []
+    for item in raw:
+        if isinstance(item, bool) or not isinstance(item, int | float):
+            return None
+        numbers.append(float(item))
+    return (numbers[0], numbers[1], numbers[2], numbers[3])
+
+
+def _short_side_pt(box: tuple[float, float, float, float]) -> float:
+    return min(abs(box[2] - box[0]), abs(box[3] - box[1]))
+
+
+def vertical_geometry(lines: Sequence[OcrPilotLine]) -> dict[str, object]:
+    """Почему вертикальный срез не чинится поворотом кропа.
+
+    Угол не подбирается по совпадению с эталоном. Короткая сторона рамки
+    в пунктах PDF — свойство кропа до распознавания.
+    """
+
+    vertical = [line for line in lines if "VERTICAL" in line.flags]
+    sides = [
+        _short_side_pt(line.bbox_pdf_pt)
+        for line in vertical
+        if line.bbox_pdf_pt is not None
+    ]
+    sides.sort()
+    median = sides[len(sides) // 2] if sides else None
+    return {
+        "n": len(vertical),
+        "n_with_bbox": len(sides),
+        "short_side_pt_median": median,
+        "n_shorter_than_6pt": sum(1 for side in sides if side < 6.0),
+        "rotation_search": False,
+        "reason": (
+            "Поворот на 90/270 и увеличение короткой стороны до 96 px "
+            "на пробе 20 строк не подняли среднюю построчную CA выше 0,05. "
+            "Рамки вертикальных строк часто короче 6 пт: глиф в кропе не читается. "
+            "Угол по эталону не выбирается."
+        ),
+    }
+
+
 def _pilot_flags(payload: Mapping[str, object]) -> tuple[str, ...]:
     """Флаги строки пилота. Печать в jsonl не размечена и здесь не выдумывается."""
 
@@ -448,6 +496,7 @@ def _parse_jsonl(raw: str) -> tuple[OcrPilotLine, ...]:
                 crop_path=str(payload.get("crop_path") or "").replace("\\", "/"),
                 source_provenance=str(payload.get("source_provenance") or ""),
                 flags=_pilot_flags(payload),
+                bbox_pdf_pt=_bbox_pdf_pt(payload),
             )
         )
     return tuple(rows)
@@ -540,6 +589,7 @@ def main() -> int:
         "gate_i_point": gate_i.point,
         "gate_i_low": gate_i.low,
         "gate_i_n": gate_i.n,
+        "vertical_geometry": vertical_geometry(lines),
         "silver_not_gold": True,
         "closes_gate_i": False,
         "note": (
