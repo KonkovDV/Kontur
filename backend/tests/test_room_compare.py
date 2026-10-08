@@ -535,6 +535,40 @@ def test_wrapped_room_list_keeps_the_numbers_from_the_next_line() -> None:
     assert rooms == {"267", "270", "271", "272"}
 
 
+def test_other_pdf_page_in_the_same_file_does_not_break_the_clause() -> None:
+    rule = {
+        "code": "FREE-HEATING-001",
+        "matrix_version": "draft-0",
+        "extractor": {"type": "room_compare", "provision": True, "room_compare": _settings()},
+    }
+    pages = {
+        DocStage.PD: StagePage(
+            document=_doc(DocStage.PD),
+            tokens=(
+                _token("(пом. 267, 270,", 0.70, 0.30, page=11),
+                _token("В помещениях раздевальных", 0.10, 0.32, page=99),
+                _token("271, 272)", 0.05, 0.34, page=11),
+                _token("предусмотрена", 0.20, 0.34, page=11),
+                _token("система", 0.35, 0.34, page=11),
+                _token("подогрева", 0.45, 0.34, page=11),
+                _token("полов.", 0.55, 0.34, page=11),
+            ),
+        ),
+        DocStage.RD: StagePage(
+            document=_doc(DocStage.RD),
+            tokens=(
+                _token("267", 0.20, 0.40, page=17),
+                _token("270", 0.30, 0.40, page=17),
+                _token("271", 0.40, 0.40, page=17),
+                _token("272", 0.50, 0.40, page=17),
+            ),
+        ),
+    }
+    found = evaluate_free_search(rule, pages, "OBJ-ROOM")
+    rooms = {location_from_group(item.evidence_group) for item in found if item.evidence_group}
+    assert rooms == {"267", "270", "271", "272"}
+
+
 def test_same_page_number_in_another_volume_does_not_erase_the_room() -> None:
     """Лист 17 чужого тома со словом «полов» не отменяет лист 17, где элемента нет."""
 

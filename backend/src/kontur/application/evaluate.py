@@ -773,15 +773,21 @@ def _provision_evaluations(
 def _isolate_sheets(
     pages: Sequence[StagePage],
 ) -> tuple[tuple[PageToken, ...], dict[int, tuple[StagePage, PageToken]]]:
-    """Свой номер листа на файл: одинаковая страница разных томов не склеивается."""
+    """Свой номер на каждый лист файла. Одинаковая страница разных томов не склеивается."""
 
     tokens: list[PageToken] = []
     owners: dict[int, tuple[StagePage, PageToken]] = {}
-    for index, page in enumerate(pages, start=1):
+    index = 1
+    for page in pages:
+        by_sheet: dict[int, list[PageToken]] = {}
         for token in page.tokens:
-            tagged = replace(token, page=index)
-            owners[id(tagged)] = (page, token)
-            tokens.append(tagged)
+            by_sheet.setdefault(token.page, []).append(token)
+        for sheet in sorted(by_sheet):
+            for token in by_sheet[sheet]:
+                tagged = replace(token, page=index)
+                owners[id(tagged)] = (page, token)
+                tokens.append(tagged)
+            index += 1
     return tuple(tokens), owners
 
 
