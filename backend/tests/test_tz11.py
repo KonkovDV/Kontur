@@ -33,6 +33,20 @@ def test_a_row_over_the_budget_fails_even_when_other_rows_are_missing() -> None:
     assert verdicts["12"] == CLAIMED
 
 
+def test_executable_rules_on_an_empty_set_are_not_the_132() -> None:
+    measured = measure_local()
+    compared = measured["4"]
+    total = compared["parameters_total"]
+    expected = compared["parameters_expected"]
+    assert isinstance(total, int) and isinstance(expected, int)
+    assert 0 < total < expected == 132
+    results = evaluate(measured)
+    row = next(item for item in results if item.row.row_id == "4")
+    assert row.verdict == NOT_QUOTABLE
+    assert "4" in timings_evidence(results)["over"]
+    assert timings_evidence(results)["within_limits"] is False
+
+
 def test_compare_without_all_parameters_is_not_quotable() -> None:
     results = evaluate({"4": {"value": 10.0, "parameters_total": 55, "parameters_expected": 132}})
     row = next(item for item in results if item.row.row_id == "4")

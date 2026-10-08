@@ -318,15 +318,42 @@ def _time_pdf_recognition(page_count: int = 100) -> dict[str, object]:
     }
 
 
-def measure_local() -> dict[str, dict[str, object]]:
-    """Строки, которые снимаются в процессе: протокол и один параметр.
+def _time_parameter_compare() -> dict[str, object]:
+    """Исполняемые правила на пустом комплекте. Это не сравнение всех 132."""
 
-    Остальные строки эта функция не заполняет. Старый прогон k6 сюда
-    не подставляется: это другой стенд и не норматив п. 11.
+    from kontur.application.evaluate import evaluate_rule
+    from kontur.infrastructure.matrix.registry import EXPECTED_PARAM_COUNT, FileRuleRegistry
+
+    registry = FileRuleRegistry()
+    rules = []
+    for code in registry.all_codes():
+        rule = registry.get(code)
+        if rule.get("coverage") == "executable":
+            rules.append(rule)
+    started = perf_counter()
+    for rule in rules:
+        evaluate_rule(rule, object_id="tz11", pages={}, completeness={})
+    return {
+        "value": perf_counter() - started,
+        "parameters_total": len(rules),
+        "parameters_expected": EXPECTED_PARAM_COUNT,
+        "note": (
+            f"локально: {len(rules)} исполняемых правил на пустом комплекте, "
+            "остановка на отсутствующей стадии; не сравнение 132 параметров"
+        ),
+    }
+
+
+def measure_local() -> dict[str, dict[str, object]]:
+    """Строки, которые снимаются в процессе.
+
+    Пустой комплект и синтетический PDF не цитируются как строки 2 и 4.
+    Старый прогон k6 сюда не подставляется: это другой стенд и не норматив п. 11.
     """
 
     return {
         "2": _time_pdf_recognition(),
+        "4": _time_parameter_compare(),
         "5": {
             "value": _time_protocol(),
             "note": "локально: сборка протокола, JSON, DOCX, XML и PDF одного объекта",
