@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import PurePosixPath
 
+from kontur.infrastructure.clamd import AvStatus, scan_from_env
+
 #: Порог RT-A: коэффициент распаковки zip без чтения содержимого файлов.
 _BOMB_EXPAND_RATIO: float = 100.0
 _BOMB_UNCOMPRESSED_BYTES: int = 100 * 1024 * 1024
@@ -253,6 +255,23 @@ def check_file(candidate: UploadCandidate) -> Rejection | None:
                 detail="архив-бомба: коэффициент распаковки или размер после inflate",
             )
     return None
+
+
+def antivirus_rejection(filename: str, payload: bytes) -> Rejection | None:
+    """Отказ, если антивирус нашёл вирус или не смог проверить заданный контур.
+
+    Без `KONTUR_CLAMD_HOST` и без `KONTUR_CLAMD_REQUIRED` файл не отклоняется:
+    отсутствие демона не выдаётся за чистую проверку и не блокирует разработку.
+    """
+
+    status, detail = scan_from_env(payload)
+    if status in {AvStatus.CLEAN, AvStatus.NOT_CONFIGURED}:
+        return None
+    return Rejection(
+        filename=filename,
+        reason=RejectionReason.ANTIVIRUS_REJECTED,
+        detail=detail or status.value,
+    )
 
 
 def evaluate_batch(candidates: Iterable[UploadCandidate]) -> IntakeDecision:

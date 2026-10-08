@@ -15,8 +15,10 @@ from kontur.application.document_catalog import CatalogFile, build_document_cata
 from kontur.application.evidence_card import build_evidence_card
 from kontur.application.intake import (
     MAX_BATCH_BYTES,
+    IntakeDecision,
     Rejection,
     UploadCandidate,
+    antivirus_rejection,
     evaluate_batch,
 )
 from kontur.application.protocol import assemble_protocol, protocol_for_http
@@ -354,10 +356,22 @@ async def _upload_documents(
 
     accept_started = perf_counter()
     payloads: list[tuple[UploadCandidate, bytes]] = []
+    av_rejected: list[Rejection] = []
     for upload in files:
         candidate, body = await read_bounded_upload(upload)
-        payloads.append((candidate, body if body is not None else b""))
+        content = body if body is not None else b""
+        infected = antivirus_rejection(candidate.filename, content)
+        if infected is not None:
+            av_rejected.append(infected)
+            continue
+        payloads.append((candidate, content))
     decision = evaluate_batch(item for item, _body in payloads)
+    if av_rejected:
+        decision = IntakeDecision(
+            accepted=decision.accepted,
+            rejected=(*decision.rejected, *av_rejected),
+            duplicates=decision.duplicates,
+        )
     if decision.rejected and not decision.accepted:
         worst = max(decision.rejected, key=lambda item: item.http_status)
         return JSONResponse(status_code=worst.http_status, content=_rejection_body(worst))

@@ -6,6 +6,7 @@
 import express from "express";
 import fs from "fs";
 import http from "node:http";
+import https from "node:https";
 import path from "path";
 import { fileURLToPath } from "url";
 import pino from "pino";
@@ -211,12 +212,32 @@ const invokedDirectly =
   process.argv[1] !== undefined &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
-if (invokedDirectly) {
-  const app = createApp();
-  app.listen(process.env.PORT ?? 3000, () => {
+function listen(app) {
+  const port = process.env.PORT ?? 3000;
+  const certPath = process.env.KONTUR_TLS_CERT ?? "";
+  const keyPath = process.env.KONTUR_TLS_KEY ?? "";
+  if (certPath && keyPath && fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+    const server = https.createServer(
+      {
+        cert: fs.readFileSync(certPath),
+        key: fs.readFileSync(keyPath),
+        minVersion: "TLSv1.3",
+      },
+      app,
+    );
+    server.listen(port, () => {
+      log.info({ port, tls: "1.3" }, "gateway started");
+    });
+    return;
+  }
+  http.createServer(app).listen(port, () => {
     log.info(
       { core: CORE_URL, MAX_FILE_BYTES, MAX_BATCH_BYTES, webRoot },
       "gateway started",
     );
   });
+}
+
+if (invokedDirectly) {
+  listen(createApp());
 }

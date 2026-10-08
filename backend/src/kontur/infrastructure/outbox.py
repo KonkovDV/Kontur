@@ -17,6 +17,7 @@ from kontur.infrastructure.db.process_store import (
     _protocol_cell,
     protocol_payload_sha256,
 )
+from kontur.infrastructure.rin_client import RinStatus, deliver_from_env
 
 RETRY_SECONDS = (60, 300, 900)
 LEASE_SECONDS = 30
@@ -351,5 +352,10 @@ def _publish_row(
         )
     except PublishError as exc:
         return mark_failed(str(exc))
+    rin = deliver_from_env(body, event_id=row.event_id)
+    if rin.status is RinStatus.SEND_REFUSED:
+        return mark_failed(rin.detail, terminal=True)
+    if rin.status is RinStatus.SEND_FAILED:
+        return mark_failed(rin.detail, terminal=not rin.retryable)
     mark_delivered()
     return "DELIVERED"
