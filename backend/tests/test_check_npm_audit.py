@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import datetime as dt
 import importlib.util
+import sys
 from pathlib import Path
+
+import pytest
 
 _PATH = Path(__file__).resolve().parents[2] / "scripts" / "check_npm_audit.py"
 _SPEC = importlib.util.spec_from_file_location("check_npm_audit", _PATH)
@@ -52,3 +55,31 @@ def test_dev_only_advisory_warns_without_failing() -> None:
     assert rc == 0
     assert errors == []
     assert any(line.startswith("::warning::") for line in info)
+
+
+def test_valid_allowlist_has_no_schema_errors() -> None:
+    assert gate.validate_allowlist({"GHSA-a": _entry("2027-01-14")}) == []
+
+
+def test_missing_expires_is_a_clear_error() -> None:
+    entry = {"projects": ["gateway"], "justification": "unreachable"}
+    errors = gate.validate_allowlist({"GHSA-a": entry})
+    assert errors == ["allowlist entry GHSA-a: 'expires' is required (YYYY-MM-DD)"]
+
+
+def test_malformed_expires_is_a_clear_error() -> None:
+    errors = gate.validate_allowlist({"GHSA-a": _entry("14.01.2027")})
+    assert errors == ["allowlist entry GHSA-a: 'expires' '14.01.2027' is not YYYY-MM-DD"]
+
+
+def test_main_exits_nonzero_without_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    bad = tmp_path / "npm_audit_allowlist.json"
+    bad.write_text('{"GHSA-a": {"projects": ["gateway"], "justification": "x"}}', encoding="utf-8")
+    monkeypatch.setattr(gate, "ALLOWLIST", bad)
+    monkeypatch.setattr(sys, "argv", ["check_npm_audit.py", "gateway"])
+    assert gate.main() == 2
+    err = capsys.readouterr().err
+    assert "'expires' is required" in err
+    assert "Traceback" not in err
