@@ -20,9 +20,8 @@ from uuid import uuid4
 
 import psycopg
 
-from kontur.application.protocol import protocol_identity
+from kontur.application.protocol import protocol_for_rin, protocol_identity
 from kontur.domain.statuses import ProcessState, Scenario
-from kontur.application.protocol import protocol_for_rin
 from kontur.infrastructure.db.process_store import (
     PostgresProcessStore,
     ProcessSnapshot,
