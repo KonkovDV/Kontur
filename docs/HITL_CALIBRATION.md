@@ -20,3 +20,14 @@ UI-чипы (`web/src/bands.ts`) читают файл: при отсутств�
 ```
 python scripts/hitl_calibration.py silver_samples.jsonl --out out/
 ```
+
+## Outbox / РиН payload (§9.6, TOP20 #13)
+
+`protocol_for_rin` + `payload_sha256` считаются от **отфильтрованного** тела
+(только `CONFIRMED_VIOLATION` / `NEGATIVE_VERIFIED`). Строки `integration_outbox`,
+материализованные **до** этого фильтра, хранят sha полного протокола: при
+повторной materialize того же `protocol_id` будет `payload_sha256 mismatch`.
+
+Миграция: только **новые** finalize после мержа фильтра; старые PENDING outbox —
+ручной `retry_failed_sync` **не** пересчитывает sha. При необходимости —
+явная rematerialize/новый protocol version, не silent rewrite.

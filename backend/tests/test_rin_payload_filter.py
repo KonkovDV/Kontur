@@ -137,3 +137,26 @@ def test_published_outbox_body_has_no_candidate() -> None:
     stored = store.load_protocol("protocol-p-rin")
     assert stored is not None
     assert protocol_payload_sha256(stored) == store._outbox["protocol-p-rin"]["payload_sha256"]
+
+
+def test_protocol_for_rin_allowlist_drops_empty_and_wrong_status() -> None:
+    payload = _full_payload()
+    payload["sections"]["confirmed"] = [
+        {"finding_id": "ok", "rule_code": "PZ-002", "finding_status": "CONFIRMED_VIOLATION"},
+        {"finding_id": "no-status", "rule_code": "PZ-009"},  # нет finding_status
+        {"finding_id": "empty", "rule_code": "PZ-010", "finding_status": ""},
+        {"finding_id": "wrong-bucket", "rule_code": "PZ-011",
+         "finding_status": "NEGATIVE_VERIFIED"},
+        {"finding_id": "candidate-in-confirmed", "rule_code": "PZ-012",
+         "finding_status": "CANDIDATE"},
+    ]
+    payload["sections"]["negative_verified"] = [
+        {"finding_id": "neg-ok", "rule_code": "PZ-003", "finding_status": "NEGATIVE_VERIFIED"},
+        {"finding_id": "confirmed-in-neg", "rule_code": "PZ-013",
+         "finding_status": "CONFIRMED_VIOLATION"},
+        {"finding_id": "blank", "rule_code": "PZ-014", "finding_status": "   "},
+    ]
+    rin = protocol_for_rin(payload)
+    assert [r["finding_id"] for r in rin["sections"]["confirmed"]] == ["ok"]
+    assert [r["finding_id"] for r in rin["sections"]["negative_verified"]] == ["neg-ok"]
+    assert rin["violation_count"] == 1

@@ -57,7 +57,7 @@ def reject_placeholder_payload(payload: Mapping[str, object]) -> None:
 
 
 def protocol_for_http(payload: Mapping[str, object]) -> dict[str, object]:
-    """Копия для провода ТЗ: карман AUTO_NO_DIFFERENCE не сериализуется."""
+    """HTTP/UI: полный протокол без AUTO. Не путать с ``protocol_for_rin`` (outbox)."""
 
     clone: dict[str, object] = json.loads(canonical_protocol_json(payload))
     sections = clone.get("sections")
@@ -66,23 +66,36 @@ def protocol_for_http(payload: Mapping[str, object]) -> dict[str, object]:
     return clone
 
 
-#: Секции, которые уходят в ИАИС «РиН» (§9.2 / §9.6): только подтверждённое инспектором.
-_RIN_SECTION_KEYS: tuple[str, ...] = ("confirmed", "negative_verified")
+#: Allowlist секция → допустимый finding_status для провода РиН (§9.2 / §9.6).
+#: Fail-closed: пустой/неизвестный статус отбрасывается; denylist не используется.
+_RIN_SECTION_ALLOWLIST: dict[str, frozenset[str]] = {
+    "confirmed": frozenset({"CONFIRMED_VIOLATION"}),
+    "negative_verified": frozenset({"NEGATIVE_VERIFIED"}),
+}
 
 
 def protocol_for_rin(payload: Mapping[str, object]) -> dict[str, object]:
     """Payload outbox/РиН: только inspector-confirmed + версии + manifest.
 
-    CANDIDATE / SUSPICION / needs_attention / missing_evidence / completeness /
-    preliminary_no_difference на провод РиН не попадают. DELIVERED брокера ≠
-    SYNCED / «доставлено в РиН» (ADR-0010/0011).
+    Allowlist: ``confirmed`` → только ``CONFIRMED_VIOLATION``;
+    ``negative_verified`` → только ``NEGATIVE_VERIFIED``. Пустой или неизвестный
+    ``finding_status`` отбрасывается (fail-closed). CANDIDATE/SUSPICION/
+    needs_attention/completeness/AUTO на провод не попадают.
+
+    ``violation_count`` = ``len(sections.confirmed)`` после фильтра.
+
+    HTTP ``protocol_for_http`` ≠ этот payload. ``payload_sha256`` outbox — от
+    **отфильтрованного** тела: старые finalize (до фильтра) при rematerialize
+    дадут mismatch — только новые finalize либо явная rematerialize/миграция.
+
+    DELIVERED брокера ≠ SYNCED / «доставлено в РиН» (ADR-0010/0011).
     """
 
     clone: dict[str, object] = json.loads(canonical_protocol_json(payload))
     raw_sections = clone.get("sections")
-    sections: dict[str, list[object]] = {}
+    sections: dict[str, list[object]] = {key: [] for key in _RIN_SECTION_ALLOWLIST}
     if isinstance(raw_sections, dict):
-        for key in _RIN_SECTION_KEYS:
+        for key, allowed in _RIN_SECTION_ALLOWLIST.items():
             rows = raw_sections.get(key, [])
             if not isinstance(rows, list):
                 raise ValueError(f"sections.{key}")
@@ -90,14 +103,16 @@ def protocol_for_rin(payload: Mapping[str, object]) -> dict[str, object]:
             for row in rows:
                 if not isinstance(row, dict):
                     raise ValueError(f"sections.{key}: строка не объект")
-                status = str(row.get("finding_status") or "")
-                if status in {"CANDIDATE", "SUSPICION", "AUTO_NO_DIFFERENCE"}:
+                status = row.get("finding_status")
+                if not isinstance(status, str) or not status.strip():
+                    continue
+                if status not in allowed:
                     continue
                 cleaned.append(row)
             sections[key] = cleaned
     clone["sections"] = sections
-    confirmed = sections.get("confirmed", [])
-    clone["violation_count"] = len(confirmed) if isinstance(confirmed, list) else 0
+    confirmed = sections["confirmed"]
+    clone["violation_count"] = len(confirmed)
     return clone
 
 
