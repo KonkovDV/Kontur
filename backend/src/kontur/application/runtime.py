@@ -619,6 +619,10 @@ class ProcessWorkspace:
         if located is None:
             raise KeyError(finding_id)
         record, stored_key, current = located
+        if record.process_state is ProcessState.FINALIZED:
+            raise TransitionError(
+                "протокол финализирован, изменение статусов запрещено"
+            )
         updated = review_actions.review(
             current,
             actor=actor,
@@ -653,6 +657,10 @@ class ProcessWorkspace:
         record = self._items.get(process_id)
         if record is None:
             raise KeyError(process_id)
+        if record.process_state is ProcessState.FINALIZED:
+            raise TransitionError(
+                "протокол финализирован, изменение статусов запрещено"
+            )
         selected: list[tuple[str, Finding]] = []
         for finding_id in finding_ids:
             stored_key: str | None = None

@@ -11,7 +11,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, Header, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from kontur.application.document_catalog import CatalogFile, build_document_catalog
 from kontur.application.evidence_card import build_evidence_card
@@ -95,6 +95,16 @@ class FinalizeRequest(BaseModel):
 class UnfinalizeRequest(BaseModel):
     inspector_id: str = Field(min_length=1, max_length=200)
     reason: str = Field(min_length=1, max_length=4000)
+
+    @field_validator("reason")
+    @classmethod
+    def reason_must_be_nonblank(cls, value: str) -> str:
+        """Пробелы не считаются причиной (§9.3) → HTTP 422, не 409."""
+
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("reason обязателен")
+        return stripped
 
 
 class ReviewRequest(BaseModel):
