@@ -1,5 +1,6 @@
 # Dependabot активен: open-pull-requests-limit=5 по ecosystems (pip/npm/actions/docker).
-# Заморозка до 2026-09-30 снята после конкурсного среза.
+# Заморозка снята. Мажоры docker-образов (node/python/postgres/redis/clamav) и web (react/vite/ts)
+# игнорируются: переход только отдельным PR с миграцией (см. закрытые #340,#341,#343,#345,#347).
 version: 2
 updates:
   - package-ecosystem: "pip"
@@ -27,6 +28,9 @@ updates:
       time: "03:15"
       timezone: "Etc/UTC"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
@@ -77,6 +81,9 @@ updates:
       time: "04:00"
       timezone: "Etc/UTC"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
@@ -93,6 +100,9 @@ updates:
       time: "04:15"
       timezone: "Etc/UTC"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
@@ -109,6 +119,9 @@ updates:
       time: "04:30"
       timezone: "Etc/UTC"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
