@@ -15,6 +15,7 @@ from typing import Final
 from uuid import uuid4
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.types import ASGIApp
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -72,9 +73,9 @@ class TzJsonFormatter(logging.Formatter):
 class _ContextFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         if not hasattr(record, "request_id"):
-            record.request_id = request_id_var.get()  # type: ignore[attr-defined]
+            record.request_id = request_id_var.get()
         if not hasattr(record, "user_id"):
-            record.user_id = user_id_var.get()  # type: ignore[attr-defined]
+            record.user_id = user_id_var.get()
         return True
 
 
@@ -121,7 +122,7 @@ def resolve_user_id(authorization: str | None) -> str:
 class JsonRequestLogMiddleware(BaseHTTPMiddleware):
     """Прокидывает ``X-Request-Id``, пишет access-лог в формате §13 п.1."""
 
-    def __init__(self, app, *, service: str = "kontur-core") -> None:  # type: ignore[no-untyped-def]
+    def __init__(self, app: ASGIApp, *, service: str = "kontur-core") -> None:
         super().__init__(app)
         self._service = service
         self._logger = configure_json_logging(service=service)
