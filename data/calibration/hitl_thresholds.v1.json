@@ -1,0 +1,25 @@
+{
+  "schema": "kontur.hitl_thresholds.v1",
+  "version": 1,
+  "silver": true,
+  "gold": false,
+  "closes_gate_i": false,
+  "closes_gate_k": false,
+  "calibrated": false,
+  "t_high": null,
+  "t_low": null,
+  "target_precision": 0.9,
+  "holdout_failed": false,
+  "insufficient_data": true,
+  "ui_fallback": {
+    "t_high": 0.9,
+    "t_low": 0.7,
+    "heuristic_not_calibrated": true,
+    "label_suffix": "не калибр."
+  },
+  "note": "Заморозка-заглушка: размеченной SILVER-выборки confidence↔correct пока нет. t_high/t_low = null; UI берёт 0.90/0.70 только как эвристику с пометкой «не калибр.». Gate I/K не закрывает. Повторный подбор = version+1, не тихая правка.",
+  "frozen_at": "2026-10-15",
+  "git_sha_at_freeze": "3ce3f4f",
+  "corpus": null,
+  "hidden_used": false
+}

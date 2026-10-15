@@ -41,6 +41,10 @@
 
 Минимальный ожидаемый уровень жюри = A13/ctrl_z one-click + evidence на странице + честный FAIL по OCR. Контур выигрывает ADR/XML/fail-closed и каркас доверия, проигрывает executable-цифре — **не спорить 59 vs 99, спорить Precision/HITL и доказательность**. OSINT peers: [`research/competitors/`](research/competitors/).
 
+## Калибровка HITL (SILVER)
+
+Калибровка SILVER, Gate I false, n=0 (insufficient_data), `t_high=null`; UI-чипы — эвристика 90/70 с пометкой «не калибр.» (`data/calibration/hitl_thresholds.v1.json`).
+
 ## Что не говорить
 
 - «100% ТЗ» / «порог взят» / «OCR ≥0,95 измерен» без протокола и n.  

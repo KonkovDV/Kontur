@@ -1,3 +1,5 @@
+import hitlThresholdsFile from "./config/hitl_thresholds.v1.json";
+
 export type Band = "open" | "closed" | "unchecked" | "attention";
 
 const CLOSED = new Set(["CONFIRMED_VIOLATION", "NEGATIVE_VERIFIED"]);
@@ -50,15 +52,72 @@ export function stepQueue(ids: string[], current: string | null, delta: 1 | -1):
 
 export type ConfidenceChip = { bucket: "high" | "mid" | "low" | "abstain"; label: string };
 
-/** Чип уверенности: текст + числовой бакет, не только цвет (CVD-safe). Порог не калиброван на скрытом сете. */
-export function confidenceChip(confidence: number | null | undefined, status?: string): ConfidenceChip {
-  if (status === "ABSTAIN" || status === "LOW_QUALITY" || confidence === null || confidence === undefined || Number.isNaN(confidence)) {
+export type HitlThresholds = {
+  calibrated: boolean;
+  t_high: number | null;
+  t_low: number | null;
+  insufficient_data?: boolean;
+  ui_fallback?: {
+    t_high: number;
+    t_low: number;
+    heuristic_not_calibrated?: boolean;
+    label_suffix?: string;
+  };
+};
+
+/** Замороженный конфиг из data/calibration (копия в web/src/config). */
+export const HITL_THRESHOLDS: HitlThresholds = hitlThresholdsFile as HitlThresholds;
+
+/** Эффективные пороги чипа: калиброванные t_* или fallback 0.90/0.70. */
+export function effectiveThresholds(cfg: HitlThresholds = HITL_THRESHOLDS): {
+  tHigh: number;
+  tLow: number;
+  calibrated: boolean;
+  suffix: string;
+} {
+  const fallbackHigh = cfg.ui_fallback?.t_high ?? 0.9;
+  const fallbackLow = cfg.ui_fallback?.t_low ?? 0.7;
+  const calibrated =
+    Boolean(cfg.calibrated) &&
+    cfg.t_high !== null &&
+    cfg.t_high !== undefined &&
+    cfg.t_low !== null &&
+    cfg.t_low !== undefined;
+  const tHigh = calibrated ? Number(cfg.t_high) : fallbackHigh;
+  const tLow = calibrated ? Number(cfg.t_low) : fallbackLow;
+  const suffix = calibrated
+    ? ""
+    : ` · ${cfg.ui_fallback?.label_suffix ?? "не калибр."}`;
+  return { tHigh, tLow, calibrated, suffix };
+}
+
+/** Чип уверенности: текст + числовой бакет, не только цвет (CVD-safe).
+ *  Пороги из hitl_thresholds.v1.json; при uncalibrated — эвристика 90/70 + суффикс. */
+export function confidenceChip(
+  confidence: number | null | undefined,
+  status?: string,
+  thresholds: HitlThresholds = HITL_THRESHOLDS,
+): ConfidenceChip {
+  if (
+    status === "ABSTAIN" ||
+    status === "LOW_QUALITY" ||
+    confidence === null ||
+    confidence === undefined ||
+    Number.isNaN(confidence)
+  ) {
     return { bucket: "abstain", label: "⊘ воздержание" };
   }
+  const { tHigh, tLow, suffix } = effectiveThresholds(thresholds);
   const pct = Math.round(Math.min(1, Math.max(0, confidence)) * 100);
-  if (pct >= 90) return { bucket: "high", label: `▲ ≥90% (${pct}%)` };
-  if (pct >= 70) return { bucket: "mid", label: `◆ 70–89% (${pct}%)` };
-  return { bucket: "low", label: `▼ <70% (${pct}%)` };
+  const highPct = Math.round(tHigh * 100);
+  const lowPct = Math.round(tLow * 100);
+  if (confidence >= tHigh) {
+    return { bucket: "high", label: `▲ ≥${highPct}% (${pct}%)${suffix}` };
+  }
+  if (confidence >= tLow) {
+    return { bucket: "mid", label: `◆ ${lowPct}–${highPct - 1}% (${pct}%)${suffix}` };
+  }
+  return { bucket: "low", label: `▼ <${lowPct}% (${pct}%)${suffix}` };
 }
 
 /** Следующий после решения: null, если в очереди не осталось других элементов (не переоткрывать закрытое). */
