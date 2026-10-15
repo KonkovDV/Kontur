@@ -3,43 +3,154 @@
   "$id": "https://kontur.local/schemas/normative_registry.schema.json",
   "title": "Normative registry",
   "type": "object",
-  "required": ["schema", "acts"],
+  "required": [
+    "schema",
+    "acts"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schema": { "const": "kontur.normative_registry.v1" },
-    "reviewed_on": { "type": ["string", "null"], "format": "date" },
+    "schema": {
+      "const": "kontur.normative_registry.v1"
+    },
+    "reviewed_on": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
     "acts": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "required": [
-          "id", "identifier", "issuer", "act_type", "mandatory",
-          "effective_from", "effective_to", "layer", "status", "verified"
+          "id",
+          "identifier",
+          "issuer",
+          "act_type",
+          "mandatory",
+          "effective_from",
+          "effective_to",
+          "layer",
+          "status",
+          "verified"
         ],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-          "identifier": { "type": "string", "minLength": 1 },
-          "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-          "issuer": { "type": "string", "minLength": 1 },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "identifier": {
+            "type": "string",
+            "minLength": 1
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "issuer": {
+            "type": "string",
+            "minLength": 1
+          },
           "act_type": {
             "enum": [
-              "federal_law", "government_decree", "regional_decree", "ministerial_order",
-              "standard", "code_of_practice", "sanitary_rules", "industry_rules"
+              "federal_law",
+              "government_decree",
+              "regional_decree",
+              "ministerial_order",
+              "standard",
+              "code_of_practice",
+              "sanitary_rules",
+              "industry_rules",
+              "xml_schema"
             ]
           },
-          "mandatory": { "enum": ["law", "bylaw", "mandatory_list", "voluntary", "contract"] },
-          "date": { "type": "string", "format": "date" },
-          "revision": { "type": "string" },
-          "url": { "type": "string" },
-          "effective_from": { "type": ["string", "null"], "format": "date" },
-          "effective_to": { "type": ["string", "null"], "format": "date" },
-          "layer": { "enum": ["organizer_matrix", "current_overlay"] },
-          "status": { "enum": ["accepted", "disputed", "typo_in_source"] },
-          "note": { "type": "string" },
-          "verified": { "type": "boolean" }
-        }
+          "mandatory": {
+            "enum": [
+              "law",
+              "bylaw",
+              "mandatory_list",
+              "voluntary",
+              "contract"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "effective_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "effective_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "layer": {
+            "enum": [
+              "organizer_matrix",
+              "current_overlay"
+            ]
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "disputed",
+              "typo_in_source"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "schema_code": {
+            "type": "string",
+            "description": "XML schema code, e.g. П9 (explanatory note, ПД section 1)."
+          },
+          "schema_version": {
+            "type": "string",
+            "pattern": "^[0-9]{2}\\.[0-9]{2}$"
+          },
+          "source_url": {
+            "type": "string"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "act_type": {
+                  "const": "xml_schema"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "schema_code",
+                "schema_version"
+              ]
+            }
+          }
+        ]
       }
     }
   }
