@@ -21,19 +21,76 @@ const httpRequestDurationSeconds = new client.Histogram({
   registers: [register],
 });
 
-const UUID_RE =
-  /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
-const HEX64_RE = /\/[0-9a-f]{64}(?=\/|$)/gi;
+/** Шаблоны маршрутов ядра, доступные через gateway (:p — любой один сегмент). */
+export const KNOWN_ROUTES = [
+  "/api/v1/demo/kit",
+  "/api/v1/documents/upload",
+  "/api/v1/evaluation/score",
+  "/api/v1/findings/:p/review",
+  "/api/v1/healthz",
+  "/api/v1/inspection/:p",
+  "/api/v1/processes/:p/audit",
+  "/api/v1/processes/:p/audit/ui",
+  "/api/v1/processes/:p/complete",
+  "/api/v1/processes/:p/documents",
+  "/api/v1/processes/:p/finalize",
+  "/api/v1/processes/:p/findings",
+  "/api/v1/processes/:p/findings/confirm",
+  "/api/v1/processes/:p/protocol",
+  "/api/v1/processes/:p/protocol.docx",
+  "/api/v1/processes/:p/protocol.pdf",
+  "/api/v1/processes/:p/protocol.xml",
+  "/api/v1/processes/:p/revisions/:p/select",
+  "/api/v1/processes/:p/status",
+  "/api/v1/processes/:p/unfinalize",
+  "/api/v1/processes/:p/verify",
+  "/api/v1/system/capabilities",
+];
+const STATIC_ROUTES = new Set(["/", "/healthz", "/metrics"]);
+const TEMPLATES = KNOWN_ROUTES.map((t) => t.split("/"));
 
-/** Снижает кардинальность: UUID и длинные hex → :id. */
+/**
+ * Label `route` с ограниченной кардинальностью: только известные шаблоны
+ * `/api/v1/*` (id -> :id) и несколько статических путей; всё остальное
+ * (404-сканы, имена файлов, SPA-assets) -> "unmatched".
+ */
 export function normalizeRoute(path) {
-  if (!path || path === "/") return "/";
-  let route = path.split("?")[0];
-  route = route.replace(UUID_RE, ":id");
-  route = route.replace(HEX64_RE, "/:id");
-  // числовые id сегменты
-  route = route.replace(/\/\d+(?=\/|$)/g, "/:id");
-  return route || "/";
+  const clean = (path ?? "").split("?")[0] || "/";
+  if (STATIC_ROUTES.has(clean)) return clean;
+  if (!clean.startsWith("/api/v1/")) return "unmatched";
+  const parts = clean.replace(/\/+$/, "").split("/");
+  for (const tpl of TEMPLATES) {
+    if (tpl.length !== parts.length) continue;
+    let ok = true;
+    for (let i = 0; i < tpl.length; i += 1) {
+      if (tpl[i] === ":p") {
+        if (!parts[i]) ok = false;
+      } else if (tpl[i] !== parts[i]) {
+        ok = false;
+      }
+      if (!ok) break;
+    }
+    if (ok) return tpl.map((seg) => (seg === ":p" ? ":id" : seg)).join("/");
+  }
+  return "unmatched";
+}
+
+/**
+ * Доступ к /metrics: Bearer KONTUR_METRICS_TOKEN; без токена — 403, если не
+ * задан KONTUR_METRICS_ALLOW_ANON=1 (осознанный анонимный режим, напр. loopback).
+ */
+export function metricsAuth({ token = process.env.KONTUR_METRICS_TOKEN ?? "", allowAnon = process.env.KONTUR_METRICS_ALLOW_ANON === "1" } = {}) {
+  return (req, res, next) => {
+    if (token) {
+      const header = req.header("authorization") ?? "";
+      if (header === `Bearer ${token}`) return next();
+      res.status(401).json({ error: "METRICS_UNAUTHORIZED" });
+      return undefined;
+    }
+    if (allowAnon) return next();
+    res.status(403).json({ error: "METRICS_DISABLED" });
+    return undefined;
+  };
 }
 
 export function metricsMiddleware(req, res, next) {
@@ -41,7 +98,7 @@ export function metricsMiddleware(req, res, next) {
   res.on("finish", () => {
     const elapsedNs = Number(process.hrtime.bigint() - started);
     const durationSec = elapsedNs / 1e9;
-    const route = normalizeRoute(req.route?.path ? req.baseUrl + req.route.path : req.path);
+    const route = normalizeRoute(req.originalUrl ?? req.path);
     const labels = {
       method: req.method,
       route,

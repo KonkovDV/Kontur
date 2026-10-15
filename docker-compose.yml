@@ -216,6 +216,9 @@ services:
       - no-new-privileges:true
     environment:
       KONTUR_CORE_URL: http://core:8000
+      # /metrics: Bearer-токен; без токена -> 403, если не KONTUR_METRICS_ALLOW_ANON=1.
+      KONTUR_METRICS_TOKEN: ${KONTUR_METRICS_TOKEN:-}
+      KONTUR_METRICS_ALLOW_ANON: ${KONTUR_METRICS_ALLOW_ANON:-0}
     depends_on:
       core:
         condition: service_healthy

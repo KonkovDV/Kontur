@@ -12,7 +12,7 @@ import { fileURLToPath } from "url";
 import pino from "pino";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
-import { metricsHandler, metricsMiddleware } from "./metrics.js";
+import { metricsAuth, metricsHandler, metricsMiddleware } from "./metrics.js";
 import {
   MAX_BATCH_BYTES,
   MAX_FILE_BYTES,
@@ -158,12 +158,18 @@ export function createApp({
   uploadLimit = UPLOAD_LIMIT,
   uploadWindowMs = UPLOAD_WINDOW_MS,
   coreUrl = CORE_URL,
+  metricsToken = process.env.KONTUR_METRICS_TOKEN ?? "",
+  metricsAllowAnon = process.env.KONTUR_METRICS_ALLOW_ANON === "1",
 } = {}) {
   const app = express();
   const allowUpload = createUploadLimiter(uploadLimit, uploadWindowMs);
 
   // /metrics до прокси и лимитеров; не уходит в ядро.
-  app.get("/metrics", metricsHandler);
+  app.get(
+    "/metrics",
+    metricsAuth({ token: metricsToken, allowAnon: metricsAllowAnon }),
+    metricsHandler,
+  );
   app.use(metricsMiddleware);
 
   app.use((req, res, next) => {
