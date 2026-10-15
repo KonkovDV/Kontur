@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from kontur.application.protocol import protocol_for_rin
 from kontur.domain.statuses import ProcessState, Scenario
 from kontur.infrastructure.db.process_store import (
     MemoryProcessStore,
@@ -81,7 +82,7 @@ def test_relay_delivers_once_and_keeps_event_id() -> None:
     assert len(publisher.events) == 1
     assert publisher.events[0][0] == event_id
     assert store._outbox["protocol-p-1"]["status"] == "DELIVERED"
-    digest = protocol_payload_sha256(_payload())
+    digest = protocol_payload_sha256(protocol_for_rin(_payload()))
     assert store._outbox["protocol-p-1"]["payload_sha256"] == digest
     assert store._outbox["protocol-p-1"]["event_id"] == event_id
 

@@ -66,6 +66,41 @@ def protocol_for_http(payload: Mapping[str, object]) -> dict[str, object]:
     return clone
 
 
+#: Секции, которые уходят в ИАИС «РиН» (§9.2 / §9.6): только подтверждённое инспектором.
+_RIN_SECTION_KEYS: tuple[str, ...] = ("confirmed", "negative_verified")
+
+
+def protocol_for_rin(payload: Mapping[str, object]) -> dict[str, object]:
+    """Payload outbox/РиН: только inspector-confirmed + версии + manifest.
+
+    CANDIDATE / SUSPICION / needs_attention / missing_evidence / completeness /
+    preliminary_no_difference на провод РиН не попадают. DELIVERED брокера ≠
+    SYNCED / «доставлено в РиН» (ADR-0010/0011).
+    """
+
+    clone: dict[str, object] = json.loads(canonical_protocol_json(payload))
+    raw_sections = clone.get("sections")
+    sections: dict[str, list[object]] = {}
+    if isinstance(raw_sections, dict):
+        for key in _RIN_SECTION_KEYS:
+            rows = raw_sections.get(key, [])
+            if not isinstance(rows, list):
+                raise ValueError(f"sections.{key}")
+            cleaned: list[object] = []
+            for row in rows:
+                if not isinstance(row, dict):
+                    raise ValueError(f"sections.{key}: строка не объект")
+                status = str(row.get("finding_status") or "")
+                if status in {"CANDIDATE", "SUSPICION", "AUTO_NO_DIFFERENCE"}:
+                    continue
+                cleaned.append(row)
+            sections[key] = cleaned
+    clone["sections"] = sections
+    confirmed = sections.get("confirmed", [])
+    clone["violation_count"] = len(confirmed) if isinstance(confirmed, list) else 0
+    return clone
+
+
 def finding_to_schema(finding: Finding) -> dict[str, object]:
     """Карточка по finding.schema.json. Лишних ключей нет: additionalProperties=false."""
 
