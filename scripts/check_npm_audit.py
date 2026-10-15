@@ -48,7 +48,8 @@ def main() -> int:
             print(f"{name}: allowlist entry {gid} no longer reported; remove it", file=sys.stderr)
             status = 1
         for gid in sorted(dev_only):
-            print(f"::warning::{name}: dev-only advisory {gid} (build tooling only, not in runtime images)")
+            note = "build tooling, not in runtime images"
+            print(f"::warning::{name}: dev-only advisory {gid} ({note})")
         if not prod and not dev_only:
             print(f"{name}: no advisories")
     return status
