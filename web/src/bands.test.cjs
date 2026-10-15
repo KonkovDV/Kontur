@@ -61,3 +61,25 @@ test("confidenceChip buckets are textual and abstain wins", () => {
   assert.equal(confidenceChip(undefined).bucket, "abstain");
   assert.match(confidenceChip(0.95).label, /90/);
 });
+
+const { nextAfterDecision, hotkeysSuppressed } = require("../dist/bands.cjs");
+
+test("confidenceChip: LOW_QUALITY/ABSTAIN status overrides high confidence", () => {
+  assert.equal(confidenceChip(0.97, "LOW_QUALITY").bucket, "abstain");
+  assert.match(confidenceChip(0.97, "ABSTAIN").label, /⊘/);
+  assert.equal(confidenceChip(0.97, "CANDIDATE").bucket, "high");
+});
+
+test("nextAfterDecision: empty queue does not reopen closed finding", () => {
+  assert.equal(nextAfterDecision(["a"], "a"), null);
+  assert.equal(nextAfterDecision([], "a"), null);
+  assert.equal(nextAfterDecision(["a", "b"], "a"), "b");
+});
+
+test("hotkeysSuppressed: inputs, contentEditable, IME", () => {
+  assert.equal(hotkeysSuppressed({ tagName: "TEXTAREA" }, false), true);
+  assert.equal(hotkeysSuppressed({ tagName: "DIV", isContentEditable: true }, false), true);
+  assert.equal(hotkeysSuppressed({ tagName: "DIV" }, true), true);
+  assert.equal(hotkeysSuppressed({ tagName: "DIV" }, false), false);
+  assert.equal(hotkeysSuppressed(null, false), false);
+});

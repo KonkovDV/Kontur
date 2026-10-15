@@ -15,13 +15,14 @@ type PaneProps = {
   fragment: FragmentView | undefined;
   pageImageUrl?: string;
   zoomed?: boolean;
+  findingStatus?: string;
 };
 
 function overlayPoints(polygon: Point[]): string {
   return polygon.map(([x, y]) => svgPointYDown(x, y)).join(" ");
 }
 
-export function EvidencePane({ title, role, fragment, pageImageUrl, zoomed = false }: PaneProps) {
+export function EvidencePane({ title, role, fragment, pageImageUrl, zoomed = false, findingStatus }: PaneProps) {
   const polygon = fragment?.polygon_norm;
   const bbox = polygon && polygon.length >= 3 ? bboxFromPolygon(polygon) : null;
   const missing = fragment === undefined;
@@ -151,7 +152,7 @@ export function EvidencePane({ title, role, fragment, pageImageUrl, zoomed = fal
               <dd>
                 {fragment.extracted.engine} {fragment.extracted.engine_version}{" "}
                 {(() => {
-                  const chip = confidenceChip(fragment.extracted.confidence);
+                  const chip = confidenceChip(fragment.extracted.confidence, findingStatus);
                   return (
                     <span className={`conf-chip conf-chip--${chip.bucket}`}>{chip.label}</span>
                   );
