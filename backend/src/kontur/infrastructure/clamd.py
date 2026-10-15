@@ -101,6 +101,19 @@ def scan_bytes(
         return AvStatus.UNAVAILABLE, f"антивирус недоступен: {exc.__class__.__name__}"
 
 
+_DEV_ENVS = frozenset({"dev", "test", "local", "demo"})
+
+
+def clamd_required() -> bool:
+    """Вне dev/test/local/demo антивирус обязателен: без clamd файл отклоняется."""
+
+    flag = os.environ.get("KONTUR_CLAMD_REQUIRED", "").strip().lower()
+    if flag == "true":
+        return True
+    env = (os.environ.get("KONTUR_ENV") or "dev").strip().lower()
+    return env not in _DEV_ENVS
+
+
 def scan_from_env(payload: bytes) -> tuple[AvStatus, str]:
     host = os.environ.get("KONTUR_CLAMD_HOST", "").strip()
     raw_port = os.environ.get("KONTUR_CLAMD_PORT", "3310").strip()
@@ -108,5 +121,5 @@ def scan_from_env(payload: bytes) -> tuple[AvStatus, str]:
         port = int(raw_port)
     except ValueError:
         port = 3310
-    required = os.environ.get("KONTUR_CLAMD_REQUIRED", "").strip().lower() == "true"
+    required = clamd_required()
     return scan_bytes(payload, host=host, port=port, required=required)

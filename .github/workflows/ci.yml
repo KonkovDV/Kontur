@@ -131,7 +131,8 @@ jobs:
             "postgres": {"mem_limit": 1073741824, "cpus": 1.0, "pids_limit": 256},
             "redis": {"mem_limit": 268435456, "cpus": 0.5, "pids_limit": 128},
             "rabbitmq": {"mem_limit": 1073741824, "cpus": 1.0, "pids_limit": 256},
-            "minio": {"mem_limit": 536870912, "cpus": 1.0, "pids_limit": 256}
+            "minio": {"mem_limit": 536870912, "cpus": 1.0, "pids_limit": 256},
+            "clamav": {"mem_limit": 2147483648, "cpus": 1.0, "pids_limit": 256}
           }
           JSON
 

@@ -51,7 +51,12 @@ from kontur.infrastructure.db.process_store import (
 )
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
 from kontur.infrastructure.pdfium_page import PageRenderError, parse_bbox, render_page_png
-from kontur.presentation.auth import _is_true, actor_from_roles, parse_bearer
+from kontur.presentation.auth import (
+    _is_true,
+    actor_from_roles,
+    insecure_auth_permitted,
+    parse_bearer,
+)
 from kontur.presentation.rbac import (
     AuthenticationRequiredError,
     PermissionDeniedError,
@@ -62,6 +67,12 @@ from kontur.presentation.upload_limits import (
     ActualUploadLimitMiddleware,
     read_bounded_upload,
 )
+
+_insecure_flag = (os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH") or "").lower() == "true"
+if _insecure_flag and not insecure_auth_permitted():
+    raise RuntimeError(
+        "KONTUR_ALLOW_INSECURE_DEV_AUTH запрещён вне KONTUR_ENV=dev|demo|test|local"
+    )
 
 
 @asynccontextmanager

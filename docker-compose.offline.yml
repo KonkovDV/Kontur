@@ -24,6 +24,9 @@ services:
   minio:
     pull_policy: never
 
+  clamav:
+    pull_policy: never
+
   core:
     pull_policy: never
 
