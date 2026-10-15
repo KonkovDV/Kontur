@@ -1,0 +1,11 @@
+{
+  "GHSA-vfj7-8cjw-p6xm": {
+    "package": "braces (via micromatch <- http-proxy-middleware@4)",
+    "projects": [
+      "gateway"
+    ],
+    "justification": "Stack-exhaustion DoS in brace-pattern expansion. No patched braces release exists. The gateway passes no glob pathFilter to createProxyMiddleware (mount path '/api/v1' only), so request data never reaches braces. Re-check when a fixed release appears.",
+    "added": "2026-10-16",
+    "expires": "2027-01-14"
+  }
+}
