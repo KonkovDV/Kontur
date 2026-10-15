@@ -3,7 +3,7 @@
 Срез: **15.10.2026 (MSK)**, редакция 3.
 Каталог: `docs/research/competitors/` (не пересекается с JURY-доками).
 
-**Якорь ТЗ (v1.1, пакет `/workspace/kontur-tz/tz.pdf.txt`):** PDF/DOCX/XML;
+**Якорь ТЗ (v1.1, текст из локального пакета ТЗ пользователя):** PDF/DOCX/XML;
 матрица **132**; OCR CA≥**0,95**, EM≥**0,90**; bbox [0;1] после CropBox/Rotate;
 HITL; MISSING_EVIDENCE≠нарушение; РиН только подтверждённое; модули §7 №1–12.
 Задача — **не BIM-clash** (ADR-0006).
@@ -13,7 +13,7 @@ HITL; MISSING_EVIDENCE≠нарушение; РиН только подтвер�
 ЛЦТ.Фест / награждение **30.10.2026** (чеки 1 000 000 / 600 000 / 400 000 ₽).
 По Положению постановщик может взять **больше 10** команд в финал.
 
-Клоны для разбора (не в git): `/workspace/kontur-osint/repos/`.
+Клоны peers для разбора хранились локально у агента и в git не входят.
 Связано: [COMPETITORS-OSINT-2026-10-15.md](COMPETITORS-OSINT-2026-10-15.md),
 [`../../RESEARCH_OSINT_2026.md`](../../RESEARCH_OSINT_2026.md),
 [`../../TZ_SCORECARD.md`](../../TZ_SCORECARD.md), [`../../METRICS.md`](../../METRICS.md).
