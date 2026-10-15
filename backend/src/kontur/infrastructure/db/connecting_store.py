@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-import psycopg
+import psycopg  # type: ignore[import-not-found,import-untyped,unused-ignore]
 
 from kontur.domain.models import Finding
 from kontur.infrastructure.db.audit_store import AuditEvent

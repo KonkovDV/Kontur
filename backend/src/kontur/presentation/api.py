@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from time import perf_counter
 from typing import Annotated
@@ -64,7 +65,7 @@ from kontur.presentation.upload_limits import (
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Postgres + MinIO из env; без env — память (pytest)."""
 
     app.state.workspace = build_workspace()

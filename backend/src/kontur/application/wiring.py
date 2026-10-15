@@ -9,13 +9,14 @@ Auth/clamd/RabbitMQ в этот модуль не входят.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from kontur.application.runtime import ProcessWorkspace
 from kontur.infrastructure.db.process_store import MemoryProcessStore
-from kontur.infrastructure.object_store import MemoryObjectStore, S3ObjectStore
+from kontur.infrastructure.object_store import MemoryObjectStore, ObjectStore, S3ObjectStore
 
 
-def build_object_store():
+def build_object_store() -> ObjectStore:
     endpoint = (
         (os.environ.get("KONTUR_OBJECT_STORE_URL") or "").strip()
         or (os.environ.get("KONTUR_S3_ENDPOINT") or "").strip()
@@ -35,7 +36,7 @@ def build_object_store():
     )
 
 
-def build_process_store():
+def build_process_store() -> Any:
     dsn = (os.environ.get("KONTUR_DB_URL") or "").strip()
     if not dsn:
         return MemoryProcessStore()
