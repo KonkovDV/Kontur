@@ -70,7 +70,10 @@ services:
       - minio:/bitnami/minio/data
 
   clamav:
-    image: clamav/clamav:1.4
+    image: clamav/clamav:1.4@sha256:b5b910ce43d595bf8a2fe401e34db56434602b2c755b7c2b07f00c917d04d469
+    mem_limit: 2g
+    cpus: 1.0
+    pids_limit: 256
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "clamdcheck.sh"]
