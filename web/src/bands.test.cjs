@@ -83,3 +83,30 @@ test("hotkeysSuppressed: inputs, contentEditable, IME", () => {
   assert.equal(hotkeysSuppressed({ tagName: "DIV" }, false), false);
   assert.equal(hotkeysSuppressed(null, false), false);
 });
+
+const { effectiveThresholds, HITL_THRESHOLDS } = require("../dist/bands.cjs");
+
+test("HITL thresholds file is frozen uncalibrated placeholder", () => {
+  assert.equal(HITL_THRESHOLDS.calibrated, false);
+  assert.equal(HITL_THRESHOLDS.t_high, null);
+  assert.equal(HITL_THRESHOLDS.t_low, null);
+  const eff = effectiveThresholds();
+  assert.equal(eff.calibrated, false);
+  assert.equal(eff.tHigh, 0.9);
+  assert.equal(eff.tLow, 0.7);
+  assert.match(eff.suffix, /не калибр/);
+});
+
+test("confidenceChip labels uncalibrated heuristic with suffix", () => {
+  assert.match(confidenceChip(0.95).label, /не калибр/);
+  assert.match(confidenceChip(0.75).label, /не калибр/);
+  assert.match(confidenceChip(0.2).label, /не калибр/);
+  const calibrated = confidenceChip(0.95, undefined, {
+    calibrated: true,
+    t_high: 0.92,
+    t_low: 0.65,
+  });
+  assert.equal(calibrated.bucket, "high");
+  assert.doesNotMatch(calibrated.label, /не калибр/);
+  assert.match(calibrated.label, /92/);
+});
