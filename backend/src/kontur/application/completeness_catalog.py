@@ -54,8 +54,8 @@ def completeness_rows_from_catalog(
     """Строки sections.completeness: каталог × стадия.
 
     MISSING стадия → outcome=MISSING (список ожидаемых документов).
-    UPLOADED/PARTIAL → outcome=PRESENT/PARTIAL (стадия доступна; поштучный
-    presence по разделу не утверждаем — BRIEF_PRESENCE_W2: +0 executable).
+    UPLOADED → STAGE_UPLOADED_NOT_VERIFIED; PARTIAL → STAGE_PARTIAL_NOT_VERIFIED.
+    Не заявляем PRESENT раздела (BRIEF_PRESENCE_W2: +0 executable).
     """
 
     sections = catalog if catalog is not None else load_sections_catalog()
@@ -69,12 +69,14 @@ def completeness_rows_from_catalog(
             if not expected:
                 continue
             state = completeness.get(stage, Completeness.MISSING)
+            # Не заявляем PRESENT раздела: presence W2 не executable.
+            # Стадия загружена ≠ раздел проверен по каталогу.
             if state is Completeness.MISSING:
                 outcome = "MISSING"
             elif state is Completeness.PARTIAL:
-                outcome = "PARTIAL"
+                outcome = "STAGE_PARTIAL_NOT_VERIFIED"
             else:
-                outcome = "PRESENT"
+                outcome = "STAGE_UPLOADED_NOT_VERIFIED"
             rows.append(
                 {
                     "section_code": code,
@@ -87,7 +89,7 @@ def completeness_rows_from_catalog(
                     # совместимость с узкими колонками экспорта (finding_id/rule_code/status)
                     "finding_id": f"completeness-{code}-{stage.value}",
                     "rule_code": f"COMPLETENESS-{code}",
-                    "finding_status": outcome,
+                    "finding_status": outcome,  # не finding.schema; для узких колонок экспорта
                     "rationale": (
                         f"Каталог раздела {code}: ожидается «{expected}» на стадии "
                         f"{stage.value}; комплектность стадии = {state.value}. "

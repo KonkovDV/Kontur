@@ -36,9 +36,10 @@ def test_missing_stage_lists_catalog_as_non_violations() -> None:
     assert rows
     assert all(row["counts_as_violation"] is False for row in rows)
     missing = [row for row in rows if row["outcome"] == "MISSING"]
-    present = [row for row in rows if row["outcome"] == "PRESENT"]
+    uploaded = [row for row in rows if row["outcome"] == "STAGE_UPLOADED_NOT_VERIFIED"]
     assert missing and all(row["stage"] in {"RD", "ID"} for row in missing)
-    assert present and all(row["stage"] == "PD" for row in present)
+    assert uploaded and all(row["stage"] == "PD" for row in uploaded)
+    assert all(row["outcome"] != "PRESENT" for row in rows)
 
 
 def test_assemble_fills_completeness_and_keeps_violation_count() -> None:
