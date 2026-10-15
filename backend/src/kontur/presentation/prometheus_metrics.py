@@ -1,6 +1,7 @@
 """§13 п.4–5: Prometheus /metrics для ядра (CPU/RAM процесса + счётчик загрузок).
 
-Findings/processing-метрики убраны (не были подключены; deferred). Не ELK и не алерты. Grafana/стек — отдельно (профиль observability, не default).
+Findings/processing-метрики убраны (не были подключены; deferred).
+Не ELK и не алерты. Grafana/стек — отдельно (профиль observability, не default).
 """
 
 from __future__ import annotations
