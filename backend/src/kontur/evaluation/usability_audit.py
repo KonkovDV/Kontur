@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TypedDict
@@ -319,15 +318,7 @@ def load_audit(path: Path) -> dict[str, object]:
     raise ValueError("ожидался каталог сессий или журнал UI")
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    if len(args) != 1:
-        print("usage: python -m kontur.evaluation.usability_audit <dir-or-file>", file=sys.stderr)
-        return 2
-    report = load_audit(Path(args[0]))
-    print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0
-
-
 if __name__ == "__main__":
+    from kontur.cli.usability_audit import main
+
     raise SystemExit(main())

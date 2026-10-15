@@ -12,11 +12,8 @@
 
 from __future__ import annotations
 
-import json
-import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from time import perf_counter
 from typing import Any
 
@@ -489,26 +486,7 @@ def _time_one_parameter() -> float:
     return elapsed
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    measurements: dict[str, Any] = {}
-    if "--from-json" in args:
-        index = args.index("--from-json")
-        if index + 1 >= len(args):
-            print("usage: python -m kontur.evaluation.tz11 [--from-json file]", file=sys.stderr)
-            return 2
-        loaded = json.loads(Path(args[index + 1]).read_text(encoding="utf-8"))
-        if not isinstance(loaded, dict):
-            print("ожидался объект измерений", file=sys.stderr)
-            return 2
-        measurements.update(loaded)
-    else:
-        measurements.update(measure_local())
-    results = evaluate(measurements)
-    print(render_table(results))
-    print(json.dumps(timings_evidence(results), ensure_ascii=False))
-    return 0
-
-
 if __name__ == "__main__":
+    from kontur.cli.tz11 import main
+
     raise SystemExit(main())
