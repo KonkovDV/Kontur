@@ -146,6 +146,68 @@ services:
     restart: unless-stopped
     ports: ["127.0.0.1:8000:8000"]
 
+  storage-integrity:
+    # §13 п.8: ежедневная сверка sha256(blob) == process_files.file_hash.
+    # Opt-in: docker compose --profile integrity up -d storage-integrity
+    # Результат — в логах + audit_log (STORAGE_INTEGRITY_MISMATCH) + health контейнера
+    # (unhealthy после неуспешного прогона). Доставки алертов (§13 п.7) НЕТ.
+    profiles: ["integrity"]
+    mem_limit: 512m
+    cpus: 0.50
+    pids_limit: 64
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        GIT_SHA: ${KONTUR_GIT_SHA:-unspecified}
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
+      KONTUR_OBJECT_STORE_URL: http://minio:9000
+      KONTUR_S3_ACCESS_KEY: kontur
+      KONTUR_S3_SECRET_KEY: kontur-dev-secret
+      KONTUR_S3_BUCKET: kontur
+      KONTUR_INTEGRITY_INTERVAL_S: ${KONTUR_INTEGRITY_INTERVAL_S:-86400}
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        while true; do
+        python -m kontur.cli.check_storage_integrity;
+        echo $$? > /tmp/integrity.last;
+        sleep "$${KONTUR_INTEGRITY_INTERVAL_S}";
+        done
+    healthcheck:
+      # Вывод виден в `docker inspect`: "not_yet_run" (файла результата ещё нет;
+      # не считается сбоем в start_period) или "failed rc=N" (последний прогон != 0).
+      test:
+        - CMD
+        - sh
+        - -c
+        - >-
+          if [ ! -f /tmp/integrity.last ]; then echo not_yet_run; exit 1; fi;
+          rc=$$(cat /tmp/integrity.last);
+          if [ "$$rc" = 0 ]; then exit 0; fi;
+          echo "failed rc=$$rc"; exit 1
+      interval: 60s
+      timeout: 5s
+      retries: 1
+      # Первый прогон по большому реестру может быть долгим: до его конца
+      # not_yet_run не делает контейнер unhealthy. Увеличьте при необходимости.
+      start_period: ${KONTUR_INTEGRITY_START_PERIOD:-30m}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
   outbox-relay:
     mem_limit: 384m
     cpus: 0.50

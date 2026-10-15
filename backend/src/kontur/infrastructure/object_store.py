@@ -9,6 +9,7 @@ S3-клиент создаётся лениво: lifespan API не падает,
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any, Protocol
 
 
@@ -42,6 +43,14 @@ class MemoryObjectStore:
 
     def get(self, process_id: str, file_id: str) -> bytes | None:
         return self._items.get(object_key(process_id, file_id))
+
+    def iter_chunks(
+        self, process_id: str, file_id: str, chunk_size: int = 1 << 20
+    ) -> Iterator[bytes] | None:
+        body = self._items.get(object_key(process_id, file_id))
+        if body is None:
+            return None
+        return (body[i : i + chunk_size] for i in range(0, len(body), chunk_size))
 
     def delete(self, process_id: str, file_id: str) -> None:
         self._items.pop(object_key(process_id, file_id), None)
@@ -118,6 +127,23 @@ class S3ObjectStore:
                 return None
             raise
         return bytes(response["Body"].read())
+
+    def iter_chunks(
+        self, process_id: str, file_id: str, chunk_size: int = 1 << 20
+    ) -> Iterator[bytes] | None:
+        """Потоковое чтение тела (для sha256 без загрузки целиком в RAM)."""
+        from botocore.exceptions import ClientError  # type: ignore[import-not-found,import-untyped,unused-ignore]
+
+        self._ensure_bucket()
+        key = object_key(process_id, file_id)
+        try:
+            response = self._get_client().get_object(Bucket=self._bucket, Key=key)
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code", "")
+            if code in {"404", "NoSuchKey", "NotFound"}:
+                return None
+            raise
+        return (bytes(chunk) for chunk in response["Body"].iter_chunks(chunk_size))
 
     def delete(self, process_id: str, file_id: str) -> None:
         self._ensure_bucket()
