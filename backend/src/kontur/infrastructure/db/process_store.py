@@ -101,6 +101,8 @@ class ProcessStore(Protocol):
 
     def load_audit(self, process_id: str) -> list[AuditEvent]: ...
 
+    def list_all_files(self) -> list[tuple[str, str, str]]: ...
+
     def next_protocol_version(self, object_id: str) -> int: ...
 
     def materialize_finalized(
@@ -370,6 +372,15 @@ class MemoryProcessStore:
     def load(self, process_id: str) -> ProcessSnapshot | None:
         return self._rows.get(process_id)
 
+    def list_all_files(self) -> list[tuple[str, str, str]]:
+        """(process_id, file_id, file_hash) по всем процессам, без фильтров."""
+
+        return [
+            (snap.process_id, item.file_id, item.file_hash.strip())
+            for pid, snap in sorted(self._rows.items())
+            for item in sorted(snap.files, key=lambda f: f.file_id)
+        ]
+
     def save(self, snapshot: ProcessSnapshot) -> None:
         validate_snapshot(snapshot)
         self._rows[snapshot.process_id] = snapshot
@@ -566,6 +577,12 @@ WHERE process_id = %(process_id)s
 ORDER BY file_id
 """
 
+SELECT_ALL_FILE_HASHES_SQL = """
+SELECT process_id, file_id, file_hash
+FROM process_files
+ORDER BY process_id, file_id
+"""
+
 SELECT_PROCESS_SQL = """
 SELECT id, object_id, process_state, scenario, matrix_version,
        model_version, dataset_version, parse_attempts, sync_attempts,
@@ -709,6 +726,12 @@ class PostgresProcessStore:
             input_manifest_hash=str(row[16]),
             files=files,
         )
+
+    def list_all_files(self) -> list[tuple[str, str, str]]:
+        """(process_id, file_id, file_hash) по всем process_files (§13 п.8)."""
+
+        cursor = self._connection.execute(SELECT_ALL_FILE_HASHES_SQL)  # type: ignore[attr-defined]
+        return [(str(r[0]), str(r[1]), str(r[2] or "").strip()) for r in cursor.fetchall()]
 
     def save(self, snapshot: ProcessSnapshot) -> None:
         validate_snapshot(snapshot)

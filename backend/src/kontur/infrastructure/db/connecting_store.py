@@ -26,6 +26,10 @@ class ConnectingPostgresProcessStore:
         with psycopg.connect(self._dsn) as connection:
             return self._store(connection).load(process_id)
 
+    def list_all_files(self) -> list[tuple[str, str, str]]:
+        with psycopg.connect(self._dsn) as connection:
+            return self._store(connection).list_all_files()
+
     def save(self, snapshot: ProcessSnapshot) -> None:
         with psycopg.connect(self._dsn) as connection:
             self._store(connection).save(snapshot)

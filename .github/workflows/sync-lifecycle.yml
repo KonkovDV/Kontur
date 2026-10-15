@@ -37,3 +37,7 @@ jobs:
         env:
           KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
         run: python scripts/check_sync_lifecycle.py
+      - name: Prove storage integrity job on Postgres (list_all_files, audit, fail-closed)
+        env:
+          KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
+        run: python scripts/check_integrity_pg_live.py
