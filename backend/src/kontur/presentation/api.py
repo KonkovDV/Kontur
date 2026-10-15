@@ -58,6 +58,7 @@ from kontur.presentation.auth import (
     parse_bearer,
 )
 from kontur.presentation.json_logging import JsonRequestLogMiddleware, configure_json_logging
+from kontur.presentation.prometheus_metrics import metrics_response, note_upload
 from kontur.presentation.rbac import (
     AuthenticationRequiredError,
     PermissionDeniedError,
@@ -252,6 +253,10 @@ def _upload_receipt(
     attached: list[dict[str, str]],
     rejected: tuple[Rejection, ...],
 ) -> dict[str, object]:
+    if attached:
+        note_upload("accepted")
+    for _item in rejected:
+        note_upload("rejected")
     return {
         "process_id": record.process_id,
         "accepted": attached,
@@ -306,6 +311,13 @@ async def _empty_package(_request: object, exc: EmptyPackageError) -> JSONRespon
 @app.get("/api/v1/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/metrics", include_in_schema=False)
+def prometheus_metrics(request: Request) -> Response:
+    """Prometheus exposition; не часть публичного /api/v1."""
+
+    return metrics_response(request)
 
 
 @app.get("/api/v1/system/capabilities")

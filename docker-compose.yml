@@ -41,7 +41,8 @@ services:
       RABBITMQ_DEFAULT_USER: kontur
       RABBITMQ_DEFAULT_PASS: kontur
     # Quorum-очередь relay: at-least-once; event_id — ключ будущего inbox/dedup.
-    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
+    # §13 п.4 queue depth: rabbitmq_prometheus → :15692 (не default scrape снаружи).
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672", "127.0.0.1:15692:15692"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -49,6 +50,7 @@ services:
       retries: 20
     volumes:
       - rabbitmq:/var/lib/rabbitmq
+      - ./deploy/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
 
   minio:
     # Docker Hub удалил minio/minio (404). Quay без логина отвечает 401.
@@ -214,6 +216,9 @@ services:
       - no-new-privileges:true
     environment:
       KONTUR_CORE_URL: http://core:8000
+      # /metrics: Bearer-токен; без токена -> 403, если не KONTUR_METRICS_ALLOW_ANON=1.
+      KONTUR_METRICS_TOKEN: ${KONTUR_METRICS_TOKEN:-}
+      KONTUR_METRICS_ALLOW_ANON: ${KONTUR_METRICS_ALLOW_ANON:-0}
     depends_on:
       core:
         condition: service_healthy
