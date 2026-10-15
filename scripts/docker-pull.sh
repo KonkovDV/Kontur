@@ -10,7 +10,7 @@ IMAGES=(
   "redis:7-alpine"
   "rabbitmq:3.13-management-alpine"
   "bitnamilegacy/minio:2025.7.23-debian-12-r5"
-  "clamav/clamav:1.5"
+  "clamav/clamav:1.4"
 )
 
 echo "==> Pulling images for offline use..."
