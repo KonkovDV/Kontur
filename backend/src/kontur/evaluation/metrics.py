@@ -223,6 +223,62 @@ def score_key_fields(fields: Sequence[Mapping[str, object]]) -> dict[str, object
     }
 
 
+LINKAGE_QUOTA = 30
+LINKAGE_FIELDS: tuple[str, ...] = ("object_id", "stage", "document_code", "revision")
+
+
+def document_linkage_exact(
+    reference: Mapping[str, object], hypothesis: Mapping[str, object]
+) -> bool:
+    """Точный выбор object_id + стадии + шифра + актуальной редакции (§14.3 связка)."""
+
+    for key in LINKAGE_FIELDS:
+        ref = normalize_key_field(str(reference.get(key) or ""))
+        hyp = normalize_key_field(str(hypothesis.get(key) or ""))
+        if not ref or ref != hyp:
+            return False
+    return True
+
+
+def score_document_linkage(groups: Sequence[Mapping[str, object]]) -> dict[str, object]:
+    """Доля evidence_group с верной связкой. n < 30 → measured=false, порог 0,95 не заявляем.
+
+    Строка: ``{"reference": {...}, "hypothesis": {...}}`` с ключами
+    object_id, stage, document_code, revision. Чуждая стадия / устаревшая
+    редакция / другой object_id — промах.
+    """
+
+    matches = 0
+    for item in groups:
+        reference = item.get("reference")
+        hypothesis = item.get("hypothesis")
+        if not isinstance(reference, Mapping) or not isinstance(hypothesis, Mapping):
+            raise ValueError("строка связки требует reference и hypothesis")
+        if document_linkage_exact(reference, hypothesis):
+            matches += 1
+    n = len(groups)
+    measured = n >= LINKAGE_QUOTA
+    interval = wilson(matches, n)
+    return {
+        "matches": matches,
+        "n": n,
+        "em": None if n == 0 else matches / n,
+        "ci95_low": None if n == 0 else interval.low,
+        "ci95_high": None if n == 0 else interval.high,
+        "quota": LINKAGE_QUOTA,
+        "measured": measured,
+        "threshold_met": measured and meets_threshold("document_linkage", interval),
+        "decides_threshold": measured,
+        "is_gold": False,
+        "note": (
+            "порог document_linkage ≥0,95 не заявляется при n < quota или без GOLD"
+            if not measured
+            else "SILVER/синтетика: порог по нижней границе Уильсона, не Gate"
+        ),
+    }
+
+
+
 def _open_ring(polygon: Polygon) -> Polygon:
     if len(polygon) >= 2 and polygon[0] == polygon[-1]:
         return polygon[:-1]

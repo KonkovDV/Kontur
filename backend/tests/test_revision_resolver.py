@@ -592,3 +592,55 @@ def test_inspector_overlay_does_not_override_not_approved() -> None:
         is ApprovalStatus.APPROVED
     )
 
+
+
+def test_w1_two_latest_heads_conflict() -> None:
+    """W1 #3: две «последние» редакции без successor → RevisionConflict, не CANDIDATE."""
+
+    a = _doc("pd-a", document_code="OV-1", approval=ApprovalStatus.APPROVED)
+    b = _doc("pd-b", document_code="OV-1", approval=ApprovalStatus.APPROVED)
+    with pytest.raises(RevisionConflict, match="несколько редакций"):
+        resolve_revision([a, b], DocStage.PD)
+
+
+def test_w1_strict_missing_approval_clarifies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """W1 #3: нет approval_status (UNKNOWN) при strict → CLARIFICATION_REQUIRED."""
+
+    monkeypatch.setenv("KONTUR_ETALON_POLICY", "strict")
+    doc = _doc("pd-x", approval=ApprovalStatus.UNKNOWN)
+    result = resolve_revision([doc], DocStage.PD)
+    assert result.status is ResolveStatus.CLARIFICATION_REQUIRED
+    assert result.resolved is None
+
+
+def test_w1_orphan_predecessor_does_not_pick_stale_as_etalon() -> None:
+    """W1 #3: разрыв predecessor у новой редакции — голова = new, old stale."""
+
+    old = replace(
+        _doc("pd-old", document_code="OV-1", approval=ApprovalStatus.APPROVED),
+        successor_file_id="pd-new",
+    )
+    # predecessor ссылается на отсутствующий id — граф не обязан быть симметричен
+    newer = replace(
+        _doc("pd-new", document_code="OV-1", approval=ApprovalStatus.APPROVED),
+        predecessor_file_id="pd-ghost",
+        successor_file_id=None,
+    )
+    result = resolve_revision([old, newer], DocStage.PD)
+    assert result.status is ResolveStatus.RESOLVED
+    assert result.resolved is not None
+    assert result.resolved.document.file_id == "pd-new"
+    assert result.resolved.is_stale is False
+
+
+def test_w1_two_heads_from_broken_bidirectional_links_conflict() -> None:
+    """W1 #3: разрыв, дающий две головы без successor → CLARIFICATION via conflict."""
+
+    a = _doc("pd-a", document_code="OV-1", approval=ApprovalStatus.APPROVED)
+    b = replace(
+        _doc("pd-b", document_code="OV-1", approval=ApprovalStatus.APPROVED),
+        predecessor_file_id="pd-missing",
+        successor_file_id="pd-also-missing",
+    )
+    with pytest.raises(RevisionConflict, match="несколько редакций"):
+        resolve_revision([a, b], DocStage.PD)

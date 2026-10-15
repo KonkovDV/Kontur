@@ -63,6 +63,9 @@ _STAMP_Y0 = 0.70
 _APPROVAL_ROW_DY = 0.04
 _APPROVAL_MAX_DX = 0.40
 
+# Детерминированный crop основной надписи ГОСТ (без VLM): нижняя полоса листа.
+# Нормализованные координаты после CropBox/MediaBox/Rotate, Y вниз.
+
 _STAGE_MAP = {
     "pd": DocStage.PD,
     "пд": DocStage.PD,
@@ -145,6 +148,69 @@ class DocumentPassport:
 def _join(tokens: Sequence[PageToken]) -> str:
     ordered = sorted(tokens, key=lambda item: reading_key(item.page, item.polygon_norm))
     return " ".join(item.text for item in ordered if item.text.strip())
+
+
+def stamp_region_polygon(*, y0: float = _STAMP_Y0) -> tuple[tuple[float, float], ...]:
+    """Прямоугольник зоны штампа в норм. координатах [0;1]. Без VLM / детектора."""
+
+    top = min(max(y0, 0.0), 0.95)
+    return ((0.0, top), (1.0, top), (1.0, 1.0), (0.0, 1.0))
+
+
+def stamp_crop_box(
+    tokens: Sequence[PageToken] | None = None,
+    *,
+    page: int | None = None,
+    y0: float = _STAMP_Y0,
+) -> tuple[float, float, float, float]:
+    """Нормализованный bbox кропа штампа для OCR dual-read.
+
+    Если в полосе есть токены — охватывающий прямоугольник с небольшим
+    запасом; иначе дефолтная нижняя полоса ГОСТ. Всегда в [0;1].
+    """
+
+    default = (0.0, min(max(y0, 0.0), 0.95), 1.0, 1.0)
+    if not tokens:
+        return default
+    pool = list(tokens)
+    if page is not None:
+        pool = [item for item in pool if item.page == page]
+    if not pool:
+        pool = list(tokens)
+    first_page = min(item.page for item in pool)
+    band = [
+        item
+        for item in pool
+        if item.page == first_page and bbox_from_polygon(item.polygon_norm)[1] >= y0
+    ]
+    if not band:
+        return default
+    x0, y_lo, x1, y_hi = bbox_from_polygon(band[0].polygon_norm)
+    for item in band[1:]:
+        left, top, right, bottom = bbox_from_polygon(item.polygon_norm)
+        x0 = min(x0, left)
+        y_lo = min(y_lo, top)
+        x1 = max(x1, right)
+        y_hi = max(y_hi, bottom)
+    pad = 0.02
+    return (
+        max(0.0, x0 - pad),
+        max(0.0, min(y_lo, y0) - pad),
+        min(1.0, x1 + pad),
+        min(1.0, y_hi + pad),
+    )
+
+
+def stamp_crop_polygon(
+    tokens: Sequence[PageToken] | None = None,
+    *,
+    page: int | None = None,
+    y0: float = _STAMP_Y0,
+) -> tuple[tuple[float, float], ...]:
+    """Четырёхугольник кропа штампа — вход для ocr_region_* / dual-read."""
+
+    x0, y_lo, x1, y_hi = stamp_crop_box(tokens, page=page, y0=y0)
+    return ((x0, y_lo), (x1, y_lo), (x1, y_hi), (x0, y_hi))
 
 
 def _stamp_tokens(tokens: Sequence[PageToken]) -> tuple[PageToken, ...]:
@@ -560,6 +626,8 @@ def read_passport(
     confidence = None
     if has_text:
         confidence = filled / len(KEY_FIELDS)
+    if crop_box is None:
+        crop_box = stamp_crop_box(tokens if tokens else None)
     return DocumentPassport(
         file_id=file_id,
         file_hash=file_hash,

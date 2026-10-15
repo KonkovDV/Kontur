@@ -22,10 +22,11 @@
 |---|---|---|
 | 1 | EM 5 полей штампа с n + 95% CI | **частично**: per-field EM + Wilson CI в `evaluation/metrics.py` (#352), отчёт на SILVER, не GOLD; экстракторы полей — в работе |
 | — | W1 ведомости КР/ИОС3/ИОС4 (`element_table`) | **сделано** (#350, 55→59 executable) |
-| 2–7 | связка ≥0,95, конфликт ревизий, PPM-102, ODI-115, SPZU-034, bbox на Rotate | открыто |
+| 2–7 | связка ≥0,95, конфликт ревизий, PPM-102, ODI-115, SPZU-034, bbox на Rotate | **частично**: #2 `score_document_linkage`; #3 ветки ревизий; #7 stamp crop+Rotate; #4–#6 остаются extractor_missing (graphic) |
 | 8–16, 18–20 | W2/W3 | открыто, по порядку §2 |
 | 17 | SBERT-якоря | **отложено** (SOTA-обзор: Defer до буфера после W1/W2) |
-| HITL | zoom-to-bbox, J/K, чипы уверенности | в работе (отдельный PR web) |
+| HITL | zoom-to-bbox, J/K, чипы уверенности | сделано (#355/#356); пороги UI uncalibrated (#359) |
+| — | Stamp crop без VLM | **сделано**: `stamp_crop_box` / `stamp_region_polygon`, crop_box в passport |
 
 Правило: любое изменение `executable` — только с экстрактором, 5 ветками триажа и фикстурами; JURY_ONEPAGER обновляется тем же PR.
 
@@ -36,12 +37,12 @@
 | # | Требование ТЗ (ссылка + цитата) | Статус и доказательство | Что сделать | Файлы | Тест / приёмка | Размер |
 |---|---|---|---|---|---|---|
 | 1 | §9.1 п.1, §14.3 «Ключевые поля»: «Exact Match для ключевых полей (шифр, стадия, редакция, номер листа/страницы, номер помещения или элемента) — не ниже 0,90» | Есть паспорт документа (`application/passport.py`, `metrics.py`), но поштучного EM по 5 полям в scorecard нет; acceptance `gold_ocr` = unmet | Экстракторы штампа для 5 полей с dual-read (векторный слой + OCR) и нормализацией: NFC, пробелы, знаки шифра не удалять. Если поле не найдено, LOW_QUALITY/ABSTAIN | `application/passport.py`, `application/normalize.py`, `infrastructure/pdfium_tokens.py`, `evaluation/metrics.py` | Фикстуры «найдено / нет / нечитаемо» на каждое поле; отчёт EM по полям с n и 95% CI на SILVER, явно помеченный как не GOLD | M |
-| 2 | §14.3 «Связка документов»: «Доля evidence_group с точным выбором object_id, стадии, шифра и актуальной редакции ≥ 0,95» | Инструмента замера нет в scorecard | Метрика связки в `evaluation/` на базе #1 и `revision_resolver` | `evaluation/metrics.py`, `cli/score.py` | Unit-тест на синтетику: верная связка, чужая стадия, устаревшая редакция | S |
-| 3 | §9.1 «Выбор актуальной редакции»: «При конфликте редакций… CLARIFICATION_REQUIRED… Устаревшая редакция не может использоваться как эталон» | `revision_resolver.py` есть; нужен e2e на ветки | Добить ветки: нет approval_status, две «последние» редакции, разрыв predecessor/successor | `application/revision_resolver.py`, тесты | Каждая ветка даёт CLARIFICATION_REQUIRED и не даёт CANDIDATE | S |
-| 4 | Прил.1 / §8, PPM-102 «Деление здания на пожарные отсеки» | exact_field, extractor_missing | Закрытый шаблон «пожарный отсек № N» плюс класс отсека в текстовом слое ППМ/АР | `application/extractors/` (семейство exact_field), `data/matrix/rules` | 5 веток (AUTO_NO_DIFFERENCE/CANDIDATE/MISSING_EVIDENCE/LOW_QUALITY/ABSTAIN) по правилу триажа | S–M |
-| 5 | ODI-115 «Технические параметры и наличие инвалидных подъемников» | exact_field, extractor_missing | Тип/грузоподъёмность из спецификации ОДИ и АР/ТХ, если значения текстовые; иначе оставить missing | то же | Фикстуры спецификаций; при отсутствии в тексте MISSING_EVIDENCE | M |
-| 6 | SPZU-034 «Точки и координаты подключения внешних сетей» | exact_field, extractor_missing | Сначала проверить, лежат ли координаты в тексте обеих стадий. Если да: шаблон координат + допуск. Если нет: обоснованно оставить missing | то же, `family_triage.json` | Решение по правилу 1–5 из EXTRACTOR_FAMILY_TRIAGE задокументировано | S (триаж) / M |
-| 7 | §9.1 п.4: «Координаты приводятся к диапазону [0;1]… после учёта CropBox, MediaBox и Rotate» (для доказательств ключевых полей) | Есть в `pdfium_*`; для новых экстракторов #1/#4–6 не проверено | Регресс: bbox из новых экстракторов на повёрнутых и смещённых листах | `tests/test_coordinates.py` | Rotate 90/180/270 + сдвинутый CropBox → bbox в [0;1], IoU ≥ 0,5 с эталоном | S |
+| 2 | §14.3 «Связка документов»: «Доля evidence_group с точным выбором object_id, стадии, шифра и актуальной редакции ≥ 0,95» | **метрика есть**: `score_document_linkage` (Wilson, quota=30); порог ≥0,95 не заявляем без n | Подключить к scorecard при размеченной выборке | `evaluation/metrics.py`, `cli/score.py` | Unit-тест на синтетику: верная связка, чужая стадия, устаревшая редакция | S |
+| 3 | §9.1 «Выбор актуальной редакции»: «При конфликте редакций… CLARIFICATION_REQUIRED… Устаревшая редакция не может использоваться как эталон» | **ветки покрыты тестами W1** (strict UNKNOWN, две головы, разрыв pred/succ) | — | `application/revision_resolver.py`, тесты | Каждая ветка даёт CLARIFICATION_REQUIRED и не даёт CANDIDATE | S |
+| 4 | Прил.1 / §8, PPM-102 «Деление здания на пожарные отсеки» | exact_field, **остаётся extractor_missing** (graphic triage) | Не переводим в executable: непрерывность стены ≠ текст «отсек № N» | `application/extractors/` (семейство exact_field), `data/matrix/rules` | 5 веток (AUTO_NO_DIFFERENCE/CANDIDATE/MISSING_EVIDENCE/LOW_QUALITY/ABSTAIN) по правилу триажа | S–M |
+| 5 | ODI-115 «Технические параметры и наличие инвалидных подъемников» | exact_field, **остаётся extractor_missing** (text_composite) | Честный missing до semantic/table extractor | то же | Фикстуры спецификаций; при отсутствии в тексте MISSING_EVIDENCE | M |
+| 6 | SPZU-034 «Точки и координаты подключения внешних сетей» | exact_field, **остаётся extractor_missing** (graphic) | Координатная сетка; regex по тексту недостаточен | то же, `family_triage.json` | Решение по правилу 1–5 из EXTRACTOR_FAMILY_TRIAGE задокументировано | S (триаж) / M |
+| 7 | §9.1 п.4: «Координаты приводятся к диапазону [0;1]… после учёта CropBox, MediaBox и Rotate» (для доказательств ключевых полей) | Есть в `pdfium_*`; **stamp crop + Rotate тест** | pdfium нормализует; `stamp_crop_*` в [0;1] | `tests/test_coordinates.py` | Rotate 90/180/270 + сдвинутый CropBox → bbox в [0;1], IoU ≥ 0,5 с эталоном | S |
 
 Остальные exact_field (AR-043, PPM-106: дуга створки; POS-085, SPZU-035, SPZU-039: графика) остаются `extractor_missing`. Доказательство там геометрическое, а не текстовое (см. EXTRACTOR_FAMILY_TRIAGE).
 
