@@ -103,6 +103,9 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # python 3.12 → 3.13/3.14 — минорный тег, но это смена интерпретатора; только отдельным PR.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-minor"]
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
