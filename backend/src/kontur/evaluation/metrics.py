@@ -227,7 +227,9 @@ LINKAGE_QUOTA = 30
 LINKAGE_FIELDS: tuple[str, ...] = ("object_id", "stage", "document_code", "revision")
 
 
-def document_linkage_exact(reference: Mapping[str, object], hypothesis: Mapping[str, object]) -> bool:
+def document_linkage_exact(
+    reference: Mapping[str, object], hypothesis: Mapping[str, object]
+) -> bool:
     """Точный выбор object_id + стадии + шифра + актуальной редакции (§14.3 связка)."""
 
     for key in LINKAGE_FIELDS:
