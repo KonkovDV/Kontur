@@ -1,0 +1,50 @@
+name: sbom
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    env:
+      SYFT_VERSION: "1.54.1"
+      # sha256 of syft_1.54.1_linux_amd64.tar.gz, computed from the downloaded release asset and
+      # matching both the release checksums file and the GitHub asset digest.
+      SYFT_SHA256: "c069905b391cc4c20a5ba65ad5c10be2a7ba074f8ea6ad203e24d14e303dad47"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install syft (pinned sha256)
+        run: |
+          set -euo pipefail
+          base="https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}"
+          tarball="syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          curl -sSfLO "${base}/${tarball}"
+          echo "${SYFT_SHA256}  ${tarball}" | sha256sum -c -
+          tar xzf "${tarball}" syft
+      - name: Generate CycloneDX SBOMs from lockfiles
+        run: |
+          set -euo pipefail
+          mkdir -p sbom pyin
+          # syft only recognises requirements*.txt; the lock is a pinned, hashed requirements file.
+          cp backend/requirements.lock pyin/requirements.txt
+          ./syft scan dir:pyin -q --override-default-catalogers python-package-cataloger \
+            -o cyclonedx-json=sbom/backend.cdx.json
+          for app in gateway web; do
+            ./syft scan "dir:${app}" -q --override-default-catalogers javascript-lock-cataloger \
+              --exclude './node_modules/**' -o "cyclonedx-json=sbom/${app}.cdx.json"
+          done
+          for f in sbom/*.cdx.json; do
+            n=$(jq '.components | length' "$f")
+            echo "$f: $n components"
+            test "$n" -gt 0
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-cyclonedx
+          path: sbom/
+          retention-days: 30
