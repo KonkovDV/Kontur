@@ -6,6 +6,7 @@ import json
 from collections.abc import Mapping, Sequence
 from datetime import UTC
 
+from kontur.application.completeness_catalog import completeness_rows_from_catalog
 from kontur.application.scenarios import CompletenessMap, detect_scenario
 from kontur.domain.models import DocStage, Finding
 from kontur.domain.status_map import PROTOCOL_STATUS, on_the_wire, tz_upload_status
@@ -179,6 +180,9 @@ def assemble_protocol(
 ) -> dict[str, object]:
     """Собрать протокол. Кандидаты не входят в violation_count.
 
+    Таблица (1) completeness — каталог sections.json × CompletenessMap;
+    counts_as_violation всегда false (не violation_count).
+
     AUTO_NO_DIFFERENCE кладётся только в `preliminary_no_difference` и не
     сериализуется в РиН: `on_the_wire` для него ложен, пока нет ответа на вопрос 8.
     """
@@ -188,7 +192,7 @@ def assemble_protocol(
         raise ValueError(f"{process_state}: ещё нет протокола (PENDING/PARSING)")
 
     sections: dict[str, list[object]] = {
-        "completeness": [],
+        "completeness": list(completeness_rows_from_catalog(completeness)),
         "candidates": [],
         "confirmed": [],
         "negative_verified": [],
