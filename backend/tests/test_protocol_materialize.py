@@ -262,7 +262,12 @@ def test_protocol_with_every_finding_status_matches_schema() -> None:
     for rows in sections.values():
         assert isinstance(rows, list)
         for row in rows:
-            if isinstance(row, dict) and "finding_status" in row:
+            if not isinstance(row, dict):
+                continue
+            # табл.(1) completeness — каталог, не finding.schema.json
+            if row.get("kind") == "section_catalog":
+                continue
+            if "finding_status" in row:
                 jsonschema.validate(row, schema)
                 seen.add(str(row["finding_status"]))
     assert seen == {status.value for status in FindingStatus}
