@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "test": "node --test src/limits.test.js src/logging.test.js src/metrics.test.js",
+    "test": "node --test src/limits.test.js src/logging.test.js src/metrics.test.js src/ratekey.test.js",
     "lint": "eslint src"
   },
   "dependencies": {

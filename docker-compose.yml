@@ -281,6 +281,12 @@ services:
       # /metrics: Bearer-токен; без токена -> 403, если не KONTUR_METRICS_ALLOW_ANON=1.
       KONTUR_METRICS_TOKEN: ${KONTUR_METRICS_TOKEN:-}
       KONTUR_METRICS_ALLOW_ANON: ${KONTUR_METRICS_ALLOW_ANON:-0}
+      # Rate-limit key: verified JWT sub, else client IP (X-Forwarded-For only from these peers).
+      KONTUR_JWT_ISSUER: ${KONTUR_JWT_ISSUER:-}
+      KONTUR_JWT_AUDIENCE: ${KONTUR_JWT_AUDIENCE:-}
+      KONTUR_JWT_ALGORITHM: ${KONTUR_JWT_ALGORITHM:-RS256}
+      KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY:-}
+      KONTUR_TRUSTED_PROXIES: ${KONTUR_TRUSTED_PROXIES:-}
     depends_on:
       core:
         condition: service_healthy
