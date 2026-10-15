@@ -3,8 +3,9 @@
 
 Errors (exit 1): schema violations, non-ISO or inverted dates, duplicate ids/identifiers, a rule
 ``normative_refs`` identifier missing from the registry.
-Warnings: a rule reference whose issuer, ``effective_from`` or ``mandatory`` differs from the
-registry (data drift to fix in the rule files), and entries not yet verified.
+Warnings: a rule reference whose issuer or ``mandatory`` differs from the registry, or whose
+``effective_from`` is earlier than the act's (a later date is a clause added by an amendment);
+and entries not yet verified.
 """
 
 from __future__ import annotations
@@ -28,6 +29,15 @@ def _date(value: Any) -> dt.date | None:
     if value is None:
         return None
     return dt.date.fromisoformat(str(value))
+
+
+def _later_clause(ref_date: Any, act_date: Any) -> bool:
+    """A clause added by a later amendment may cite a later date than the act itself."""
+    try:
+        start, cited = _date(act_date), _date(ref_date)
+    except ValueError:
+        return False
+    return start is not None and cited is not None and cited > start
 
 
 def check(
@@ -71,6 +81,8 @@ def check(
                 errors.append(f"{code}: normative_refs {ref['identifier']!r} not in registry")
                 continue
             for key in ("issuer", "effective_from", "mandatory"):
+                if key == "effective_from" and _later_clause(ref.get(key), act[key]):
+                    continue
                 if key in ref and ref[key] != act[key]:
                     warnings.append(
                         f"{code}: {ref['identifier']} {key}={ref[key]!r}, registry={act[key]!r}"

@@ -61,11 +61,11 @@
   "normative_refs": [
     {
       "identifier": "ФЗ № 261-ФЗ",
-      "issuer": "Федеральное Собрание России",
+      "issuer": "Российская Федерация",
       "clause": "Статья 11 (требования энергетической эффективности зданий)",
       "effective_from": "2009-11-23",
       "effective_to": null,
-      "mandatory": "bylaw",
+      "mandatory": "law",
       "layer": "organizer_matrix"
     }
   ],
