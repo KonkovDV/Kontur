@@ -60,3 +60,10 @@ GAP-EMB: вложения `/EmbeddedFile` пайплайн не видит (см
 | GAP-JWT-VERIFY | Проверенный JWT RS256/ES256; dotted-токен не падает в legacy; k6 без plaintext | PR #58 |
 | GAP-ISOLATE | PDF-разбор в spawn-процессе; таймаут terminate/kill дочернего, не поток API | pdf_guard.py |
 | GAP-PHASE-CLOCK | Четыре ключа `phase_seconds` на статусе: upload, parse, compare, protocol. Не норматив. Рестарт их не восстанавливает | runtime.py |
+
+## Durable blobs (P0)
+
+| ID | Суть | Статус |
+|---|---|---|
+| GAP-DURABLE-BLOBS | Тела PDF/PNG только в `record.blobs` не переживали рестарт core | **закрыт**: `ObjectStore` (MinIO/S3) + `file_path` в `process_files`; `wiring.build_workspace` на lifespan API |
+

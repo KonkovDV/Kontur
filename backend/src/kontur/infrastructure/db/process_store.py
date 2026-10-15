@@ -52,6 +52,7 @@ class FileRecord:
     size_bytes: int
     predecessor_file_id: str | None = None
     successor_file_id: str | None = None
+    file_path: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -548,16 +549,16 @@ DELETE_FINDINGS_SQL = "DELETE FROM process_findings WHERE process_id = %(process
 INSERT_FILE_SQL = """
 INSERT INTO process_files (
     process_id, file_id, file_hash, filename, doc_stage, size_bytes,
-    predecessor_file_id, successor_file_id
+    predecessor_file_id, successor_file_id, file_path
 ) VALUES (
     %(process_id)s, %(file_id)s, %(file_hash)s, %(filename)s, %(doc_stage)s, %(size_bytes)s,
-    %(predecessor_file_id)s, %(successor_file_id)s
+    %(predecessor_file_id)s, %(successor_file_id)s, %(file_path)s
 )
 """
 
 SELECT_FILES_SQL = """
 SELECT file_id, file_hash, filename, doc_stage, size_bytes,
-       predecessor_file_id, successor_file_id
+       predecessor_file_id, successor_file_id, file_path
 FROM process_files
 WHERE process_id = %(process_id)s
 ORDER BY file_id
@@ -682,6 +683,7 @@ class PostgresProcessStore:
                 size_bytes=int(item[4]),
                 predecessor_file_id=None if item[5] is None else str(item[5]),
                 successor_file_id=None if item[6] is None else str(item[6]),
+                file_path=None if len(item) < 8 or item[7] is None else str(item[7]),
             )
             for item in files_cursor.fetchall()
         )
@@ -731,6 +733,7 @@ class PostgresProcessStore:
                     "size_bytes": item.size_bytes,
                     "predecessor_file_id": item.predecessor_file_id,
                     "successor_file_id": item.successor_file_id,
+                    "file_path": item.file_path,
                 },
             )
 

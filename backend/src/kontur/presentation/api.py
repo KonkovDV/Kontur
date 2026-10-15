@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from time import perf_counter
 from typing import Annotated
 from uuid import uuid4
@@ -31,6 +32,7 @@ from kontur.application.protocol_export import (
 )
 from kontur.application.review import ACTION_TO_STATUS
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
+from kontur.application.wiring import build_workspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.cli.score import score_supplied
 from kontur.domain.capabilities import capabilities_payload
@@ -60,9 +62,17 @@ from kontur.presentation.upload_limits import (
     read_bounded_upload,
 )
 
-app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Postgres + MinIO из env; без env — память (pytest)."""
+
+    app.state.workspace = build_workspace()
+    yield
+
+
+app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton", lifespan=lifespan)
 app.add_middleware(ActualUploadLimitMiddleware)
-app.state.workspace = ProcessWorkspace()
+app.state.workspace = ProcessWorkspace()  # до startup: совместимость TestClient без lifespan-событий
 
 
 class FinalizeRequest(BaseModel):
@@ -507,10 +517,10 @@ def get_documents(
             file_hash=item.file_hash,
             filename=item.filename,
             doc_stage=item.doc_stage,
-            content=record.blobs[item.file_id],
+            content=body,
         )
         for item in record.files
-        if item.file_id in record.blobs
+        if (body := _workspace().get_blob(record, item.file_id)) is not None
     ]
     # Голова шифра и выбор инспектора, не порядок загрузки и не «ред. N».
     return {
@@ -575,7 +585,7 @@ def get_file_page_png(
     record = _record_for_access(process_id, object_id)
     if record is None:
         return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
-    raw = record.blobs.get(file_id)
+    raw = _workspace().get_blob(record, file_id)
     if raw is None or not any(item.file_id == file_id for item in record.files):
         return JSONResponse(status_code=404, content={"detail": "файл не найден"})
     try:

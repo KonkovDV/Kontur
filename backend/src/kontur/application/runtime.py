@@ -1,8 +1,7 @@
 """Состояние процессов: снимок в DAO, очередь — в process_findings / audit_log.
 
-Таблица `processes` хранит состояние и комплектность. HTTP по умолчанию держит
-контур в памяти и пишет снимок в MemoryProcessStore. Postgres включает
-адаптер с теми же таблицами schema.sql.
+Таблица `processes` хранит состояние и комплектность. Workspace собирает
+`wiring.build_workspace` (Postgres + MinIO при env; иначе память).
 """
 
 from __future__ import annotations
@@ -45,6 +44,7 @@ from kontur.domain.statuses import (
     SyncState,
 )
 from kontur.evaluation.submission_pack import build_input_manifest
+from kontur.infrastructure.object_store import MemoryObjectStore, ObjectStore
 from kontur.infrastructure.db.process_store import (
     FileRecord,
     MemoryProcessStore,
@@ -89,6 +89,7 @@ class AcceptedFile:
     successor_file_id: str | None = None
     manifest_section: str | None = None
     manifest_path: str | None = None
+    file_path: str | None = None
 
 
 _COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -242,9 +243,14 @@ def _manifest_hash(record: ProcessRecord) -> str:
 class ProcessWorkspace:
     """Процессы в памяти плюс снимок DAO: находки, файлы, комплектность, аудит."""
 
-    def __init__(self, store: ProcessStore | None = None) -> None:
+    def __init__(
+        self,
+        store: ProcessStore | None = None,
+        objects: ObjectStore | None = None,
+    ) -> None:
         self._items: dict[str, ProcessRecord] = {}
         self._store: ProcessStore = store if store is not None else MemoryProcessStore()
+        self._objects: ObjectStore = objects if objects is not None else MemoryObjectStore()
         self._pipeline = PipelineWorker(self._run_scheduled)
 
     def reset(self) -> None:
@@ -253,6 +259,8 @@ class ProcessWorkspace:
         store = self._store
         if isinstance(store, MemoryProcessStore):
             store.clear()
+        if isinstance(self._objects, MemoryObjectStore):
+            self._objects.clear()
 
     def _snapshot(self, record: ProcessRecord) -> ProcessSnapshot:
         return ProcessSnapshot(
@@ -282,6 +290,7 @@ class ProcessWorkspace:
                     size_bytes=item.size_bytes,
                     predecessor_file_id=item.predecessor_file_id,
                     successor_file_id=item.successor_file_id,
+                    file_path=item.file_path,
                 )
                 for item in record.files
             ),
@@ -291,7 +300,7 @@ class ProcessWorkspace:
         self._store.save(self._snapshot(record))
 
     def _hydrate(self, snapshot: ProcessSnapshot) -> ProcessRecord:
-        return ProcessRecord(
+        record = ProcessRecord(
             process_id=snapshot.process_id,
             object_id=snapshot.object_id,
             process_state=snapshot.process_state,
@@ -320,10 +329,16 @@ class ProcessWorkspace:
                     size_bytes=item.size_bytes,
                     predecessor_file_id=item.predecessor_file_id,
                     successor_file_id=item.successor_file_id,
+                    file_path=item.file_path,
                 )
                 for item in snapshot.files
             ],
         )
+        for item in record.files:
+            body = self._objects.get(record.process_id, item.file_id)
+            if body is not None:
+                record.blobs[item.file_id] = body
+        return record
 
     def load_protocol(self, protocol_id: str) -> dict[str, object] | None:
         return self._store.load_protocol(protocol_id)
@@ -422,9 +437,26 @@ class ProcessWorkspace:
         return True
 
     def keep_blob(self, record: ProcessRecord, file_id: str, content: bytes) -> None:
-        """Тело файла только в памяти процесса: Postgres снимок его не хранит."""
+        """Тело в ObjectStore и кэше; file_path в метаданных; снимок обновляется."""
 
+        key = self._objects.put(record.process_id, file_id, content)
         record.blobs[file_id] = content
+        for item in record.files:
+            if item.file_id == file_id:
+                item.file_path = key
+                break
+        self._persist(record)
+
+    def get_blob(self, record: ProcessRecord, file_id: str) -> bytes | None:
+        """Кэш процесса, иначе ObjectStore (после рестарта API при MinIO)."""
+
+        cached = record.blobs.get(file_id)
+        if cached is not None:
+            return cached
+        loaded = self._objects.get(record.process_id, file_id)
+        if loaded is not None:
+            record.blobs[file_id] = loaded
+        return loaded
 
     def note_phase(self, record: ProcessRecord, name: str, seconds: float) -> None:
         """Записать часы загрузки или сборки протокола. Разбор и сравнение пишет пайплайн."""
@@ -492,7 +524,7 @@ class ProcessWorkspace:
         )
         known = {stored.file_id for stored in record.files}
         for expanded in report.expanded_files:
-            record.blobs[expanded.file_id] = report.expanded_blobs[expanded.file_id]
+            self.keep_blob(record, expanded.file_id, report.expanded_blobs[expanded.file_id])
             if expanded.file_id in known:
                 continue
             known.add(expanded.file_id)
@@ -694,7 +726,7 @@ class ProcessWorkspace:
         match = next((item for item in record.files if item.file_id == file_id), None)
         if match is None:
             raise KeyError(file_id)
-        raw = record.blobs.get(file_id)
+        raw = self.get_blob(record, file_id)
         if raw is None:
             raise TransitionError("нет содержимого файла; повторите загрузку")
         stamp = stamp_approval_from_pdf(

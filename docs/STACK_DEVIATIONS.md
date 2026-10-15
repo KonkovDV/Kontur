@@ -17,3 +17,10 @@ pull-модель с `process_id` и статусами, воспроизвод�
 | Промышленный CI/CD | GitHub Actions и Docker Compose | Ответ 2: конкретная CI-платформа не является недопуском |
 
 Гейты I/J/K/L этой таблицей не закрываются.
+
+## Object store (MinIO/S3)
+
+Compose поднимает MinIO; `core` получает `KONTUR_OBJECT_STORE_URL` / ключи.
+Без URL (pytest) — `MemoryObjectStore`. Метаданные процесса — Postgres/`MemoryProcessStore`;
+байты — object store по ключу `{process_id}/{file_id}` (`file_path` в `process_files`).
+
