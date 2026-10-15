@@ -4,7 +4,7 @@
 
 | Что | Где |
 |---|---|
-| Prometheus exposition gateway | `GET :3000/metrics`, **Bearer `KONTUR_METRICS_TOKEN`**; без токена 403 (кроме `KONTUR_METRICS_ALLOW_ANON=1`) (`kontur_gateway_*`, `http_requests_total`, latency histogram) |
+| Prometheus exposition gateway | `GET :3000/metrics`, **Bearer `KONTUR_METRICS_TOKEN`**; токен задан, но заголовок отсутствует/неверный → 401; токен не задан → 403 (кроме `KONTUR_METRICS_ALLOW_ANON=1`); сравнение constant-time (`kontur_gateway_*`, `http_requests_total`, latency histogram) |
 | Prometheus exposition core | `GET :8000/metrics` (process_* + `kontur_uploads_total` (findings/processing-метрики не реализованы — deferred)) |
 | RabbitMQ queue metrics | плагин `rabbitmq_prometheus`, порт `127.0.0.1:15692` (`rabbitmq_queue_messages_ready`) |
 

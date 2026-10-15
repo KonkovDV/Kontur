@@ -1,5 +1,7 @@
 /** §13 п.4–5: Prometheus /metrics для gateway (CPU/RAM процесса, RPS, latency, 5xx). */
 
+import crypto from "node:crypto";
+
 import client from "prom-client";
 
 const register = new client.Registry();
@@ -79,11 +81,22 @@ export function normalizeRoute(path) {
  * Доступ к /metrics: Bearer KONTUR_METRICS_TOKEN; без токена — 403, если не
  * задан KONTUR_METRICS_ALLOW_ANON=1 (осознанный анонимный режим, напр. loopback).
  */
+function digest(value) {
+  return crypto.createHash("sha256").update(value, "utf8").digest();
+}
+
+/** Constant-time Bearer check; an empty configured token never matches. */
+export function tokenMatches(header, token) {
+  if (typeof token !== "string" || token.length === 0) return false;
+  const presented = typeof header === "string" && header.startsWith("Bearer ") ? header.slice(7) : "";
+  return crypto.timingSafeEqual(digest(presented), digest(token)) && presented.length > 0;
+}
+
 export function metricsAuth({ token = process.env.KONTUR_METRICS_TOKEN ?? "", allowAnon = process.env.KONTUR_METRICS_ALLOW_ANON === "1" } = {}) {
+  const configured = typeof token === "string" ? token.trim() : "";
   return (req, res, next) => {
-    if (token) {
-      const header = req.header("authorization") ?? "";
-      if (header === `Bearer ${token}`) return next();
+    if (configured) {
+      if (tokenMatches(req.header("authorization") ?? "", configured)) return next();
       res.status(401).json({ error: "METRICS_UNAUTHORIZED" });
       return undefined;
     }

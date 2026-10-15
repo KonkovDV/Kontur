@@ -4,7 +4,7 @@ import http from "node:http";
 import test from "node:test";
 
 import { createApp } from "./server.js";
-import { normalizeRoute } from "./metrics.js";
+import { normalizeRoute, tokenMatches } from "./metrics.js";
 
 test("normalizeRoute maps known templates, everything else is unmatched", () => {
   assert.equal(
@@ -79,4 +79,12 @@ test("GET /metrics is Prometheus text with gateway process + http counters", asy
   assert.doesNotMatch(leakedBody, /kontur_gateway_process_cpu/);
 
   server.close();
+});
+
+test("tokenMatches: constant-time compare, empty token never matches", () => {
+  assert.equal(tokenMatches("Bearer s3", "s3"), true);
+  assert.equal(tokenMatches("Bearer s4", "s3"), false);
+  assert.equal(tokenMatches("Bearer ", ""), false);
+  assert.equal(tokenMatches("", ""), false);
+  assert.equal(tokenMatches("s3", "s3"), false);
 });
