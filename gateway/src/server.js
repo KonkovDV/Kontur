@@ -12,6 +12,7 @@ import { fileURLToPath } from "url";
 import pino from "pino";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
+import { jwtConfigFromEnv, parseTrustedProxies, rateLimitKey } from "./ratekey.js";
 import { metricsAuth, metricsHandler, metricsMiddleware } from "./metrics.js";
 import {
   MAX_BATCH_BYTES,
@@ -106,9 +107,6 @@ function isFinalize(req) {
   return req.method === "POST" && FINALIZE_PATH.test(req.originalUrl);
 }
 
-function clientKey(req) {
-  return req.socket?.remoteAddress ?? "unknown";
-}
 
 function readBody(req, maxBatchBytes) {
   return new Promise((resolve, rejectRead) => {
@@ -168,12 +166,16 @@ export function createApp({
   finalizeLimit = FINALIZE_LIMIT,
   finalizeWindowMs = FINALIZE_WINDOW_MS,
   coreUrl = CORE_URL,
+  jwt = jwtConfigFromEnv(),
+  trustedProxies = parseTrustedProxies(process.env.KONTUR_TRUSTED_PROXIES),
   metricsToken = process.env.KONTUR_METRICS_TOKEN ?? "",
   metricsAllowAnon = process.env.KONTUR_METRICS_ALLOW_ANON === "1",
 } = {}) {
   const app = express();
   const allowUpload = createUploadLimiter(uploadLimit, uploadWindowMs);
   const allowFinalize = createUploadLimiter(finalizeLimit, finalizeWindowMs);
+  const trusted = trustedProxies instanceof Set ? trustedProxies : parseTrustedProxies(trustedProxies);
+  const clientKey = (req) => rateLimitKey(req, { jwt, trustedProxies: trusted });
 
   // /metrics до прокси и лимитеров; не уходит в ядро.
   app.get(
