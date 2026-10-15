@@ -26,9 +26,10 @@ type Props = {
   card: EvidenceCard;
   pageImages?: Partial<Record<StagePane, string>>;
   children?: ReactNode;
+  zoomed?: boolean;
 };
 
-export function EvidenceViewer({ card, pageImages, children }: Props) {
+export function EvidenceViewer({ card, pageImages, children, zoomed = false }: Props) {
   const finding = card.finding;
   const decision = finding.inspector_decision;
   return (
@@ -41,6 +42,7 @@ export function EvidenceViewer({ card, pageImages, children }: Props) {
             role={STAGE_ROLE[stage]}
             fragment={fragmentByStage(card, stage)}
             pageImageUrl={pageImages?.[stage]}
+            zoomed={zoomed}
           />
         ))}
       </div>
@@ -78,6 +80,7 @@ export function EvidenceViewer({ card, pageImages, children }: Props) {
             ))}
           </ul>
         )}
+        <p className="gate-note">Клавиши: Z — zoom к bbox, J/K — следующая/предыдущая находка, C/R/Q — решение.</p>
         <p className="gate-note">карточка не закрывает Gate K</p>
         {children}
       </section>

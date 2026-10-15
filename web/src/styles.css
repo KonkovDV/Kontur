@@ -284,3 +284,19 @@ select {
     margin-left: 0;
   }
 }
+
+.page-frame--zoomed {
+  overflow: hidden;
+  outline: 2px solid #a31515;
+}
+
+.page-zoom {
+  position: relative;
+  transition: transform 120ms ease-out;
+}
+
+.conf-chip { display: inline-block; padding: 0 0.4em; border-radius: 0.6em; font-size: 0.85em; border: 1px solid #333; }
+.conf-chip--high { background: #dbe9f6; border-style: solid; }
+.conf-chip--mid { background: #fdf0c8; border-style: dashed; }
+.conf-chip--low { background: #f6dcc8; border-style: dotted; }
+.conf-chip--abstain { background: #e6e6e6; border-style: double; }

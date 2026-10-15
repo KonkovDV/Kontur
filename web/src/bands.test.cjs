@@ -27,3 +27,37 @@ test("a refusal is not a confirmation", () => {
   assert.equal(isCheckRefusal("CLARIFICATION_REQUIRED"), false);
   assert.equal(isCheckRefusal("CANDIDATE"), false);
 });
+
+const { zoomTransform, stepQueue } = require("../dist/bands.cjs");
+
+test("zoomTransform keeps bbox inside the frame and never shrinks the page", () => {
+  const full = zoomTransform({ x0: 0, y0: 0, x1: 1, y1: 1 });
+  assert.equal(full.scale, 1);
+  const z = zoomTransform({ x0: 0.8, y0: 0.85, x1: 0.95, y1: 0.95 });
+  assert.ok(z.scale > 1 && z.scale <= 8);
+  const left = -z.txPct / 100;
+  const top = -z.tyPct / 100;
+  assert.ok(left <= 0.8 && left + 1 / z.scale >= 0.95);
+  assert.ok(top <= 0.85 && top + 1 / z.scale >= 0.95);
+  assert.ok(left + 1 / z.scale <= 1 + 1e-9);
+  assert.equal(zoomTransform({ x0: 0.5, y0: 0.5, x1: 0.5, y1: 0.5 }, 0).scale, 8);
+});
+
+test("stepQueue cycles and handles empty/unknown", () => {
+  assert.equal(stepQueue([], null, 1), null);
+  assert.equal(stepQueue(["a", "b"], null, 1), "a");
+  assert.equal(stepQueue(["a", "b"], null, -1), "b");
+  assert.equal(stepQueue(["a", "b"], "b", 1), "a");
+  assert.equal(stepQueue(["a", "b"], "a", -1), "b");
+});
+
+const { confidenceChip } = require("../dist/bands.cjs");
+
+test("confidenceChip buckets are textual and abstain wins", () => {
+  assert.equal(confidenceChip(0.95).bucket, "high");
+  assert.equal(confidenceChip(0.75).bucket, "mid");
+  assert.equal(confidenceChip(0.2).bucket, "low");
+  assert.equal(confidenceChip(0.99, "ABSTAIN").bucket, "abstain");
+  assert.equal(confidenceChip(undefined).bucket, "abstain");
+  assert.match(confidenceChip(0.95).label, /90/);
+});
