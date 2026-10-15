@@ -32,8 +32,8 @@ from kontur.application.protocol_export import (
 )
 from kontur.application.review import ACTION_TO_STATUS
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
-from kontur.application.wiring import build_workspace
 from kontur.application.scenarios import CompletenessMap
+from kontur.application.wiring import build_workspace
 from kontur.cli.score import score_supplied
 from kontur.domain.capabilities import capabilities_payload
 from kontur.domain.models import DocStage, Finding
@@ -62,6 +62,7 @@ from kontur.presentation.upload_limits import (
     read_bounded_upload,
 )
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Postgres + MinIO из env; без env — память (pytest)."""
@@ -72,7 +73,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton", lifespan=lifespan)
 app.add_middleware(ActualUploadLimitMiddleware)
-app.state.workspace = ProcessWorkspace()  # до startup: совместимость TestClient без lifespan-событий
+app.state.workspace = ProcessWorkspace()  # до lifespan: TestClient
 
 
 class FinalizeRequest(BaseModel):

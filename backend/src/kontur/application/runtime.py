@@ -44,13 +44,13 @@ from kontur.domain.statuses import (
     SyncState,
 )
 from kontur.evaluation.submission_pack import build_input_manifest
-from kontur.infrastructure.object_store import MemoryObjectStore, ObjectStore
 from kontur.infrastructure.db.process_store import (
     FileRecord,
     MemoryProcessStore,
     ProcessSnapshot,
     ProcessStore,
 )
+from kontur.infrastructure.object_store import MemoryObjectStore, ObjectStore
 
 
 class MemoryAudit:

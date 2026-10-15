@@ -2,6 +2,9 @@
 
 Метаданные процесса живут в ProcessStore; байты PDF — здесь.
 Ключ объекта: ``{process_id}/{file_id}``.
+
+S3-клиент создаётся лениво: lifespan API не падает, если MinIO ещё не в DNS
+(smoke/partial compose). Bucket — при первом put/get.
 """
 
 from __future__ import annotations
@@ -48,7 +51,7 @@ class MemoryObjectStore:
 
 
 class S3ObjectStore:
-    """MinIO / S3 через boto3. Bucket создаётся при первом put, если его нет."""
+    """MinIO / S3 через boto3. Клиент и bucket — при первом обращении."""
 
     def __init__(
         self,
@@ -61,48 +64,63 @@ class S3ObjectStore:
     ) -> None:
         if not endpoint_url.strip() or not bucket.strip():
             raise ValueError("endpoint_url и bucket обязательны")
-        import boto3
-        from botocore.client import Config
-
+        self._endpoint_url = endpoint_url
+        self._access_key = access_key
+        self._secret_key = secret_key
         self._bucket = bucket
-        self._client = boto3.client(
-            "s3",
-            endpoint_url=endpoint_url,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            region_name=region,
-            config=Config(signature_version="s3v4"),
-        )
-        self._ensure_bucket()
+        self._region = region
+        self._client = None
+        self._bucket_ready = False
+
+    def _get_client(self):
+        if self._client is None:
+            import boto3
+            from botocore.client import Config
+
+            self._client = boto3.client(
+                "s3",
+                endpoint_url=self._endpoint_url,
+                aws_access_key_id=self._access_key,
+                aws_secret_access_key=self._secret_key,
+                region_name=self._region,
+                config=Config(signature_version="s3v4"),
+            )
+        return self._client
 
     def _ensure_bucket(self) -> None:
+        if self._bucket_ready:
+            return
         from botocore.exceptions import ClientError
 
+        client = self._get_client()
         try:
-            self._client.head_bucket(Bucket=self._bucket)
+            client.head_bucket(Bucket=self._bucket)
         except ClientError:
-            self._client.create_bucket(Bucket=self._bucket)
+            client.create_bucket(Bucket=self._bucket)
+        self._bucket_ready = True
 
     def put(self, process_id: str, file_id: str, content: bytes) -> str:
+        self._ensure_bucket()
         key = object_key(process_id, file_id)
-        self._client.put_object(Bucket=self._bucket, Key=key, Body=content)
+        self._get_client().put_object(Bucket=self._bucket, Key=key, Body=content)
         return key
 
     def get(self, process_id: str, file_id: str) -> bytes | None:
         from botocore.exceptions import ClientError
 
+        self._ensure_bucket()
         key = object_key(process_id, file_id)
         try:
-            response = self._client.get_object(Bucket=self._bucket, Key=key)
+            response = self._get_client().get_object(Bucket=self._bucket, Key=key)
         except ClientError as exc:
             code = exc.response.get("Error", {}).get("Code", "")
             if code in {"404", "NoSuchKey", "NotFound"}:
                 return None
             raise
-        body = response["Body"].read()
-        return bytes(body)
+        return bytes(response["Body"].read())
 
     def delete(self, process_id: str, file_id: str) -> None:
-        self._client.delete_object(
+        self._ensure_bucket()
+        self._get_client().delete_object(
             Bucket=self._bucket, Key=object_key(process_id, file_id)
         )
