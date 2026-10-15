@@ -15,8 +15,8 @@
 
 ## Матрица честно: 55 / 132
 
-- **executable:** 55  
-- **extractor_missing:** 72  
+- **executable:** 59  
+- **extractor_missing:** 68  
 - **advisory:** 1  
 - **source_missing:** 4  
 

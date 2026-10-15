@@ -14,7 +14,7 @@
 
 | Контур | Смысл | Сейчас |
 |---|---|---|
-| Code | Функции и автотесты | часть HTTP/матрицы/протокола; 55 executable из 132 |
+| Code | Функции и автотесты | часть HTTP/матрицы/протокола; 59 executable из 132 |
 | Acceptance | Пороги на frozen/GOLD с 95% CI | не измерены; 6 gold-позитивов < n=16 для recall |
 | Production | OIDC, TLS, AV, backup, SLA | JWT containment и hardening контейнеров; ruleset `main-pr-and-ci` (id 23890545), обязательных ревью 0; не OIDC и не закрытие гейтов I/J/K/L |
 
@@ -28,4 +28,4 @@ OSINT Document AI (срез 28.09.2026, литература 21.09, не bake-of
 Поштучный триаж семейств `exact_field` / `presence`:
 [`EXTRACTOR_FAMILY_TRIAGE.md`](EXTRACTOR_FAMILY_TRIAGE.md) и
 [`family_triage.json`](../data/matrix/family_triage.json). Живая разбивка —
-`executable` 55, `extractor_missing` 72, `advisory` 1, `source_missing` 4.
+`executable` 59, `extractor_missing` 68, `advisory` 1, `source_missing` 4.

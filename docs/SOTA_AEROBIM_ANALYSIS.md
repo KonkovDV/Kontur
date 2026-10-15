@@ -43,7 +43,7 @@ PR #4 содержал тот же текст одной строкой base64 �
          → протокол
 ```
 
-Покрытие на сегодня — 55 executable, 72 `extractor_missing`, 1 advisory,
+Покрытие на сегодня — 59 executable, 68 `extractor_missing`, 1 advisory,
 4 `source_missing`. Раньше в этом файле стояло «исполняется только PZ-001».
 OCR на SILVER ниже 0,95. Пробелы — в [KNOWN_GAPS.md](KNOWN_GAPS.md).
 

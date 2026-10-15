@@ -5,14 +5,14 @@
   "unit": "мм",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Уменьшение толщины стен лифтовых шахт или пилонов диафрагм жесткости.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
       "RD"
     ],
     "object_types": [],
-    "condition": null
+    "condition": "Ведомость элементов: в строке марка (ПМ-1, Стм1) и одно число толщины в мм. Сечения «500x500» и разный набор марок — не склеиваются."
   },
   "sources": {
     "pd": {
@@ -26,7 +26,7 @@
     }
   },
   "extractor": {
-    "type": "number",
+    "type": "element_table",
     "regex": null,
     "anchors": [
       "Толщина несущих монолитных стен (ядра жесткости)"
