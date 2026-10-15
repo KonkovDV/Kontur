@@ -199,3 +199,34 @@ acts:
     status: typo_in_source
     note: ТЗ пишет «№ 61-ФЗ»; реквизиты соответствуют Закону РФ № 4802-1 «О статусе столицы». Вопрос 5 организатору.
     verified: false
+  # XML schemas for ПД section 1 «Пояснительная записка» (Минстрой publishes, Главгосэкспертиза
+  # enforces on ЕЦПЭ/АИС). effective_to is the last day the version is accepted for new submissions.
+  - id: xsd-p9-4-v01-06
+    identifier: XML-схема П9.4 «Пояснительная записка» 01.06
+    issuer: Минстрой России
+    act_type: xml_schema
+    schema_code: П9
+    schema_version: "01.06"
+    mandatory: bylaw
+    effective_from: "2026-01-29"
+    effective_to: "2026-06-10"
+    layer: current_overlay
+    status: accepted
+    source_url: https://minstroyrf.gov.ru/tim/xml-skhemy/
+    note: Дата ввода по вторичному источнику (xml1.ru); официальная страница из CI недоступна.
+    verified: false
+  - id: xsd-p9-5-v01-07
+    identifier: XML-схема П9.5 «Пояснительная записка» 01.07
+    issuer: Минстрой России
+    act_type: xml_schema
+    schema_code: П9
+    schema_version: "01.07"
+    mandatory: bylaw
+    date: "2026-03-11"
+    effective_from: "2026-06-11"
+    effective_to: null
+    layer: current_overlay
+    status: accepted
+    source_url: https://minstroyrf.gov.ru/tim/xml-skhemy/
+    note: С 11.06.2026 заявление в АИС/ЕЦПЭ создаётся только с ПЗ 01.07 (сообщение Главгосэкспертизы в пересказе региональных экспертиз). Отдельные источники пишут, что ГИС ЕГРЗ ещё принимает 01.06/01.05; применимость к ГИС ЕГРЗ не проверена.
+    verified: false
