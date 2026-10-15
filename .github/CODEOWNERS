@@ -1,0 +1,3 @@
+# Default owner. Combined with "Require review from Code Owners" in branch protection,
+# changes to main need the owner's review.
+* @KonkovDV
