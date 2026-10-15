@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { bandOf, isCheckRefusal, stepQueue, type Band } from "./bands";
+import { bandOf, isCheckRefusal, hotkeysSuppressed, nextAfterDecision, stepQueue, type Band } from "./bands";
 import { EvidenceViewer } from "./EvidenceViewer";
 import {
   STAGE_PANES,
@@ -172,6 +172,7 @@ export function LiveWorkspace({ token }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [card, setCard] = useState<EvidenceCard | null>(null);
   const [zoomed, setZoomed] = useState(false);
+  const [queueEmpty, setQueueEmpty] = useState(false);
   const [pageImages, setPageImages] = useState<Partial<Record<StagePane, string>>>({});
   const [etalonComment, setEtalonComment] = useState("");
   const [comment, setComment] = useState("");
@@ -240,6 +241,7 @@ export function LiveWorkspace({ token }: Props) {
   async function openFinding(findingId: string) {
     if (!processId) return;
     setActiveId(findingId);
+    setQueueEmpty(false);
     setClicks(1);
     postUi("UI_CLICK", {
       screen: "queue",
@@ -454,9 +456,14 @@ export function LiveWorkspace({ token }: Props) {
       );
       recordDecision(action);
       const ids = visible.map((item) => item.finding_id);
-      const next = ids.length > 1 ? stepQueue(ids, active.finding_id, 1) : null;
+      const next = nextAfterDecision(ids, active.finding_id);
       await refresh(processId);
-      await openFinding(next ?? active.finding_id);
+      if (next) {
+        await openFinding(next);
+      } else {
+        setActiveId(null);
+        setQueueEmpty(true);
+      }
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "решение не принято");
     } finally {
@@ -570,15 +577,8 @@ export function LiveWorkspace({ token }: Props) {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (busy || event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "SELECT" ||
-          target.tagName === "TEXTAREA")
-      ) {
-        return;
-      }
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (hotkeysSuppressed(target, event.isComposing)) return;
       const key = event.key.toLowerCase();
       if (key === "z") {
         setZoomed((value) => !value);
@@ -826,6 +826,8 @@ export function LiveWorkspace({ token }: Props) {
           </ul>
         </section>
       ) : null}
+
+      {queueEmpty && !active ? <p className="missing-hint">Очередь пуста.</p> : null}
 
       {card && active ? (
         <EvidenceViewer card={card} pageImages={pageImages} zoomed={zoomed}>

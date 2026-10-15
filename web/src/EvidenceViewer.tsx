@@ -43,6 +43,7 @@ export function EvidenceViewer({ card, pageImages, children, zoomed = false }: P
             fragment={fragmentByStage(card, stage)}
             pageImageUrl={pageImages?.[stage]}
             zoomed={zoomed}
+            findingStatus={finding.finding_status}
           />
         ))}
       </div>

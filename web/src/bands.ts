@@ -60,3 +60,21 @@ export function confidenceChip(confidence: number | null | undefined, status?: s
   if (pct >= 70) return { bucket: "mid", label: `◆ 70–89% (${pct}%)` };
   return { bucket: "low", label: `▼ <70% (${pct}%)` };
 }
+
+/** Следующий после решения: null, если в очереди не осталось других элементов (не переоткрывать закрытое). */
+export function nextAfterDecision(ids: string[], current: string): string | null {
+  const rest = ids.filter((id) => id !== current);
+  if (rest.length === 0) return null;
+  return stepQueue(ids, current, 1);
+}
+
+/** Хоткеи не срабатывают в полях ввода, contentEditable и во время IME-композиции. */
+export function hotkeysSuppressed(
+  target: { tagName?: string; isContentEditable?: boolean } | null,
+  isComposing: boolean,
+): boolean {
+  if (isComposing) return true;
+  if (!target) return false;
+  if (target.isContentEditable) return true;
+  return target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA";
+}
