@@ -41,14 +41,6 @@
 | Сверка документов, не нормы | [`adr/0006-compare-documents-not-norms.md`](adr/0006-compare-documents-not-norms.md) |
 | Остальные решения | [`adr/`](adr/) |
 
-## Исследование (октябрь 2026)
-
-| Вопрос | Файл |
-|---|---|
-| Топ‑10 открытых GH-репозиториев (BIM diff, IDS, confidence, BCF) | [`research/TOP10-GH-REPOS.md`](research/TOP10-GH-REPOS.md) |
-| Финалисты «Город» №10, российские и мировые конкуренты | [`research/COMPETITORS-OSINT-2026-10-15.md`](research/COMPETITORS-OSINT-2026-10-15.md) |
-| OCR / Document AI (срез 28.09) | [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md) |
-
 ## Записи по дням
 
 Дата в имени файла — день записи. Текущее покрытие смотрите в scorecard.
