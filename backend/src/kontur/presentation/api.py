@@ -68,7 +68,12 @@ from kontur.presentation.upload_limits import (
     read_bounded_upload,
 )
 
-<<<<<<< HEAD
+_insecure_flag = (os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH") or "").lower() == "true"
+if _insecure_flag and not insecure_auth_permitted():
+    raise RuntimeError(
+        "KONTUR_ALLOW_INSECURE_DEV_AUTH запрещён вне KONTUR_ENV=dev|demo|test|local"
+    )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -79,15 +84,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton", lifespan=lifespan)
-=======
-_insecure_flag = (os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH") or "").lower() == "true"
-if _insecure_flag and not insecure_auth_permitted():
-    raise RuntimeError(
-        "KONTUR_ALLOW_INSECURE_DEV_AUTH запрещён вне KONTUR_ENV=dev|demo|test|local"
-    )
-
-app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton")
->>>>>>> 3871253 (fix(security): block insecure auth outside dev/demo; clamd required outside dev + compose clamav; PDF timeout 60s; Dependabot limit 5)
 app.add_middleware(ActualUploadLimitMiddleware)
 app.state.workspace = ProcessWorkspace()  # до lifespan: TestClient
 
