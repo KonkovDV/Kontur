@@ -418,7 +418,7 @@ def _bottom_band(image: object | None) -> object | None:
     width, height = size
     if height < 8:
         return None
-    top = int(height * 0.72)
+    top = int(height * 0.70)  # согласовано с passport._STAMP_Y0
     crop = getattr(image, "crop", None)
     if crop is None:
         return None
