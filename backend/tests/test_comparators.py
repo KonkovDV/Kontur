@@ -25,6 +25,7 @@ from kontur.application.comparators import (
     compare_range,
     compare_set_membership,
     compare_values,
+    trigger_sense,
 )
 from kontur.domain.statuses import FindingStatus
 
@@ -141,6 +142,31 @@ class TestCompareOrdering:
         rule = {"code": "TST", "unit": "", "comparator": {"operator": "ge"}}
         r = compare_ordering(expected=5.0, actual=5.0, rule=rule)
         assert r.status == FindingStatus.AUTO_NO_DIFFERENCE
+
+    def test_thicker_slab_does_not_fire_a_decrease_trigger(self) -> None:
+        rule = _rule("delta")
+        rule["code"] = "KR-058"
+        rule["source_trigger_logic"] = (
+            "Уменьшение проектной толщины плиты в РД или по факту заливки (ИД)."
+        )
+        thicker = compare_values(800.0, 900.0, rule)
+        thinner = compare_values(800.0, 600.0, rule)
+        assert thicker.status is FindingStatus.AUTO_NO_DIFFERENCE
+        assert thinner.status is FindingStatus.CANDIDATE
+        assert thicker.status is not FindingStatus.NEGATIVE_VERIFIED
+
+    def test_any_area_difference_stays_a_candidate(self) -> None:
+        rule = _rule("delta")
+        rule["source_trigger_logic"] = "Расхождение контуров здания на генплане с данными БТИ или РД > 0."
+        assert trigger_sense(rule) is None
+        assert compare_values(1250.5, 1100.0, rule).status is FindingStatus.CANDIDATE
+
+    def test_opening_width_delta_has_no_binary_tail(self) -> None:
+        rule = _rule("ge", value=0.9)
+        rule["unit"] = "м"
+        result = compare_ordering(expected=0.9, actual=0.8, rule=rule)
+        assert result.status == FindingStatus.CANDIDATE
+        assert result.delta == -0.1
 
     def test_unknown_operator_raises(self) -> None:
         with pytest.raises(ValueError, match="compare_ordering"):

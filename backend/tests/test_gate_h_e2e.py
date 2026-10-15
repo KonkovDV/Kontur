@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from kontur.application.comparators import trigger_sense
 from kontur.application.evaluate import StagePage, evaluate_rule
 from kontur.application.extractors.number import PageToken
 from kontur.domain.models import ApprovalStatus, DocStage, DocumentRef
@@ -162,15 +163,16 @@ def test_no_difference_happy_path(
     ids=[c[0] for c in _CASES if c[0] != "AR-041"],
 )
 def test_candidate_on_delta_mismatch(rule_code: str, anchor_words: tuple[str, ...]) -> None:
-    """Расхождение PD и RD → CANDIDATE.
+    """Расхождение в сторону триггера → CANDIDATE.
 
-    Для правил с tolerance_rel=0.05 используем 1000 и 900: дельта=10% > 5% → CANDIDATE.
-    Для правил с tolerance_abs=0 дельта=100 != 0 → CANDIDATE.
+    Для правил с tolerance_rel=0.05 дельта 10% > 5%. Для tolerance_abs=0 дельта 100.
+    Триггер «увеличение» проверяется ростом 900 → 1000, остальные — падением 1000 → 900.
     """
     rule = _REGISTRY.get(rule_code)
+    pd_value, rd_value = ("900,0", "1000,0") if trigger_sense(rule) == "increase" else ("1000,0", "900,0")
     pages = {
-        DocStage.PD: _page(DocStage.PD, *(*anchor_words, "1000,0"), suffix=f"-{rule_code}-cand"),
-        DocStage.RD: _page(DocStage.RD, *(*anchor_words, "900,0"), suffix=f"-{rule_code}-cand"),
+        DocStage.PD: _page(DocStage.PD, *(*anchor_words, pd_value), suffix=f"-{rule_code}-cand"),
+        DocStage.RD: _page(DocStage.RD, *(*anchor_words, rd_value), suffix=f"-{rule_code}-cand"),
     }
     result = evaluate_rule(rule, object_id=OBJECT_ID, pages=pages, completeness=_completeness())
     finding = result.finding

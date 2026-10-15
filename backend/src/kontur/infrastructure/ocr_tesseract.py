@@ -662,6 +662,10 @@ def _render_pil(pdf_page: object) -> object | None:
     render = getattr(pdf_page, "render", None)
     if render is None:
         return None
+    from kontur.infrastructure.pdfium_page import page_is_drawable
+
+    if not page_is_drawable(pdf_page, scale=RENDER_SCALE):
+        return None
     bitmap = render(scale=RENDER_SCALE)
     try:
         to_pil = getattr(bitmap, "to_pil", None)

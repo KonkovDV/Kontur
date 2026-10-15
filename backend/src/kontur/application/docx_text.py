@@ -14,6 +14,7 @@ from docx import Document
 from docx.opc.exceptions import PackageNotFoundError
 
 from kontur.application.extractors.number import PageToken
+from kontur.application.intake import archive_looks_like_bomb
 from kontur.domain.models import ExtractionEngine
 
 _UNIT = (
@@ -37,6 +38,8 @@ class DocxText:
 def read_docx_bytes(raw: bytes) -> DocxText:
     """Слова абзацев и таблиц. Пустой текст — пустые tokens, не исключение."""
 
+    if archive_looks_like_bomb(raw):
+        raise DocxReadError("DOCX: отклонён как бомба")
     try:
         document = Document(BytesIO(raw))
     except (PackageNotFoundError, zipfile.BadZipFile, ValueError, OSError) as exc:

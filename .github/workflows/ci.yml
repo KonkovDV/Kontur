@@ -18,6 +18,7 @@ jobs:
       - run: ruff check backend scripts
       - run: mypy --strict backend/src
       - run: pytest backend/tests -q
+      - run: python -m kontur.evaluation.build_gold --check
 
   contracts:
     runs-on: ubuntu-latest

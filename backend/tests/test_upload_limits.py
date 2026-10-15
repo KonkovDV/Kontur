@@ -5,13 +5,14 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import io
+import zipfile
 from collections.abc import Awaitable, Callable
 
 import pytest
 from starlette.datastructures import UploadFile
 from starlette.types import Message, Receive, Scope, Send
 
-from kontur.application.intake import RejectionReason
+from kontur.application.intake import RejectionReason, evaluate_batch
 from kontur.presentation.upload_limits import (
     UPLOAD_PATH,
     ActualUploadLimitMiddleware,
@@ -207,6 +208,26 @@ def test_bounded_read_stops_after_first_overflow_byte() -> None:
         assert candidate.content_hash is None
         leftover = upload.file.read()
         assert leftover == body[6:]
+
+    asyncio.run(_run())
+
+
+def test_zip_upload_keeps_the_central_directory_for_the_bomb_check() -> None:
+    """Первые 16 байт zip не содержат каталог. Бомба обязана доехать до check_file."""
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("bomb.bin", b"\x00" * 1_000_000)
+    body = buffer.getvalue()
+    upload = UploadFile(file=io.BytesIO(body), filename="bomb.zip")
+
+    async def _run() -> None:
+        candidate, stored = await read_bounded_upload(upload)
+        assert stored == body
+        assert candidate.header == body
+        decision = evaluate_batch([candidate])
+        assert not decision.ok
+        assert "бомба" in decision.rejected[0].detail
 
     asyncio.run(_run())
 

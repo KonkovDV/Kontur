@@ -46,6 +46,39 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/SystemCapabilities" }
 
+  /evaluation/score:
+    post:
+      summary: Счёт эталона из запроса
+      description: >
+        Эталон и ответ приходят в теле и не сохраняются. Числа этого ответа
+        не публикация Контура и не закрытие гейта J. Путь к файлу не читается.
+      operationId: scoreEvaluation
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rows, submissions]
+              properties:
+                match:
+                  type: string
+                  enum: [location, code]
+                rows:
+                  type: array
+                  items: { type: object }
+                submissions:
+                  type: array
+                  items: { type: object }
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: Тело не разбирается как эталон или ответ
+        "200":
+          description: Счёт этого тела. closes_gate_j остаётся false.
+
   /documents/upload:
     post:
       summary: Загрузка пакета документов (инкрементальная дозагрузка до финализации)
@@ -307,6 +340,38 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AuditLog" }
+        "404": { description: Процесс не найден }
+
+  /processes/{process_id}/audit/ui:
+    post:
+      summary: Клик или решение инспектора в журнал
+      description: >
+        Событие UI_CLICK, UI_CARD_OPEN, UI_DECISION_SUBMIT или UI_HOTKEY.
+        Журнал учебный: closes_gate_k из этого вызова не становится true.
+        Вердикт находки сюда не пишется.
+      operationId: recordUiEvent
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters: [{ $ref: "#/components/parameters/ProcessId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string }
+                screen: { type: string }
+                target: { type: string }
+                check_id: { type: string }
+                click_index: { type: integer, minimum: 0 }
+                client_ts: { type: string }
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { description: Событие не из списка UI }
+        "200":
+          description: Событие записано. Гейт K не закрыт.
         "404": { description: Процесс не найден }
 
   /processes/{process_id}/findings/{finding_id}/evidence-card:

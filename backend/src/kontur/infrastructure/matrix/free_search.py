@@ -19,6 +19,7 @@ class FreeSearchEntry:
     action: str
     matrix_scope: str
     room_compare: dict[str, object] | None = None
+    provision: bool = False
 
 
 def load_free_search(path: Path) -> tuple[FreeSearchEntry, ...]:
@@ -47,6 +48,7 @@ def load_free_search(path: Path) -> tuple[FreeSearchEntry, ...]:
                 action=str(item.get("action") or ""),
                 matrix_scope=str(item.get("matrix_scope") or ""),
                 room_compare=raw_room if isinstance(raw_room, dict) else None,
+                provision=item.get("provision") is True,
             )
         )
     return tuple(entries)

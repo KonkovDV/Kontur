@@ -15,8 +15,10 @@ from kontur.application.document_catalog import CatalogFile, build_document_cata
 from kontur.application.evidence_card import build_evidence_card
 from kontur.application.intake import (
     MAX_BATCH_BYTES,
+    IntakeDecision,
     Rejection,
     UploadCandidate,
+    antivirus_rejection,
     evaluate_batch,
 )
 from kontur.application.protocol import assemble_protocol, protocol_for_http
@@ -27,14 +29,17 @@ from kontur.application.protocol_export import (
     render_pdf,
     render_xml,
 )
+from kontur.application.review import ACTION_TO_STATUS
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
+from kontur.cli.score import score_supplied
 from kontur.domain.capabilities import capabilities_payload
 from kontur.domain.models import DocStage, Finding
 from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError, protocol_status
-from kontur.domain.statuses import Completeness, ProcessState, ReasonCode
+from kontur.domain.statuses import Completeness, FindingStatus, ProcessState, ReasonCode
 from kontur.evaluation.demo_kit import DRAFT_FILE_ID, ETALON_FILE_ID, install_demo_kit
+from kontur.evaluation.usability_audit import ui_journal
 from kontur.infrastructure.access_control import AccessDeniedError, check_object_access
 from kontur.infrastructure.db.process_store import (
     ProtocolConflictError,
@@ -65,26 +70,26 @@ class FinalizeRequest(BaseModel):
 
 
 class UnfinalizeRequest(BaseModel):
-    inspector_id: str = Field(min_length=1)
-    reason: str = Field(min_length=1)
+    inspector_id: str = Field(min_length=1, max_length=200)
+    reason: str = Field(min_length=1, max_length=4000)
 
 
 class ReviewRequest(BaseModel):
-    action: str = Field(min_length=1)
-    inspector_id: str = Field(min_length=1)
-    comment: str = Field(min_length=1)
+    action: str = Field(min_length=1, max_length=40)
+    inspector_id: str = Field(min_length=1, max_length=200)
+    comment: str = Field(min_length=1, max_length=4000)
     reason_code: ReasonCode | None = None
 
 
 class ConfirmCandidatesRequest(BaseModel):
-    inspector_id: str = Field(min_length=1)
-    comment: str = Field(min_length=1)
+    inspector_id: str = Field(min_length=1, max_length=200)
+    comment: str = Field(min_length=1, max_length=4000)
     finding_ids: list[str] = Field(min_length=1, max_length=50)
 
 
 class SelectRevisionRequest(BaseModel):
-    inspector_id: str = Field(min_length=1)
-    comment: str = Field(min_length=1)
+    inspector_id: str = Field(min_length=1, max_length=200)
+    comment: str = Field(min_length=1, max_length=4000)
 
 
 def _rules() -> FileRuleRegistry:
@@ -145,16 +150,19 @@ def _record_for_access(
     return record
 
 
-def _record_for_finding(finding_id: str) -> ProcessRecord | None:
-    """Найти уже загруженный процесс так же, как текущий workspace.review_finding."""
+def _record_for_finding(
+    finding_id: str,
+    *,
+    target: FindingStatus | None = None,
+) -> ProcessRecord | None:
+    """Тот же выбор, что у workspace.review_finding: открытый процесс, не прошлая копия."""
 
     workspace = _workspace()
     workspace.wait_pipelines()
-    for record in workspace._items.values():  # noqa: SLF001 - единая in-memory граница
-        for key, item in record.findings.items():
-            if item.finding_id == finding_id or key == finding_id:
-                return record
-    return None
+    located = workspace.locate_finding(finding_id, target=target)
+    if located is None:
+        return None
+    return located[0]
 
 
 def _rejection_body(item: Rejection) -> dict[str, str]:
@@ -271,6 +279,26 @@ def system_capabilities(
     return capabilities_payload()
 
 
+class EvaluationScoreBody(BaseModel):
+    rows: list[dict[str, object]]
+    submissions: list[dict[str, object]]
+    match: str = "location"
+
+
+@app.post("/api/v1/evaluation/score", response_model=None)
+def evaluation_score(
+    body: EvaluationScoreBody,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    """Счёт эталона из тела. Файл не открывается, тело не сохраняется."""
+
+    _require("scoreEvaluation", authorization)
+    try:
+        return score_supplied(body.rows, body.submissions, match=body.match)
+    except ValueError as exc:
+        return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
 @app.post("/api/v1/documents/upload", status_code=202, response_model=None)
 async def upload_documents(
     request: Request,
@@ -354,10 +382,22 @@ async def _upload_documents(
 
     accept_started = perf_counter()
     payloads: list[tuple[UploadCandidate, bytes]] = []
+    av_rejected: list[Rejection] = []
     for upload in files:
         candidate, body = await read_bounded_upload(upload)
-        payloads.append((candidate, body if body is not None else b""))
+        content = body if body is not None else b""
+        infected = antivirus_rejection(candidate.filename, content)
+        if infected is not None:
+            av_rejected.append(infected)
+            continue
+        payloads.append((candidate, content))
     decision = evaluate_batch(item for item, _body in payloads)
+    if av_rejected:
+        decision = IntakeDecision(
+            accepted=decision.accepted,
+            rejected=(*decision.rejected, *av_rejected),
+            duplicates=decision.duplicates,
+        )
     if decision.rejected and not decision.accepted:
         worst = max(decision.rejected, key=lambda item: item.http_status)
         return JSONResponse(status_code=worst.http_status, content=_rejection_body(worst))
@@ -719,7 +759,60 @@ def get_audit(
             {"actor_id": actor_id, "action": action, "payload": payload}
             for actor_id, action, payload in record.audit.records
         ],
+        "ui_journal": ui_journal(record.audit.records),
     }
+
+
+_UI_ACTIONS = frozenset({"UI_CLICK", "UI_CARD_OPEN", "UI_DECISION_SUBMIT", "UI_HOTKEY"})
+
+
+class UiEventBody(BaseModel):
+    action: str
+    screen: str = ""
+    target: str = ""
+    check_id: str = ""
+    click_index: int | None = None
+    client_ts: str = ""
+
+
+@app.post("/api/v1/processes/{process_id}/audit/ui", response_model=None)
+def record_ui_event(
+    process_id: str,
+    body: UiEventBody,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    """Клик инспектора в журнал. Не закрывает гейт K и не пишет вердикт."""
+
+    subject, _granted, object_id = _require("recordUiEvent", authorization)
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    if body.action not in _UI_ACTIONS:
+        return JSONResponse(status_code=422, content={"detail": "неизвестное UI-событие"})
+    if isinstance(body.click_index, bool) or (
+        body.click_index is not None and body.click_index < 0
+    ):
+        return JSONResponse(status_code=422, content={"detail": "click_index должен быть целым"})
+    if (
+        len(body.screen) > 40
+        or len(body.target) > 80
+        or len(body.check_id) > 80
+        or len(body.client_ts) > 40
+    ):
+        return JSONResponse(status_code=422, content={"detail": "поле UI-события слишком длинное"})
+    record.audit.record(
+        subject,
+        body.action,
+        {
+            "screen": body.screen,
+            "target": body.target,
+            "check_id": body.check_id,
+            "click_index": body.click_index,
+            "client_ts": body.client_ts,
+            "object_id": record.object_id,
+        },
+    )
+    return {"stored": True, "closes_gate_k": False}
 
 
 @app.get(
@@ -763,7 +856,10 @@ def review_finding(
     subject, granted, object_id = _require("reviewFinding", authorization)
     if body.inspector_id != subject:
         raise PermissionDeniedError("inspector_id не совпадает с субъектом токена")
-    owner = _record_for_finding(finding_id)
+    owner = _record_for_finding(
+        finding_id,
+        target=ACTION_TO_STATUS.get(body.action),
+    )
     if owner is None:
         return JSONResponse(status_code=404, content={"detail": "находка не найдена"})
     _check_scope(owner.object_id, object_id)

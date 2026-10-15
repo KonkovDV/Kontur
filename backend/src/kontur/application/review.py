@@ -11,7 +11,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 
 from kontur.application.revision_resolver import overlay_inspector_approval
-from kontur.domain.models import ApprovalStatus, Finding, InspectorDecision
+from kontur.domain.models import ApprovalStatus, EvidenceGroup, Finding, InspectorDecision
 from kontur.domain.ports import AuditLog
 from kontur.domain.state_machines import (
     Actor,
@@ -213,11 +213,41 @@ def select_revision_as_etalon(
     return overlay_inspector_approval(stamp, inspector_selected=True)
 
 
-def split(finding: Finding, parts: int) -> list[Finding]:
-    """Разделение составного кандидата на атомарные (ТЗ п. 9.3).
+def split(
+    finding: Finding,
+    parts: Sequence[EvidenceGroup],
+    *,
+    actor: Actor,
+) -> list[Finding]:
+    """Разделить составного кандидата на атомарные находки (ТЗ п. 9.3).
 
-    Общего статуса PARTIALLY_CONFIRMED не существует: каждая часть получает
-    собственное доказательство и собственное решение.
+    Общего статуса PARTIALLY_CONFIRMED нет. У каждой части своё доказательство
+    и потом своё решение инспектора. Автомат эту функцию не вызывает.
     """
 
-    raise NotImplementedError("L8: каждая часть требует собственной evidence_group")
+    if not actor.is_human:
+        raise TransitionError("разделение требует инспектора")
+    if finding.finding_status is not FindingStatus.CANDIDATE:
+        raise TransitionError("делится только кандидат")
+    if len(parts) < 2:
+        raise TransitionError("нужны минимум две части со своими доказательствами")
+    seen: set[str] = set()
+    created: list[Finding] = []
+    for index, group in enumerate(parts, start=1):
+        if not group.fragments:
+            raise TransitionError("у части нет доказательства")
+        if group.rule_code != finding.rule_code:
+            raise TransitionError("часть относится к другому правилу")
+        if group.evidence_group_id in seen:
+            raise TransitionError("у частей один evidence_group_id")
+        seen.add(group.evidence_group_id)
+        created.append(
+            replace(
+                finding,
+                finding_id=f"{finding.finding_id}:{index}",
+                evidence_group_id=group.evidence_group_id,
+                evidence_refs=tuple(item.fragment_id for item in group.fragments),
+                inspector_decision=None,
+            )
+        )
+    return created

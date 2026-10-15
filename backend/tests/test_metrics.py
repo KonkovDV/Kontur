@@ -16,6 +16,9 @@ from kontur.evaluation.metrics import (
     key_field_exact_match,
     key_field_exact_match_interval,
     meets_threshold,
+    pooled_ca_line_bootstrap,
+    pooled_character_accuracy,
+    score_key_fields,
     wilson,
 )
 
@@ -134,6 +137,107 @@ def test_character_accuracy_is_not_binary() -> None:
 def test_character_accuracy_is_case_sensitive() -> None:
     """Регистр не сворачивается: шифр документа чувствителен к регистру."""
     assert character_accuracy("PZ-001", "pz-001") != pytest.approx(1.0)
+
+
+def test_key_field_kind_below_quota_stays_out_of_the_summary() -> None:
+    short = score_key_fields([{"kind": "CIPHER", "reference": "PZ-001", "hypothesis": "PZ-001"}])
+    assert short["defined"] is False
+    assert short["threshold_met"] is False
+    assert "CIPHER" in short["kinds_below_quota"]
+
+
+def test_stage_field_ignores_case_and_cipher_keeps_it() -> None:
+    scored = score_key_fields(
+        [
+            {"kind": "STAGE", "reference": "ПД", "hypothesis": "пд"},
+            {"kind": "CIPHER", "reference": "PZ-001", "hypothesis": "pz-001"},
+        ]
+    )
+    by_kind = {item["kind"]: item for item in scored["by_kind"]}  # type: ignore[union-attr]
+    assert by_kind["STAGE"]["em"] == pytest.approx(1.0)
+    assert by_kind["CIPHER"]["em"] == pytest.approx(0.0)
+
+
+def test_thirty_perfect_ciphers_do_not_meet_the_field_threshold() -> None:
+    fields = [
+        {"kind": "CIPHER", "reference": "PZ-001", "hypothesis": "PZ-001"} for _ in range(30)
+    ]
+    scored = score_key_fields(fields)
+    cipher = next(item for item in scored["by_kind"] if item["kind"] == "CIPHER")  # type: ignore[union-attr]
+    assert cipher["measured"] is True
+    assert scored["defined"] is True
+    assert scored["n"] == 30
+    assert scored["threshold_met"] is False
+
+
+def test_unknown_key_field_kind_is_rejected() -> None:
+    with pytest.raises(ValueError, match="ROOM"):
+        score_key_fields([{"kind": "ROOM", "reference": "1", "hypothesis": "1"}])
+
+
+def test_pooled_ca_weights_by_characters_not_by_lines() -> None:
+    """Одна ошибка в короткой строке и верная длинная: микро-CA выше среднего строк."""
+
+    pairs = [("А", "Б"), ("АБВГДЕЖЗ", "АБВГДЕЖЗ")]
+    pooled = pooled_character_accuracy(pairs)
+    mean = (
+        character_accuracy("А", "Б") + character_accuracy("АБВГДЕЖЗ", "АБВГДЕЖЗ")
+    ) / 2
+    assert pooled.edit_distance == 1
+    assert pooled.ref_chars == 9
+    assert pooled.point == pytest.approx(8 / 9)
+    assert mean == pytest.approx(0.5)
+    assert pooled.point != pytest.approx(mean)
+
+
+def test_pooled_ca_ignores_an_empty_reference() -> None:
+    pooled = pooled_character_accuracy([("", "xxx"), ("АБ", "АБ")])
+    assert pooled.n_lines == 2
+    assert pooled.ref_chars == 2
+    assert pooled.point == pytest.approx(1.0)
+
+
+def test_pooled_ca_on_no_characters_is_undefined() -> None:
+    pooled = pooled_character_accuracy([("", ""), ("", "гипотеза")])
+    assert pooled.point is None
+    assert pooled.cer is None
+    assert pooled.wer is None
+    assert pooled.ref_chars == 0
+    assert pooled.line_exact_match == pytest.approx(0.5)
+    assert pooled_ca_line_bootstrap([("", "")]) is None
+
+
+def test_ocr_normalization_collapses_any_whitespace_and_keeps_signs() -> None:
+    assert character_accuracy("А\tБ\nВ", "А Б В") == pytest.approx(1.0)
+    assert character_accuracy("ИОС4.2-кор3", "ИОС42кор3") != pytest.approx(1.0)
+    assert character_accuracy("A", "А") != pytest.approx(1.0)
+
+
+def test_wer_and_line_exact_match_are_not_character_accuracy() -> None:
+    pooled = pooled_character_accuracy([("А Б", "А В")])
+    assert pooled.ref_tokens == 2
+    assert pooled.token_distance == 1
+    assert pooled.wer == pytest.approx(0.5)
+    assert pooled.line_exact_match == pytest.approx(0.0)
+    assert pooled.cer == pytest.approx(1.0 - (pooled.point or 0.0))
+    empty = pooled_character_accuracy(())
+    assert empty.line_exact_match is None
+    assert empty.wer is None
+
+
+def test_line_bootstrap_does_not_decide_the_threshold() -> None:
+    same = pooled_ca_line_bootstrap([("АБ", "АВ")] * 4, rounds=40, seed=7)
+    assert same is not None
+    assert same.low == pytest.approx(same.high)
+    assert same.decides_threshold is False
+    mixed = pooled_ca_line_bootstrap(
+        [("А", "Б"), ("АБВГДЕЖЗ", "АБВГДЕЖЗ")],
+        rounds=200,
+        seed=7,
+    )
+    assert mixed is not None
+    assert mixed.low < mixed.high
+    assert mixed.decides_threshold is False
 
 
 # --- IoU ---

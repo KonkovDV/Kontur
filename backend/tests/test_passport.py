@@ -9,7 +9,12 @@ import jsonschema
 import pytest
 
 from kontur.application.extractors.number import PageToken
-from kontur.application.passport import KEY_FIELDS, apply_manifest_section, read_passport
+from kontur.application.passport import (
+    KEY_FIELDS,
+    apply_manifest_section,
+    read_passport,
+    section_mark_from_filename,
+)
 from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage
 
 HASH = "a" * 64
@@ -55,6 +60,15 @@ def test_stamp_fills_key_fields_and_matches_schema() -> None:
     assert passport.text_render_agreement is None
     assert passport.extraction_confidence == pytest.approx(1.0)
     jsonschema.Draft202012Validator(SCHEMA).validate(passport.to_schema())
+
+
+def test_title_correction_number_is_the_revision() -> None:
+    passport = _read(_tok("Корректировка №4", 0.20, 0.82))
+    assert passport.revision == "4"
+    assert passport.revision_kind == "correction"
+    changed = _read(_tok("Изм. 2", 0.20, 0.82))
+    assert changed.revision == "2"
+    assert changed.revision_kind == "change"
 
 
 def test_filename_is_not_used_as_document_code() -> None:
@@ -331,6 +345,39 @@ def test_tied_designations_are_not_chosen() -> None:
     assert passport.clarification_reason == (
         "несколько обозначений без большинства, шифр не выбран"
     )
+
+
+def test_ventilation_folder_is_the_same_discipline_as_heating() -> None:
+    passport = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.4.2.pdf"),
+        section=None,
+        relative_path="ПД/5.4 Вентиляция/Том 5.4.2.pdf",
+        filename="Том 5.4.2.pdf",
+    )
+    assert passport.discipline == "ОВ"
+    assert passport.document_code is None
+
+
+def test_water_folder_is_ios2_and_two_systems_do_not_pick() -> None:
+    water = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том 5.2.pdf"),
+        section=None,
+        relative_path="ПД/5.2 Водоснабжение/Том 5.2.pdf",
+        filename="Том 5.2.pdf",
+    )
+    assert water.discipline == "ИОС2"
+    clash = apply_manifest_section(
+        _read(_tok("лист 1", 0.08, 0.82), filename="Том.pdf"),
+        section=None,
+        relative_path="ПД/Отопление и водоснабжение/Том.pdf",
+        filename="Том.pdf",
+    )
+    assert clash.discipline is None
+    assert clash.needs_clarification is True
+
+
+def test_spoken_vk_in_the_filename_is_ios2() -> None:
+    assert section_mark_from_filename("5.2_ВК.pdf") == "ИОС2"
 
 
 def test_index_section_is_discipline_not_a_shared_cipher() -> None:

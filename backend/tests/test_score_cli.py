@@ -5,7 +5,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from kontur.cli.score import _line, _ScoreRow, cluster_f1_interval, score_directory, score_scope
+import pytest
+
+from kontur.cli.score import (
+    _line,
+    _ScoreRow,
+    cluster_f1_interval,
+    score_directory,
+    score_scope,
+    score_supplied,
+)
 
 
 def test_empty_submissions_stay_zero_of_six(tmp_path: Path) -> None:
@@ -53,8 +62,10 @@ def test_one_code_hits_every_duplicate_row_and_does_not_meet_tz(tmp_path: Path) 
     assert matrix["tz_recall_met"] is False
     fpr = matrix["fpr"]
     assert isinstance(fpr, dict)
-    assert fpr["defined"] is False
-    assert fpr["n"] == 0
+    assert fpr["defined"] is True
+    assert fpr["n"] == 5
+    assert matrix["false_positives"] == 0
+    assert matrix["tz_fpr_met"] is False
     default = score_directory(tmp_path)
     assert default["match"] == "object_id+parameter_code+location"
     default_matrix = default["matrix"]
@@ -334,9 +345,17 @@ def test_zero_negatives_are_not_printed_as_zero_fpr() -> None:
     assert isinstance(fpr, dict)
     assert fpr["n"] == 0
     assert fpr["defined"] is False
-    assert fpr["point"] == 0.0
+    assert fpr["point"] is None
+    assert fpr["low"] is None
+    assert block["fpr_composition"] == []
+    assert block["acceptance_rule"] == "wilson_bound"
+    missing = block["not_measured"]
+    assert isinstance(missing, list)
+    assert "false_positive_rate" in missing
+    assert "NO_VIOLATION" in str(block["fpr_denominator_name"])
     tail = _line("MATRIX", block).split("FPR", 1)[1]
-    assert "не определён (n=0)" in tail
+    assert "не измерен (n=0)" in tail
+    assert "не_измерено=" in tail
     assert "0.000" not in tail
 
 
@@ -351,6 +370,71 @@ def test_invalid_submission_does_not_receive_a_score(tmp_path: Path) -> None:
         assert "submission_bad.json" in str(exc)
     else:
         raise AssertionError("невалидный ответ получил отчёт")
+
+
+def _supplied_submission(object_id: str, code: str, location: str) -> dict[str, object]:
+    return {
+        "object_id": object_id,
+        "checks": [
+            {
+                "parameter_code": code,
+                "location": location,
+                "violation_label": "VIOLATION_PRESENT",
+                "evidence": [{"stage": "PD", "file_id": "f", "pdf_page_number": 1}],
+            }
+        ],
+    }
+
+
+def test_supplied_gold_is_not_stored_and_does_not_close_the_gate() -> None:
+    rows = [
+        {
+            "object_id": "OBJ-CALLER",
+            "parameter_code": "PZ-001",
+            "violation_label": "VIOLATION_PRESENT",
+            "matrix_scope": "MATRIX",
+            "score_eligible": True,
+            "location": "1",
+        }
+        for _ in range(40)
+    ]
+    report = score_supplied(rows, [_supplied_submission("OBJ-CALLER", "PZ-001", "1")])
+    assert report["stored"] is False
+    assert report["publishes_metrics"] is False
+    assert report["closes_gate_j"] is False
+    assert report["corpus"] == "request"
+    matrix = report["matrix"]
+    assert isinstance(matrix, dict)
+    assert matrix["hits"] == 40
+    assert matrix["tz_recall_met"] is True
+    gaps = report["not_measured"]
+    assert isinstance(gaps, dict)
+    matrix_gaps = gaps["matrix"]
+    assert isinstance(matrix_gaps, list)
+    assert "false_positive_rate" in matrix_gaps
+
+
+def test_supplied_score_rejects_an_empty_reference_and_a_bad_submission() -> None:
+    try:
+        score_supplied([], [])
+    except ValueError as exc:
+        assert "нет строк эталона" in str(exc)
+    else:
+        raise AssertionError("пустой эталон получил счёт")
+    row = {
+        "object_id": "OBJ-CALLER",
+        "parameter_code": "PZ-001",
+        "violation_label": "VIOLATION_PRESENT",
+        "matrix_scope": "MATRIX",
+        "score_eligible": True,
+        "location": "1",
+    }
+    try:
+        score_supplied([row], [{"object_id": "OBJ-CALLER"}])
+    except ValueError as exc:
+        assert "submissions[1]" in str(exc)
+    else:
+        raise AssertionError("ответ без проверки получил счёт")
 
 
 def test_ineligible_negative_is_not_a_false_positive() -> None:
@@ -384,6 +468,58 @@ def test_ineligible_negative_is_not_a_false_positive() -> None:
     fpr = block["fpr"]
     assert isinstance(fpr, dict)
     assert fpr["defined"] is False
+
+
+def test_second_review_negatives_enter_fpr_and_do_not_meet_the_threshold() -> None:
+    from kontur.cli.score import _predictions
+
+    codes = ("PZ-009", "KR-055", "KR-055", "KR-055", "KR-058")
+    locations = (
+        "Отметка 0.000",
+        "Стена в грунте",
+        "Фундаментная плита",
+        "Вертикальные конструкции подземной части",
+        "Фундаментная плита",
+    )
+    rows = [
+        {
+            "object_id": "OBJ-NOVOSLOBODSKAYA",
+            "parameter_code": code,
+            "violation_label": "NO_VIOLATION",
+            "matrix_scope": "MATRIX",
+            "score_eligible": False,
+            "fpr_denominator": True,
+            "location": location,
+        }
+        for code, location in zip(codes, locations, strict=True)
+    ]
+    quiet = score_scope(rows, {}, [])
+    assert quiet["n_positive"] == 0
+    assert quiet["n_negative"] == 5
+    assert quiet["false_positives"] == 0
+    assert quiet["tz_fpr_met"] is False
+    composition = quiet["fpr_composition"]
+    assert isinstance(composition, list)
+    assert composition == sorted(composition)
+    assert len(composition) == 5
+    assert "OBJ-NOVOSLOBODSKAYA | PZ-009" in composition
+    assert composition.count("OBJ-NOVOSLOBODSKAYA | KR-055") == 3
+    submissions = [
+        {
+            "object_id": "OBJ-NOVOSLOBODSKAYA",
+            "checks": [
+                {
+                    "parameter_code": "PZ-009",
+                    "location": "Отметка 0.000",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "evidence": [{"stage": "PD", "file_id": "f", "pdf_page_number": 1}],
+                }
+            ],
+        }
+    ]
+    fired = score_scope(rows, _predictions(submissions), submissions)
+    assert fired["false_positives"] == 1
+    assert fired["tz_fpr_met"] is False
 
 
 def test_other_row_page_is_not_a_localization() -> None:
@@ -440,6 +576,142 @@ def test_other_row_page_is_not_a_localization() -> None:
     assert block["hits"] == 1
     assert block["localized_hits"] == 0
     assert block["localization_unscored"] == 0
+
+
+def test_three_fpr_names_do_not_share_one_denominator() -> None:
+    from kontur.cli.score import _predictions
+
+    tz_row = {
+        "object_id": "OBJ-N",
+        "parameter_code": "KR-055",
+        "violation_label": "NO_VIOLATION",
+        "score_eligible": False,
+        "fpr_denominator": True,
+        "location": "Стена",
+    }
+    gate_row = {
+        "object_id": "OBJ-N",
+        "parameter_code": "KR-058",
+        "violation_label": "NO_VIOLATION",
+        "score_eligible": True,
+        "location": "Плита",
+    }
+    outside = {
+        "object_id": "OBJ-N",
+        "parameter_code": "PZ-009",
+        "violation_label": "NO_VIOLATION",
+        "score_eligible": False,
+        "location": "Отметка",
+    }
+    block = score_scope([tz_row, gate_row, outside], _predictions([]), [])
+    sets = block["fpr_sets"]
+    assert isinstance(sets, dict)
+    tz = sets["FPR_ТЗ"]
+    gate = sets["FPR_ворот"]
+    extended = sets["FPR_расш"]
+    assert isinstance(tz, dict) and isinstance(gate, dict) and isinstance(extended, dict)
+    assert tz["n"] == 2
+    assert tz["decides_threshold"] is True
+    assert gate["n"] == 1
+    assert gate["decides_threshold"] is False
+    assert extended["n"] == 3
+    assert extended["decides_threshold"] is False
+    assert block["tz_fpr_met"] is False
+
+
+def test_named_hit_without_confirmation_fails_the_approved_level() -> None:
+    from kontur.cli.score import _predictions
+
+    row = {
+        "object_id": "OBJ-A",
+        "parameter_code": "PZ-001",
+        "violation_label": "VIOLATION_PRESENT",
+        "score_eligible": True,
+        "location": "1",
+    }
+    submission = [
+        {
+            "object_id": "OBJ-A",
+            "checks": [
+                {
+                    "parameter_code": "PZ-001",
+                    "location": "1",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "evidence": [{"stage": "PD", "file_id": "f", "pdf_page_number": 1}],
+                }
+            ],
+        }
+    ]
+    block = score_scope([row], _predictions(submission), submission)
+    levels = block["levels"]
+    assert isinstance(levels, dict)
+    named = levels["named"]
+    approved = levels["approved"]
+    assert isinstance(named, dict) and isinstance(approved, dict)
+    assert named["tp"] == 1
+    assert named["decides_gate_j"] is False
+    assert approved["tp"] == 0
+    assert approved["fp"] == 1
+    assert approved["decides_gate_j"] is True
+    assert approved["tz_recall_met"] is False
+    assert block["tz_recall_met"] is False
+    assert "sensitivity" in block["not_measured"]
+
+
+def test_source_verified_localization_does_not_move_the_strict_count() -> None:
+    from kontur.cli.score import _predictions_by_location
+
+    strict = [[0.0, 0.0], [0.1, 0.0], [0.1, 0.1], [0.0, 0.1]]
+    other = [[0.5, 0.5], [1.0, 0.5], [1.0, 1.0], [0.5, 1.0]]
+    row = {
+        "object_id": "OBJ-X",
+        "parameter_code": "IOS4-078",
+        "violation_label": "VIOLATION_PRESENT",
+        "location": "140",
+        "evidence": [{"file_id": "F1", "pdf_page_number": 2, "polygon_norm": strict}],
+        "localization_adjudication": {
+            "reason": "POSSIBLE_GOLD_LOCALIZATION_CONFLICT",
+            "file_id": "F1",
+            "pdf_page_number": 2,
+            "polygon_norm": other,
+        },
+    }
+    submission = [
+        {
+            "object_id": "OBJ-X",
+            "checks": [
+                {
+                    "parameter_code": "IOS4-078",
+                    "location": "140",
+                    "violation_label": "VIOLATION_PRESENT",
+                    "confidence": 0.95,
+                    "evidence": [
+                        {
+                            "stage": "PD",
+                            "file_id": "F1",
+                            "pdf_page_number": 2,
+                            "polygon_norm": other,
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
+    block = score_scope(
+        [row],
+        _predictions_by_location(submission),
+        submission,
+        by_location=True,
+    )
+    assert block["localized_hits"] == 0
+    verified = block["localization_source_verified"]
+    assert isinstance(verified, dict)
+    assert verified["n"] == 1
+    assert verified["point"] == pytest.approx(1.0)
+    sensitivity = block["sensitivity"]
+    assert isinstance(sensitivity, dict)
+    assert sensitivity["decides_threshold"] is False
+    assert sensitivity["n_claims"] == 1
 
 
 def test_f1_interval_is_withheld_below_ten_clusters() -> None:

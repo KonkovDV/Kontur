@@ -5,9 +5,10 @@ from __future__ import annotations
 import zipfile
 from io import BytesIO
 
+import pytest
 from docx import Document
 
-from kontur.application.docx_text import read_docx_bytes
+from kontur.application.docx_text import DocxReadError, read_docx_bytes
 from kontur.application.process_pipeline import PipelineFile, run_process_pipeline
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import DocStage
@@ -21,6 +22,14 @@ def _completeness() -> CompletenessMap:
         DocStage.RD: Completeness.MISSING,
         DocStage.ID: Completeness.MISSING,
     }
+
+
+def test_docx_bomb_is_refused_before_parse() -> None:
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("word/document.xml", b"\x00" * 1_000_000)
+    with pytest.raises(DocxReadError, match="бомба"):
+        read_docx_bytes(buffer.getvalue())
 
 
 def _docx(paragraph: str, cell: str) -> bytes:

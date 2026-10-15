@@ -14,11 +14,14 @@ from kontur.evaluation.ocr_pilot import (
     OCR_PILOT_ENV,
     OcrPilotLine,
     accuracy_interval,
+    character_accuracy_report,
     eligible_for_ca,
+    judge_pooled_ocr,
     load_recognition_lines,
     resolve_pilot_path,
     score_crop_bytes,
     tz_character_accuracy_met,
+    vertical_geometry,
 )
 
 
@@ -58,6 +61,48 @@ def test_tesseract_self_preannotation_is_not_eligible() -> None:
 
 def test_pdf_text_layer_on_train_object_is_eligible() -> None:
     assert eligible_for_ca(_line()) is True
+
+
+def test_vertical_and_broken_encoding_become_line_flags(tmp_path: Path) -> None:
+    jsonl = tmp_path / "data" / "recognition_lines.jsonl"
+    jsonl.parent.mkdir()
+    jsonl.write_text(
+        json.dumps(
+            {
+                "line_id": "L1",
+                "object_id": "OBJ-NOVOSLOBODSKAYA",
+                "text_raw": "ось",
+                "crop_path": "a.png",
+                "source_provenance": "PDF_TEXT_LAYER",
+                "orientation": "ROTATED_OR_VERTICAL",
+                "encoding_flags": ["CID_PLACEHOLDER"],
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    lines = load_recognition_lines(tmp_path)
+    assert lines[0].flags == ("VERTICAL", "LOW_QUALITY")
+
+
+def test_vertical_short_side_is_counted_without_searching_for_an_angle() -> None:
+    lines = (
+        OcrPilotLine(
+            line_id="L1",
+            page_id="P1",
+            object_id="OBJ-NOVOSLOBODSKAYA",
+            reference="12",
+            crop_path="a.png",
+            source_provenance="PDF_TEXT_LAYER",
+            flags=("VERTICAL",),
+            bbox_pdf_pt=(838.195, 65.514, 840.647, 69.2),
+        ),
+    )
+    report = vertical_geometry(lines)
+    assert report["n"] == 1
+    assert report["n_shorter_than_6pt"] == 1
+    assert report["rotation_search"] is False
 
 
 def test_jsonl_without_object_id_is_invalid(tmp_path: Path) -> None:
@@ -119,3 +164,57 @@ def test_empty_pairs_do_not_meet_threshold() -> None:
     interval = accuracy_interval(())
     assert interval.n == 0
     assert not tz_character_accuracy_met(interval)
+
+
+def test_pooled_point_on_one_line_does_not_close_gate_i() -> None:
+    report = judge_pooled_ocr([("абвгдеёжзи", "абвгдеёжзи")], gold=True)
+    assert report["point_meets_threshold"] is True
+    assert report["defined"] is True
+    assert report["closes_gate_i"] is False
+    line_pass = report["line_pass_rate"]
+    assert isinstance(line_pass, dict)
+    assert line_pass["wilson_lower_meets_threshold"] is False
+
+
+def test_line_pass_hides_a_long_miss_so_pooled_ca_blocks_the_gate() -> None:
+    """990 коротких попаданий и 10 длинных промахов: доля строк высока, микро-CA нет."""
+
+    pairs = [("А", "А")] * 990 + [("Б" * 100, "В" * 100)] * 10
+    report = judge_pooled_ocr(pairs, gold=True)
+    line_pass = report["line_pass_rate"]
+    assert isinstance(line_pass, dict)
+    assert line_pass["wilson_lower_meets_threshold"] is True
+    assert report["point_meets_threshold"] is False
+    assert report["closes_gate_i"] is False
+
+
+def test_gold_needs_both_the_pooled_point_and_the_line_sample() -> None:
+    pairs = [("АБ", "АБ")] * 80
+    gold = judge_pooled_ocr(pairs, gold=True)
+    silver = judge_pooled_ocr(pairs, gold=False)
+    assert gold["point_meets_threshold"] is True
+    assert gold["closes_gate_i"] is True
+    assert silver["closes_gate_i"] is False
+    assert silver["silver_not_gold"] is True
+
+
+def test_abstain_drops_coverage_and_stamp_is_its_own_slice() -> None:
+    report = character_accuracy_report(
+        [("АБ", "АБ"), ("ВГ", "")],
+        line_flags=[("STAMP",), ("ABSTAIN",)],
+    )
+    assert report["coverage"] == pytest.approx(0.5)
+    by_flag = report["by_flag"]
+    assert isinstance(by_flag, dict)
+    stamp = by_flag["STAMP"]
+    assert isinstance(stamp, dict)
+    assert stamp["n_lines"] == 1
+    assert stamp["point"] == pytest.approx(1.0)
+    assert report["closes_gate_i"] is False
+
+
+def test_empty_corpus_stays_unmeasured_even_as_gold() -> None:
+    report = judge_pooled_ocr((), gold=True)
+    assert report["point"] is None
+    assert report["defined"] is False
+    assert report["closes_gate_i"] is False

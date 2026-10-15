@@ -38,7 +38,7 @@ function qualityOf(status: string): FindingQuality | null {
 }
 
 if (DEMO_CARDS.length !== EXPECTED_FINDINGS) {
-  throw new Error("учебная очередь должна содержать ровно пять находок");
+  throw new Error("учебная очередь должна содержать ровно 14 находок");
 }
 
 function downloadJson(filename: string, payload: object) {
@@ -211,7 +211,7 @@ export function App() {
         <div>
           <h1>Инспектор ИИ</h1>
           <p>
-            Учебный рекордер Gate K: пять карточек, три панели ПД / РД / ИД.
+            Учебный рекордер Gate K: 14 карточек, три панели ПД / РД / ИД.
             Пустая стадия — нет фрагмента, не нарушение. Не закрывает гейт.
             «Подтвердить» не в фокусе. Клавиши C / R / Q.
             <code>MISSING_EVIDENCE</code> нельзя подтвердить как нарушение.

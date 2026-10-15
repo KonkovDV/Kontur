@@ -6,8 +6,9 @@
 
 Вызывается после intake. Пустой растр при наличии Tesseract идёт в
 `fill_empty_raster_pages`; иначе пустые токены. Ошибка OCR — статусы
-качества, не нарушение. `ocr_text` в capabilities не становится
-AVAILABLE: CA на пилоте не измерена. Автомат не пишет
+качества, не нарушение. XML отдаёт текстовые узлы, zip — PDF, DOCX и XML
+из архива. 7z и rar не распаковываются. `ocr_text` в capabilities не
+становится AVAILABLE: CA на пилоте не измерена. Автомат не пишет
 CONFIRMED_VIOLATION / NEGATIVE_VERIFIED.
 """
 
@@ -17,9 +18,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from time import perf_counter
 
+from kontur.application.archive_expand import expand_zip
 from kontur.application.docx_text import DocxReadError, read_docx_bytes
 from kontur.application.evaluate import StagePage, evaluate_free_search, evaluate_rule
-from kontur.application.intake import accepted_unparsed_detail
+from kontur.application.extractors.number import PageToken
 from kontur.application.passport import apply_manifest_section, read_passport
 from kontur.application.revision_resolver import (
     ResolveStatus,
@@ -28,6 +30,7 @@ from kontur.application.revision_resolver import (
     resolve_heads_by_identity,
 )
 from kontur.application.scenarios import CompletenessMap
+from kontur.application.xml_text import XmlReadError, read_xml_bytes
 from kontur.domain.models import (
     ApprovalBasis,
     ApprovalStatus,
@@ -56,7 +59,12 @@ from kontur.infrastructure.pdf_guard import (
     pdf_parse_timeout_s,
     run_pdf_parse_sync,
 )
-from kontur.infrastructure.pdfium_tokens import PdfDocumentTokens, extract_pdf_bytes, flatten_tokens
+from kontur.infrastructure.pdfium_tokens import (
+    PdfDocumentTokens,
+    extract_pdf_bytes,
+    file_sha256,
+    flatten_tokens,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +91,10 @@ class PipelineReport:
     #: Монотонные секунды разбора и сравнения. Загрузка и экспорт протокола
     #: в этот отчёт не входят: их часы живут у вызывающего.
     phase_seconds: Mapping[str, float] = field(default_factory=dict)
+    #: Документы, достатые из zip. Их байты нужно положить к комплекту,
+    #: иначе карточка доказательства не найдёт страницу.
+    expanded_files: tuple[PipelineFile, ...] = ()
+    expanded_blobs: Mapping[str, bytes] = field(default_factory=dict)
 
 
 def _is_pdf(filename: str) -> bool:
@@ -100,7 +112,7 @@ def _archive_suffix(filename: str) -> str | None:
 
 
 def _office_suffix(filename: str) -> str | None:
-    """DOCX разбирается текстом. XML принят контрактом и пока не разбирается."""
+    """DOCX и XML разбираются текстом. Схема XML не интерпретируется."""
 
     lower = filename.lower()
     for suffix in (".docx", ".xml"):
@@ -117,6 +129,7 @@ def _document_ref(
     basis: ApprovalBasis,
     sheet: str | None,
     discipline: str | None = None,
+    revision_kind: str = "",
 ) -> DocumentRef:
     return DocumentRef(
         file_id=item.file_id,
@@ -130,7 +143,57 @@ def _document_ref(
         discipline=discipline,
         predecessor_file_id=item.predecessor_file_id,
         successor_file_id=item.successor_file_id,
+        source_name=item.filename,
+        revision_kind=revision_kind,
     )
+
+
+def _append_text_page(
+    item: PipelineFile,
+    tokens: tuple[PageToken, ...],
+    *,
+    inspector_approved_file_ids: frozenset[str],
+    stamps: dict[str, ApprovalStatus],
+    injection_clean: dict[str, bool],
+    built: list[tuple[DocumentRef, StagePage]],
+) -> None:
+    """Паспорт и голова для текста DOCX или XML. Страница одна."""
+
+    injection_clean_flag = scan_tokens_for_injection(tokens).is_clean
+    passport = read_passport(
+        tokens,
+        file_id=item.file_id,
+        file_hash=item.file_hash,
+        filename=item.filename,
+        pages=1,
+        layer_kind="vector",
+        injection_clean=injection_clean_flag,
+    )
+    passport = apply_manifest_section(
+        passport,
+        section=item.manifest_section,
+        relative_path=item.manifest_path,
+        filename=item.filename,
+    )
+    stamp = passport.approval_status
+    stamps[item.file_id] = stamp
+    injection_clean[item.file_id] = injection_clean_flag
+    approval, basis = approval_with_basis(
+        stamp,
+        passport.approval_basis,
+        inspector_selected=item.file_id in inspector_approved_file_ids,
+    )
+    ref = _document_ref(
+        item,
+        passport.identity_code,
+        passport.revision,
+        approval,
+        basis,
+        passport.sheet,
+        passport.discipline,
+        passport.revision_kind,
+    )
+    built.append((ref, StagePage(document=ref, tokens=tokens)))
 
 
 def _pages_from_blobs(
@@ -138,6 +201,8 @@ def _pages_from_blobs(
     blobs: Mapping[str, bytes],
     *,
     inspector_approved_file_ids: frozenset[str] = frozenset(),
+    expanded_out: list[PipelineFile] | None = None,
+    expanded_blobs: dict[str, bytes] | None = None,
 ) -> tuple[
     dict[DocStage, StagePage | tuple[StagePage, ...]],
     tuple[str, ...],
@@ -155,13 +220,40 @@ def _pages_from_blobs(
     stamps: dict[str, ApprovalStatus] = {}
     injection_clean: dict[str, bool] = {}
     built: list[tuple[DocumentRef, StagePage]] = []
-    for item in files:
+    pending = list(files)
+    stored = dict(blobs)
+    seen: set[str] = set()
+    while pending:
+        item = pending.pop(0)
+        if item.file_id in seen:
+            errors.append(f"{item.file_id}: повтор file_id")
+            continue
+        seen.add(item.file_id)
         office = _office_suffix(item.filename)
         if office == ".xml":
-            errors.append(f"{item.file_id}: {accepted_unparsed_detail(office)}")
+            raw = stored.get(item.file_id)
+            if raw is None:
+                errors.append(f"{item.file_id}: нет содержимого в памяти")
+                continue
+            try:
+                parsed_xml = read_xml_bytes(raw)
+            except XmlReadError as exc:
+                errors.append(f"{item.file_id}: {exc}")
+                continue
+            if not parsed_xml.tokens:
+                errors.append(f"{item.file_id}: XML: текст не прочитан")
+                continue
+            _append_text_page(
+                item,
+                parsed_xml.tokens,
+                inspector_approved_file_ids=inspector_approved_file_ids,
+                stamps=stamps,
+                injection_clean=injection_clean,
+                built=built,
+            )
             continue
         if office == ".docx":
-            raw = blobs.get(item.file_id)
+            raw = stored.get(item.file_id)
             if raw is None:
                 errors.append(f"{item.file_id}: нет содержимого в памяти")
                 continue
@@ -176,43 +268,42 @@ def _pages_from_blobs(
             if parsed.skipped:
                 skipped = ", ".join(parsed.skipped)
                 errors.append(f"{item.file_id}: DOCX: пропущены {skipped}")
-            tokens = parsed.tokens
-            injection_clean_flag = scan_tokens_for_injection(tokens).is_clean
-            passport = read_passport(
-                tokens,
-                file_id=item.file_id,
-                file_hash=item.file_hash,
-                filename=item.filename,
-                pages=1,
-                layer_kind="vector",
-                injection_clean=injection_clean_flag,
-            )
-            passport = apply_manifest_section(
-                passport,
-                section=item.manifest_section,
-                relative_path=item.manifest_path,
-                filename=item.filename,
-            )
-            stamp = passport.approval_status
-            stamps[item.file_id] = stamp
-            injection_clean[item.file_id] = injection_clean_flag
-            approval, basis = approval_with_basis(
-                stamp,
-                passport.approval_basis,
-                inspector_selected=item.file_id in inspector_approved_file_ids,
-            )
-            ref = _document_ref(
+            _append_text_page(
                 item,
-                passport.identity_code,
-                passport.revision,
-                approval,
-                basis,
-                passport.sheet,
-                passport.discipline,
+                parsed.tokens,
+                inspector_approved_file_ids=inspector_approved_file_ids,
+                stamps=stamps,
+                injection_clean=injection_clean,
+                built=built,
             )
-            built.append((ref, StagePage(document=ref, tokens=tokens)))
             continue
         archive = _archive_suffix(item.filename)
+        if archive == ".zip":
+            raw = stored.get(item.file_id)
+            if raw is None:
+                errors.append(f"{item.file_id}: нет содержимого в памяти")
+                continue
+            try:
+                members = expand_zip(item.file_id, raw)
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
+            for index, (filename, content) in enumerate(members, start=1):
+                child = PipelineFile(
+                    file_id=f"{item.file_id}__{index}",
+                    file_hash=file_sha256(content),
+                    filename=filename,
+                    doc_stage=item.doc_stage,
+                    manifest_section=item.manifest_section,
+                    manifest_path=item.manifest_path,
+                )
+                stored[child.file_id] = content
+                pending.append(child)
+                if expanded_out is not None:
+                    expanded_out.append(child)
+                if expanded_blobs is not None:
+                    expanded_blobs[child.file_id] = content
+            continue
         if archive is not None:
             errors.append(
                 f"{item.file_id}: ARCHIVE_NOT_EXPANDED: {archive} распакуйте до сверки"
@@ -226,7 +317,7 @@ def _pages_from_blobs(
                 f"{item.file_id}: UNSUPPORTED_FORMAT: {label} не входит в разбор PDF"
             )
             continue
-        raw = blobs.get(item.file_id)
+        raw = stored.get(item.file_id)
         if raw is None:
             errors.append(f"{item.file_id}: нет содержимого в памяти")
             continue
@@ -276,6 +367,7 @@ def _pages_from_blobs(
             basis,
             passport.sheet,
             passport.discipline,
+            passport.revision_kind,
         )
         cache = PageImageCache(raw) if tesseract_available() else None
         built.append(
@@ -360,10 +452,14 @@ def run_process_pipeline(
     if len(codes) != EXPECTED_PARAM_COUNT:
         raise ValueError(f"матрица {len(codes)} правил, ожидалось {EXPECTED_PARAM_COUNT}")
     parse_started = perf_counter()
+    expanded_files: list[PipelineFile] = []
+    expanded_blobs: dict[str, bytes] = {}
     pages, parse_errors, stamps, injection_clean, revision_pool = _pages_from_blobs(
         files,
         blobs,
         inspector_approved_file_ids=inspector_approved_file_ids,
+        expanded_out=expanded_files,
+        expanded_blobs=expanded_blobs,
     )
     parse_seconds = perf_counter() - parse_started
     compare_started = perf_counter()
@@ -399,6 +495,7 @@ def run_process_pipeline(
                     "extractor": {
                         "type": "room_compare",
                         "room_compare": entry.room_compare,
+                        "provision": entry.provision,
                     },
                 },
                 pages,
@@ -427,6 +524,8 @@ def run_process_pipeline(
         evidence_groups=tuple(groups),
         injection_clean_by_file_id=injection_clean,
         phase_seconds={"parse": parse_seconds, "compare": compare_seconds},
+        expanded_files=tuple(expanded_files),
+        expanded_blobs=expanded_blobs,
     )
     assert_machine_only(report.findings)
     return report

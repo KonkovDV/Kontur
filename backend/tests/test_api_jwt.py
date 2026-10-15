@@ -142,6 +142,49 @@ def test_unknown_or_insufficient_role_is_403(
     assert app.state.workspace._items == {}
 
 
+def test_evaluation_score_does_not_keep_the_reference(
+    client: TestClient,
+    rsa_private: rsa.RSAPrivateKey,
+) -> None:
+    body = {
+        "rows": [
+            {
+                "object_id": "OBJ-CALLER",
+                "parameter_code": "PZ-001",
+                "violation_label": "VIOLATION_PRESENT",
+                "matrix_scope": "MATRIX",
+                "score_eligible": True,
+                "location": "1",
+                "path": "files/РАЗМЕЧЕННЫЙ_TEST__213/secret.jsonl",
+            }
+        ],
+        "submissions": [
+            {
+                "object_id": "OBJ-CALLER",
+                "checks": [
+                    {
+                        "parameter_code": "PZ-001",
+                        "location": "1",
+                        "violation_label": "NO_VIOLATION",
+                        "evidence": [{"stage": "PD", "file_id": "f", "pdf_page_number": 1}],
+                    }
+                ],
+            }
+        ],
+    }
+    response = client.post(
+        "/api/v1/evaluation/score",
+        headers=_headers(rsa_private),
+        json=body,
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["stored"] is False
+    assert payload["closes_gate_j"] is False
+    assert payload["matrix"]["hits"] == 0
+    assert app.state.workspace._items == {}
+
+
 def test_missing_object_scope_on_object_endpoint_is_403(
     client: TestClient,
     rsa_private: rsa.RSAPrivateKey,

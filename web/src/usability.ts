@@ -38,7 +38,7 @@ export type UsabilityExport = {
   };
 };
 
-export const EXPECTED_FINDINGS = 5;
+export const EXPECTED_FINDINGS = 14;
 const THIRTY_MINUTES_S = 30 * 60;
 
 export function allowedActions(status: FindingQuality): readonly DecisionAction[] {

@@ -15,6 +15,7 @@ from kontur.application.visual_text import (
 from kontur.domain.coordinates import PageFrame
 from kontur.domain.geometry import bbox_from_polygon
 from kontur.infrastructure.pdf_guard import run_pdf_parse_sync
+from kontur.infrastructure.pdfium_page import page_is_drawable
 from kontur.infrastructure.pdfium_tokens import extract_pdf_bytes
 
 RENDER_SCALE = 2.0
@@ -65,6 +66,8 @@ def _page_flags(
     tokens: Sequence[PageToken],
     frame: PageFrame,
 ) -> list[bool | None]:
+    if not page_is_drawable(page, scale=RENDER_SCALE):
+        return [None for token in tokens if token.text.strip()]
     bitmap = page.render(scale=RENDER_SCALE)
     try:
         raw = bytes(bitmap.buffer)

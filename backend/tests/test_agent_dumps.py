@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from kontur.evaluation.agent_dumps import (
     build_coverage_snapshot,
@@ -228,10 +229,11 @@ def test_engineering_dump_and_pred_jsonl_keep_gate_j_open() -> None:
     assert not recall_meets_tz(interval)
 
 
-def test_export_all_writes_json() -> None:
-    written = export_all(repo_root())
+def test_export_all_writes_json(tmp_path: Path) -> None:
+    written = export_all(tmp_path)
     assert written["coverage"].is_file()
     assert written["handoff"].is_file()
+    assert written["scorecard"].is_relative_to(tmp_path)
 
 
 def test_handoff_pointer_files_exist() -> None:

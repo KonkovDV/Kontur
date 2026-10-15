@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from time import perf_counter
 from uuid import uuid4
 
@@ -29,7 +29,12 @@ from kontur.application.protocol import (
 from kontur.application.retry_policy import next_sync_attempt
 from kontur.application.scenarios import CompletenessMap, detect_scenario
 from kontur.domain.models import ApprovalStatus, DocStage, EvidenceGroup, Finding
-from kontur.domain.state_machines import Actor, TransitionError, advance_process
+from kontur.domain.state_machines import (
+    FINDING_TRANSITIONS,
+    Actor,
+    TransitionError,
+    advance_process,
+)
 from kontur.domain.status_map import protocol_status, tz_upload_status
 from kontur.domain.statuses import (
     Completeness,
@@ -192,6 +197,39 @@ def _public_phase_seconds(clocks: dict[str, float]) -> dict[str, float]:
         for key in _PHASE_ORDER
         if key in clocks
     }
+
+
+def _carry_inspector_decision(previous: Finding, fresh: Finding) -> Finding:
+    """Повтор прогона с теми же числами сохраняет решение инспектора.
+
+    Числа изменились — карточка снова кандидат, старая подпись не переезжает.
+    """
+
+    decision = previous.inspector_decision
+    if decision is None:
+        return fresh
+    if previous.evidence_group_id != fresh.evidence_group_id:
+        return fresh
+    if previous.rule_code != fresh.rule_code:
+        return fresh
+    same_values = (
+        previous.expected_value == fresh.expected_value
+        and previous.actual_value == fresh.actual_value
+    )
+    if not same_values:
+        return fresh
+    if fresh.finding_status is not FindingStatus.CANDIDATE:
+        return fresh
+    if previous.finding_status not in {
+        FindingStatus.CONFIRMED_VIOLATION,
+        FindingStatus.NEGATIVE_VERIFIED,
+    }:
+        return fresh
+    return replace(
+        fresh,
+        finding_status=previous.finding_status,
+        inspector_decision=decision,
+    )
 
 
 def _manifest_hash(record: ProcessRecord) -> str:
@@ -452,10 +490,27 @@ class ProcessWorkspace:
             blobs=record.blobs,
             inspector_approved_file_ids=frozenset(record.inspector_approved_file_ids),
         )
-        for item in record.files:
-            stamp = report.stamp_by_file_id.get(item.file_id)
+        known = {stored.file_id for stored in record.files}
+        for expanded in report.expanded_files:
+            record.blobs[expanded.file_id] = report.expanded_blobs[expanded.file_id]
+            if expanded.file_id in known:
+                continue
+            known.add(expanded.file_id)
+            record.files.append(
+                AcceptedFile(
+                    file_id=expanded.file_id,
+                    file_hash=expanded.file_hash,
+                    filename=expanded.filename,
+                    doc_stage=expanded.doc_stage,
+                    size_bytes=len(report.expanded_blobs[expanded.file_id]),
+                    manifest_section=expanded.manifest_section,
+                    manifest_path=expanded.manifest_path,
+                )
+            )
+        for stored in record.files:
+            stamp = report.stamp_by_file_id.get(stored.file_id)
             if stamp is not None:
-                item.stamp_approval = stamp
+                stored.stamp_approval = stamp
         for finding in report.findings:
             self.put_finding(record.process_id, finding)
         record.evidence_groups = {
@@ -485,8 +540,37 @@ class ProcessWorkspace:
         """
         record = self._items[process_id]
         key = finding.evidence_group_id or finding.finding_id
+        previous = record.findings.get(key)
+        if previous is not None:
+            finding = _carry_inspector_decision(previous, finding)
         record.findings[key] = finding
         self._store.save_finding(process_id, finding)
+
+    def locate_finding(
+        self,
+        finding_id: str,
+        *,
+        target: FindingStatus | None = None,
+    ) -> tuple[ProcessRecord, str, Finding] | None:
+        """Находка с этим id. Учебный комплект повторяет id в новом процессе.
+
+        Если переход возможен в нескольких процессах, берётся последний.
+        Закрытая копия из прошлого прогона не перехватывает решение.
+        """
+
+        matches: list[tuple[ProcessRecord, str, Finding]] = []
+        for record in self._items.values():
+            for key, item in record.findings.items():
+                if item.finding_id == finding_id or key == finding_id:
+                    matches.append((record, key, item))
+                    break
+        if not matches:
+            return None
+        if target is not None:
+            for record, key, item in reversed(matches):
+                if target in FINDING_TRANSITIONS[item.finding_status]:
+                    return record, key, item
+        return matches[-1]
 
     def review_finding(
         self,
@@ -497,37 +581,31 @@ class ProcessWorkspace:
         reason_code: ReasonCode | None,
         comment: str,
     ) -> Finding:
-        for record in self._items.values():
-            stored_key: str | None = None
-            current: Finding | None = None
-            for key, item in record.findings.items():
-                if item.finding_id == finding_id or key == finding_id:
-                    stored_key = key
-                    current = item
-                    break
-            if current is None or stored_key is None:
-                continue
-            updated = review_actions.review(
-                current,
-                actor=actor,
-                action=action,
-                reason_code=reason_code,
-                comment=comment,
+        target = review_actions.ACTION_TO_STATUS.get(action)
+        located = self.locate_finding(finding_id, target=target)
+        if located is None:
+            raise KeyError(finding_id)
+        record, stored_key, current = located
+        updated = review_actions.review(
+            current,
+            actor=actor,
+            action=action,
+            reason_code=reason_code,
+            comment=comment,
+        )
+        record.findings[stored_key] = updated
+        self._store.save_finding(record.process_id, updated)
+        record.audit.record(
+            actor.actor_id,
+            "REVIEW",
+            {"finding_id": finding_id, "action": action},
+        )
+        if record.process_state is ProcessState.READY:
+            record.process_state = review_actions.start_verification(
+                record.process_state, actor=actor, audit=record.audit
             )
-            record.findings[stored_key] = updated
-            self._store.save_finding(record.process_id, updated)
-            record.audit.record(
-                actor.actor_id,
-                "REVIEW",
-                {"finding_id": finding_id, "action": action},
-            )
-            if record.process_state is ProcessState.READY:
-                record.process_state = review_actions.start_verification(
-                    record.process_state, actor=actor, audit=record.audit
-                )
-                self._persist(record)
-            return updated
-        raise KeyError(finding_id)
+            self._persist(record)
+        return updated
 
     def confirm_candidates(
         self,

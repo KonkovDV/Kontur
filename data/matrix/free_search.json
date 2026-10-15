@@ -15,7 +15,8 @@
         "bind_radius": 0.08,
         "pair_jaccard_min": 0.5,
         "max_differences": 8
-      }
+      },
+      "provision": true
     }
   ]
 }

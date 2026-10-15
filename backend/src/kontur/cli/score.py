@@ -6,11 +6,19 @@
 Локализация — IoU полигона на file_id и странице той же gold-строки.
 Страница другой строки того же кода попаданием не считается.
 Строка без эталонного полигона, файла или страницы в знаменатель не входит.
-`score_eligible` не true в попадание и FPR не входит.
+`score_eligible` не true в попадание не входит. В FPR такая строка входит
+только с `fpr_denominator`.
 Позитив без метки — unlabeled_positive, не ложное и не истинное срабатывание.
 Ответ вне submission.schema.json числа не получает.
 Матрица и свободный поиск не смешиваются. Порог ТЗ здесь не объявляется взятым.
 Интервал F1 — кластерный bootstrap по object_id и только при 10+ кластерах.
+Уровень «названо» — метка VIOLATION_PRESENT. Уровень «утверждено» —
+только finding_status CONFIRMED_VIOLATION. Названное и не утверждённое
+на утверждённом уровне входит и в ложные срабатывания, и в пропуски.
+`tz_recall_met` остаётся на названном уровне. Гейт J этим счётом не закрывается.
+Пустой знаменатель публикуется как «не измерено», не как 0.
+FPR_ТЗ, FPR_ворот и FPR_расш. печатаются раздельно, у каждого свой состав.
+Порог FPR решает только FPR_ТЗ.
 """
 
 from __future__ import annotations
@@ -29,13 +37,24 @@ from jsonschema import Draft202012Validator, ValidationError  # type: ignore[imp
 
 from kontur.evaluation.dataset_package import is_hidden_test_object
 from kontur.evaluation.inventory import is_quarantined
-from kontur.evaluation.metrics import IOU_THRESHOLD, Polygon, f1, iou, meets_threshold, wilson
+from kontur.evaluation.metrics import (
+    IOU_THRESHOLD,
+    Interval,
+    Polygon,
+    f1,
+    iou,
+    meets_threshold,
+    score_key_fields,
+    wilson,
+)
 from kontur.evaluation.train_public import load_run_inventory
 
 _MIN_CLUSTERS = 10
 
 _POSITIVE = "VIOLATION_PRESENT"
+_CONFIRMED = "CONFIRMED_VIOLATION"
 _ABSTAIN = frozenset({"COMPARISON_IMPOSSIBLE", "MISSING_DOCUMENT"})
+_ADJUDICATION = "POSSIBLE_GOLD_LOCALIZATION_CONFLICT"
 
 
 def _rows(inventory: Mapping[str, object]) -> list[dict[str, object]]:
@@ -88,11 +107,145 @@ def _load_submissions(folder: Path) -> list[dict[str, object]]:
 
 
 def _row_eligible(row: Mapping[str, object]) -> bool:
-    """Нет поля — синтетическая строка теста. Явный false в счёт не входит."""
+    """Нет поля — синтетическая строка теста. Явный false в recall не входит."""
 
     if "score_eligible" not in row:
         return True
     return row.get("score_eligible") is True
+
+
+def _fpr_row(row: Mapping[str, object]) -> bool:
+    """Отрицательная строка знаменателя FPR_ТЗ. Вторая проверка не становится позитивом."""
+
+    if row.get("violation_label") != "NO_VIOLATION":
+        return False
+    if row.get("fpr_denominator") is True:
+        return True
+    return _row_eligible(row)
+
+
+def _confirmed_keys(
+    submissions: Sequence[Mapping[str, object]],
+    *,
+    by_location: bool,
+) -> set[tuple[str, ...]]:
+    """Ключи, которые инспектор утвердил. Метка ответа сама утверждением не считается."""
+
+    found: set[tuple[str, ...]] = set()
+    for document in submissions:
+        object_id = str(document.get("object_id") or "")
+        checks = document.get("checks")
+        if not isinstance(checks, list):
+            continue
+        for check in checks:
+            if not isinstance(check, dict):
+                continue
+            if str(check.get("finding_status") or "") != _CONFIRMED:
+                continue
+            code = str(check.get("parameter_code") or "")
+            if by_location:
+                location = str(check.get("location") or "").strip()
+                if object_id and code and location:
+                    found.add((object_id, code, location))
+            elif object_id and code:
+                found.add((object_id, code))
+    return found
+
+
+def _adjudicated_target(row: Mapping[str, object]) -> tuple[str, int, Polygon] | None:
+    """Вторая локализация. Строгую рамку эталона не подменяет."""
+
+    raw = row.get("localization_adjudication")
+    if not isinstance(raw, dict) or raw.get("reason") != _ADJUDICATION:
+        return None
+    polygon = _as_polygon(raw.get("polygon_norm"))
+    file_id = str(raw.get("file_id") or "")
+    page = raw.get("pdf_page_number")
+    if polygon is None or not file_id or isinstance(page, bool) or not isinstance(page, int):
+        return None
+    return (file_id, page, polygon)
+
+
+def _fpr_publication(
+    name: str,
+    meaning: str,
+    selected: Sequence[Mapping[str, object]],
+    predictions: Mapping[tuple[str, ...], str],
+    *,
+    by_location: bool,
+    decides: bool,
+) -> dict[str, object]:
+    composition: list[str] = []
+    false_positives = 0
+    for row in selected:
+        key = _row_key(row, by_location=by_location)
+        if key is None:
+            continue
+        composition.append(" | ".join(key))
+        if predictions.get(key) == _POSITIVE:
+            false_positives += 1
+    interval = wilson(false_positives, len(composition))
+    published = _published_rate(interval)
+    published["label"] = name
+    published["meaning"] = meaning
+    published["composition"] = sorted(composition)
+    published["false_positives"] = false_positives
+    published["decides_threshold"] = decides and interval.n > 0
+    return published
+
+
+def _sensitivity(
+    submissions: Sequence[Mapping[str, object]],
+    gold_positive: set[tuple[str, ...]],
+    *,
+    by_location: bool,
+) -> dict[str, object] | None:
+    """Таблица порог × k. Числа справочные и порог приёмки не двигают."""
+
+    claims: list[tuple[float, bool]] = []
+    for document in submissions:
+        object_id = str(document.get("object_id") or "")
+        checks = document.get("checks")
+        if not isinstance(checks, list):
+            continue
+        for check in checks:
+            if not isinstance(check, dict):
+                continue
+            confidence = check.get("confidence")
+            if isinstance(confidence, bool) or not isinstance(confidence, int | float):
+                continue
+            if str(check.get("violation_label") or "") != _POSITIVE:
+                continue
+            code = str(check.get("parameter_code") or "")
+            if by_location:
+                location = str(check.get("location") or "").strip()
+                key: tuple[str, ...] | None = (
+                    (object_id, code, location) if object_id and code and location else None
+                )
+            else:
+                key = (object_id, code) if object_id and code else None
+            if key is None:
+                continue
+            claims.append((float(confidence), key in gold_positive))
+    if not claims:
+        return None
+    claims.sort(key=lambda item: item[0], reverse=True)
+    rows: list[dict[str, object]] = []
+    for threshold in (0.5, 0.8, 0.9):
+        kept = [item for item in claims if item[0] >= threshold]
+        for limit in (1, 3, 5):
+            head = kept[:limit]
+            hits = sum(1 for _confidence, hit in head if hit)
+            rows.append(
+                {
+                    "threshold": threshold,
+                    "k": limit,
+                    "n": len(head),
+                    "hits": hits,
+                    "precision": None if not head else hits / len(head),
+                }
+            )
+    return {"rows": rows, "n_claims": len(claims), "decides_threshold": False}
 
 
 def _predictions(submissions: Sequence[Mapping[str, object]]) -> dict[tuple[str, ...], str]:
@@ -260,6 +413,20 @@ class _ScoreRow:
     predicted_positive: bool
 
 
+def _published_rate(interval: Interval) -> dict[str, object]:
+    """Пустая выборка — не число 0. Точка 0 при n > 0 остаётся нулём."""
+
+    if interval.n <= 0:
+        return {"point": None, "low": None, "high": None, "n": 0, "defined": False}
+    return {
+        "point": interval.point,
+        "low": interval.low,
+        "high": interval.high,
+        "n": interval.n,
+        "defined": True,
+    }
+
+
 def _confusion(sample: Sequence[_ScoreRow]) -> tuple[int, int, int]:
     """TP, FP, FN по строкам разметки. Точка и bootstrap считают одно и то же."""
 
@@ -356,19 +523,25 @@ def score_scope(
     *,
     by_location: bool = False,
 ) -> dict[str, object]:
+    source = list(rows)
     unlabeled = _unlabeled_positive(
-        rows, predictions, by_location=by_location, unknown_codes=False
+        source, predictions, by_location=by_location, unknown_codes=False
     )
-    rows = [row for row in rows if _row_eligible(row)]
-    positives = [row for row in rows if row.get("violation_label") == _POSITIVE]
-    negatives = [row for row in rows if row.get("violation_label") == "NO_VIOLATION"]
+    eligible = [row for row in source if _row_eligible(row)]
+    positives = [row for row in eligible if row.get("violation_label") == _POSITIVE]
+    negatives = [row for row in source if _fpr_row(row)]
     hits = 0
+    approved_tp = 0
     abstain = 0
     localized_hits = 0
     localization_unscored = 0
+    source_hits = 0
+    source_n = 0
     unscored = 0
+    confirmed = _confirmed_keys(submissions, by_location=by_location)
     scorable_pos: list[Mapping[str, object]] = []
     scorable_neg: list[Mapping[str, object]] = []
+    fpr_composition: list[str] = []
     score_rows: list[_ScoreRow] = []
 
     def row_key(row: Mapping[str, object]) -> tuple[str, ...] | None:
@@ -390,10 +563,17 @@ def score_scope(
             localization_unscored += 1
         elif label == _POSITIVE and _iou_localized(submissions, key, targets):
             localized_hits += 1
+        adjudicated = _adjudicated_target(row)
+        if adjudicated is not None:
+            source_n += 1
+            if label == _POSITIVE and _iou_localized(submissions, key, [adjudicated]):
+                source_hits += 1
         if label in _ABSTAIN or label is None:
             abstain += 1
         elif label == _POSITIVE:
             hits += 1
+            if key in confirmed:
+                approved_tp += 1
         score_rows.append(
             _ScoreRow(
                 object_id=str(row["object_id"]),
@@ -406,6 +586,7 @@ def score_scope(
         if key is None:
             continue
         scorable_neg.append(row)
+        fpr_composition.append(" | ".join(key))
         predicted_positive = predictions.get(key) == _POSITIVE
         score_rows.append(
             _ScoreRow(
@@ -418,10 +599,78 @@ def score_scope(
     recall = wilson(true_positive, true_positive + false_negative)
     precision = wilson(true_positive, true_positive + row_false_positive)
     fpr = wilson(row_false_positive, len(scorable_neg))
+    location_note = " с непустым location" if by_location else ""
+    fpr_tz = _fpr_publication(
+        "FPR_ТЗ",
+        "NO_VIOLATION с fpr_denominator или score_eligible" + location_note,
+        negatives,
+        predictions,
+        by_location=by_location,
+        decides=True,
+    )
+    fpr_gate = _fpr_publication(
+        "FPR_ворот",
+        "подмножество FPR_ТЗ со score_eligible, справочно, не порог ТЗ",
+        [row for row in negatives if _row_eligible(row)],
+        predictions,
+        by_location=by_location,
+        decides=False,
+    )
+    fpr_extended = _fpr_publication(
+        "FPR_расш",
+        "все NO_VIOLATION, включая строки вне FPR_ТЗ; информационно",
+        [row for row in source if row.get("violation_label") == "NO_VIOLATION"],
+        predictions,
+        by_location=by_location,
+        decides=False,
+    )
+    approved_fp = row_false_positive + (hits - approved_tp)
+    approved_recall = wilson(approved_tp, len(scorable_pos))
+    approved_precision = wilson(approved_tp, approved_tp + approved_fp)
+    key_field_rows: list[dict[str, object]] = []
+    for row in source:
+        raw_fields = row.get("key_fields")
+        if not isinstance(raw_fields, list):
+            continue
+        key_field_rows.extend(item for item in raw_fields if isinstance(item, dict))
+    key_fields = score_key_fields(key_field_rows) if key_field_rows else None
+    gold_positive_keys = {
+        key for row in scorable_pos if (key := row_key(row)) is not None
+    }
+    sensitivity = _sensitivity(
+        submissions, gold_positive_keys, by_location=by_location
+    )
+    source_localization = wilson(source_hits, source_n)
     point_f1 = _f1_of(score_rows)
     localization_n = len(scorable_pos) - localization_unscored
     localization = wilson(localized_hits, localization_n)
     f1_interval = cluster_f1_interval(score_rows)
+    not_measured: list[str] = []
+    if recall.n == 0:
+        not_measured.append("recall")
+    if precision.n == 0:
+        not_measured.append("precision")
+    if fpr.n == 0:
+        not_measured.append("false_positive_rate")
+    if localization.n == 0:
+        not_measured.append("evidence_localization")
+    if f1_interval is None:
+        not_measured.append("f1_bootstrap")
+    if fpr_gate["n"] == 0:
+        not_measured.append("FPR_ворот")
+    if fpr_extended["n"] == 0:
+        not_measured.append("FPR_расш")
+    if approved_recall.n == 0:
+        not_measured.append("approved_recall")
+    if key_fields is None:
+        not_measured.append("key_field_exact_match")
+    elif key_fields["defined"] is not True:
+        not_measured.append("key_field_exact_match")
+    if sensitivity is None:
+        not_measured.append("sensitivity")
+    if source_localization.n == 0:
+        not_measured.append("localization_source_verified")
+    fpr_denominator_name = str(fpr_tz["meaning"])
     report: dict[str, object] = {
         "n_positive": len(scorable_pos),
         "hits": hits,
@@ -430,13 +679,36 @@ def score_scope(
         "false_positives": row_false_positive,
         "localized_hits": localized_hits,
         "localization_unscored": localization_unscored,
-        "localization": {
-            "point": localization.point,
-            "low": localization.low,
-            "high": localization.high,
-            "n": localization.n,
-            "defined": localization.n > 0,
+        "localization": _published_rate(localization),
+        "localization_source_verified": _published_rate(source_localization),
+        "levels": {
+            "named": {
+                "tp": hits,
+                "fp": row_false_positive,
+                "fn": len(scorable_pos) - hits,
+                "recall": _published_rate(recall),
+                "tz_recall_met": meets_threshold("recall", recall),
+                "decides_gate_j": False,
+            },
+            "approved": {
+                "tp": approved_tp,
+                "fp": approved_fp,
+                "fn": len(scorable_pos) - approved_tp,
+                "recall": _published_rate(approved_recall),
+                "precision": _published_rate(approved_precision),
+                "tz_recall_met": (
+                    meets_threshold("recall", approved_recall) if approved_recall.n else False
+                ),
+                "decides_gate_j": True,
+            },
         },
+        "fpr_sets": {
+            "FPR_ТЗ": fpr_tz,
+            "FPR_ворот": fpr_gate,
+            "FPR_расш": fpr_extended,
+        },
+        "key_fields": key_fields,
+        "sensitivity": sensitivity,
         "f1_interval": (
             None if f1_interval is None else {"low": f1_interval[0], "high": f1_interval[1]}
         ),
@@ -445,59 +717,122 @@ def score_scope(
             if f1_interval is None
             else "кластерный bootstrap по object_id, не нижние границы precision и recall"
         ),
-        "recall": {"point": recall.point, "low": recall.low, "high": recall.high, "n": recall.n},
-        "precision": {
-            "point": precision.point,
-            "low": precision.low,
-            "high": precision.high,
-            "n": precision.n,
-        },
+        "recall": _published_rate(recall),
+        "precision": _published_rate(precision),
         "f1_point": point_f1,
-        "fpr": {
-            "point": fpr.point,
-            "low": fpr.low,
-            "high": fpr.high,
-            "n": fpr.n,
-            "defined": fpr.n > 0,
-        },
+        "fpr": _published_rate(fpr),
+        "fpr_composition": sorted(fpr_composition),
+        "fpr_unit": "gold_row",
         "unlabeled_positive": unlabeled,
         "tz_recall_met": meets_threshold("recall", recall),
         "tz_precision_met": meets_threshold("precision", precision) if precision.n else False,
         "tz_fpr_met": meets_threshold("false_positive_rate", fpr) if fpr.n else False,
+        "acceptance_rule": "wilson_bound",
+        "fpr_denominator_name": fpr_denominator_name,
+        "not_measured": not_measured,
     }
     if by_location:
         report["unscored_without_location"] = unscored
     return report
 
 
-def score_directory(folder: Path, *, match: str = "location") -> dict[str, object]:
+def _plain_rows(rows: Sequence[object]) -> list[dict[str, object]]:
+    """Строки из запроса. Путь к файлу не читается."""
+
+    if not rows:
+        raise ValueError("нет строк эталона")
+    checked: list[dict[str, object]] = []
+    for index, item in enumerate(rows, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"rows[{index}]: ожидался объект")
+        if not str(item.get("object_id") or "").strip():
+            raise ValueError(f"rows[{index}]: нет object_id")
+        if not str(item.get("parameter_code") or "").strip():
+            raise ValueError(f"rows[{index}]: нет parameter_code")
+        checked.append(item)
+    return checked
+
+
+def _checked_submissions(submissions: Sequence[object]) -> list[dict[str, object]]:
+    validator = _submission_validator()
+    checked: list[dict[str, object]] = []
+    for index, item in enumerate(submissions, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"submissions[{index}]: ожидался объект")
+        try:
+            validator.validate(item)
+        except ValidationError as exc:
+            raise ValueError(f"submissions[{index}]: {exc.message}") from exc
+        checked.append(item)
+    return checked
+
+
+def score_bundle(
+    rows: Sequence[Mapping[str, object]],
+    submissions: Sequence[Mapping[str, object]],
+    *,
+    match: str,
+    corpus: str,
+) -> dict[str, object]:
+    """Счёт по уже прочитанным строкам. Диск здесь не открывается."""
+
     if match not in {"code", "location"}:
         raise ValueError("match: code или location")
-    inventory = load_run_inventory()
-    rows = _rows(inventory)
-    submissions = _load_submissions(folder)
     by_location = match == "location"
     predictions = (
         _predictions_by_location(submissions) if by_location else _predictions(submissions)
     )
     location_in_gold = any(_gold_location(row) is not None for row in rows)
-    report = {
+    matrix = score_scope(
+        _scope_rows(rows, "MATRIX"), predictions, submissions, by_location=by_location
+    )
+    free_search = score_scope(
+        _scope_rows(rows, "FREE_SEARCH"), predictions, submissions, by_location=by_location
+    )
+    return {
         "closes_gate_j": False,
-        "corpus": "public_gold_checks",
-        "not_frozen_val": True,
+        "stored": False,
+        "publishes_metrics": False,
+        "corpus": corpus,
+        "not_frozen_val": corpus != "request",
         "match": "object_id+parameter_code+location" if by_location else "object_id+parameter_code",
         "location_in_gold": location_in_gold,
         "unlabeled_positive": _unlabeled_positive(
             rows, predictions, by_location=by_location, unknown_codes=True
         ),
-        "matrix": score_scope(
-            _scope_rows(rows, "MATRIX"), predictions, submissions, by_location=by_location
-        ),
-        "free_search": score_scope(
-            _scope_rows(rows, "FREE_SEARCH"), predictions, submissions, by_location=by_location
-        ),
+        "matrix": matrix,
+        "free_search": free_search,
+        "not_measured": {
+            "matrix": matrix["not_measured"],
+            "free_search": free_search["not_measured"],
+        },
     }
-    return report
+
+
+def score_directory(folder: Path, *, match: str = "location") -> dict[str, object]:
+    inventory = load_run_inventory()
+    return score_bundle(
+        _rows(inventory),
+        _load_submissions(folder),
+        match=match,
+        corpus="public_gold_checks",
+    )
+
+
+def score_supplied(
+    rows: Sequence[object],
+    submissions: Sequence[object],
+    *,
+    match: str = "location",
+) -> dict[str, object]:
+    """Счёт эталона из запроса. Тело не пишется на диск и гейт J не закрывает."""
+
+    return score_bundle(
+        _plain_rows(rows),
+        _checked_submissions(submissions),
+        match=match,
+        corpus="request",
+    )
 
 
 def _line(title: str, block: Mapping[str, object]) -> str:
@@ -509,10 +844,26 @@ def _line(title: str, block: Mapping[str, object]) -> str:
     point_f1 = block["f1_point"]
     if not isinstance(point_f1, float):
         raise TypeError(title)
+
+    def _fmt(name: str, rate: Mapping[str, object]) -> str:
+        point = rate.get("point")
+        if point is None or rate.get("defined") is False:
+            return f"{name} не измерен (n={rate.get('n', 0)})"
+        low = rate.get("low")
+        high = rate.get("high")
+        numbers = (point, low, high)
+        if not all(isinstance(item, float) for item in numbers):
+            raise TypeError(title)
+        return f"{name}={point:.3f} [{low:.3f}; {high:.3f}]"
+
+    denominator = block.get("fpr_denominator_name")
+    composition = block.get("fpr_composition")
+    composition_n = len(composition) if isinstance(composition, list) else 0
+    denominator_text = f", знаменатель: {denominator}, строк={composition_n}"
     if fpr.get("defined") is False or fpr.get("n") == 0:
-        fpr_text = "FPR не определён (n=0)"
+        fpr_text = f"FPR не измерен (n=0){denominator_text}"
     else:
-        fpr_text = f"FPR n={fpr['n']} {fpr['point']:.3f} [{fpr['low']:.3f}; {fpr['high']:.3f}]"
+        fpr_text = f"{_fmt('FPR', fpr)}{denominator_text}"
     localization_block = block.get("localization")
     if not isinstance(localization_block, dict) or localization_block.get("defined") is False:
         localization_text = "локализация не определена"
@@ -530,14 +881,15 @@ def _line(title: str, block: Mapping[str, object]) -> str:
         f1_text = f"F1={point_f1:.3f} bootstrap [{interval['low']:.3f}; {interval['high']:.3f}]"
     return (
         f"{title}: n={recall['n']} hits={block['hits']} "
-        f"R={recall['point']:.3f} [{recall['low']:.3f}; {recall['high']:.3f}] "
-        f"P n={precision['n']} {precision['point']:.3f} "
-        f"[{precision['low']:.3f}; {precision['high']:.3f}] "
+        f"{_fmt('R', recall)} "
+        f"P n={precision['n']} {_fmt('P', precision)} "
         f"{f1_text} "
         f"{fpr_text} "
         f"abstain={block['abstentions']} {localization_text} "
         f"localization_unscored={block['localization_unscored']} "
-        f"порог_ТЗ={block['tz_recall_met']}"
+        f"порог_ТЗ={block['tz_recall_met']} "
+        f"правило={block.get('acceptance_rule', 'wilson_bound')} "
+        f"не_измерено={block.get('not_measured', [])}"
     )
 
 

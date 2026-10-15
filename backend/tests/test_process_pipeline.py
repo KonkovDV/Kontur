@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import io
+import zipfile
+
 from test_pdf_tokens import ascii_pdf, empty_pdf
 
 from kontur.application.document_catalog import CatalogFile, build_document_catalog
@@ -109,7 +112,8 @@ def test_zip_is_not_silently_skipped() -> None:
         files=(item,),
         blobs={"f-zip": payload},
     )
-    assert any("ARCHIVE_NOT_EXPANDED" in line and ".zip" in line for line in report.parse_errors)
+    assert any("ZIP: не прочитан" in line for line in report.parse_errors)
+    assert all("ARCHIVE_NOT_EXPANDED" not in line for line in report.parse_errors)
     assert report.pages_built == 0
 
 
@@ -171,7 +175,8 @@ def test_docx_and_xml_are_named_accepted_unparsed_not_skipped() -> None:
     )
     text = " ".join(report.parse_errors)
     assert "f-docx: DOCX: не прочитан" in text
-    assert "f-xml: ACCEPTED_UNPARSED" in text
+    assert "f-xml: XML: текст не прочитан" in text
+    assert "ACCEPTED_UNPARSED" not in text
     assert "UNSUPPORTED_FORMAT" not in text
     assert report.pages_built == 1
     assert all(item.finding_status not in HUMAN_ONLY_STATUSES for item in report.findings)
@@ -406,3 +411,82 @@ def test_successor_head_is_used_even_if_stale_file_is_uploaded_last() -> None:
     assert by_id == {"f-current": "CURRENT", "f-stale": "SUPERSEDED"}
     assert stamps["f-stale"] is ApprovalStatus.UNKNOWN
     assert stamps["f-current"] is ApprovalStatus.UNKNOWN
+
+
+def test_xml_text_is_a_page_and_doctype_is_refused() -> None:
+    payload = '<?xml version="1.0" encoding="UTF-8"?><note>шифр 12345-PZ</note>'.encode()
+    item = PipelineFile(
+        file_id="f-xml",
+        file_hash=file_sha256(payload),
+        filename="note.xml",
+        doc_stage=DocStage.PD,
+    )
+    report = run_process_pipeline(
+        object_id="obj-xml",
+        completeness=_completeness_pd(),
+        files=(item,),
+        blobs={"f-xml": payload},
+    )
+    assert report.pages_built == 1
+    assert all("ACCEPTED_UNPARSED" not in line for line in report.parse_errors)
+    assert all("UNSUPPORTED_FORMAT" not in line for line in report.parse_errors)
+    hostile = b'<!DOCTYPE note [<!ENTITY xxe SYSTEM "file:///secret">]><note>&xxe;</note>'
+    hostile_item = PipelineFile(
+        file_id="f-xxe",
+        file_hash=file_sha256(hostile),
+        filename="note.xml",
+        doc_stage=DocStage.PD,
+    )
+    refused = run_process_pipeline(
+        object_id="obj-xxe",
+        completeness=_completeness_pd(),
+        files=(hostile_item,),
+        blobs={"f-xxe": hostile},
+    )
+    assert refused.pages_built == 0
+    assert any("внешние сущности" in line for line in refused.parse_errors)
+
+
+def test_zip_with_pdf_is_expanded_before_compare() -> None:
+    pdf = ascii_pdf("CODE 12345-PZ Rev 2 Sheet 1")
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("sheet.pdf", pdf)
+    payload = buffer.getvalue()
+    item = PipelineFile(
+        file_id="f-zip",
+        file_hash=file_sha256(payload),
+        filename="pack.zip",
+        doc_stage=DocStage.PD,
+    )
+    report = run_process_pipeline(
+        object_id="obj-zip-pdf",
+        completeness=_completeness_pd(),
+        files=(item,),
+        blobs={"f-zip": payload},
+    )
+    assert report.pages_built == 1
+    assert report.expanded_files[0].file_id == "f-zip__1"
+    assert report.expanded_files[0].filename == "sheet.pdf"
+    assert report.expanded_blobs["f-zip__1"] == pdf
+    text = " ".join(report.parse_errors)
+    assert "ARCHIVE_NOT_EXPANDED" not in text
+    assert "ZIP:" not in text
+
+
+def test_seven_zip_stays_unexpanded() -> None:
+    payload = b"7z-not-a-real-archive"
+    item = PipelineFile(
+        file_id="f-7z",
+        file_hash=file_sha256(payload),
+        filename="pack.7z",
+        doc_stage=DocStage.PD,
+    )
+    report = run_process_pipeline(
+        object_id="obj-7z",
+        completeness=_completeness_pd(),
+        files=(item,),
+        blobs={"f-7z": payload},
+    )
+    assert any("ARCHIVE_NOT_EXPANDED" in line and ".7z" in line for line in report.parse_errors)
+    assert report.pages_built == 0

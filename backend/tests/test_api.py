@@ -474,6 +474,42 @@ def test_audit_log_lists_review_events(client: TestClient) -> None:
     assert "REVIEW" in actions
 
 
+def test_ui_event_stays_teaching_and_does_not_close_gate_k(client: TestClient) -> None:
+    from kontur.evaluation.usability_audit import audit_event_log
+
+    process_id = _upload(client).json()["process_id"]
+    recorded = client.post(
+        f"/api/v1/processes/{process_id}/audit/ui",
+        headers=INSPECTOR,
+        json={
+            "action": "UI_CLICK",
+            "screen": "queue",
+            "target": "finding",
+            "check_id": "f-1",
+            "click_index": 1,
+            "client_ts": "2026-10-08T12:00:00+00:00",
+            "teaching_data": False,
+        },
+    )
+    assert recorded.status_code == 200
+    assert recorded.json()["closes_gate_k"] is False
+    journal = client.get(f"/api/v1/processes/{process_id}/audit", headers=INSPECTOR).json()
+    assert journal["ui_journal"]["teaching_data"] is True
+    assert audit_event_log(journal["ui_journal"])["closes_gate_k"] is False
+    refused = client.post(
+        f"/api/v1/processes/{process_id}/audit/ui",
+        headers=INSPECTOR,
+        json={"action": "CONFIRMED_VIOLATION"},
+    )
+    assert refused.status_code == 422
+    huge_stamp = client.post(
+        f"/api/v1/processes/{process_id}/audit/ui",
+        headers=INSPECTOR,
+        json={"action": "UI_CLICK", "client_ts": "x" * 41},
+    )
+    assert huge_stamp.status_code == 422
+
+
 def test_audit_log_unknown_process_is_404(client: TestClient) -> None:
     response = client.get("/api/v1/processes/does-not-exist/audit", headers=INSPECTOR)
     assert response.status_code == 404

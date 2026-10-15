@@ -89,14 +89,20 @@ def _validated_claims(token: str) -> dict[str, Any]:
     public_key_pem = (
         os.environ.get("KONTUR_JWT_PUBLIC_KEY", "").replace("\\n", "\n").strip()
     )
-    if algorithm not in _ALLOWED_ALGORITHMS or not issuer or not audience or not public_key_pem:
+    jwks_url = os.environ.get("KONTUR_JWKS_URL", "").strip()
+    if algorithm not in _ALLOWED_ALGORITHMS or not issuer or not audience:
         raise _authentication_required()
-    key = _verification_key(public_key_pem, algorithm)
+    if not public_key_pem and not jwks_url:
+        raise _authentication_required()
 
     try:
         header = jwt.get_unverified_header(token)
         if header.get("alg") != algorithm:
             raise _authentication_required()
+        if jwks_url:
+            key = jwt.PyJWKClient(jwks_url).get_signing_key_from_jwt(token).key
+        else:
+            key = _verification_key(public_key_pem, algorithm)
         decoded = jwt.decode(
             token,
             key,

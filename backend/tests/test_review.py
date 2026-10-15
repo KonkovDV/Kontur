@@ -17,7 +17,17 @@ from kontur.application.review import (
     start_verification,
     unfinalize_process,
 )
-from kontur.domain.models import ApprovalStatus, Finding
+from kontur.domain.models import (
+    ApprovalStatus,
+    DocStage,
+    DocumentRef,
+    EvidenceFragment,
+    EvidenceGroup,
+    EvidenceRole,
+    Extraction,
+    ExtractionEngine,
+    Finding,
+)
 from kontur.domain.state_machines import Actor, TransitionError
 from kontur.domain.statuses import FindingStatus, ProcessState, ReasonCode, ReviewPriority
 
@@ -196,9 +206,65 @@ def test_split_is_not_an_atomic_review_action() -> None:
         review(candidate(), actor=INSPECTOR, action="SPLIT", comment=COMMENT)
 
 
-def test_split_is_unimplemented_until_each_part_has_evidence() -> None:
-    with pytest.raises(NotImplementedError, match="evidence_group"):
-        split(candidate(), parts=2)
+def _part(group_id: str, rule_code: str = "AR-041") -> EvidenceGroup:
+    square = ((0.1, 0.1), (0.2, 0.1), (0.2, 0.2), (0.1, 0.2))
+    document = DocumentRef(
+        file_id=f"file-{group_id}",
+        file_hash="a" * 64,
+        doc_stage=DocStage.PD,
+        document_code="AR-1",
+        revision="1",
+        approval_status=ApprovalStatus.APPROVED,
+    )
+
+    def fragment(role: EvidenceRole) -> EvidenceFragment:
+        return EvidenceFragment(
+            fragment_id=f"{group_id}-{role.value}",
+            role=role,
+            document=document,
+            page=1,
+            polygon_source=square,
+            polygon_norm=square,
+            extracted=Extraction(
+                raw_token="десять",  # noqa: S106
+                engine=ExtractionEngine.VECTOR,
+                engine_version="test",
+                confidence=0.99,
+                normalized_value=10.0,
+                grounded_in_source_tokens=True,
+                second_read_agrees=True,
+            ),
+        )
+
+    return EvidenceGroup(
+        evidence_group_id=group_id,
+        object_id="obj-1",
+        rule_code=rule_code,
+        matrix_version="draft-0",
+        fragments=(fragment(EvidenceRole.EXPECTED), fragment(EvidenceRole.ACTUAL)),
+    )
+
+
+def test_inspector_splits_a_candidate_into_parts_with_their_own_evidence() -> None:
+    parts = split(
+        candidate(),
+        (_part("eg-a"), _part("eg-b")),
+        actor=INSPECTOR,
+    )
+    assert [item.finding_id for item in parts] == ["f-1:1", "f-1:2"]
+    assert [item.evidence_group_id for item in parts] == ["eg-a", "eg-b"]
+    assert all(item.finding_status is FindingStatus.CANDIDATE for item in parts)
+    assert all(item.finding_status is not FindingStatus.CONFIRMED_VIOLATION for item in parts)
+
+
+def test_machine_cannot_split_a_finding() -> None:
+    with pytest.raises(TransitionError, match="инспектора"):
+        split(candidate(), (_part("eg-a"), _part("eg-b")), actor=Actor("worker", is_human=False))
+
+
+def test_split_refuses_a_part_without_a_distinct_evidence_group() -> None:
+    with pytest.raises(TransitionError, match="evidence_group_id"):
+        split(candidate(), (_part("eg-a"), _part("eg-a")), actor=INSPECTOR)
 
 
 def test_inspector_can_select_unknown_stamp_as_etalon() -> None:

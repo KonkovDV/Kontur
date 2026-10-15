@@ -17,11 +17,12 @@ from dataclasses import dataclass
 
 from kontur.application.normalize import (
     fold_label,
-    length_unit_of_match,
+    measure_dimensions_conflict,
+    measure_unit_of_match,
     parse_number,
-    scale_length_to_target,
+    scale_measure_to_target,
 )
-from kontur.domain.geometry import reading_key, union_rect_polygon, y_overlap
+from kontur.domain.geometry import reading_key, y_overlap
 from kontur.domain.models import Extraction, ExtractionEngine, Polygon
 
 ENGINE_VERSION = "0.1.0"
@@ -119,7 +120,16 @@ def _join(tokens: Sequence[PageToken]) -> str:
     return " ".join(item.text for item in tokens)
 
 
-def _find_anchor_end(tokens: Sequence[PageToken], anchors: Sequence[str]) -> int | None:
+_STANDARD = re.compile(r"(сп|снип|гост)\s*(\d+(?:[.\-]\d+)*)", re.IGNORECASE)
+_ROW_PREFIX = re.compile(r"^\d{1,2}\.$")
+
+
+def _anchor_spans(
+    tokens: Sequence[PageToken], anchors: Sequence[str]
+) -> tuple[tuple[int, int], ...]:
+    """Все вхождения якоря, не первое. Пустая страница якорей не получает."""
+
+    spans: list[tuple[int, int]] = []
     for start in range(len(tokens)):
         chunk: list[str] = []
         for end in range(start, min(len(tokens), start + _MAX_ANCHOR_TOKENS)):
@@ -128,21 +138,159 @@ def _find_anchor_end(tokens: Sequence[PageToken], anchors: Sequence[str]) -> int
             chunk.append(tokens[end].text)
             folded = fold_label(" ".join(chunk))
             if any(anchor in folded for anchor in anchors):
-                return end
-    return None
+                spans.append((start, end))
+                break
+    return tuple(spans)
 
 
-def _window(tokens: Sequence[PageToken], anchor_end: int) -> list[PageToken]:
-    origin = tokens[anchor_end]
-    rest = [
-        item
-        for item in tokens[anchor_end + 1 : anchor_end + 1 + _MAX_WINDOW_TOKENS]
-        if item.page == origin.page
-    ]
-    same_row = [
-        item for item in rest if y_overlap(origin.polygon_norm, item.polygon_norm)
-    ]
-    return same_row or rest
+def _find_anchor_end(tokens: Sequence[PageToken], anchors: Sequence[str]) -> int | None:
+    spans = _anchor_spans(tokens, anchors)
+    if not spans:
+        return None
+    return spans[0][1]
+
+
+def _standards(text: str) -> set[tuple[str, str]]:
+    return {
+        (kind.casefold(), number.replace("-", "."))
+        for kind, number in _STANDARD.findall(fold_label(text))
+    }
+
+
+def _rule_standards(rule: dict[str, object]) -> set[tuple[str, str]]:
+    raw = rule.get("normative_refs")
+    if not isinstance(raw, list):
+        return set()
+    parts: list[str] = []
+    for item in raw:
+        if isinstance(item, dict):
+            parts.append(str(item.get("identifier") or ""))
+            parts.append(str(item.get("clause") or ""))
+        elif isinstance(item, str):
+            parts.append(item)
+    return _standards(" ".join(parts))
+
+
+def _norm_mismatch(window_text: str, rule: dict[str, object]) -> bool:
+    """Чужой СП/ГОСТ/СНиП понижает окно. Пустой перечень правила ничего не режет."""
+
+    expected = _rule_standards(rule)
+    cited = _standards(window_text)
+    if not expected or not cited:
+        return False
+    return expected.isdisjoint(cited)
+
+
+def _numbered_row(tokens: Sequence[PageToken], start: int) -> bool:
+    if start <= 0:
+        return False
+    prefix = tokens[start - 1]
+    anchor = tokens[start]
+    if prefix.page != anchor.page:
+        return False
+    if not y_overlap(prefix.polygon_norm, anchor.polygon_norm):
+        return False
+    return _ROW_PREFIX.fullmatch(prefix.text.strip()) is not None
+
+
+def _match_token_index(window: Sequence[PageToken], match: re.Match[str]) -> int:
+    cursor = 0
+    for index, token in enumerate(window):
+        start = cursor
+        cursor += len(token.text)
+        if start <= match.start() < cursor:
+            return index
+        cursor += 1
+    return len(window)
+
+
+@dataclass(frozen=True, slots=True)
+class _Read:
+    value: float
+    raw: str
+    token: PageToken
+    note: bool
+    distance: int
+
+
+def _note_flags(tokens: Sequence[PageToken]) -> tuple[bool, ...]:
+    """Число внутри скобок — примечание строки, не ячейка."""
+
+    depth = 0
+    flags: list[bool] = []
+    for token in tokens:
+        flags.append(depth > 0 or "(" in token.text)
+        depth = max(0, depth + token.text.count("(") - token.text.count(")"))
+    return tuple(flags)
+
+
+def _reads(
+    tokens: Sequence[PageToken], rule: dict[str, object], *, nearest_at_end: bool
+) -> list[_Read]:
+    if not tokens:
+        return []
+    flags = _note_flags(tokens)
+    text = _join(tokens)
+    steps = _steps(rule)
+    target = _target_unit(rule)
+    found: list[_Read] = []
+    last = len(tokens) - 1
+    for match in _regex(rule).finditer(text):
+        local = _match_token_index(tokens, match)
+        if local >= len(tokens):
+            continue
+        token = tokens[local]
+        if _ROW_PREFIX.fullmatch(token.text.strip()):
+            continue
+        try:
+            raw = _captured_number(match)
+            source_unit = measure_unit_of_match(text, match)
+            if measure_dimensions_conflict(source_unit, target):
+                continue
+            value = scale_measure_to_target(
+                parse_number(raw, steps),
+                source_unit=source_unit,
+                target_unit=target,
+            )
+        except ValueError:
+            continue
+        distance = last - local if nearest_at_end else local
+        found.append(
+            _Read(value=value, raw=raw, token=token, note=flags[local], distance=distance)
+        )
+    return found
+
+
+def _same_row(
+    ordered: Sequence[PageToken], start: int, end: int
+) -> tuple[list[PageToken], list[PageToken]]:
+    origin = ordered[end]
+    before: list[PageToken] = []
+    after: list[PageToken] = []
+    for index, token in enumerate(ordered):
+        if token.page != origin.page or not y_overlap(origin.polygon_norm, token.polygon_norm):
+            continue
+        if start <= index <= end:
+            continue
+        if index < start:
+            before.append(token)
+        else:
+            after.append(token)
+    return before, after
+
+
+def _forward_rest(ordered: Sequence[PageToken], end: int) -> list[PageToken]:
+    """Следующие строки, когда в строке якоря справа пусто. Не дальше окна."""
+
+    origin = ordered[end]
+    rest: list[PageToken] = []
+    for token in ordered[end + 1 : end + 1 + _MAX_WINDOW_TOKENS]:
+        if token.page != origin.page:
+            break
+        if y_overlap(origin.polygon_norm, token.polygon_norm):
+            continue
+        rest.append(token)
+    return rest
 
 
 def parse_number_from_text(text: str, rule: dict[str, object]) -> float | None:
@@ -153,14 +301,18 @@ def parse_number_from_text(text: str, rule: dict[str, object]) -> float | None:
     matches = list(_regex(rule).finditer(text))
     if not matches:
         return None
+    source_unit = measure_unit_of_match(text, matches[0])
+    target = _target_unit(rule)
+    if measure_dimensions_conflict(source_unit, target):
+        return None
     try:
         value = parse_number(_captured_number(matches[0]), _steps(rule))
     except ValueError:
         return None
-    return scale_length_to_target(
+    return scale_measure_to_target(
         value,
-        source_unit=length_unit_of_match(text, matches[0]),
-        target_unit=_target_unit(rule),
+        source_unit=source_unit,
+        target_unit=target,
     )
 
 
@@ -174,61 +326,101 @@ def _target_unit(rule: dict[str, object]) -> str | None:
     return unit if isinstance(unit, str) and unit.strip() else None
 
 
-def extract_number(tokens: Sequence[PageToken], rule: dict[str, object]) -> NumberHit | None:
-    """Найти число после якоря. Нет якоря или нет числа — None, не догадка."""
+def _candidate_from_span(
+    ordered: Sequence[PageToken],
+    start: int,
+    end: int,
+    rule: dict[str, object],
+) -> tuple[tuple[int, int, int, int, int, int, int], NumberHit] | None:
+    """Число строки. Слева от подписи — ячейка, в скобках справа — примечание.
 
-    if not tokens:
-        return None
-    ordered = _sorted(tokens)
-    end = _find_anchor_end(ordered, _anchors(rule))
-    if end is None:
-        return None
-    window = _window(ordered, end)
-    if not window:
-        return None
-    text = _join(window)
-    matches = list(_regex(rule).finditer(text))
-    if not matches:
-        return None
-    steps = _steps(rule)
-    target = _target_unit(rule)
+    Первое и последнее чтение считаются только по ячейкам. Примечание не
+    спорит с ячейкой и не заставляет отказ. Нет числа — None, не догадка.
+    """
 
-    def _scaled(match: re.Match[str]) -> float:
-        raw = _captured_number(match)
-        value = parse_number(raw, steps)
-        return scale_length_to_target(
-            value,
-            source_unit=length_unit_of_match(text, match),
-            target_unit=target,
-        )
-
-    try:
-        primary = _scaled(matches[0])
-        secondary = _scaled(matches[-1])
-    except ValueError:
+    before, after = _same_row(ordered, start, end)
+    real_after = [item for item in _reads(after, rule, nearest_at_end=False) if not item.note]
+    real_before = [item for item in _reads(before, rule, nearest_at_end=True) if not item.note]
+    notes = [item for item in _reads(after, rule, nearest_at_end=False) if item.note]
+    note_only = False
+    if real_after:
+        chosen = real_after
+        context = before + after
+    elif real_before:
+        chosen = [min(real_before, key=lambda item: (item.distance, item.raw))]
+        context = before + after
+    elif notes:
+        chosen = notes
+        note_only = True
+        context = before + after
+    elif not after:
+        rest = _forward_rest(ordered, end)
+        chosen = _reads(rest, rule, nearest_at_end=False)
+        context = rest
+    else:
         return None
-    primary_raw = _captured_number(matches[0])
-    covering = [item for item in window if item.text.strip()]
-    source = union_rect_polygon(tuple(item.polygon_source for item in covering))
-    norm = union_rect_polygon(tuple(item.polygon_norm for item in covering))
-    agrees = primary == secondary
-    return NumberHit(
+    if not chosen:
+        return None
+    primary = chosen[0]
+    secondary = chosen[-1]
+    origin = ordered[end]
+    agrees = primary.value == secondary.value
+    same_row = y_overlap(origin.polygon_norm, primary.token.polygon_norm)
+    text = _join(context)
+    hit = NumberHit(
         extraction=Extraction(
-            raw_token=primary_raw,
-            engine=engine_of(covering),
+            raw_token=primary.raw,
+            engine=engine_of((primary.token,)),
             engine_version=ENGINE_VERSION,
             confidence=0.99 if agrees else 0.4,
-            normalized_value=primary,
+            normalized_value=primary.value,
             unit=str(rule["unit"]) if rule.get("unit") else None,
             grounded_in_source_tokens=True,
             second_read_agrees=agrees,
             confidence_features={
-                "window_matches": float(len(matches)),
-                "second_read": float(secondary),
+                "window_matches": float(len(chosen)),
+                "second_read": float(secondary.value),
             },
         ),
-        page=ordered[end].page,
-        polygon_source=source,
-        polygon_norm=norm,
+        page=origin.page,
+        polygon_source=primary.token.polygon_source,
+        polygon_norm=primary.token.polygon_norm,
         window_text=text,
     )
+    rank = (
+        0 if same_row else 1,
+        1 if note_only else 0,
+        1 if _norm_mismatch(text, rule) else 0,
+        1 if primary.value == 0.0 else 0,
+        primary.distance,
+        0 if _numbered_row(ordered, start) else 1,
+        end,
+    )
+    return rank, hit
+
+
+def extract_number(tokens: Sequence[PageToken], rule: dict[str, object]) -> NumberHit | None:
+    """Число у самого плотного якоря.
+
+    Первое совпадение в порядке чтения не выигрывает, если дальше по листу
+    есть число в той же строке, ненулевой шаблон или норматив правила.
+    Число слева от подписи берётся, когда справа только скобочное примечание.
+    Ноль остаётся, когда другого числа нет. Нет якоря или нет числа — None.
+    """
+
+    if not tokens:
+        return None
+    ordered = _sorted(tokens)
+    spans = _anchor_spans(ordered, _anchors(rule))
+    if not spans:
+        return None
+    chosen: tuple[tuple[int, int, int, int, int, int, int], NumberHit] | None = None
+    for start, end in spans:
+        candidate = _candidate_from_span(ordered, start, end, rule)
+        if candidate is None:
+            continue
+        if chosen is None or candidate[0] < chosen[0]:
+            chosen = candidate
+    if chosen is None:
+        return None
+    return chosen[1]

@@ -98,6 +98,19 @@ def test_pz001_is_executable() -> None:
     assert registry.get("PZ-001")["coverage"] == "executable", "PZ-001 должен оставаться executable"
 
 
+def test_square_centimeters_and_square_meters_are_one_value(rule: dict[str, object]) -> None:
+    """5000 см² и 0,5 м² — одна площадь. Голые мм к мм² не приводятся."""
+
+    result = _run(
+        rule,
+        ("Площадь", "застройки", "5000", "см²"),
+        ("Площадь", "застройки", "0,5", "м²"),
+    )
+    assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+    assert result.finding.expected_value == pytest.approx(0.5)
+    assert result.finding.actual_value == pytest.approx(0.5)
+
+
 def test_equal_values_give_no_difference(rule: dict[str, object]) -> None:
     result = _run(
         rule,
@@ -186,6 +199,7 @@ def test_ocr_reads_disagree_gives_abstain(rule: dict[str, object]) -> None:
     )
     assert result.finding.finding_status is FindingStatus.ABSTAIN
     assert result.finding.evidence_group_id is None
+    assert [item.finding.finding_status for item in result.also] == [FindingStatus.SUSPICION]
 
 
 def test_package_default_pd_and_unstamped_rd_compare(rule: dict[str, object]) -> None:
