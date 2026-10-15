@@ -33,6 +33,8 @@ jobs:
       - run: pip install jsonschema pyyaml
       - name: Схемы и OpenAPI разбираются
         run: python scripts/check_contracts.py
+      - name: Normative registry (schema, dates, rule references)
+        run: python scripts/check_normative_registry.py
 
   db:
     runs-on: ubuntu-latest

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/normative_registry.schema.json",
+  "title": "Normative registry",
+  "type": "object",
+  "required": ["schema", "acts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "kontur.normative_registry.v1" },
+    "reviewed_on": { "type": ["string", "null"], "format": "date" },
+    "acts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "identifier", "issuer", "act_type", "mandatory",
+          "effective_from", "effective_to", "layer", "status", "verified"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "identifier": { "type": "string", "minLength": 1 },
+          "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "issuer": { "type": "string", "minLength": 1 },
+          "act_type": {
+            "enum": [
+              "federal_law", "government_decree", "regional_decree", "ministerial_order",
+              "standard", "code_of_practice", "sanitary_rules", "industry_rules"
+            ]
+          },
+          "mandatory": { "enum": ["law", "bylaw", "mandatory_list", "voluntary", "contract"] },
+          "date": { "type": "string", "format": "date" },
+          "revision": { "type": "string" },
+          "url": { "type": "string" },
+          "effective_from": { "type": ["string", "null"], "format": "date" },
+          "effective_to": { "type": ["string", "null"], "format": "date" },
+          "layer": { "enum": ["organizer_matrix", "current_overlay"] },
+          "status": { "enum": ["accepted", "disputed", "typo_in_source"] },
+          "note": { "type": "string" },
+          "verified": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}
