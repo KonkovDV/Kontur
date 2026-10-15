@@ -92,6 +92,10 @@ services:
       - no-new-privileges:true
     environment:
       KONTUR_DB_URL: postgresql://kontur:kontur@postgres:5432/kontur
+      KONTUR_OBJECT_STORE_URL: http://minio:9000
+      KONTUR_S3_ACCESS_KEY: kontur
+      KONTUR_S3_SECRET_KEY: kontur-dev-secret
+      KONTUR_S3_BUCKET: kontur
       KONTUR_REDIS_URL: redis://redis:6379/0
       KONTUR_AMQP_URL: amqp://kontur:kontur@rabbitmq:5672/
       KONTUR_JWT_ISSUER: ${KONTUR_JWT_ISSUER}
