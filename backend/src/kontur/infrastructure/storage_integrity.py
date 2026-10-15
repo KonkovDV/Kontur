@@ -16,7 +16,7 @@ from typing import Literal
 from kontur.infrastructure.db.process_store import MemoryProcessStore, ProcessSnapshot
 from kontur.infrastructure.object_store import ObjectStore
 
-IntegrityStatus = Literal["ok", "mismatch", "missing"]
+IntegrityStatus = Literal["ok", "mismatch", "missing", "no_hash"]
 
 logger = logging.getLogger("kontur")
 
@@ -57,9 +57,8 @@ def registry_from_memory(store: MemoryProcessStore) -> tuple[RegistryFile, ...]:
     rows: list[RegistryFile] = []
     for snapshot in _iter_memory_snapshots(store):
         for item in snapshot.files:
+            # Пустой file_hash НЕ пропускаем: check_storage_integrity пометит no_hash.
             digest = item.file_hash.strip().lower()
-            if not digest:
-                continue
             rows.append(
                 RegistryFile(
                     process_id=snapshot.process_id,
@@ -88,6 +87,18 @@ def check_storage_integrity(
     bad = 0
     for entry in entries:
         expected = entry.expected_hash.strip().lower()
+        if not expected:
+            finding = IntegrityFinding(
+                process_id=entry.process_id,
+                file_id=entry.file_id,
+                expected_hash="",
+                actual_hash=None,
+                status="no_hash",
+            )
+            bad += 1
+            findings.append(finding)
+            _emit_mismatch(finding, audit=audit)
+            continue
         blob = objects.get(entry.process_id, entry.file_id)
         if blob is None:
             finding = IntegrityFinding(

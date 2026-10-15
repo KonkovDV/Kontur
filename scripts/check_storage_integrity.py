@@ -5,7 +5,7 @@
 
   PYTHONPATH=backend/src python scripts/check_storage_integrity.py
 
-По умолчанию — in-memory smoke (0 файлов → ok). Для реального стенда задайте
+По умолчанию — in-memory; 0 файлов → exit 3 (fail-closed). Для реального стенда задайте
 ``KONTUR_DB_URL`` + object store env (как API) — тогда обход идёт через
 workspace wiring. Расхождение → ERROR в лог, exit 1.
 
@@ -44,7 +44,20 @@ def main() -> int:
             return 0
         return 2
 
-    report = check_storage_integrity(registry_from_memory(store), objects)
+    entries = registry_from_memory(store)
+    if not entries and os.environ.get("KONTUR_INTEGRITY_ALLOW_EMPTY") != "1":
+        # Вакуумный pass недопустим для cron: 0 файлов = нечего проверять.
+        print(
+            "check_storage_integrity: реестр пуст (0 файлов) — fail-closed; "
+            "KONTUR_INTEGRITY_ALLOW_EMPTY=1 для осознанного пропуска.",
+            file=sys.stderr,
+        )
+        return 3
+
+    def _audit(actor: str, action: str, payload: dict[str, object]) -> None:
+        store.save_audit_event(str(payload["process_id"]), actor, action, payload)
+
+    report = check_storage_integrity(entries, objects, audit=_audit)
     print(f"ok={report.ok} bad={report.bad}")
     for item in report.findings:
         if item.status == "ok":
