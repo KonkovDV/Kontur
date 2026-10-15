@@ -24,7 +24,7 @@ HITL; MISSING_EVIDENCE≠нарушение; РиН только подтвер�
 |---|---|---|---|---|---|---|
 | 1 | [tbikbov/a13-inspector-lct2026](https://github.com/tbikbov/a13-inspector-lct2026) | 0 | — | peer A13 | Fastify+Python workers, Tesseract, LLM **off** по умолчанию, офлайн-пакет, честные §14 (OCR FAIL, F1 строгое не берёт порог), JURY-GUIDE | **Ближайший архитектурный peer** Контуру (fail-closed, LLM≠вердикт) |
 | 2 | [midudar/ctrl_z_hackathon](https://github.com/midudar/ctrl_z_hackathon) | 0 | — | peer ctrl_z | Node+React+ml-service; HITL; OCR **кэш из Releases** (EasyOCR/Paddle заранее); claim train P1.00 R0.80 F1 0.89; ~19 params с извлечением | Сильный packaging; OCR в runtime на стенде без кэша слабый |
-| 3 | [Evgen74/inspector-ai-public](https://github.com/Evgen74/inspector-ai-public) | 0 | — | peer | NestJS+ONNX PP-OCR; claim 75/132 content; «100/100» Тюменская; XML протокола ❌; скрытый тест остановлен | Эталон объёма ML; не копировать |
+| 3 | [Evgen74/inspector-ai-public](https://github.com/Evgen74/inspector-ai-public) | 0 | — | peer | NestJS+ONNX PP-OCR; claim 75/132 content; «100/100» Тюменская; XML протокола нет; скрытый тест остановлен | Эталон объёма ML; не копировать |
 | 4 | [Namelomax/AIDocumentAnalize](https://github.com/Namelomax/AIDocumentAnalize) | 0 | — | peer | Offline tar+ClamAV; claim 99/132; OCR **1−CER 0,225** | Offline-pack ориентир; OCR-гейт открыт |
 | 5 | [NikolaySalyakhutdinov/gos-stoidoc](https://github.com/NikolaySalyakhutdinov/gos-stoidoc) | 0 | — | peer | MiniLM-132; `drawing_dimension`≠searchable | Паттерн фильтра чертежных размеров |
 | 6 | [IfcOpenShell/IfcOpenShell](https://github.com/IfcOpenShell/IfcOpenShell) (`ifcdiff`) | 2860 | LGPL-3.0 | паттерн | JSON IFC diff | Не dep PDF-пути |
@@ -49,13 +49,13 @@ HITL; MISSING_EVIDENCE≠нарушение; РиН только подтвер�
 
 | Модуль | Kontur | a13 | ctrl_z | inspector-ai | AIDocument | gos-stoidoc | Hakaton-LDT* | chakaton |
 |---|---|---|---|---|---|---|---|---|
-| 1 Загрузка | ✅ | ✅ Tess+AV | ✅ +OCR cache Rel. | ✅ ONNX | ✅+ClamAV | ✅ MiniLM | ◐ gateway | ❌ |
-| 2 Сравнение | 55 exec | ◐ честные NOT_COMPARABLE | ~19 extract | ~75 content | ~99 decl. | seed 132 | ◐ arch only | ❌ |
-| 3 HITL | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ? | UI |
-| 5 Free search | ◐ | ✅ workers | ? | ◐ FREE | ◐ | ◐ | ? | ❌ |
-| 6 РиН | mock | mock | ? | mock | mock | ? | ? | ❌ |
+| 1 Загрузка | да | да, Tess+AV | да, +OCR cache Rel. | да, ONNX | да, +ClamAV | да, MiniLM | ◐ gateway | нет |
+| 2 Сравнение | 55 exec | ◐ честные NOT_COMPARABLE | ~19 extract | ~75 content | ~99 decl. | seed 132 | ◐ arch only | нет |
+| 3 HITL | да | да | да | да | да | да | ? | UI |
+| 5 Free search | ◐ | да, workers | ? | ◐ FREE | ◐ | ◐ | ? | нет |
+| 6 РиН | mock | mock | ? | mock | mock | ? | ? | нет |
 | OCR CA≥0,95 | Wilson 0,663 | FAIL (пишут) | claim 0,950 на 600 стр. SILVER* | ONNX | CER→0,225 | ? | — | — |
-| XML протокол | в контракте | ? | ? | ❌ | ✅ claim | ? | — | — |
+| XML протокол | в контракте | ? | ? | нет | да, claim | ? | — | — |
 
 \*ctrl_z: OCR 0,950 — их замер EasyOCR vs text-layer SILVER; не скрытый тест орг.
 \*Hakaton-LDT = frontend+backend pair.

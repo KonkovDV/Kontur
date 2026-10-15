@@ -63,7 +63,7 @@
 |---|---|---|---|---|---|---|
 | [tbikbov/a13-inspector-lct2026](https://github.com/tbikbov/a13-inspector-lct2026) | A13 | Fastify, Python workers, Tess, LLM off | 132; NOT_COMPARABLE честно | **FAIL** (пишут); stamp CA не взят | mock | Честность плюс; пороги §14 не закрыты |
 | [midudar/ctrl_z_hackathon](https://github.com/midudar/ctrl_z_hackathon) | ctrl_z | Node/React/ml-service | ~19 extract; skeleton 132 | claim **0,950** SILVER 600 стр.* | ? | Без Releases-кэша сканы ИД пустые |
-| [Evgen74/inspector-ai-public](https://github.com/Evgen74/inspector-ai-public) | — | Nest+ONNX | ~75 content | ONNX; наш SILVER не гоняли | mock | Скрытый тест остановлен; XML❌; runs∉git |
+| [Evgen74/inspector-ai-public](https://github.com/Evgen74/inspector-ai-public) | — | Nest+ONNX | ~75 content | ONNX; наш SILVER не гоняли | mock | Скрытый тест остановлен; XML нет; runs∉git |
 | [Namelomax/AIDocumentAnalize](https://github.com/Namelomax/AIDocumentAnalize) | — | Docker+optional vLLM | ~99/132 | **1−CER 0,225** | mock | OCR-гейт; demo passwords |
 | [NikolaySalyakhutdinov/gos-stoidoc](https://github.com/NikolaySalyakhutdinov/gos-stoidoc) | — | Express+MiniLM | seed 132 | tesseract | очередь | Cloud Run в README |
 | [Tanoklllmonbku/Hakaton-LDT](https://github.com/Tanoklllmonbku/Hakaton-LDT) + [Kaiman30/Hakaton-LDT-backend](https://github.com/Kaiman30/Hakaton-LDT-backend) | — | Go microservices skeleton | arch README | — | — | Ранняя стадия; не полный компаратор |
