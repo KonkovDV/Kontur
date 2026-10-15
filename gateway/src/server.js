@@ -16,6 +16,8 @@ import { metricsAuth, metricsHandler, metricsMiddleware } from "./metrics.js";
 import {
   MAX_BATCH_BYTES,
   MAX_FILE_BYTES,
+  FINALIZE_LIMIT,
+  FINALIZE_WINDOW_MS,
   UPLOAD_LIMIT,
   UPLOAD_WINDOW_MS,
   createUploadLimiter,
@@ -98,6 +100,12 @@ function isUpload(req) {
   return req.method === "POST" && req.originalUrl.startsWith("/api/v1/documents/upload");
 }
 
+const FINALIZE_PATH = /^\/api\/v1\/processes\/[^/]+\/(?:finalize|unfinalize)(?:\?|$)/;
+
+function isFinalize(req) {
+  return req.method === "POST" && FINALIZE_PATH.test(req.originalUrl);
+}
+
 function clientKey(req) {
   return req.socket?.remoteAddress ?? "unknown";
 }
@@ -157,12 +165,15 @@ export function createApp({
   maxBatchBytes = MAX_BATCH_BYTES,
   uploadLimit = UPLOAD_LIMIT,
   uploadWindowMs = UPLOAD_WINDOW_MS,
+  finalizeLimit = FINALIZE_LIMIT,
+  finalizeWindowMs = FINALIZE_WINDOW_MS,
   coreUrl = CORE_URL,
   metricsToken = process.env.KONTUR_METRICS_TOKEN ?? "",
   metricsAllowAnon = process.env.KONTUR_METRICS_ALLOW_ANON === "1",
 } = {}) {
   const app = express();
   const allowUpload = createUploadLimiter(uploadLimit, uploadWindowMs);
+  const allowFinalize = createUploadLimiter(finalizeLimit, finalizeWindowMs);
 
   // /metrics до прокси и лимитеров; не уходит в ядро.
   app.get(
@@ -201,6 +212,14 @@ export function createApp({
         "BATCH_LIMIT_EXCEEDED",
         `Content-Length ${length} больше лимита ${maxBatchBytes} Б`,
       );
+      return;
+    }
+    next();
+  });
+
+  app.use((req, res, next) => {
+    if (isFinalize(req) && !allowFinalize(clientKey(req))) {
+      reject(res, 429, "RATE_LIMITED", "слишком много запросов финализации, повторите позже");
       return;
     }
     next();

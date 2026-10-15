@@ -110,3 +110,31 @@ test("gateway rejects an empty-of-quota burst with RATE_LIMITED", async () => {
     server.close();
   }
 });
+
+test("gateway rate-limits finalize/unfinalize per client with RATE_LIMITED", async () => {
+  const app = createApp({ finalizeLimit: 1, finalizeWindowMs: 60_000, coreUrl: "http://127.0.0.1:9" });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const { port } = server.address();
+  const post = (path) =>
+    fetch(`http://127.0.0.1:${port}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ inspector_id: "i-1", reason: "r" }),
+    });
+  try {
+    const first = await post("/api/v1/processes/p-1/finalize");
+    await first.arrayBuffer();
+    assert.notEqual(first.status, 429);
+    const second = await post("/api/v1/processes/p-2/unfinalize");
+    const payload = await second.json();
+    assert.equal(second.status, 429);
+    assert.equal(payload.reason_code, "RATE_LIMITED");
+    const status = await fetch(`http://127.0.0.1:${port}/api/v1/processes/p-1/status`);
+    await status.arrayBuffer();
+    assert.notEqual(status.status, 429);
+  } finally {
+    server.close();
+  }
+});
+

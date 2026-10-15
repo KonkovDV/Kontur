@@ -4,6 +4,9 @@ export const MAX_FILE_BYTES = 50 * 1024 * 1024;
 export const MAX_BATCH_BYTES = 200 * 1024 * 1024;
 export const UPLOAD_LIMIT = 30;
 export const UPLOAD_WINDOW_MS = 60_000;
+// finalize/unfinalize: state-changing protocol actions, far rarer than uploads.
+export const FINALIZE_LIMIT = 10;
+export const FINALIZE_WINDOW_MS = 60_000;
 
 export function exceedsFileLimit(size, maxFileBytes = MAX_FILE_BYTES) {
   return size > maxFileBytes;
