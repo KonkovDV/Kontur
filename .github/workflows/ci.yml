@@ -9,8 +9,8 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -e "backend[dev]"
@@ -23,8 +23,8 @@ jobs:
   contracts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install jsonschema pyyaml
@@ -47,8 +47,8 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install PostgreSQL adapter and Kontur core
@@ -74,8 +74,8 @@ jobs:
   claims:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Честность публичных формулировок
@@ -88,8 +88,8 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: npm
@@ -110,7 +110,7 @@ jobs:
       KONTUR_JWT_PUBLIC_KEY: unused-for-health-check
       KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate base and offline compose contracts
         run: |
           set -euo pipefail
@@ -174,7 +174,7 @@ jobs:
       KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
       KONTUR_CORE_CPUS: "2"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build core image
         run: docker compose build core
       - name: Verify core runtime contract and multiprocessing spawn
@@ -205,8 +205,8 @@ jobs:
       KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
       KONTUR_CORE_CPUS: "2"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Gateway limit tests
@@ -240,7 +240,7 @@ jobs:
       KONTUR_ALLOW_INSECURE_DEV_AUTH: "false"
       KONTUR_CORE_CPUS: "2"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build and start core and gateway
         run: |
           docker compose build core gateway
