@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 
+import pytest
+
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import DocStage
@@ -98,6 +100,7 @@ def test_wiring_fails_db_without_object_store_in_production(monkeypatch) -> None
 
 
 def test_wiring_allows_db_without_object_store_in_dev(monkeypatch) -> None:
+    pytest.importorskip("psycopg")
     monkeypatch.setenv("KONTUR_ENV", "dev")
     monkeypatch.setenv("KONTUR_DB_URL", "postgresql://kontur:kontur@localhost/kontur")
     monkeypatch.delenv("KONTUR_OBJECT_STORE_URL", raising=False)
