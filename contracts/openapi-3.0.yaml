@@ -747,6 +747,8 @@ paths:
                 inspector_id:
                   type: string
       responses:
+        '429':
+          description: Лимит запросов шлюза (RATE_LIMITED)
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -787,6 +789,8 @@ paths:
                   type: string
                   minLength: 1
       responses:
+        '429':
+          description: Лимит запросов шлюза (RATE_LIMITED)
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
