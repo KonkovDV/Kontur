@@ -13,15 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SYFT_VERSION: "1.54.1"
+      # sha256 of syft_1.54.1_linux_amd64.tar.gz, computed from the downloaded release asset and
+      # matching both the release checksums file and the GitHub asset digest.
+      SYFT_SHA256: "c069905b391cc4c20a5ba65ad5c10be2a7ba074f8ea6ad203e24d14e303dad47"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install syft (checksum verified)
+      - name: Install syft (pinned sha256)
         run: |
           set -euo pipefail
           base="https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}"
           tarball="syft_${SYFT_VERSION}_linux_amd64.tar.gz"
           curl -sSfLO "${base}/${tarball}"
-          curl -sSfL "${base}/syft_${SYFT_VERSION}_checksums.txt" | grep " ${tarball}$" | sha256sum -c -
+          echo "${SYFT_SHA256}  ${tarball}" | sha256sum -c -
           tar xzf "${tarball}" syft
       - name: Generate CycloneDX SBOMs from lockfiles
         run: |
