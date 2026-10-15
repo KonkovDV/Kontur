@@ -44,16 +44,12 @@ class DualReadResult:
 
 
 def _parse_number(raw: str) -> float | None:
-    """Попытка разобрать float из токена с русской нотацией (запятая = точка)."""
-    text = (
-        unicodedata.normalize("NFC", raw)
-        .strip()
-        .replace(",", ".")
-        .replace("\u00a0", "")
-        .replace("\u202f", "")
-    )
+    """Тот же разбор, что у экстрактора: правый разделитель — дробь, «1.254» не угадывается."""
+
+    from kontur.application.normalize import parse_number
+
     try:
-        return float(text)
+        return parse_number(raw, ("nfc", "collapse_spaces", "decimal_comma"))
     except ValueError:
         return None
 

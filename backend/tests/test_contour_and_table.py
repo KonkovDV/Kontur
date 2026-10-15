@@ -149,6 +149,24 @@ def _table_page(document: DocumentRef, rows: tuple[tuple[str, str], ...]) -> Sta
     return StagePage(document=document, tokens=tuple(tokens))
 
 
+def test_latin_b_riser_is_the_same_mark_as_cyrillic() -> None:
+    """B1 и В1 — одна строка ведомости. Латиница не плодит второй стояк."""
+
+    pd = _doc(DocStage.PD, "ИОС2-1", "ios2-pd")
+    rd = _doc(DocStage.RD, "ИОС2-1", "ios2-rd")
+    result = evaluate_rule(
+        _rule("IOS2-071"),
+        object_id="OBJ-IOS2-071",
+        pages={
+            DocStage.PD: _table_page(pd, (("B1.1", "25"), ("B1.2", "32"))),
+            DocStage.RD: _table_page(rd, (("В1.1", "25"), ("В1.2", "32"))),
+        },
+        completeness=_completeness(),
+        revision_pool=[pd, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+
+
 def test_same_riser_diameters_are_not_a_hit() -> None:
     rows = (("В1.1", "25"), ("В1.2", "32"))
     pd = _doc(DocStage.PD, "ИОС2-1", "ios2-pd")
@@ -186,6 +204,39 @@ def test_smaller_riser_is_a_candidate() -> None:
     group = result.evidence_group
     assert group is not None
     assert all(fragment.polygon_norm[0][1] > 0.35 for fragment in group.fragments)
+
+
+def test_thicker_riser_does_not_fire_a_decrease_trigger() -> None:
+    pd = _doc(DocStage.PD, "ИОС2-1", "ios2-pd")
+    rd = _doc(DocStage.RD, "ИОС2-1", "ios2-rd")
+    result = evaluate_rule(
+        _rule("IOS2-071"),
+        object_id="OBJ-IOS2-071",
+        pages={
+            DocStage.PD: _table_page(pd, (("В1.1", "25"),)),
+            DocStage.RD: _table_page(rd, (("В1.1", "32"),)),
+        },
+        completeness=_completeness(),
+        revision_pool=[pd, rd],
+    )
+    assert result.finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE
+
+
+def test_table_on_one_file_is_not_a_design_change() -> None:
+    shared = _doc(DocStage.PD, "ИОС2-1", "same-volume")
+    copy = _doc(DocStage.RD, "ИОС2-1", "same-volume")
+    result = evaluate_rule(
+        _rule("IOS2-071"),
+        object_id="OBJ-IOS2-071",
+        pages={
+            DocStage.PD: _table_page(shared, (("В1.1", "25"),)),
+            DocStage.RD: _table_page(copy, (("В1.1", "20"),)),
+        },
+        completeness=_completeness(),
+        revision_pool=[shared, copy],
+    )
+    assert result.finding.finding_status is FindingStatus.NOT_COMPARABLE
+    assert "один файл" in result.finding.rationale
 
 
 def test_missing_riser_mark_is_not_paired() -> None:

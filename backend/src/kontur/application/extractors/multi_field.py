@@ -12,7 +12,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from kontur.application.comparators import Comparison, compare_delta
+from kontur.application.comparators import Comparison, compare_values
 from kontur.application.extractors.number import (
     ENGINE_VERSION,
     NumberHit,
@@ -135,7 +135,7 @@ def align_fields(
     for unit in units:
         scoped = dict(rule)
         scoped["unit"] = unit
-        comparison = compare_delta(left[unit].value, right[unit].value, scoped)
+        comparison = compare_values(left[unit].value, right[unit].value, scoped)
         if comparison.status is FindingStatus.CANDIDATE:
             return comparison, unit
         if chosen is None:

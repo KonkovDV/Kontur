@@ -250,6 +250,15 @@ _WORD_MARK: dict[str, str] = {
     "ARCHITECTURE": "АР",
     "КОНСТРУКЦИИ": "КР",
     "STRUCTURES": "КР",
+    "ВОДОСНАБЖЕНИЕ": "ИОС2",
+    "КАНАЛИЗАЦИЯ": "ИОС3",
+    "ВОДООТВЕДЕНИЕ": "ИОС3",
+    "ЭЛЕКТРОСНАБЖЕНИЕ": "ИОС1",
+    "ЭЛЕКТРООБОРУДОВАНИЕ": "ИОС1",
+    "ЭОМ": "ИОС1",
+    "ВК": "ИОС2",
+    "СЛАБОТОЧНЫЕ": "ИОС5",
+    "ГЕНПЛАН": "ПЗУ",
 }
 
 
@@ -529,6 +538,27 @@ def _halt(
         stages=stages,
         missing_stage=missing_stage,
     )
+
+
+def _pages_are_one_file(
+    pages: Mapping[DocStage, StagePage | tuple[StagePage, ...]],
+    left: DocStage,
+    right: DocStage,
+) -> bool:
+    """Один file_id на двух стадиях — это копирование файла, не изменение проекта."""
+
+    def file_id(stage: DocStage) -> str:
+        raw = pages.get(stage)
+        if isinstance(raw, tuple):
+            page = raw[0] if raw else None
+        else:
+            page = raw
+        if page is None:
+            return ""
+        return page.document.file_id.strip()
+
+    first = file_id(left)
+    return bool(first) and first == file_id(right)
 
 
 def _identity_ok(page: StagePage) -> bool:
@@ -1183,6 +1213,14 @@ def _element_table_rule(
             )
         tables[stage] = parsed
         sheets[stage] = raw
+    if _pages_are_one_file(sheets, DocStage.PD, DocStage.RD):
+        return _halt(
+            rule,
+            Stage.L5_PAIRING,
+            _mapped(rule, "not_comparable", FindingStatus.NOT_COMPARABLE),
+            "ПД и РД указывают на один файл",
+            prior=identity_ok,
+        )
     outcome = align_tables(tables[DocStage.PD], tables[DocStage.RD], rule)
     if isinstance(outcome, str):
         return _halt(
@@ -1279,6 +1317,14 @@ def _multi_field_rule(
             )
         fields[stage] = parsed
         sheets[stage] = raw
+    if _pages_are_one_file(sheets, DocStage.PD, DocStage.RD):
+        return _halt(
+            rule,
+            Stage.L5_PAIRING,
+            _mapped(rule, "not_comparable", FindingStatus.NOT_COMPARABLE),
+            "ПД и РД указывают на один файл",
+            prior=identity_ok,
+        )
     outcome = align_fields(fields[DocStage.PD], fields[DocStage.RD], rule)
     if isinstance(outcome, str):
         return _halt(
@@ -1738,6 +1784,14 @@ def evaluate_rule(
                 )
             text_hits[stage] = hit
 
+        if _pages_are_one_file(pages, DocStage.PD, DocStage.RD):
+            return _halt(
+                rule,
+                Stage.L5_PAIRING,
+                _mapped(rule, "not_comparable", FindingStatus.NOT_COMPARABLE),
+                "ПД и РД указывают на один файл",
+                prior=identity_ok,
+            )
         if DocStage.PD not in text_hits or DocStage.RD not in text_hits:
             return _halt(
                 rule,
@@ -1947,6 +2001,14 @@ def evaluate_rule(
             )
         hits[stage] = number_hit
 
+    if _pages_are_one_file(pages, DocStage.PD, DocStage.RD):
+        return _halt(
+            rule,
+            Stage.L5_PAIRING,
+            _mapped(rule, "not_comparable", FindingStatus.NOT_COMPARABLE),
+            "ПД и РД указывают на один файл",
+            prior=identity_ok,
+        )
     if DocStage.PD not in hits or DocStage.RD not in hits:
         return _halt(
             rule,

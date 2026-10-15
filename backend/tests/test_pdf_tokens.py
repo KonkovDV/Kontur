@@ -148,6 +148,27 @@ def _dark_pixels(png: bytes, polygon: object) -> tuple[int, int, int]:
     return dark, width, height
 
 
+def test_nan_bbox_is_rejected() -> None:
+    from kontur.infrastructure.pdfium_page import PageRenderError, parse_bbox
+
+    with pytest.raises(PageRenderError, match="не число"):
+        parse_bbox("nan,0,1,1")
+
+
+def test_huge_page_is_not_rasterized() -> None:
+    """MediaBox в десятки тысяч пунктов не выделяет растр."""
+
+    from kontur.infrastructure.pdfium_page import PageRenderError, render_page_png
+
+    pdf = pdfium.PdfDocument.new()
+    pdf.new_page(20_000, 20_000)
+    buffer = io.BytesIO()
+    pdf.save(buffer)
+    pdf.close()
+    with pytest.raises(PageRenderError, match="слишком велика"):
+        render_page_png(buffer.getvalue(), 1)
+
+
 def test_rotated_page_polygon_lands_on_png_ink() -> None:
     """Поворот листа: polygon_norm в [0;1] и на краске того PNG, что отдаёт экран."""
 
@@ -190,6 +211,52 @@ def test_screen_overlay_keeps_polygon_y_down() -> None:
     body = evidence[start : evidence.index("\n}", start) + 2]
     assert "1 -" not in body
     assert "y * scaleY" in body
+
+
+def test_invisible_render_mode_is_not_a_token() -> None:
+    """Режим invisible не попадает в значение. Рядом лежащий видимый текст остаётся."""
+
+    pdf = pdfium.PdfDocument.new()
+    page = pdf.new_page(200, 200)
+    hidden = pdfium_c.FPDFPageObj_NewTextObj(pdf, b"Helvetica", 14)
+    pdfium_c.FPDFText_SetText(hidden, _wchar("SECRET 3300"))
+    pdfium_c.FPDFPageObj_Transform(hidden, 1, 0, 0, 1, 20.0, 40.0)
+    pdfium_c.FPDFTextObj_SetTextRenderMode(hidden, pdfium_c.FPDF_TEXTRENDERMODE_INVISIBLE)
+    pdfium_c.FPDFPage_InsertObject(page, hidden)
+    visible = pdfium_c.FPDFPageObj_NewTextObj(pdf, b"Helvetica", 12)
+    pdfium_c.FPDFText_SetText(visible, _wchar("VISIBLE 1200"))
+    pdfium_c.FPDFPageObj_Transform(visible, 1, 0, 0, 1, 20.0, 100.0)
+    pdfium_c.FPDFPage_InsertObject(page, visible)
+    pdfium_c.FPDFPage_GenerateContent(page)
+    buffer = io.BytesIO()
+    pdf.save(buffer)
+    pdf.close()
+
+    texts = [token.text for token in flatten_tokens(extract_pdf_bytes(buffer.getvalue()))]
+    assert texts == ["VISIBLE 1200"]
+
+
+def test_page_sized_invisible_text_does_not_erase_visible_tokens() -> None:
+    """Растянутый invisible-объект не прячет соседнюю видимую строку."""
+
+    pdf = pdfium.PdfDocument.new()
+    page = pdf.new_page(200, 200)
+    cover = pdfium_c.FPDFPageObj_NewTextObj(pdf, b"Helvetica", 14)
+    pdfium_c.FPDFText_SetText(cover, _wchar("X"))
+    pdfium_c.FPDFTextObj_SetTextRenderMode(cover, pdfium_c.FPDF_TEXTRENDERMODE_INVISIBLE)
+    pdfium_c.FPDFPageObj_Transform(cover, 50, 0, 0, 50, 0, 0)
+    pdfium_c.FPDFPage_InsertObject(page, cover)
+    visible = pdfium_c.FPDFPageObj_NewTextObj(pdf, b"Helvetica", 12)
+    pdfium_c.FPDFText_SetText(visible, _wchar("VISIBLE 1200"))
+    pdfium_c.FPDFPageObj_Transform(visible, 1, 0, 0, 1, 20.0, 100.0)
+    pdfium_c.FPDFPage_InsertObject(page, visible)
+    pdfium_c.FPDFPage_GenerateContent(page)
+    buffer = io.BytesIO()
+    pdf.save(buffer)
+    pdf.close()
+
+    texts = [token.text for token in flatten_tokens(extract_pdf_bytes(buffer.getvalue()))]
+    assert texts == ["VISIBLE 1200"]
 
 
 def test_text_outside_cropbox_is_not_a_token() -> None:

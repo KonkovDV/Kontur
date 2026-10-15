@@ -69,6 +69,10 @@ class DocumentRef:
     sheet: str | None = None
     predecessor_file_id: str | None = None
     successor_file_id: str | None = None
+    #: Имя файла поставки. Пустой шифр штампа группирует редакции по нему.
+    source_name: str = ""
+    #: «change» — изм, «correction» — кор/ред. Пусто, если номер взяли не с титула.
+    revision_kind: str = ""
 
 
 def _polygon_points(polygon: Polygon, *, normalized: bool) -> None:

@@ -9,7 +9,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from kontur.application.comparators import Comparison, compare_delta
+from kontur.application.comparators import Comparison, compare_values
 from kontur.application.extractors.number import (
     ENGINE_VERSION,
     NumberHit,
@@ -17,6 +17,8 @@ from kontur.application.extractors.number import (
     engine_of,
 )
 from kontur.application.normalize import parse_number
+from kontur.application.room_compare import label_text
+from kontur.application.system_marks import expand_system_marks
 from kontur.domain.geometry import union_rect_polygon, y_overlap
 from kontur.domain.models import Extraction, Polygon
 from kontur.domain.statuses import FindingStatus
@@ -70,24 +72,29 @@ def parse_element_table(tokens: Sequence[PageToken]) -> dict[str, TableRow] | st
         marks = [item for item in group if item not in numbers and item.text.strip()]
         if not marks:
             continue
-        mark = "".join(item.text.strip() for item in marks)
-        if _MARK.fullmatch(mark) is None:
+        mark = label_text("".join(item.text.strip() for item in marks))
+        expanded = expand_system_marks(mark)
+        names = expanded or ((mark,) if _MARK.fullmatch(mark) else ())
+        if not names:
             continue
-        if mark in found:
-            return f"марка {mark} повторяется"
+        if any(name in found for name in names):
+            return f"марка {names[0]} повторяется"
         try:
             value = parse_number(numbers[0].text.strip(), ("nfc", "decimal_comma"))
         except ValueError:
             return "число строки не разбирается"
         polygons_source = tuple(item.polygon_source for item in (*marks, numbers[0]))
         polygons_norm = tuple(item.polygon_norm for item in (*marks, numbers[0]))
-        found[mark] = TableRow(
-            mark=mark,
-            value=value,
-            page=numbers[0].page,
-            polygon_source=union_rect_polygon(polygons_source),
-            polygon_norm=union_rect_polygon(polygons_norm),
-        )
+        source = union_rect_polygon(polygons_source)
+        norm = union_rect_polygon(polygons_norm)
+        for name in names:
+            found[name] = TableRow(
+                mark=name,
+                value=value,
+                page=numbers[0].page,
+                polygon_source=source,
+                polygon_norm=norm,
+            )
     if not found:
         return "строки ведомости не найдены"
     return found
@@ -105,7 +112,7 @@ def align_tables(
     chosen: Comparison | None = None
     chosen_mark = ""
     for mark in sorted(left):
-        comparison = compare_delta(left[mark].value, right[mark].value, rule)
+        comparison = compare_values(left[mark].value, right[mark].value, rule)
         if comparison.status is FindingStatus.CANDIDATE:
             return comparison, mark
         if chosen is None:

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from kontur.application.normalize import quantize
+from kontur.application.normalize import measured_delta, quantize
 from kontur.domain.statuses import FindingStatus
 
 
@@ -56,7 +56,7 @@ def compare_delta(expected: float, actual: float, rule: dict[str, object]) -> Co
     abs_tol, rel_tol, rounding = _tolerance(rule)
     left = quantize(expected, rounding)
     right = quantize(actual, rounding)
-    delta = float(right - left)
+    delta = measured_delta(float(right), float(left))
     distance = abs(delta)
     within = False
     if abs_tol is not None and distance <= abs_tol:
@@ -110,7 +110,7 @@ def compare_ordering(expected: float, actual: float, rule: dict[str, object]) ->
     ok = results.get(operator)
     if ok is None:
         raise ValueError(f"compare_ordering: неизвестный operator {operator!r}")
-    delta = float(actual - ref)
+    delta = measured_delta(actual, ref)
     verdict = "выполнено" if ok else "нарушение"
     return Comparison(
         status=FindingStatus.AUTO_NO_DIFFERENCE if ok else FindingStatus.CANDIDATE,
@@ -144,7 +144,7 @@ def compare_range(expected: float, actual: float, rule: dict[str, object]) -> Co
     if in_range:
         reason_parts.append(f"{actual} {unit} в диапазоне [{min_f}, {max_f}] {unit}")
 
-    delta = float(actual - expected)
+    delta = measured_delta(actual, expected)
     return Comparison(
         status=FindingStatus.AUTO_NO_DIFFERENCE if in_range else FindingStatus.CANDIDATE,
         expected=expected,
@@ -334,6 +334,60 @@ ALL_OPERATORS: frozenset[str] = (
 )
 
 
+def trigger_sense(rule: dict[str, object]) -> str | None:
+    """Направление из текста триггера матрицы.
+
+    «Расхождение», «изменение», «подмена» оставляют любую разницу кандидатом.
+    Однозначное «уменьшение» или «увеличение» не делает кандидатом противоположный знак.
+    """
+
+    text = str(rule.get("source_trigger_logic") or "").casefold().replace("ё", "е")
+    if not text:
+        return None
+    if any(word in text for word in ("расхожден", "изменен", "подмен", "сдвиг", "замен")):
+        return None
+    decrease = any(word in text for word in ("уменьшен", "понижен", "менее прочн", "менее пластич"))
+    increase = any(word in text for word in ("увеличен", "превышен"))
+    if decrease == increase:
+        return None
+    return "decrease" if decrease else "increase"
+
+
+def _opposite_of_trigger(comparison: Comparison, rule: dict[str, object]) -> Comparison:
+    """Снять кандидат, если знак разницы не тот, что назван в триггере.
+
+    Автомат по-прежнему не пишет NEGATIVE_VERIFIED: противоположный знак —
+    отсутствие срабатывания триггера.
+    """
+
+    if comparison.status is not FindingStatus.CANDIDATE:
+        return comparison
+    sense = trigger_sense(rule)
+    if sense is None:
+        return comparison
+    expected = comparison.expected
+    actual = comparison.actual
+    if isinstance(expected, bool) or isinstance(actual, bool):
+        return comparison
+    if not isinstance(expected, int | float) or not isinstance(actual, int | float):
+        return comparison
+    opposite = (sense == "decrease" and actual >= expected) or (
+        sense == "increase" and actual <= expected
+    )
+    if not opposite:
+        return comparison
+    direction = "уменьшение" if sense == "decrease" else "увеличение"
+    return Comparison(
+        status=FindingStatus.AUTO_NO_DIFFERENCE,
+        expected=expected,
+        actual=actual,
+        delta=comparison.delta,
+        rationale=(
+            f"триггер матрицы смотрит {direction}: {expected} → {actual} его не выполняет"
+        ),
+    )
+
+
 def compare_values(expected: object, actual: object, rule: dict[str, object]) -> Comparison:
     """Единая точка входа матричного движка.
 
@@ -344,9 +398,12 @@ def compare_values(expected: object, actual: object, rule: dict[str, object]) ->
     operator = str(c.get("operator") or "")
 
     if operator == "delta":
-        return compare_delta(
-            float(expected),  # type: ignore[arg-type]
-            float(actual),  # type: ignore[arg-type]
+        return _opposite_of_trigger(
+            compare_delta(
+                float(expected),  # type: ignore[arg-type]
+                float(actual),  # type: ignore[arg-type]
+                rule,
+            ),
             rule,
         )
     if operator in {"eq", "ne"} and isinstance(expected, str) and isinstance(actual, str):

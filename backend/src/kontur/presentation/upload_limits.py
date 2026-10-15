@@ -99,14 +99,19 @@ async def read_bounded_upload(
         if len(header) < 16:
             header.extend(chunk[: 16 - len(header)])
         parts.append(chunk)
+    body = b"".join(parts)
+    # Центральный каталог zip не лежит в первых 16 байтах. Без полного
+    # тела проверка бомбы в check_file молча не срабатывает.
+    magic = bytes(header)
+    stored_header = body if magic.startswith(b"PK\x03\x04") else (magic or None)
     return (
         UploadCandidate(
             filename=name,
             size_bytes=size,
-            header=bytes(header) if header else None,
+            header=stored_header,
             content_hash=digest.hexdigest(),
         ),
-        b"".join(parts),
+        body,
     )
 
 

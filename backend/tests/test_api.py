@@ -502,6 +502,12 @@ def test_ui_event_stays_teaching_and_does_not_close_gate_k(client: TestClient) -
         json={"action": "CONFIRMED_VIOLATION"},
     )
     assert refused.status_code == 422
+    huge_stamp = client.post(
+        f"/api/v1/processes/{process_id}/audit/ui",
+        headers=INSPECTOR,
+        json={"action": "UI_CLICK", "client_ts": "x" * 41},
+    )
+    assert huge_stamp.status_code == 422
 
 
 def test_audit_log_unknown_process_is_404(client: TestClient) -> None:

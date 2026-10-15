@@ -51,7 +51,7 @@ GAP-EMB: вложения `/EmbeddedFile` пайплайн не видит (см
 | GAP-ENUM-EXTRACTOR | text/enum экстрактор; KR-055 и PZ-015/021/022/023 executable | 4a10ce8 |
 | GAP-IOS4 | IOS4-078/079 остаются `number`. Тип `geometry` меряет пару штрихов в оценке и не включён в матрицу | synthetic |
 | GAP-RT-G | Дубль находки в процессе: `put_finding` по evidence_group_id | runtime.py |
-| GAP-SPLIT | Инспектор делит кандидата: у каждой части своя `evidence_group`, статус остаётся `CANDIDATE` | review.py |
+| GAP-SPLIT | Функция `split()` есть в `review.py`, автомат её не вызывает. Маршрута HTTP нет, поэтому приёмка п. 9.3 по-прежнему без деления с экрана | review.py |
 | GAP-PROCESS-FINDINGS | Находки, файлы и комплектность переживают смену workspace; Postgres пишет `process_findings` / `process_files` | schema.sql |
 | GAP-EDIT | Журнал REVIEW/FINALIZE/UNFINALIZE в `audit_log` и GET `/audit` | audit_store.py |
 | GAP-HTTP-PIPELINE | POST /upload гоняет L1–L7 по векторному слою и ставит READY | process_pipeline.py |

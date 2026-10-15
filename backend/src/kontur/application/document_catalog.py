@@ -90,6 +90,8 @@ def _stamp_ref(item: CatalogFile, inspector_ids: frozenset[str]) -> tuple[Docume
         sheet=passport.sheet,
         predecessor_file_id=item.predecessor_file_id,
         successor_file_id=item.successor_file_id,
+        source_name=item.filename,
+        revision_kind=passport.revision_kind,
     )
     return ref, passport.discipline
 

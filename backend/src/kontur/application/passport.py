@@ -34,7 +34,10 @@ _CODE_DESIGNATION = re.compile(
     r"[A-ZА-ЯЁ]{1,8}\d{0,4}(?:\.\d+){0,4})(?!\w)",
     re.IGNORECASE,
 )
-_REV = re.compile(r"(?:изм\.?|ред\.?|rev\.?)\s*[:.]?\s*(\d{1,3})\b", re.IGNORECASE)
+_REV = re.compile(
+    r"(изм\.?|ред\.?|rev\.?|корректировк\w*)\s*[:.]?\s*(?:№\s*)?(\d{1,3})\b",
+    re.IGNORECASE,
+)
 _SHEET = re.compile(
     r"(?:лист|sheet)\s*[:.]?\s*([A-ZА-Я0-9][A-ZА-Я0-9.\-]{0,12})",
     re.IGNORECASE,
@@ -81,6 +84,8 @@ class DocumentPassport:
     layer_kind: str
     document_code: str | None = None
     revision: str | None = None
+    #: «change» для «изм», «correction» для «кор» и «ред». Пусто без номера на титуле.
+    revision_kind: str = ""
     sheet: str | None = None
     discipline: str | None = None
     approval_status: ApprovalStatus = ApprovalStatus.UNKNOWN
@@ -213,6 +218,21 @@ def _title_block_approval(
     return ApprovalStatus.UNKNOWN, None
 
 
+def _revision_mark(text: str) -> tuple[str | None, str]:
+    """Номер редакции и шкала. «Изм» и «корректировка» не одна шкала."""
+
+    match = _REV.search(text)
+    if match is None:
+        return None, ""
+    number = normalize_key_field(match.group(2))
+    if not number:
+        return None, ""
+    word = match.group(1).casefold()
+    if word.startswith("изм"):
+        return number, "change"
+    return number, "correction"
+
+
 def _first(pattern: re.Pattern[str], text: str) -> str | None:
     match = pattern.search(text)
     if match is None:
@@ -272,6 +292,15 @@ _LATIN_SECTION: dict[str, str] = {
     "OOS": "ООС",
     "SPZU": "СПЗУ",
 }
+# Словесные марки комплекта, которых нет в шифре матрицы. КМ к КР не сводится.
+_SPOKEN_SECTION: dict[str, str] = {
+    "ВК": "ИОС2",
+    "VK": "ИОС2",
+    "ЭОМ": "ИОС1",
+    "EOM": "ИОС1",
+    "СС": "ИОС5",
+    "SS": "ИОС5",
+}
 _SECTION_TOKEN = re.compile(r"[A-ZА-ЯЁ]{2,8}")
 
 
@@ -289,7 +318,11 @@ def section_mark_from_filename(filename: str | None) -> str | None:
         return None
     found: list[str] = []
     for raw in _SECTION_TOKEN.findall(stem.upper().replace("_", " ")):
-        mark = raw if raw in _SECTION_MARKS else _LATIN_SECTION.get(raw)
+        mark = (
+            raw
+            if raw in _SECTION_MARKS
+            else _LATIN_SECTION.get(raw) or _SPOKEN_SECTION.get(raw)
+        )
         if mark is not None and mark not in found:
             found.append(mark)
     if len(found) != 1:
@@ -306,6 +339,14 @@ _PATH_PHRASES: tuple[tuple[str, str], ...] = (
     ("овик", "ОВ"),
     ("схема планировочной организации", "ПЗУ"),
     ("проект организации строительства", "ПОС"),
+    ("водоснабжен", "ИОС2"),
+    ("канализац", "ИОС3"),
+    ("водоотведен", "ИОС3"),
+    ("электроснабжен", "ИОС1"),
+    ("электрооборудован", "ИОС1"),
+    ("слаботочн", "ИОС5"),
+    ("пожарная сигнализация", "ИОС5"),
+    ("генплан", "ПЗУ"),
 )
 
 
@@ -315,7 +356,7 @@ def _mark_from_section_field(section: str | None) -> str | None:
     raw = section.strip().upper().replace(" ", "")
     if raw in _SECTION_MARKS:
         return raw
-    return _LATIN_SECTION.get(raw)
+    return _LATIN_SECTION.get(raw) or _SPOKEN_SECTION.get(raw)
 
 
 def _marks_from_index_path(relative_path: str | None) -> frozenset[str]:
@@ -445,7 +486,7 @@ def read_passport(
 
     code = cipher_from_text(search)
     ambiguous = code is None and cipher_is_ambiguous(search)
-    revision = _first(_REV, search)
+    revision, revision_kind = _revision_mark(search)
     sheet = _first(_SHEET, search)
     stage = _stage_from_text(search, labeled_only=True) or _stage_from_text(
         search, labeled_only=False
@@ -462,6 +503,7 @@ def read_passport(
         reason = "текстовый слой расходится с растром: скрытый или перекрытый текст"
         code = None
         revision = None
+        revision_kind = ""
         sheet = None
         stage = None
     if stage is not None and name_stage is not None and stage is not name_stage:
@@ -529,6 +571,7 @@ def read_passport(
         identity_code=identity_code,
         code_basis=code_basis,
         revision=revision,
+        revision_kind=revision_kind,
         sheet=sheet,
         approval_status=approval,
         approval_basis=basis,

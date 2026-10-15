@@ -13,12 +13,92 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, replace
 from enum import StrEnum
 
 from kontur.domain.models import ApprovalBasis, ApprovalStatus, DocStage, DocumentRef
 
 SOLE_HEAD_NOTICE = "утверждение не подтверждено"
+
+_COPY_SUFFIX = re.compile(r"\s*\(\d{1,2}\)\s*$")
+_FILENAME_MARK = re.compile(
+    r"(?:^|[\s._\-])(изм|корр?|ред)(?:[\s._\-]*(\d{1,2}))?(?!\d)",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _NameMark:
+    kind: str
+    number: int | None
+
+
+def _volume_key(source_name: str) -> str:
+    """Шифр из имени без «кор3», «изм. 2» и «(1)». Пустое имя группу не создаёт."""
+
+    stem = source_name.replace("\\", "/").rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    stem = _COPY_SUFFIX.sub("", stem)
+    stem = _FILENAME_MARK.sub(" ", stem)
+    return re.sub(r"[^0-9a-zа-яё]", "", stem.casefold())
+
+
+def _name_mark(doc: DocumentRef) -> _NameMark:
+    """Номер с титула важнее имени. «Изм» и «кор» в одном имени не складываются."""
+
+    if doc.revision.strip().isdigit():
+        kind = doc.revision_kind if doc.revision_kind in {"change", "correction"} else "correction"
+        return _NameMark(kind, int(doc.revision.strip()))
+    stem = _COPY_SUFFIX.sub(
+        "",
+        doc.source_name.replace("\\", "/").rsplit("/", 1)[-1].rsplit(".", 1)[0],
+    )
+    found = _FILENAME_MARK.findall(stem)
+    kinds = {item[0].casefold()[:3] for item in found}
+    folded = set()
+    for kind in kinds:
+        folded.add("change" if kind.startswith("изм") else "correction")
+    if len(folded) > 1:
+        return _NameMark("mixed", None)
+    number = next((int(item[1]) for item in found if item[1]), None)
+    if not folded:
+        return _NameMark("none", 0 if doc.source_name.strip() else None)
+    kind = next(iter(folded))
+    return _NameMark(kind, number)
+
+
+def _chain_by_filename(
+    group: list[DocumentRef],
+) -> tuple[list[DocumentRef], str | None]:
+    """Одна цепочка имени. Разные шкалы и один номер у разных файлов — уточнение."""
+
+    marks = [_name_mark(item) for item in group]
+    if any(item.kind == "mixed" for item in marks):
+        return group, "в имени смешаны изм и кор, порядок редакции не выбирается"
+    kinds = {item.kind for item in marks}
+    if "change" in kinds and ({"correction", "stamp"} & kinds):
+        return group, "изм и кор не упорядочиваются между собой"
+    by_number: dict[int, DocumentRef] = {}
+    for doc, mark in zip(group, marks, strict=True):
+        if mark.number is None:
+            return group, "номер редакции в имени не прочитан"
+        previous = by_number.get(mark.number)
+        if previous is not None and previous.file_hash != doc.file_hash:
+            return group, "один номер редакции у разных файлов"
+        by_number[mark.number] = doc
+    ordered = [by_number[number] for number in sorted(by_number)]
+    linked: list[DocumentRef] = []
+    for index, doc in enumerate(ordered):
+        predecessor = ordered[index - 1].file_id if index else None
+        successor = ordered[index + 1].file_id if index + 1 < len(ordered) else None
+        linked.append(
+            replace(
+                doc,
+                predecessor_file_id=predecessor,
+                successor_file_id=successor,
+            )
+        )
+    return linked, None
 
 
 def _identity_key(doc: DocumentRef) -> tuple[str, str, str] | None:
@@ -307,14 +387,19 @@ def resolve_heads_by_identity(
     keyed: list[tuple[tuple[str, str, str] | None, list[DocumentRef]]] = [
         (key, group) for key, group in groups.items()
     ]
-    keyed.extend((None, component) for component in _blank_components(blanks))
+    keyed.extend(
+        (None, component) for component in _blank_filename_groups(blanks, stage)
+    )
     for key, group in keyed:
         selected = frozenset(
             item.file_id
             for item in group
             if item.file_id in inspector_selected_file_ids
         )
+        filename_conflict = _filename_group_conflict(group, stage)
         try:
+            if filename_conflict is not None:
+                raise RevisionConflict(filename_conflict)
             resolution = resolve_revision(
                 group,
                 stage,
@@ -334,6 +419,59 @@ def resolve_heads_by_identity(
             )
         )
     return tuple(result)
+
+
+def _blank_filename_groups(
+    blanks: list[DocumentRef],
+    stage: DocStage,
+) -> list[list[DocumentRef]]:
+    """ПД и РД с пустым шифром: одно имя без метки редакции — одна цепочка.
+
+    ИД не схлопывается: акты не заменяют друг друга. Связь predecessor
+    остаётся сильнее имени.
+    """
+
+    components = _blank_components(blanks)
+    if stage is DocStage.ID:
+        return components
+    kept: list[list[DocumentRef]] = []
+    loose: list[DocumentRef] = []
+    for component in components:
+        if len(component) == 1 and component[0].source_name.strip():
+            loose.append(component[0])
+        else:
+            kept.append(component)
+    clusters: dict[str, list[DocumentRef]] = {}
+    for doc in loose:
+        key = _volume_key(doc.source_name)
+        if not key:
+            kept.append([doc])
+            continue
+        clusters.setdefault(key, []).append(doc)
+    for group in clusters.values():
+        if len(group) == 1:
+            kept.append(group)
+            continue
+        linked, conflict = _chain_by_filename(group)
+        if conflict is not None:
+            kept.append(group)
+            continue
+        kept.append(linked)
+    return kept
+
+
+def _filename_group_conflict(group: list[DocumentRef], stage: DocStage) -> str | None:
+    if stage is DocStage.ID or len(group) < 2:
+        return None
+    if any(not item.source_name.strip() for item in group):
+        return None
+    keys = {_volume_key(item.source_name) for item in group}
+    if len(keys) != 1 or not next(iter(keys)):
+        return None
+    if any(item.predecessor_file_id or item.successor_file_id for item in group):
+        return None
+    _linked, conflict = _chain_by_filename(group)
+    return conflict
 
 
 def _blank_components(blanks: list[DocumentRef]) -> list[list[DocumentRef]]:

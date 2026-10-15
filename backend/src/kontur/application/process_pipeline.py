@@ -129,6 +129,7 @@ def _document_ref(
     basis: ApprovalBasis,
     sheet: str | None,
     discipline: str | None = None,
+    revision_kind: str = "",
 ) -> DocumentRef:
     return DocumentRef(
         file_id=item.file_id,
@@ -142,6 +143,8 @@ def _document_ref(
         discipline=discipline,
         predecessor_file_id=item.predecessor_file_id,
         successor_file_id=item.successor_file_id,
+        source_name=item.filename,
+        revision_kind=revision_kind,
     )
 
 
@@ -188,6 +191,7 @@ def _append_text_page(
         basis,
         passport.sheet,
         passport.discipline,
+        passport.revision_kind,
     )
     built.append((ref, StagePage(document=ref, tokens=tokens)))
 
@@ -363,6 +367,7 @@ def _pages_from_blobs(
             basis,
             passport.sheet,
             passport.discipline,
+            passport.revision_kind,
         )
         cache = PageImageCache(raw) if tesseract_available() else None
         built.append(

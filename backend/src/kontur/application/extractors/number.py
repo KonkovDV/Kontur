@@ -17,9 +17,10 @@ from dataclasses import dataclass
 
 from kontur.application.normalize import (
     fold_label,
-    length_unit_of_match,
+    measure_dimensions_conflict,
+    measure_unit_of_match,
     parse_number,
-    scale_length_to_target,
+    scale_measure_to_target,
 )
 from kontur.domain.geometry import reading_key, y_overlap
 from kontur.domain.models import Extraction, ExtractionEngine, Polygon
@@ -243,9 +244,12 @@ def _reads(
             continue
         try:
             raw = _captured_number(match)
-            value = scale_length_to_target(
+            source_unit = measure_unit_of_match(text, match)
+            if measure_dimensions_conflict(source_unit, target):
+                continue
+            value = scale_measure_to_target(
                 parse_number(raw, steps),
-                source_unit=length_unit_of_match(text, match),
+                source_unit=source_unit,
                 target_unit=target,
             )
         except ValueError:
@@ -297,14 +301,18 @@ def parse_number_from_text(text: str, rule: dict[str, object]) -> float | None:
     matches = list(_regex(rule).finditer(text))
     if not matches:
         return None
+    source_unit = measure_unit_of_match(text, matches[0])
+    target = _target_unit(rule)
+    if measure_dimensions_conflict(source_unit, target):
+        return None
     try:
         value = parse_number(_captured_number(matches[0]), _steps(rule))
     except ValueError:
         return None
-    return scale_length_to_target(
+    return scale_measure_to_target(
         value,
-        source_unit=length_unit_of_match(text, matches[0]),
-        target_unit=_target_unit(rule),
+        source_unit=source_unit,
+        target_unit=target,
     )
 
 

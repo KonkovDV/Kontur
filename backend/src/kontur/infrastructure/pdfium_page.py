@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from functools import partial
 from io import BytesIO
 
@@ -10,6 +11,23 @@ import pypdfium2 as pdfium  # type: ignore[import-untyped,unused-ignore]
 from kontur.infrastructure.pdf_guard import pdf_parse_timeout_s, run_pdf_parse_sync
 
 RENDER_SCALE = 2.0
+# A0 при масштабе 2 ещё рисуется. Лист в десятки тысяч пунктов — нет.
+MAX_RENDER_SIDE_PX = 12_000
+MAX_RENDER_PIXELS = 40_000_000
+
+
+def page_is_drawable(page: object, *, scale: float) -> bool:
+    """Растр страницы помещается в память. Иначе отрисовку не начинаем."""
+
+    get_size = getattr(page, "get_size", None)
+    if get_size is None or scale <= 0:
+        return False
+    width, height = get_size()
+    if width <= 0 or height <= 0:
+        return False
+    side = max(float(width), float(height)) * scale
+    pixels = float(width) * scale * float(height) * scale
+    return side <= MAX_RENDER_SIDE_PX and pixels <= MAX_RENDER_PIXELS
 
 
 class PageRenderError(ValueError):
@@ -27,6 +45,8 @@ def _render(
         if page_number < 1 or page_number > count:
             raise PageRenderError(f"страница {page_number} вне 1..{count}")
         page = pdf[page_number - 1]
+        if not page_is_drawable(page, scale=RENDER_SCALE):
+            raise PageRenderError("страница слишком велика для отрисовки")
         bitmap = page.render(scale=RENDER_SCALE)
         try:
             image = bitmap.to_pil()
@@ -63,6 +83,8 @@ def parse_bbox(raw: str | None) -> tuple[float, float, float, float] | None:
         raise PageRenderError("bbox содержит не число") from exc
     if len(values) != 4:
         raise PageRenderError("bbox — четыре числа через запятую")
+    if not all(math.isfinite(value) for value in values):
+        raise PageRenderError("bbox содержит не число")
     left, bottom, right, top = values
     if min(values) < 0 or max(values) > 1:
         raise PageRenderError("bbox вне [0;1]")

@@ -316,6 +316,97 @@ class TestIdentityHeads:
             assert item.resolution.resolved is not None
             assert item.resolution.resolved.document.approval_basis is ApprovalBasis.SOLE_HEAD
 
+    def test_filename_correction_supersedes_the_blank_cipher_base(self) -> None:
+        base = replace(
+            _doc("kr-base"),
+            document_code="",
+            revision="",
+            source_name="01-07-22-14-П-КР1.pdf",
+        )
+        corrected = replace(
+            _doc("kr-cor3"),
+            document_code="",
+            revision="",
+            source_name="01-07-22-14-П-КР1-кор3.pdf",
+        )
+        heads = resolve_heads_by_identity([base, corrected], DocStage.PD)
+        assert len(heads) == 1
+        assert heads[0].resolution.status is ResolveStatus.RESOLVED
+        resolved = heads[0].resolution.resolved
+        assert resolved is not None
+        assert resolved.document.file_id == "kr-cor3"
+        assert resolved.is_stale is False
+
+    def test_same_filename_revision_number_is_a_conflict(self) -> None:
+        left = replace(
+            _doc("kr-a"),
+            document_code="",
+            revision="",
+            source_name="КР1-кор3.pdf",
+        )
+        right = replace(
+            _doc("kr-b"),
+            document_code="",
+            revision="",
+            source_name="КР1-кор3.pdf",
+        )
+        heads = resolve_heads_by_identity([left, right], DocStage.PD)
+        assert len(heads) == 1
+        assert heads[0].resolution.status is ResolveStatus.CLARIFICATION_REQUIRED
+        assert "один номер" in (heads[0].resolution.conflict_reason or "")
+
+    def test_change_and_correction_marks_are_not_ordered(self) -> None:
+        change = replace(
+            _doc("kr-izm"),
+            document_code="",
+            revision="",
+            source_name="КР1-изм2.pdf",
+        )
+        correction = replace(
+            _doc("kr-cor"),
+            document_code="",
+            revision="",
+            source_name="КР1-кор3.pdf",
+        )
+        heads = resolve_heads_by_identity([change, correction], DocStage.PD)
+        assert heads[0].resolution.status is ResolveStatus.CLARIFICATION_REQUIRED
+        assert "не упорядочиваются" in (heads[0].resolution.conflict_reason or "")
+
+    def test_title_change_and_title_correction_are_not_ordered(self) -> None:
+        change = replace(
+            _doc("kr-izm-title"),
+            document_code="",
+            revision="2",
+            revision_kind="change",
+            source_name="КР1.pdf",
+        )
+        correction = replace(
+            _doc("kr-cor-title"),
+            document_code="",
+            revision="4",
+            revision_kind="correction",
+            source_name="КР1.pdf",
+        )
+        heads = resolve_heads_by_identity([change, correction], DocStage.PD)
+        assert heads[0].resolution.status is ResolveStatus.CLARIFICATION_REQUIRED
+        assert "не упорядочиваются" in (heads[0].resolution.conflict_reason or "")
+
+    def test_id_acts_with_the_same_name_stay_separate(self) -> None:
+        left = replace(
+            _doc("act-a", stage=DocStage.ID),
+            document_code="",
+            revision="",
+            source_name="АОСР-кор2.pdf",
+        )
+        right = replace(
+            _doc("act-b", stage=DocStage.ID),
+            document_code="",
+            revision="",
+            source_name="АОСР.pdf",
+        )
+        heads = resolve_heads_by_identity([left, right], DocStage.ID)
+        assert len(heads) == 2
+
     def test_blank_cipher_does_not_join_known_cipher(self) -> None:
         coded = _doc("pd-pz", document_code="12345-PZ")
         blank = replace(_doc("pd-blank"), document_code="")
