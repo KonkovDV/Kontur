@@ -6,12 +6,11 @@
 from __future__ import annotations
 
 import pytest
+from test_contour_and_table import _completeness, _doc, _rule, _table_page
 
 from kontur.application.evaluate import evaluate_rule
 from kontur.domain.models import DocStage
 from kontur.domain.statuses import FindingStatus
-
-from test_contour_and_table import _completeness, _doc, _rule, _table_page
 
 CASES = {
     "KR-059": ("КР-1", (("ПМ-1", "200"), ("ПМ-2", "220")), "180"),
@@ -29,8 +28,11 @@ def _eval(code: str, pd_rows, rd_rows):
     if rd_rows is not None:
         pages[DocStage.RD] = _table_page(rd, rd_rows)
     return evaluate_rule(
-        _rule(code), object_id=f"OBJ-{code}", pages=pages,
-        completeness=_completeness(), revision_pool=[pd, rd],
+        _rule(code),
+        object_id=f"OBJ-{code}",
+        pages=pages,
+        completeness=_completeness(),
+        revision_pool=[pd, rd],
     ).finding.finding_status
 
 
@@ -59,5 +61,6 @@ def test_changed_mark_set_is_not_auto_ok(code: str) -> None:
     rows = CASES[code][1]
     other = (rows[0], ("Х9-9", rows[1][1]))
     assert _eval(code, rows, other) not in {
-        FindingStatus.AUTO_NO_DIFFERENCE, FindingStatus.CONFIRMED_VIOLATION,
+        FindingStatus.AUTO_NO_DIFFERENCE,
+        FindingStatus.CONFIRMED_VIOLATION,
     }
