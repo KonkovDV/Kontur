@@ -34,6 +34,32 @@ def advisories(project: Path, *, omit_dev: bool) -> set[str]:
     return found
 
 
+def validate_allowlist(allowed: Any) -> list[str]:
+    """Return schema errors for the allowlist; empty when every entry is well-formed."""
+    if not isinstance(allowed, dict):
+        return ["allowlist must be a JSON object keyed by advisory id"]
+    errors: list[str] = []
+    for gid, entry in sorted(allowed.items()):
+        if not isinstance(entry, dict):
+            errors.append(f"allowlist entry {gid}: must be an object")
+            continue
+        projects = entry.get("projects")
+        if not isinstance(projects, list) or not all(isinstance(p, str) for p in projects):
+            errors.append(f"allowlist entry {gid}: 'projects' must be a list of strings")
+        justification = entry.get("justification")
+        if not isinstance(justification, str) or not justification.strip():
+            errors.append(f"allowlist entry {gid}: 'justification' is required")
+        expires = entry.get("expires")
+        if expires is None:
+            errors.append(f"allowlist entry {gid}: 'expires' is required (YYYY-MM-DD)")
+        else:
+            try:
+                dt.date.fromisoformat(str(expires))
+            except ValueError:
+                errors.append(f"allowlist entry {gid}: 'expires' {expires!r} is not YYYY-MM-DD")
+    return errors
+
+
 def evaluate(
     name: str,
     prod: set[str],
@@ -64,7 +90,16 @@ def evaluate(
 
 
 def main() -> int:
-    allowed = json.loads(ALLOWLIST.read_text(encoding="utf-8"))
+    try:
+        allowed = json.loads(ALLOWLIST.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"{ALLOWLIST.name}: cannot read allowlist: {exc}", file=sys.stderr)
+        return 2
+    schema_errors = validate_allowlist(allowed)
+    for line in schema_errors:
+        print(f"{ALLOWLIST.name}: {line}", file=sys.stderr)
+    if schema_errors:
+        return 2
     today = dt.datetime.now(dt.UTC).date()
     status = 0
     for name in sys.argv[1:]:
