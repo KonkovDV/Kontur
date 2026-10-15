@@ -1,6 +1,6 @@
 # TZ_GAP_CLOSURE — план закрытия незакрытых требований ТЗ (до 30.10.2026)
 
-Срез: `main@5c768c9`, 15.10.2026. Источник: Red Team brief «топ-20» (Ваня) + `data/dataset/tz_scorecard.json` (generated_on 2026-10-15).
+Срез: `main@5c768c9`, 15.10.2026. Источник: Red Team brief «топ-20» + `data/dataset/tz_scorecard.json` (generated_on 2026-10-15).
 Это инженерный план, **не** процент выполнения ТЗ и **не** P/R/F1. Gate I/J/K/L = false.
 
 ## 0. Базовая линия (scorecard, факт)
