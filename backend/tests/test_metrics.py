@@ -338,3 +338,20 @@ def test_evidence_localization_uses_iou_threshold_not_tz_point() -> None:
     interval = evidence_localization_interval([(UNIT_SQUARE, half)] * 100)
     assert interval.point == pytest.approx(0.0)
     assert not meets_threshold("evidence_localization", interval)
+
+
+def test_key_fields_report_wilson_ci_per_kind() -> None:
+    """ТЗ §14.3: по каждому из 5 полей — n и 95% CI; n < 30 порог не решает."""
+
+    rows = [{"kind": "CIPHER", "reference": "АНО/1-П-АР", "hypothesis": "АНО/1-П-АР"}] * 40
+    rows += [{"kind": "SHEET_PAGE", "reference": "3", "hypothesis": "3"}] * 5
+    scored = score_key_fields(rows)
+    by_kind = {item["kind"]: item for item in scored["by_kind"]}  # type: ignore[union-attr]
+    cipher = by_kind["CIPHER"]
+    assert cipher["n"] == 40 and cipher["ci95_high"] == pytest.approx(1.0)
+    assert 0.90 < cipher["ci95_low"] < 1.0
+    assert cipher["threshold_met"] is True
+    sheet = by_kind["SHEET_PAGE"]
+    assert sheet["ci95_low"] is not None and sheet["threshold_met"] is False
+    assert by_kind["ROOM_ELEMENT"]["ci95_low"] is None
+    assert by_kind["ROOM_ELEMENT"]["threshold_met"] is False

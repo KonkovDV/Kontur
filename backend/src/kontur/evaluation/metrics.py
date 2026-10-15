@@ -194,14 +194,19 @@ def score_key_fields(fields: Sequence[Mapping[str, object]]) -> dict[str, object
             summary_n += n
         else:
             below_quota.append(kind)
+        kind_interval = wilson(matches, n)
         by_kind.append(
             {
                 "kind": kind,
                 "matches": matches,
                 "n": n,
                 "em": None if n == 0 else matches / n,
+                "ci95_low": None if n == 0 else kind_interval.low,
+                "ci95_high": None if n == 0 else kind_interval.high,
                 "quota": FIELD_QUOTA,
                 "measured": measured,
+                "threshold_met": measured
+                and meets_threshold("key_field_exact_match", kind_interval),
             }
         )
     interval = wilson(summary_matches, summary_n)
