@@ -46,7 +46,7 @@ def test_module_entrypoint_still_works() -> None:
 def test_tz11_from_json_writes_table_and_json(tmp_path: Path) -> None:
     path = tmp_path / "m.json"
     path.write_text("{}", encoding="utf-8")
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603 — fixed argv, temp path from tmp_path
         [sys.executable, "-m", "kontur.evaluation.tz11", "--from-json", str(path)],
         capture_output=True,
         text=True,
