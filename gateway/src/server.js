@@ -23,7 +23,59 @@ import {
   multipartFileState,
 } from "./limits.js";
 
-const log = pino({ base: { service: "gateway" } });
+const LEVEL_LABELS = {
+  trace: "DEBUG",
+  debug: "DEBUG",
+  info: "INFO",
+  warn: "WARNING",
+  error: "ERROR",
+  fatal: "ERROR",
+};
+
+/** §13 п.1: имена полей timestamp/level/message (не time/msg/числовой level). */
+const log = pino({
+  base: { service: "gateway" },
+  messageKey: "message",
+  timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
+  formatters: {
+    level(label) {
+      return { level: LEVEL_LABELS[label] ?? String(label).toUpperCase() };
+    },
+    bindings(bindings) {
+      return { service: bindings.service };
+    },
+  },
+});
+
+/** Best-effort subject для лога; без проверки подписи JWT. */
+function userIdFromReq(req) {
+  const auth = req.header("authorization") ?? "";
+  if (!auth.toLowerCase().startsWith("bearer ")) return "anonymous";
+  const token = auth.slice(7).trim();
+  if (!token) return "anonymous";
+  const parts = token.split(".");
+  if (parts.length >= 2) {
+    try {
+      const json = Buffer.from(parts[1], "base64url").toString("utf8");
+      const payload = JSON.parse(json);
+      if (typeof payload.sub === "string" && payload.sub.trim()) {
+        return payload.sub.trim();
+      }
+    } catch {
+      /* ignore */
+    }
+    return "anonymous";
+  }
+  if (token.includes("/")) {
+    const principal = token.split("/")[0] ?? "";
+    if (principal.includes("@")) {
+      return principal.split("@")[0] || "anonymous";
+    }
+    return principal || "anonymous";
+  }
+  return token;
+}
+
 
 const CORE_URL = process.env.KONTUR_CORE_URL ?? "http://localhost:8000";
 const PROXY_TIMEOUT_MS = Number(process.env.KONTUR_PROXY_TIMEOUT_MS ?? 600_000);
@@ -111,8 +163,19 @@ export function createApp({
 
   app.use((req, res, next) => {
     req.requestId = req.header("x-request-id") ?? crypto.randomUUID();
+    // Сквозной id в ядро: proxy и forwardBuffered читают req.headers.
+    req.headers["x-request-id"] = req.requestId;
     res.setHeader("x-request-id", req.requestId);
-    log.info({ request_id: req.requestId, method: req.method, path: req.path });
+    const userId = userIdFromReq(req);
+    log.info(
+      {
+        request_id: req.requestId,
+        user_id: userId,
+        method: req.method,
+        path: req.path,
+      },
+      "request",
+    );
     next();
   });
 

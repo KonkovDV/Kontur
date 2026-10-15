@@ -57,6 +57,7 @@ from kontur.presentation.auth import (
     insecure_auth_permitted,
     parse_bearer,
 )
+from kontur.presentation.json_logging import JsonRequestLogMiddleware, configure_json_logging
 from kontur.presentation.rbac import (
     AuthenticationRequiredError,
     PermissionDeniedError,
@@ -84,7 +85,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Инспектор ИИ", version="0.1.0-skeleton", lifespan=lifespan)
+configure_json_logging(service="kontur-core")
+# Последний add_middleware — первый на входе запроса.
 app.add_middleware(ActualUploadLimitMiddleware)
+app.add_middleware(JsonRequestLogMiddleware, service="kontur-core")
 app.state.workspace = ProcessWorkspace()  # до lifespan: TestClient
 
 
