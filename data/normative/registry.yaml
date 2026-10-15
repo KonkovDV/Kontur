@@ -1,0 +1,201 @@
+# Machine-readable normative registry (docs/NORMATIVE_REGISTRY.md).
+# Schema: contracts/schemas/normative_registry.schema.json; check: scripts/check_normative_registry.py.
+# layer: organizer_matrix = competition contract (verdicts); current_overlay = current edition,
+# shown as a warning only, never writes finding_status (ADR-0006).
+# verified: false means dates/issuer were taken from the rule files and the TZ, not yet
+# checked against the official publication. Do not read it as legally reviewed.
+schema: kontur.normative_registry.v1
+reviewed_on: null
+acts:
+  - id: grk-190-fz
+    identifier: ГрК РФ № 190-ФЗ
+    issuer: Российская Федерация
+    act_type: federal_law
+    mandatory: law
+    effective_from: "2005-01-10"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: fz-123
+    identifier: ФЗ № 123-ФЗ
+    issuer: Российская Федерация
+    act_type: federal_law
+    mandatory: law
+    date: "2008-07-22"
+    effective_from: "2009-05-01"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: fz-261
+    identifier: ФЗ № 261-ФЗ
+    issuer: Российская Федерация
+    act_type: federal_law
+    mandatory: law
+    date: "2009-11-23"
+    effective_from: "2009-11-23"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: fz-89
+    identifier: ФЗ № 89-ФЗ
+    issuer: Российская Федерация
+    act_type: federal_law
+    mandatory: law
+    date: "1998-06-24"
+    effective_from: "1998-06-24"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: pp-rf-87
+    identifier: Постановление Правительства РФ № 87
+    aliases: [ПП РФ № 87]
+    issuer: Правительство Российской Федерации
+    act_type: government_decree
+    mandatory: bylaw
+    date: "2008-02-16"
+    effective_from: "2008-02-16"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: pp-msk-257
+    identifier: Постановление Правительства Москвы № 257-ПП
+    issuer: Правительство Москвы
+    act_type: regional_decree
+    mandatory: bylaw
+    effective_from: "2015-05-12"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: pp-2078
+    identifier: ПП № 2078 от 20.11.2024
+    issuer: Правительство Москвы
+    act_type: regional_decree
+    mandatory: bylaw
+    date: "2024-11-20"
+    effective_from: "2024-11-20"
+    effective_to: null
+    layer: organizer_matrix
+    status: disputed
+    note: ТЗ называет ПП РФ; официальный источник указывает постановление Правительства Москвы. Вопрос 4 организатору.
+    verified: false
+  - id: minstroy-344
+    identifier: Приказ Минстроя № 344/пр
+    issuer: Минстрой России
+    act_type: ministerial_order
+    mandatory: bylaw
+    effective_from: "2023-09-01"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    note: Применимость № 369/пр с 01.03.2026 учитывается в overlay.
+    verified: false
+  - id: gost-r-21-101-2020
+    identifier: ГОСТ Р 21.101-2020
+    issuer: Росстандарт
+    act_type: standard
+    mandatory: voluntary
+    effective_from: "2021-01-01"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    note: Контракт соревнования; действующая редакция — gost-r-21-101-2026 (overlay).
+    verified: false
+  - id: gost-r-21-101-2026
+    identifier: ГОСТ Р 21.101-2026
+    issuer: Росстандарт
+    act_type: standard
+    mandatory: voluntary
+    effective_from: null
+    effective_to: null
+    layer: current_overlay
+    status: accepted
+    note: С поправкой от 27.08.2026; дата введения не сверена.
+    verified: false
+  - id: gost-21-110-2013
+    identifier: ГОСТ 21.110-2013
+    issuer: Межгосударственный совет по стандартизации
+    act_type: standard
+    mandatory: voluntary
+    effective_from: "2014-01-01"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: sp-1-13130-2020
+    identifier: СП 1.13130.2020
+    issuer: МЧС России
+    act_type: code_of_practice
+    mandatory: mandatory_list
+    effective_from: "2020-09-19"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: sp-48-13330-2019
+    identifier: СП 48.13330.2019
+    issuer: Минстрой России
+    act_type: code_of_practice
+    mandatory: mandatory_list
+    effective_from: "2020-06-25"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: sp-51-13330-2011
+    identifier: СП 51.13330.2011
+    issuer: Минрегион России
+    act_type: code_of_practice
+    mandatory: mandatory_list
+    effective_from: "2011-05-20"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: sp-325-1325800-2017
+    identifier: СП 325.1325800.2017
+    issuer: Минстрой России
+    act_type: code_of_practice
+    mandatory: voluntary
+    effective_from: "2018-06-18"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: sanpin-2-1-3684-21
+    identifier: СанПиН 2.1.3684-21
+    issuer: Роспотребнадзор
+    act_type: sanitary_rules
+    mandatory: mandatory_list
+    effective_from: "2021-03-01"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: pue-1-2
+    identifier: ПУЭ (гл. 1.2)
+    issuer: Минэнерго России
+    act_type: industry_rules
+    mandatory: bylaw
+    effective_from: "2002-01-01"
+    effective_to: null
+    layer: organizer_matrix
+    status: accepted
+    verified: false
+  - id: law-4802-1
+    identifier: Закон РФ № 4802-1
+    aliases: [Закон РФ № 61-ФЗ]
+    issuer: Российская Федерация
+    act_type: federal_law
+    mandatory: law
+    effective_from: null
+    effective_to: null
+    layer: organizer_matrix
+    status: typo_in_source
+    note: ТЗ пишет «№ 61-ФЗ»; реквизиты соответствуют Закону РФ № 4802-1 «О статусе столицы». Вопрос 5 организатору.
+    verified: false

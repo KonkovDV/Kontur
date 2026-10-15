@@ -9,6 +9,12 @@
 
 ## Поля записи норматива
 
+Машиночитаемый реестр: `data/normative/registry.yaml` (схема
+`contracts/schemas/normative_registry.schema.json`, проверка в CI —
+`scripts/check_normative_registry.py`). Все записи пока `verified: false`:
+даты и issuer взяты из правил и ТЗ, с официальной публикацией не сверены.
+Расхождения правил с реестром выводятся предупреждениями, а не исправляются молча.
+
 `issuer`, `act_type`, `number`, `date`, `revision`, `url`, структурная ссылка
 (статья/пункт/таблица/приложение), `effective_from`, `effective_to`,
 территория, тип объекта, обязательность (закон / подзаконный акт /
