@@ -1,6 +1,7 @@
 """Таблица (1) комплектности протокола из каталога разделов ТЗ.
 
-Строки — MISSING/PRESENT по стадии из CompletenessMap × sections.json.
+Строки — MISSING / STAGE_UPLOADED_NOT_VERIFIED / STAGE_PARTIAL_NOT_VERIFIED
+по стадии из CompletenessMap × sections.json (не PRESENT раздела).
 Это НЕ нарушения: counts_as_violation всегда false. Presence W2 / executable
 матрицы не трогаем (59/132 без изменений).
 """
