@@ -5,14 +5,14 @@
   "unit": "мм",
   "matrix_version": "draft-0",
   "source_trigger_logic": "Изменение диаметров Т1/Т2, нарушающее гидравлическую увязку системы.",
-  "coverage": "extractor_missing",
+  "coverage": "executable",
   "applicability": {
     "stages_required": [
       "PD",
       "RD"
     ],
     "object_types": [],
-    "condition": null
+    "condition": "Ведомость участков: в строке марка (К1-1, Т1.2) и один условный диаметр в мм. Разный набор марок — не склеивается."
   },
   "sources": {
     "pd": {
@@ -26,7 +26,7 @@
     }
   },
   "extractor": {
-    "type": "number",
+    "type": "element_table",
     "regex": null,
     "anchors": [
       "Диаметры магистралей и стояков отопления (Т1, Т2)"

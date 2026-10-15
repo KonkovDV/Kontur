@@ -9,7 +9,7 @@
 
 | Контур | Что в нём | Сейчас |
 |---|---|---|
-| Code | Контракт, пайплайн, автотесты | 55 executable, 72 extractor_missing, 1 advisory, 4 source_missing |
+| Code | Контракт, пайплайн, автотесты | 59 executable, 68 extractor_missing, 1 advisory, 4 source_missing |
 | Acceptance | Пороги раздела 14 на frozen validation | не измерены. Гейты I/J/K/L открыты |
 | Production | OIDC, TLS, живой РиН, УКЭП | не строятся до подачи |
 

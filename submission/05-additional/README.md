@@ -24,7 +24,7 @@
 
 | Замер | Значение | n | Источник | Чем не является |
 |---|---|---|---|---|
-| Покрытие матрицы | 55 executable, 72 extractor_missing, 1 advisory, 4 source_missing | 132 правила | [`coverage_snapshot.json`](../../data/matrix/coverage_snapshot.json) | Заявлением, что все параметры исполняются |
+| Покрытие матрицы | 59 executable, 68 extractor_missing, 1 advisory, 4 source_missing | 132 правила | [`coverage_snapshot.json`](../../data/matrix/coverage_snapshot.json) | Заявлением, что все параметры исполняются |
 | Публичный gold, матрица | 0 попаданий, Wilson [0; 0,39] | 6 позитивов | [`GOLD_DIAGNOSIS.md`](../../docs/GOLD_DIAGNOSIS.md) | Порогом Recall |
 | Публичный gold, свободный поиск | 0 попаданий, Wilson [0; 0,49] | 4 позитива | там же | Порогом Recall |
 | OCR, eslav PP-OCRv5 | нижняя граница Wilson 0,663 доли строк с CA не ниже 0,95 | 5935 строк SILVER | [`OCR_BAKEOFF.md`](../../docs/OCR_BAKEOFF.md) | Замером на GOLD. Порог 0,95 не взят |

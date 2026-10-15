@@ -13,7 +13,7 @@
     },
     "element_table": {
       "advisory": 0,
-      "executable": 1,
+      "executable": 5,
       "extractor_missing": 0,
       "not_applicable": 0,
       "source_missing": 0
@@ -49,7 +49,7 @@
     "number": {
       "advisory": 0,
       "executable": 30,
-      "extractor_missing": 44,
+      "extractor_missing": 40,
       "not_applicable": 0,
       "source_missing": 0
     },
@@ -75,7 +75,11 @@
     "element_table": {
       "advisory": [],
       "executable": [
-        "IOS2-071"
+        "IOS2-071",
+        "IOS3-074",
+        "IOS4-076",
+        "KR-059",
+        "KR-061"
       ],
       "extractor_missing": [],
       "not_applicable": [],
@@ -202,15 +206,11 @@
         "AR-050",
         "AR-051",
         "IOS2-072",
-        "IOS3-074",
         "IOS3-075",
-        "IOS4-076",
         "IOS4-077",
         "IOS5-080",
         "KR-054",
-        "KR-059",
         "KR-060",
-        "KR-061",
         "KR-064",
         "KR-065",
         "ODI-116",
@@ -264,5 +264,5 @@
       "source_missing": []
     }
   },
-  "note": "72 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
+  "note": "68 extractor_missing remain missing until each family has a working extractor and fixtures. Do not treat this file as 132/132."
 }

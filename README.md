@@ -281,7 +281,7 @@ Frozen validation в репозитории нет. Ниже — то, что у
 
 | Требование | Где в коде | Статус в карте |
 |---|---|---|
-| Матрица 132 параметров как данные (п. 8, прил. 1) | [`data/matrix/`](data/matrix/), [`rule.schema.json`](contracts/schemas/rule.schema.json) | in_progress: 55 executable |
+| Матрица 132 параметров как данные (п. 8, прил. 1) | [`data/matrix/`](data/matrix/), [`rule.schema.json`](contracts/schemas/rule.schema.json) | in_progress: 59 executable |
 | Разбор, OCR, координаты, выбор редакции (п. 9.1) | `application/process_pipeline.py`, `revision_resolver.py`, `infrastructure/pdfium_tokens.py` | in_progress: OCR `MEASURED` |
 | Ошибки загрузки: формат, 50 МБ, 200 МБ, таймаут (п. 9.1) | `application/intake.py`, [`gateway/`](gateway/) | in_progress |
 | Каскад остановок, карточка, протокол (п. 9.2) | `application/pipeline.py`, `evaluate.py`, `protocol.py` | in_progress |

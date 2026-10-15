@@ -3,7 +3,7 @@
 **Ссылка для формы:** https://github.com/KonkovDV/Kontur/tree/main/submission/02-documentation
 
 Техническое досье Контура для жюри задачи №10. Замеры — срез 28.09.2026.
-Покрытие матрицы: 55 executable, 72 extractor_missing, 1 advisory,
+Покрытие матрицы: 59 executable, 68 extractor_missing, 1 advisory,
 4 source_missing из 132. Приёмка по гейтам I, J, K и L ещё впереди.
 
 ## Содержание

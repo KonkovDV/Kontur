@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "generated_on": "2026-09-26",
-  "export_git_sha": "81f457395ec577be5dfc5896170c04172d1007b6",
+  "generated_on": "2026-10-15",
+  "export_git_sha": "040db27ea82131ffdb91cc7c31f69dc650ae9db7",
   "deadline": "2026-09-29T23:59:00+03:00",
   "purpose": "Снимок сопровождения. Не frozen val, не GOLD OCR, не scorecard ТЗ.",
   "human_doc": "docs/ARCHITECTURE.md",
@@ -39,8 +39,8 @@
   ],
   "coverage_counts": {
     "advisory": 1,
-    "executable": 55,
-    "extractor_missing": 72,
+    "executable": 59,
+    "extractor_missing": 68,
     "not_applicable": 0,
     "source_missing": 4,
     "declared": 132,
@@ -130,7 +130,7 @@
     "feat/ocr-gate-i-crop3x-oem1",
     "feat/ocr-300dpi-step2-verifying"
   ],
-  "index_stats_present": true,
+  "index_stats_present": false,
   "verdict_echo": {
     "frozen_validation_corpus_for_132": false,
     "closes_gate_j": false
