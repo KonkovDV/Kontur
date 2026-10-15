@@ -41,6 +41,14 @@
 | Сверка документов, не нормы | [`adr/0006-compare-documents-not-norms.md`](adr/0006-compare-documents-not-norms.md) |
 | Остальные решения | [`adr/`](adr/) |
 
+
+## Исследование
+
+| Вопрос | Файл |
+|---|---|
+| OSINT финалистов №10, peers GH, конкуренты (15.10.2026) | [`research/competitors/`](research/competitors/) |
+| OCR / Document AI (срез 28.09) | [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md) |
+
 ## Записи по дням
 
 Дата в имени файла — день записи. Текущее покрытие смотрите в scorecard.
