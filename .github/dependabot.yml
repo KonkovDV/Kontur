@@ -8,7 +8,7 @@ updates:
       day: "monday"
       time: "03:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
@@ -25,7 +25,7 @@ updates:
       day: "tuesday"
       time: "03:15"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
@@ -42,7 +42,7 @@ updates:
       day: "wednesday"
       time: "03:30"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
@@ -59,7 +59,7 @@ updates:
       day: "thursday"
       time: "03:45"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
@@ -75,7 +75,7 @@ updates:
       day: "friday"
       time: "04:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
@@ -91,7 +91,7 @@ updates:
       day: "saturday"
       time: "04:15"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"
@@ -107,7 +107,7 @@ updates:
       day: "sunday"
       time: "04:30"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     rebase-strategy: "auto"
     commit-message:
       prefix: "deps"

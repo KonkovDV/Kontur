@@ -69,6 +69,16 @@ services:
     volumes:
       - minio:/bitnami/minio/data
 
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+
   core:
     # Пакет жюри с хоста, не смена command сервиса:
     # python -m kontur.cli.run_package --input <dir> --out <dir>
@@ -103,7 +113,10 @@ services:
       KONTUR_JWT_ALGORITHM: ${KONTUR_JWT_ALGORITHM:-RS256}
       KONTUR_JWT_PUBLIC_KEY: ${KONTUR_JWT_PUBLIC_KEY}
       KONTUR_ALLOW_INSECURE_DEV_AUTH: ${KONTUR_ALLOW_INSECURE_DEV_AUTH:-false}
-      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
+      KONTUR_ENV: ${KONTUR_ENV:-production}
+      KONTUR_CLAMD_HOST: ${KONTUR_CLAMD_HOST:-clamav}
+      KONTUR_CLAMD_PORT: ${KONTUR_CLAMD_PORT:-3310}
+      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-60}
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,6 +124,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      clamav:
+        condition: service_started
       minio:
         condition: service_healthy
     healthcheck:
@@ -252,7 +267,7 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-600}
+      KONTUR_PDF_PARSE_TIMEOUT_S: ${KONTUR_PDF_PARSE_TIMEOUT_S:-60}
     volumes:
       - ${KONTUR_PACKAGE_INPUT:-./input}:/input:ro
       - ${KONTUR_PACKAGE_OUT:-./out}:/out

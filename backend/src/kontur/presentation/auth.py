@@ -38,6 +38,15 @@ def _is_true(value: str | None) -> bool:
     return value is not None and value.lower() == "true"
 
 
+def insecure_auth_permitted() -> bool:
+    """Legacy-токен только в dev/test/local/demo. Иначе — только JWT."""
+
+    if not _is_true(os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH")):
+        return False
+    env = (os.environ.get("KONTUR_ENV") or "dev").strip().lower()
+    return env in {"dev", "test", "local", "demo"}
+
+
 def _legacy_context(token: str) -> AuthContext:
     if _LEGACY_TOKEN.fullmatch(token) is None:
         raise _authentication_required()
@@ -166,7 +175,7 @@ def parse_bearer(authorization: str | None) -> AuthContext:
         # including one/two/four-part, truncated, prefixed, or suffixed variants.
         if "." in token:
             return _jwt_context(token)
-        if _is_true(os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH")):
+        if insecure_auth_permitted():
             return _legacy_context(token)
         raise _authentication_required()
     except AuthenticationRequiredError:
