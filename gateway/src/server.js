@@ -12,6 +12,7 @@ import { fileURLToPath } from "url";
 import pino from "pino";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
+import { metricsHandler, metricsMiddleware } from "./metrics.js";
 import {
   MAX_BATCH_BYTES,
   MAX_FILE_BYTES,
@@ -160,6 +161,10 @@ export function createApp({
 } = {}) {
   const app = express();
   const allowUpload = createUploadLimiter(uploadLimit, uploadWindowMs);
+
+  // /metrics до прокси и лимитеров; не уходит в ядро.
+  app.get("/metrics", metricsHandler);
+  app.use(metricsMiddleware);
 
   app.use((req, res, next) => {
     req.requestId = req.header("x-request-id") ?? crypto.randomUUID();

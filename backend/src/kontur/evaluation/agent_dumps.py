@@ -386,7 +386,11 @@ def build_tz_scorecard(
             "partial",
             "ruleset main-pr-and-ci id 23890545; required reviews 0; gates I/J/K/L stay open",
         ),
-        _scorecard_item("observability_otel", "unmet", "no Prometheus/Grafana stack"),
+        _scorecard_item(
+            "observability_otel",
+            "partial",
+            "/metrics gateway+core; rabbitmq_prometheus:15692; no Grafana/ELK/alert delivery",
+        ),
     ]
     return {
         "schema_version": SCHEMA_VERSION,
