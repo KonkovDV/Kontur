@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { bandOf, isCheckRefusal, type Band } from "./bands";
+import { bandOf, isCheckRefusal, stepQueue, type Band } from "./bands";
 import { EvidenceViewer } from "./EvidenceViewer";
 import {
   STAGE_PANES,
@@ -171,6 +171,7 @@ export function LiveWorkspace({ token }: Props) {
   const [sectionFilter, setSectionFilter] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [card, setCard] = useState<EvidenceCard | null>(null);
+  const [zoomed, setZoomed] = useState(false);
   const [pageImages, setPageImages] = useState<Partial<Record<StagePane, string>>>({});
   const [etalonComment, setEtalonComment] = useState("");
   const [comment, setComment] = useState("");
@@ -452,8 +453,10 @@ export function LiveWorkspace({ token }: Props) {
         }),
       );
       recordDecision(action);
+      const ids = visible.map((item) => item.finding_id);
+      const next = ids.length > 1 ? stepQueue(ids, active.finding_id, 1) : null;
       await refresh(processId);
-      await openFinding(active.finding_id);
+      await openFinding(next ?? active.finding_id);
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "решение не принято");
     } finally {
@@ -577,6 +580,19 @@ export function LiveWorkspace({ token }: Props) {
         return;
       }
       const key = event.key.toLowerCase();
+      if (key === "z") {
+        setZoomed((value) => !value);
+        return;
+      }
+      if (key === "j" || key === "k") {
+        const next = stepQueue(
+          visible.map((item) => item.finding_id),
+          activeId,
+          key === "j" ? 1 : -1,
+        );
+        if (next) void openFinding(next);
+        return;
+      }
       if (key === "c") void decide("CONFIRM");
       if (key === "r") void decide("REJECT");
       if (key === "q") void decide("REQUEST_CLARIFICATION");
@@ -812,7 +828,7 @@ export function LiveWorkspace({ token }: Props) {
       ) : null}
 
       {card && active ? (
-        <EvidenceViewer card={card} pageImages={pageImages}>
+        <EvidenceViewer card={card} pageImages={pageImages} zoomed={zoomed}>
           {isCheckRefusal(active.finding_status) ? (
             <p className="missing-hint">
               Система не смогла проверить. Это не нарушение.

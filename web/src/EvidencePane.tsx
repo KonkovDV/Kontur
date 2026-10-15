@@ -1,4 +1,5 @@
 import type { EvidenceRole, FragmentView, Point } from "./evidence";
+import { confidenceChip, zoomTransform } from "./bands";
 import { bboxFromPolygon, formatBBox, formatPolygon, svgPointYDown } from "./evidence";
 
 const PAGE_W = 100;
@@ -13,16 +14,24 @@ type PaneProps = {
   role: EvidenceRole;
   fragment: FragmentView | undefined;
   pageImageUrl?: string;
+  zoomed?: boolean;
 };
 
 function overlayPoints(polygon: Point[]): string {
   return polygon.map(([x, y]) => svgPointYDown(x, y)).join(" ");
 }
 
-export function EvidencePane({ title, role, fragment, pageImageUrl }: PaneProps) {
+export function EvidencePane({ title, role, fragment, pageImageUrl, zoomed = false }: PaneProps) {
   const polygon = fragment?.polygon_norm;
   const bbox = polygon && polygon.length >= 3 ? bboxFromPolygon(polygon) : null;
   const missing = fragment === undefined;
+  const zoom = zoomed && bbox ? zoomTransform(bbox) : null;
+  const zoomStyle = zoom
+    ? {
+        transform: `scale(${zoom.scale}) translate(${zoom.txPct}%, ${zoom.tyPct}%)`,
+        transformOrigin: "0 0",
+      }
+    : undefined;
   return (
     <section className="pane evidence-pane" aria-label={title} data-role={role}>
       <h2>{title}</h2>
@@ -31,7 +40,8 @@ export function EvidencePane({ title, role, fragment, pageImageUrl }: PaneProps)
       ) : (
         <>
           {pageImageUrl ? (
-            <div className="page-frame">
+            <div className={zoom ? "page-frame page-frame--zoomed" : "page-frame"}>
+              <div className="page-zoom" style={zoomStyle}>
               <img src={pageImageUrl} alt={`страница ${fragment.page}`} />
               <svg
                 className="page-overlay page-overlay--bitmap"
@@ -46,11 +56,16 @@ export function EvidencePane({ title, role, fragment, pageImageUrl }: PaneProps)
                   strokeWidth="0.008"
                 />
               </svg>
+              </div>
             </div>
           ) : (
           <svg
             className="page-overlay"
-            viewBox={`0 0 ${PAGE_W} ${PAGE_H}`}
+            viewBox={
+              zoom
+                ? `${(-zoom.txPct / 100) * PAGE_W} ${(-zoom.tyPct / 100) * PAGE_H} ${PAGE_W / zoom.scale} ${PAGE_H / zoom.scale}`
+                : `0 0 ${PAGE_W} ${PAGE_H}`
+            }
             role="img"
             aria-label={`страница ${fragment.page}, polygon_norm`}
           >
@@ -134,8 +149,13 @@ export function EvidencePane({ title, role, fragment, pageImageUrl }: PaneProps)
             <div>
               <dt>engine</dt>
               <dd>
-                {fragment.extracted.engine} {fragment.extracted.engine_version} (
-                {Math.round(fragment.extracted.confidence * 100)}%)
+                {fragment.extracted.engine} {fragment.extracted.engine_version}{" "}
+                {(() => {
+                  const chip = confidenceChip(fragment.extracted.confidence);
+                  return (
+                    <span className={`conf-chip conf-chip--${chip.bucket}`}>{chip.label}</span>
+                  );
+                })()}
               </dd>
             </div>
           </dl>
