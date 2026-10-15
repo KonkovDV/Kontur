@@ -21,6 +21,14 @@ pull-модель с `process_id` и статусами, воспроизвод�
 ## Object store (MinIO/S3)
 
 Compose поднимает MinIO; `core` получает `KONTUR_OBJECT_STORE_URL` / ключи.
-Без URL (pytest) — `MemoryObjectStore`. Метаданные процесса — Postgres/`MemoryProcessStore`;
+Без URL (pytest / dev) — `MemoryObjectStore`. Метаданные процесса — Postgres/`MemoryProcessStore`;
 байты — object store по ключу `{process_id}/{file_id}` (`file_path` в `process_files`).
+В non-dev `KONTUR_DB_URL` без object store URL — процесс не стартует (`wiring.build_workspace`):
+иначе снова иллюзия durable (метаданные в DB, байты только в RAM).
+
+## ConnectingPostgresProcessStore
+
+`ConnectingPostgresProcessStore` открывает **новое** psycopg-соединение на каждый вызов
+(`load` / `save` / findings / audit). Пула соединений в skeleton нет — для демо и стенда
+жюри достаточно; production-пул — отдельный follow-up, не часть P0.
 

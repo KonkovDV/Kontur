@@ -65,5 +65,5 @@ GAP-EMB: вложения `/EmbeddedFile` пайплайн не видит (см
 
 | ID | Суть | Статус |
 |---|---|---|
-| GAP-DURABLE-BLOBS | Тела PDF/PNG только в `record.blobs` не переживали рестарт core | **закрыт**: `ObjectStore` (MinIO/S3) + `file_path` в `process_files`; `wiring.build_workspace` на lifespan API |
+| GAP-DURABLE-BLOBS | Тела PDF/PNG только в `record.blobs` не переживали рестарт core | **закрыт на границе store**: `ObjectStore` (MinIO/S3) + `file_path` в `process_files`; `wiring.build_workspace` на lifespan API. Регрессия — `test_object_store_durable.py` (новый `ProcessWorkspace` + тот же store/objects, sha256 PNG). Это **не** e2e `docker compose restart core`; полный compose-restart smoke — опциональный `scripts/smoke_durable_restart.sh` (вручную / optional gate), не обязателен в CI. В non-dev DB без object store — fail startup (см. `wiring.py`) |
 

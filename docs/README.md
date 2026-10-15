@@ -15,6 +15,8 @@
 
 | Вопрос | Файл |
 |---|---|
+| Одностраничник и Murder Board | [`JURY_ONEPAGER.md`](JURY_ONEPAGER.md) |
+| Очередь экстракторов после P0 | [`EXTRACTOR_ROADMAP.md`](EXTRACTOR_ROADMAP.md) |
 | Четыре входа, без обхода репозитория | [`../README.md`](../README.md), раздел «Куда смотреть» |
 | Пять полей формы | [`../submission/README.md`](../submission/README.md) |
 | Постановка и методология | [`../submission/02-documentation/README.md`](../submission/02-documentation/README.md) |

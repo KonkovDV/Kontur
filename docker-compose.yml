@@ -128,7 +128,7 @@ services:
       rabbitmq:
         condition: service_healthy
       clamav:
-        condition: service_started
+        condition: service_healthy
       minio:
         condition: service_healthy
     healthcheck:

@@ -1,4 +1,5 @@
-# Заморозка до 2026-09-30: конкурсный срез. Новые PR не открывать.
+# Dependabot активен: open-pull-requests-limit=5 по ecosystems (pip/npm/actions/docker).
+# Заморозка до 2026-09-30 снята после конкурсного среза.
 version: 2
 updates:
   - package-ecosystem: "pip"
