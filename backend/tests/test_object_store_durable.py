@@ -62,7 +62,9 @@ def test_blobs_survive_workspace_restart_same_object_store() -> None:
     assert body is not None
     assert hashlib.sha256(body).hexdigest() == expected
     assert body == png
-    assert any(f.file_id == "f-png" and f.file_path == f"{process_id}/f-png" for f in restored.files)
+    assert any(
+        f.file_id == "f-png" and f.file_path == f"{process_id}/f-png" for f in restored.files
+    )
 
 
 def test_wiring_defaults_to_memory(monkeypatch) -> None:
