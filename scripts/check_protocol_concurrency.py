@@ -20,7 +20,7 @@ from uuid import uuid4
 
 import psycopg
 
-from kontur.application.protocol import protocol_identity
+from kontur.application.protocol import protocol_for_rin, protocol_identity
 from kontur.domain.statuses import ProcessState, Scenario
 from kontur.infrastructure.db.process_store import (
     PostgresProcessStore,
@@ -162,8 +162,10 @@ def _assert_identical_redelivery_is_idempotent(prefix: str) -> None:
         raise AssertionError(
             f"idempotent finalize produced protocols={protocol_count}, outbox={outbox_count}"
         )
-    if stored_hash != protocol_payload_sha256(payload):
-        raise AssertionError("stored protocol hash differs from canonical payload")
+    if stored_hash != protocol_payload_sha256(protocol_for_rin(payload)):
+        raise AssertionError(
+            "stored protocol hash differs from RiN-filtered canonical payload"
+        )
 
 
 def _assert_object_version_race_fails_closed(prefix: str) -> None:

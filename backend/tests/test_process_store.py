@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 import pytest
 
+from kontur.application.protocol import protocol_for_rin
 from kontur.application.runtime import AcceptedFile, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.domain.models import DocStage, Finding
@@ -490,10 +491,20 @@ def test_memory_materialize_is_idempotent_for_same_payload() -> None:
 def test_memory_materialize_conflicts_on_different_payload() -> None:
     store = MemoryProcessStore()
     store.materialize_finalized(_finalized_snap(), _final_payload())
+    other = _final_payload()
+    other["sections"] = {
+        **other["sections"],  # type: ignore[dict-item]
+        "confirmed": [
+            {
+                "finding_id": "f-1",
+                "rule_code": "PZ-001",
+                "finding_status": "CONFIRMED_VIOLATION",
+                "rationale": "другое",
+            }
+        ],
+    }
     with pytest.raises(ProtocolConflictError, match="другое содержимое"):
-        store.materialize_finalized(
-            _finalized_snap(), _final_payload(violation_count=1)
-        )
+        store.materialize_finalized(_finalized_snap(), other)
 
 
 def test_memory_materialize_conflicts_on_object_version() -> None:
@@ -548,7 +559,8 @@ def test_postgres_materialize_is_idempotent_for_same_canonical_json() -> None:
     conn = _Conn()
     conn.protocol_insert_rows = None
     payload = _final_payload()
-    conn.existing_payload = payload
+    # в store лежит уже отфильтрованное тело РиН
+    conn.existing_payload = protocol_for_rin(payload)
     store = PostgresProcessStore(conn)
     store.materialize_finalized(_finalized_snap(), payload)
     assert any("FOR UPDATE" in item for item in conn.sql)
@@ -558,7 +570,18 @@ def test_postgres_materialize_is_idempotent_for_same_canonical_json() -> None:
 def test_postgres_materialize_conflicts_on_different_payload() -> None:
     conn = _Conn()
     conn.protocol_insert_rows = None
-    conn.existing_payload = _final_payload(violation_count=3)
+    existing = _final_payload()
+    existing["sections"] = {
+        **existing["sections"],  # type: ignore[dict-item]
+        "confirmed": [
+            {
+                "finding_id": "old",
+                "rule_code": "PZ-001",
+                "finding_status": "CONFIRMED_VIOLATION",
+            }
+        ],
+    }
+    conn.existing_payload = protocol_for_rin(existing)
     store = PostgresProcessStore(conn)
     with pytest.raises(ProtocolConflictError, match="другое содержимое"):
         store.materialize_finalized(_finalized_snap(), _final_payload())

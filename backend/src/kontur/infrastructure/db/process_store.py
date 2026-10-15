@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
 
+from kontur.application.protocol import protocol_for_rin
 from kontur.domain.models import DocStage, Finding, InspectorDecision
 from kontur.domain.statuses import (
     Completeness,
@@ -413,7 +414,8 @@ class MemoryProcessStore:
         protocol_id = snapshot.protocol_id
         if protocol_id is None:
             raise ProtocolMaterializationRequiredError("FINALIZED требует protocol_id")
-        encoded = _clone_protocol_payload(payload)
+        # §9.6: в outbox/РиН только confirmed (+ negative_verified), не CANDIDATE.
+        encoded = _clone_protocol_payload(protocol_for_rin(payload))
         existing = self._protocols.get(protocol_id)
         if existing is not None and _canonical_json(existing) != _canonical_json(encoded):
             raise ProtocolConflictError(
@@ -751,7 +753,7 @@ class PostgresProcessStore:
     ) -> None:
         validate_snapshot(snapshot)
         _reject_unsafe_protocol_payload(payload, snapshot)
-        encoded = _clone_protocol_payload(payload)
+        encoded = _clone_protocol_payload(protocol_for_rin(payload))
         transaction_fn = getattr(self._connection, "transaction", None)
         if not callable(transaction_fn):
             raise TransactionUnavailableError(
