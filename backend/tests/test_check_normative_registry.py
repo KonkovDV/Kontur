@@ -66,3 +66,15 @@ def test_drift_is_a_warning_not_an_error() -> None:
     errors, warnings = reg.check(_registry(), SCHEMA, rules)
     assert errors == []
     assert any("X-002" in w and "effective_from" in w for w in warnings)
+
+
+def test_later_clause_date_is_not_drift() -> None:
+    act = _registry()["acts"][0]
+    later = {"identifier": act["identifier"], "effective_from": "2099-01-01"}
+    _, warnings = reg.check(_registry(), SCHEMA, {"X-003": {"normative_refs": [later]}})
+    assert not any("X-003" in w for w in warnings)
+
+
+def test_repository_rules_have_no_drift() -> None:
+    _, warnings = reg.check(_registry(), SCHEMA, reg.load_rules())
+    assert [w for w in warnings if "registry=" in w] == []
