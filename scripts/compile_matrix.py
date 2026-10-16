@@ -12,6 +12,7 @@ import json
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -275,7 +276,7 @@ def load_overrides() -> dict[str, dict[str, object]]:
     return found
 
 
-def write_params_csv(rows: list[dict[str, object]]) -> None:
+def write_params_csv(rows: list[dict[str, object]], csv_path: Path = PARAMS_CSV) -> None:
     fieldnames = [
         "id",
         "code",
@@ -291,9 +292,9 @@ def write_params_csv(rows: list[dict[str, object]]) -> None:
         "data_type",
         "is_active",
     ]
-    PARAMS_CSV.parent.mkdir(parents=True, exist_ok=True)
-    with PARAMS_CSV.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             comparator, extractor_type = _comparator(row)
@@ -317,7 +318,7 @@ def write_params_csv(rows: list[dict[str, object]]) -> None:
             )
 
 
-def compile_rules() -> tuple[int, int]:
+def compile_rules(rules_dir: Path = RULES, csv_path: Path = PARAMS_CSV) -> tuple[int, int]:
     catalog = _load_catalog(ensure_catalog())
     if len(catalog) != 132:
         raise ValueError(f"в каталоге {len(catalog)} строк, ожидалось 132")
@@ -326,27 +327,58 @@ def compile_rules() -> tuple[int, int]:
     if unknown:
         raise ValueError(f"override вне матрицы: {sorted(unknown)}")
 
-    RULES.mkdir(parents=True, exist_ok=True)
+    rules_dir.mkdir(parents=True, exist_ok=True)
     written: set[str] = set()
     for row in catalog:
         code = str(row["parameter_code"])
         rule = _stamp_catalog_fields(overrides[code], row) if code in overrides else skeleton(row)
-        path = RULES / f"{code}.json"
+        path = rules_dir / f"{code}.json"
         path.write_text(
             json.dumps(rule, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
         written.add(code)
 
-    for stale in RULES.glob("*.json"):
+    for stale in rules_dir.glob("*.json"):
         if stale.stem not in written:
             stale.unlink()
 
-    write_params_csv(catalog)
+    write_params_csv(catalog, csv_path)
     return len(written), len(overrides)
 
 
+def check() -> list[str]:
+    """Собрать во временный каталог и вернуть файлы, расходящиеся с репозиторием."""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        rules_dir = Path(tmp) / "rules"
+        csv_path = Path(tmp) / "params.template.csv"
+        compile_rules(rules_dir, csv_path)
+        drift: list[str] = []
+        expected = {path.name for path in rules_dir.glob("*.json")}
+        actual = {path.name for path in RULES.glob("*.json")}
+        for name in sorted(expected | actual):
+            built = rules_dir / name
+            committed = RULES / name
+            if not built.is_file() or not committed.is_file():
+                drift.append(f"data/matrix/rules/{name}")
+            elif built.read_bytes() != committed.read_bytes():
+                drift.append(f"data/matrix/rules/{name}")
+        if csv_path.read_bytes() != PARAMS_CSV.read_bytes():
+            drift.append("data/matrix/params.template.csv")
+        return drift
+
+
 def main() -> int:
+    if sys.argv[1:] == ["--check"]:
+        drift = check()
+        for name in drift:
+            print(f"расходится с compile_matrix.py: {name}")
+        if drift:
+            print("правьте data/matrix/overrides/ и перезапустите scripts/compile_matrix.py")
+            return 1
+        print("matrix: правила совпадают с результатом сборки")
+        return 0
     declared, overridden = compile_rules()
     print(f"matrix: {declared} правил, из них {overridden} с ручным экстрактором")
     return 0
