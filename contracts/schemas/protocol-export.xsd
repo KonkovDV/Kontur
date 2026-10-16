@@ -61,6 +61,34 @@
             </xs:sequence>
           </xs:complexType>
         </xs:element>
+        <xs:element name="revision_changes" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="revision_pair" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="change" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="old" type="xs:string" minOccurs="0"/>
+                          <xs:element name="new" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                        <xs:attribute name="rule_code" type="xs:string" use="required"/>
+                        <xs:attribute name="kind" type="xs:string" use="required"/>
+                        <xs:attribute name="usable_for_automatic_finding" type="xs:boolean" use="required"/>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="document_code" type="xs:string" use="required"/>
+                  <xs:attribute name="old_file_id" type="xs:string" use="required"/>
+                  <xs:attribute name="new_file_id" type="xs:string" use="required"/>
+                  <xs:attribute name="old_revision" type="xs:string" use="required"/>
+                  <xs:attribute name="new_revision" type="xs:string" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
         <xs:element name="violation_count" type="xs:nonNegativeInteger"/>
       </xs:sequence>
       <xs:attribute name="protocol_id" type="xs:string" use="required"/>

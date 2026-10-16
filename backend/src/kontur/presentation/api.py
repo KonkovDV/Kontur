@@ -32,6 +32,12 @@ from kontur.application.protocol_export import (
     render_xml,
 )
 from kontur.application.review import ACTION_TO_STATUS
+from kontur.application.revision_diff import (
+    RevisionChainError,
+    documents_in,
+    revision_changes,
+    revision_diff_payload,
+)
 from kontur.application.runtime import AcceptedFile, ProcessRecord, ProcessWorkspace
 from kontur.application.scenarios import CompletenessMap
 from kontur.application.wiring import build_workspace
@@ -693,6 +699,7 @@ def _protocol_document(
         },
         process_state=record.process_state,
         input_manifest_hash=record.input_manifest_hash,
+        revision_changes=revision_changes(record.evidence_groups.values()),
     )
     _workspace().note_phase(record, "protocol", perf_counter() - protocol_started)
     return protocol_for_http(payload)
@@ -1063,6 +1070,38 @@ def select_revision(
     except KeyError:
         return JSONResponse(status_code=404, content={"detail": "файл не найден"})
     return updated.to_status()
+
+
+@app.get("/api/v1/processes/{process_id}/revisions/{file_id}/diff", response_model=None)
+def get_revision_diff(
+    process_id: str,
+    file_id: str,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict[str, object] | JSONResponse:
+    """Изменения параметров редакции ``file_id`` относительно её предшественника."""
+
+    _subject, _granted, object_id = _require("getRevisionDiff", authorization)
+    record = _record_for_access(process_id, object_id)
+    if record is None:
+        return JSONResponse(status_code=404, content={"detail": "процесс не найден"})
+    groups = tuple(record.evidence_groups.values())
+    documents = documents_in(groups)
+    new = documents.get(file_id)
+    if new is None:
+        return JSONResponse(status_code=404, content={"detail": "файл не найден"})
+    predecessor = new.predecessor_file_id
+    if predecessor is None or predecessor not in documents:
+        return JSONResponse(
+            status_code=409,
+            content={"detail": "у редакции нет зафиксированного предшественника в пакете"},
+        )
+    try:
+        payload = revision_diff_payload(groups, documents[predecessor], new)
+    except RevisionChainError:
+        return JSONResponse(
+            status_code=409, content={"detail": "редакции не образуют зафиксированную пару"}
+        )
+    return {"process_id": process_id, **payload}
 
 
 @app.post("/api/v1/inspection/{process_id}", status_code=202, response_model=None)

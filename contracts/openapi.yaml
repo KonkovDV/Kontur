@@ -623,6 +623,31 @@ paths:
         "404": { description: Процесс или файл не найден }
         "409": { description: Не READY, финализирован, штамп NOT_APPROVED или нет содержимого }
 
+  /processes/{process_id}/revisions/{file_id}/diff:
+    get:
+      summary: Изменения параметров между редакцией и её предшественником
+      description: >
+        Сравнивает значения параметров матрицы, извлечённые из редакции
+        file_id и из её зафиксированного предшественника (predecessor_file_id).
+        Порядок редакций не угадывается по номеру. Единицы не пересчитываются.
+        Это справка инспектору: не находка, не finding_status, не входит в
+        violation_count. Группы живут в памяти процесса; после рестарта без
+        тел фрагментов файл не найдётся.
+      operationId: getRevisionDiff
+      x-required-roles: [INSPECTOR, SUPERVISOR, ADMIN]
+      parameters:
+        - { $ref: "#/components/parameters/ProcessId" }
+        - { $ref: "#/components/parameters/FileId" }
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "./schemas/revision_diff.schema.json" }
+        "404": { description: Процесс или файл не найден }
+        "409": { description: У редакции нет зафиксированного предшественника в пакете }
+
   /demo/kit:
     post:
       summary: Загрузить синтетический учебный комплект

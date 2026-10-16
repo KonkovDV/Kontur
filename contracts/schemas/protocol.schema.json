@@ -65,6 +65,11 @@
       "description": "Равен длине sections.confirmed. Кандидаты, подозрения и статусы качества данных не входят."
     },
     "versions": { "type": "object" },
+    "revision_changes": {
+      "description": "Справочно: изменения параметров между зафиксированными парами редакций, только пары с изменениями, без UNCHANGED. Не находки и не violation_count; protocol_for_rin поле отбрасывает. Нет поля — нет изменений.",
+      "type": "array",
+      "items": { "$ref": "https://kontur.local/schemas/revision_diff.schema.json" }
+    },
     "input_manifest": {
       "type": "object",
       "required": ["manifest_hash", "files"],

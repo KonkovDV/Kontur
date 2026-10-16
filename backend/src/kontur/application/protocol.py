@@ -93,6 +93,7 @@ def protocol_for_rin(payload: Mapping[str, object]) -> dict[str, object]:
     """
 
     clone: dict[str, object] = json.loads(canonical_protocol_json(payload))
+    clone.pop("revision_changes", None)
     raw_sections = clone.get("sections")
     sections: dict[str, list[object]] = {key: [] for key in _RIN_SECTION_ALLOWLIST}
     if isinstance(raw_sections, dict):
@@ -177,6 +178,7 @@ def assemble_protocol(
     process_state: ProcessState = ProcessState.READY,
     input_manifest_hash: str,
     version: int = 1,
+    revision_changes: Sequence[Mapping[str, object]] = (),
 ) -> dict[str, object]:
     """Собрать протокол. Кандидаты не входят в violation_count.
 
@@ -213,7 +215,7 @@ def assemble_protocol(
         sections[bucket].append(finding_to_schema(finding))
 
     confirmed = sections["confirmed"]
-    return {
+    payload: dict[str, object] = {
         "protocol_id": protocol_id,
         "object_id": object_id,
         "version": version,
@@ -232,3 +234,7 @@ def assemble_protocol(
             "files": list(files),
         },
     }
+    if revision_changes:
+        # Справка инспектору: не находки, не violation_count, не на провод РиН.
+        payload["revision_changes"] = [dict(item) for item in revision_changes]
+    return payload

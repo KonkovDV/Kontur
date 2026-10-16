@@ -72,6 +72,7 @@ OBJECT_BOUND_OPERATIONS = frozenset(
         "finalizeProtocol",
         "unfinalizeProtocol",
         "selectRevision",
+        "getRevisionDiff",
         "syncInspection",
     }
 )
