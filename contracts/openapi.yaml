@@ -218,6 +218,35 @@ paths:
                           description: Раздел матрицы правила. Нет правила — null, из шифра файла не выводится.
                         rationale: { type: string }
                         evidence_group_id: { type: ["string", "null"] }
+                        expected_value:
+                          description: Ожидаемое значение (строка, число, логическое) или null.
+                        actual_value:
+                          description: Измеренное значение (строка, число, логическое) или null.
+                        delta:
+                          description: Разница (строка или число) или null.
+                        normative_refs:
+                          type: array
+                          description: Пункты норм из правила матрицы. Нет ссылок — пустой список.
+                          items:
+                            type: object
+                            required: [identifier, clause]
+                            properties:
+                              identifier: { type: string }
+                              clause: { type: ["string", "null"] }
+                        places:
+                          type: ["array", "null"]
+                          description: >
+                            Документ и страница каждого фрагмента доказательства. Пустой
+                            список — у находки нет группы доказательств; null — группа
+                            не в памяти процесса (после рестарта без тел фрагментов).
+                            Текст страницы не отдаётся.
+                          items:
+                            type: object
+                            required: [role, file_id, page]
+                            properties:
+                              role: { type: string }
+                              file_id: { type: string }
+                              page: { type: integer, minimum: 1 }
         "404": { description: Процесс не найден }
 
   /processes/{process_id}/files/{file_id}/pages/{page}.png:

@@ -1064,3 +1064,24 @@ def test_revision_diff_and_protocol_match_contract_schemas(client: TestClient) -
     _schema_validator("revision_diff.schema.json").validate(diff)
     protocol = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR).json()
     _schema_validator("protocol.schema.json").validate(protocol)
+
+
+def test_findings_list_shows_value_norm_and_page(client: TestClient) -> None:
+    process_id = _seed_completed(client, with_candidate=True)
+    _attach_group(process_id)
+    response = client.get(f"/api/v1/processes/{process_id}/findings", headers=INSPECTOR)
+    assert response.status_code == 200
+    (item,) = [row for row in response.json()["findings"] if row["finding_id"] == "f-1"]
+    assert {"expected_value", "actual_value", "delta"} <= set(item)
+    assert item["normative_refs"]
+    assert all({"identifier", "clause"} == set(ref) for ref in item["normative_refs"])
+    places = {(place["role"], place["file_id"], place["page"]) for place in item["places"]}
+    assert ("actual", "file-rd", 1) in places
+    assert "raw_token" not in json.dumps(item)
+
+
+def test_findings_list_places_null_when_group_not_in_memory(client: TestClient) -> None:
+    process_id = _seed_completed(client, with_candidate=True)
+    response = client.get(f"/api/v1/processes/{process_id}/findings", headers=INSPECTOR)
+    (item,) = [row for row in response.json()["findings"] if row["finding_id"] == "f-1"]
+    assert item["places"] is None

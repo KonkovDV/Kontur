@@ -7,17 +7,17 @@
 
 | Что нужно | Где есть в контракте | Обязательно? | В `GET /processes/{id}/findings` |
 |---|---|---|---|
-| Измеренное значение | `finding.actual_value`, `finding.expected_value`, `finding.delta` | нет | **нет** |
+| Измеренное значение | `finding.actual_value`, `finding.expected_value`, `finding.delta` | нет | да, те же поля (null, если нет) |
 | Единица измерения | только `evidence_group.fragments[].extracted.unit` | нет | **нет** |
-| Пункт нормы | `finding.normative_refs[].identifier` + `.clause` | нет (сам список необязателен) | **нет** |
+| Пункт нормы | `finding.normative_refs[].identifier` + `.clause` | нет (сам список необязателен) | да, `normative_refs[]` из правила матрицы (пустой, если ссылок нет) |
 | Документ | `evidence_group.fragments[].document` (`file_id`, `file_hash`, `sheet`, `revision`) | да, внутри фрагмента | только через `evidence_group_id` |
-| Страница | `evidence_group.fragments[].page` | да, внутри фрагмента | только через `evidence_group_id` |
+| Страница | `evidence_group.fragments[].page` | да, внутри фрагмента | да, `places[].file_id` + `.page` (null, если группы нет в памяти) |
 | Область | `evidence_group.fragments[].polygon_source` / `polygon_norm` | да, внутри фрагмента | только через `evidence_group_id` |
 
 ## Пробелы
 
-1. Список находок в API отдаёт только `finding_id`, `rule_code`, `finding_status`, `section`,
-   `rationale`, `evidence_group_id`. Значение, норма и место видны только в карточке доказательства.
+1. Список находок отдаёт значение, пункт нормы и страницу, но не область (polygon) и не текст
+   страницы: они в карточке доказательства. После рестарта без тел фрагментов `places` = null.
 2. У `finding` нет собственного поля единицы: значение без единицы нельзя показать отдельно от фрагмента.
 3. `normative_refs` и `evidence_group_id` у находки необязательны: схема пропускает находку без нормы и без места.
 
