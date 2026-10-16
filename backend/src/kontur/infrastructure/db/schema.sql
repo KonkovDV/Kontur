@@ -143,6 +143,8 @@ CREATE TABLE protocols (
                             'VERIFICATION_COMPLETED', 'PROTOCOL_FINALIZED'
                         )),
     payload             JSONB NOT NULL,
+    -- Полный протокол для HTTP/экспорта (все разделы). В РиН уходит только payload.
+    full_payload        JSONB,
     payload_sha256      CHAR(64) NOT NULL
                         CHECK (payload_sha256 ~ '^[a-f0-9]{64}$'),
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -170,11 +172,13 @@ BEGIN
     THEN
         IF (NEW.id, NEW.object_id, NEW.version, NEW.matrix_version,
             NEW.dataset_version, NEW.model_version, NEW.input_manifest_hash,
-            NEW.payload, NEW.payload_sha256, NEW.created_at, NEW.supersedes_version)
+            NEW.payload, NEW.full_payload, NEW.payload_sha256, NEW.created_at,
+            NEW.supersedes_version)
            IS DISTINCT FROM
            (OLD.id, OLD.object_id, OLD.version, OLD.matrix_version,
             OLD.dataset_version, OLD.model_version, OLD.input_manifest_hash,
-            OLD.payload, OLD.payload_sha256, OLD.created_at, OLD.supersedes_version)
+            OLD.payload, OLD.full_payload, OLD.payload_sha256, OLD.created_at,
+            OLD.supersedes_version)
         THEN
             RAISE EXCEPTION
                 'отмена финализации протокола % не может менять содержимое', OLD.id

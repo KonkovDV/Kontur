@@ -88,3 +88,13 @@ class ConnectingPostgresProcessStore:
     ) -> dict[str, object] | None:
         with psycopg.connect(self._dsn) as connection:
             return self._store(connection).load_protocol_version(object_id, version)
+
+    def load_full_protocol(self, protocol_id: str) -> dict[str, object] | None:
+        with psycopg.connect(self._dsn) as connection:
+            return self._store(connection).load_full_protocol(protocol_id)
+
+    def load_full_protocol_version(
+        self, object_id: str, version: int
+    ) -> dict[str, object] | None:
+        with psycopg.connect(self._dsn) as connection:
+            return self._store(connection).load_full_protocol_version(object_id, version)
