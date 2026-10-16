@@ -78,3 +78,36 @@ def test_fields_are_not_required_before_demo() -> None:
     )
     assert not {"normative_refs", "evidence_group_id"} & set(schema["required"])
     assert "normative_refs" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+
+def test_completeness_rows_are_not_findings(tmp_path: Path) -> None:
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    examples = tmp_path / "examples" / "one"
+    examples.mkdir(parents=True)
+    protocol = {
+        "sections": {
+            "completeness": [
+                {
+                    "finding_id": "completeness-ПЗ-PD",
+                    "kind": "section_catalog",
+                    "counts_as_violation": False,
+                }
+            ],
+            "needs_attention": [{"finding_id": "f1", "counts_as_violation": False}],
+            "candidates": [
+                {"finding_id": "f2", "counts_as_violation": False, "evidence_group_id": "g"}
+            ],
+        }
+    }
+    (examples / "protocol.json").write_text(json.dumps(protocol), encoding="utf-8")
+    report = _module().collect(rules, tmp_path / "examples")
+    assert report.catalog_rows == 1
+    assert report.findings_total == 2
+    assert report.findings_without_group == 1
+
+
+def test_repository_examples_split_catalog_rows() -> None:
+    report = _module().collect()
+    assert report.catalog_rows == 94
+    assert report.findings_total == 264
