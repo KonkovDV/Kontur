@@ -11,6 +11,7 @@ from kontur.application.scenarios import CompletenessMap, detect_scenario
 from kontur.domain.models import DocStage, Finding
 from kontur.domain.status_map import PROTOCOL_STATUS, on_the_wire, tz_upload_status
 from kontur.domain.statuses import FindingStatus, ProcessState
+from kontur.infrastructure.matrix.registry import FileRuleRegistry
 
 _SECTION: dict[FindingStatus, str] = {
     FindingStatus.CANDIDATE: "candidates",
@@ -118,7 +119,48 @@ def protocol_for_rin(payload: Mapping[str, object]) -> dict[str, object]:
     return clone
 
 
-def finding_to_schema(finding: Finding) -> dict[str, object]:
+_REF_KEYS = ("identifier", "issuer", "clause", "effective_from", "effective_to", "layer")
+_REF_REQUIRED = ("identifier", "clause", "effective_from")
+_DEFAULT_RULES: FileRuleRegistry | None = None
+
+
+def _default_rules() -> FileRuleRegistry:
+    global _DEFAULT_RULES
+    if _DEFAULT_RULES is None:
+        _DEFAULT_RULES = FileRuleRegistry()
+    return _DEFAULT_RULES
+
+
+def rule_normative_refs(
+    rule_code: str, rules: FileRuleRegistry | None = None
+) -> list[dict[str, object]]:
+    """normative_refs правила матрицы в форме finding.schema.json.
+
+    Только ссылки, которые уже есть в JSON правила; ничего не дописывается. Ссылка без
+    identifier/clause/effective_from пропускается. Нет правила — пустой список.
+    """
+
+    registry = rules if rules is not None else _default_rules()
+    try:
+        rule = registry.get(rule_code)
+    except (KeyError, FileNotFoundError):
+        return []
+    raw = rule.get("normative_refs") if isinstance(rule, dict) else None
+    if not isinstance(raw, list):
+        return []
+    refs: list[dict[str, object]] = []
+    for ref in raw:
+        if not isinstance(ref, dict):
+            continue
+        if not all(isinstance(ref.get(key), str) and ref.get(key) for key in _REF_REQUIRED):
+            continue
+        refs.append({key: ref[key] for key in _REF_KEYS if key in ref})
+    return refs
+
+
+def finding_to_schema(
+    finding: Finding, normative_refs: Sequence[Mapping[str, object]] = ()
+) -> dict[str, object]:
     """Карточка по finding.schema.json. Лишних ключей нет: additionalProperties=false."""
 
     payload: dict[str, object] = {
@@ -136,6 +178,8 @@ def finding_to_schema(finding: Finding) -> dict[str, object]:
     }
     if finding.evidence_group_id is not None:
         payload["evidence_group_id"] = finding.evidence_group_id
+    if normative_refs:
+        payload["normative_refs"] = [dict(ref) for ref in normative_refs]
     if finding.expected_value is not None:
         payload["expected_value"] = finding.expected_value
     if finding.actual_value is not None:
@@ -179,6 +223,7 @@ def assemble_protocol(
     input_manifest_hash: str,
     version: int = 1,
     revision_changes: Sequence[Mapping[str, object]] = (),
+    rules: FileRuleRegistry | None = None,
 ) -> dict[str, object]:
     """Собрать протокол. Кандидаты не входят в violation_count.
 
@@ -207,12 +252,16 @@ def assemble_protocol(
         if finding.finding_status is FindingStatus.AUTO_NO_DIFFERENCE:
             if on_the_wire(finding.finding_status):
                 raise RuntimeError("AUTO_NO_DIFFERENCE нельзя отдавать в РиН")
-            sections["preliminary_no_difference"].append(finding_to_schema(finding))
+            sections["preliminary_no_difference"].append(
+                finding_to_schema(finding, rule_normative_refs(finding.rule_code, rules))
+            )
             continue
         bucket = _SECTION.get(finding.finding_status)
         if bucket is None:
             raise ValueError(f"{finding.finding_status.value} не входит ни в одну секцию протокола")
-        sections[bucket].append(finding_to_schema(finding))
+        sections[bucket].append(
+            finding_to_schema(finding, rule_normative_refs(finding.rule_code, rules))
+        )
 
     confirmed = sections["confirmed"]
     payload: dict[str, object] = {

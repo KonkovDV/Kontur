@@ -53,7 +53,25 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "СП 1.13130.2020",
+            "issuer": "МЧС России",
+            "clause": "п. 4.2.1",
+            "effective_from": "2020-09-19",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "Технический регламент о требованиях пожарной безопасности",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -196,7 +214,25 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ГрК РФ № 190-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "ст. 52 ч. 7 (отклонение от проектной документации)",
+            "effective_from": "2005-01-10",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "clause": "п. 13 подп. «ж» (раздел 3 «Архитектурные решения»: цветовое решение)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -404,7 +440,25 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ГОСТ 21.110-2013",
+            "issuer": "Межгосударственный совет по стандартизации",
+            "clause": "Спецификация оборудования, изделий и материалов",
+            "effective_from": "2014-01-01",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "Приказ Минстроя № 344/пр",
+            "issuer": "Минстрой России",
+            "clause": "Приложение № 1, п. 13 (журналы работ)",
+            "effective_from": "2023-09-01",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -690,7 +744,25 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ФЗ № 89-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "ст. 12 ч. 6, ст. 9 (ГРОО и лицензирование обращения с отходами)",
+            "effective_from": "1998-06-24",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "Постановление Правительства Москвы № 257-ПП",
+            "issuer": "Правительство Москвы",
+            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+            "effective_from": "2015-05-12",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -703,7 +775,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "Постановление Правительства Москвы № 257-ПП",
+            "issuer": "Правительство Москвы",
+            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+            "effective_from": "2015-05-12",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -716,7 +798,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "Постановление Правительства Москвы № 257-ПП",
+            "issuer": "Правительство Москвы",
+            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+            "effective_from": "2015-05-12",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -729,7 +821,25 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ФЗ № 89-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "ст. 12 ч. 6, ст. 9 (ГРОО и лицензирование обращения с отходами)",
+            "effective_from": "1998-06-24",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "Постановление Правительства Москвы № 257-ПП",
+            "issuer": "Правительство Москвы",
+            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+            "effective_from": "2015-05-12",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -755,7 +865,33 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ГрК РФ № 190-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "ст. 55.31 (снос объекта капитального строительства)",
+            "effective_from": "2018-08-04",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "clause": "п. 24 (раздел 7 «Проект организации работ по сносу или демонтажу»)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "СП 325.1325800.2017",
+            "issuer": "Минстрой России",
+            "clause": "п. 5 (правила производства работ при демонтаже)",
+            "effective_from": "2018-06-18",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -807,7 +943,33 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "clause": "п. 24 (раздел 7 «Проект организации работ по сносу или демонтажу»)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "СанПиН 2.1.3684-21",
+            "issuer": "Роспотребнадзор",
+            "clause": "разд. X (санитарные требования при обращении с отходами сноса)",
+            "effective_from": "2021-03-01",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "СП 51.13330.2011",
+            "issuer": "Минрегион России",
+            "clause": "разд. 12 (защита от шума на строительной площадке)",
+            "effective_from": "2011-05-20",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -924,7 +1086,33 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ГрК РФ № 190-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "ст. 52 ч. 7 (отклонение от проектной документации)",
+            "effective_from": "2005-01-10",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "clause": "п. 23 (раздел 6 «Проект организации строительства»)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "СП 48.13330.2019",
+            "issuer": "Минстрой России",
+            "clause": "п. 6.2 (проект производства работ и технологические карты)",
+            "effective_from": "2020-06-25",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -976,7 +1164,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "Статья 88 (требования к противопожарным преградам и заполнению проёмов)",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -1028,7 +1226,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "Статья 13 (классификация строительных материалов по пожарной опасности, классы КМ0-КМ5)",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -1132,7 +1340,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ПП РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "clause": "Положение, п. 10 (Пояснительная записка)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -1314,7 +1532,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ПУЭ (гл. 1.2)",
+            "issuer": "Минэнерго России",
+            "clause": "Правила устройства электроустановок, гл. 1.2 (категории надежности)",
+            "effective_from": "2002-01-01",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -1392,7 +1620,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ФЗ № 261-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "Статья 11 (требования энергетической эффективности зданий)",
+            "effective_from": "2009-11-23",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -1405,7 +1643,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "Таблица 21 (степени огнестойкости)",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -1418,7 +1666,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "Таблица 22 (классы конструктивной пожарной опасности)",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -1652,7 +1910,17 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ФЗ № 261-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "Статья 11 (требования энергетической эффективности зданий)",
+            "effective_from": "2009-11-23",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
@@ -1730,7 +1998,25 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        }
+        },
+        "normative_refs": [
+          {
+            "identifier": "ФЗ № 261-ФЗ",
+            "issuer": "Российская Федерация",
+            "clause": "ст. 11 (требования энергетической эффективности зданий)",
+            "effective_from": "2009-11-23",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          },
+          {
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "clause": "п. 27(1) (раздел 10(1) «Мероприятия по обеспечению соблюдения требований энергетической эффективности»)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "layer": "organizer_matrix"
+          }
+        ]
       },
       {
         "counts_as_violation": false,
