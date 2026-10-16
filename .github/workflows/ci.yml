@@ -35,6 +35,8 @@ jobs:
         run: python scripts/check_contracts.py
       - name: Normative registry (schema, dates, rule references)
         run: python scripts/check_normative_registry.py
+      - name: Правила матрицы совпадают с результатом сборки
+        run: python scripts/compile_matrix.py --check
 
   db:
     runs-on: ubuntu-latest

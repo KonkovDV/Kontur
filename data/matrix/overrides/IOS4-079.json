@@ -7,20 +7,61 @@
   "source_trigger_logic": "Подмена установок на аналоги с меньшей кратностью воздухообмена.",
   "coverage": "executable",
   "applicability": {
-    "stages_required": ["PD", "RD"],
+    "stages_required": [
+      "PD",
+      "RD"
+    ],
     "object_types": [],
     "condition": "Наличие общеобменной вентиляции"
   },
   "sources": {
-    "pd": { "discipline": ["ОВ"], "table": null, "description": "Аксонометрия; Спецификация оборудования (ОВ)" },
-    "rd": { "discipline": ["ОВ"], "table": null, "description": "Планы венткамер; Спецификация вентиляторов" },
-    "id": { "document_kind": ["Паспорт"], "table": null, "description": "Паспорта вентиляторов; Акты пусконаладки" }
+    "pd": {
+      "discipline": [
+        "ОВ"
+      ],
+      "table": null,
+      "description": "Аксонометрия; Спецификация оборудования (ОВ)"
+    },
+    "rd": {
+      "discipline": [
+        "ОВ"
+      ],
+      "table": null,
+      "description": "Планы венткамер; Спецификация вентиляторов"
+    },
+    "id": {
+      "document_kind": [
+        "Паспорт"
+      ],
+      "table": null,
+      "description": "Паспорта вентиляторов; Акты пусконаладки"
+    }
   },
   "extractor": {
     "type": "number",
+    "passes": [
+      "number",
+      "room_pass"
+    ],
+    "room_compare": {
+      "room_regex": "^(?:\\d{3}|0\\d{2}\\.\\d)$",
+      "feature_regex": "^(?:П(?:В)?\\d{0,2}(?:\\.\\d{1,2})?|приточ\\w*)$",
+      "bind_radius": 0.08,
+      "pair_jaccard_min": 0.5,
+      "max_differences": 8
+    },
     "regex": "(\\d[\\d\\s]*(?:[.,]\\d+)?)\\s*(?:м[³3]/ч|м3/ч|куб\\.?\\s*м/ч)",
-    "anchors": ["приточная установка", "венткамера", "кратность воздухообмена"],
-    "normalization": ["nfc", "collapse_spaces", "decimal_comma", "strip_unit"],
+    "anchors": [
+      "приточная установка",
+      "венткамера",
+      "кратность воздухообмена"
+    ],
+    "normalization": [
+      "nfc",
+      "collapse_spaces",
+      "decimal_comma",
+      "strip_unit"
+    ],
     "dual_read_required": false
   },
   "comparator": {
@@ -30,7 +71,10 @@
     "rounding": "half_up",
     "unit_target": "м³/ч"
   },
-  "required_evidence": ["expected", "actual"],
+  "required_evidence": [
+    "expected",
+    "actual"
+  ],
   "normative_refs": [],
   "failure_mapping": {
     "source_absent": "MISSING_EVIDENCE",
@@ -41,9 +85,21 @@
   },
   "review_priority": "HIGH",
   "tests": [
-    { "name": "same_ahu_config_gives_no_difference", "expected_status": "AUTO_NO_DIFFERENCE" },
-    { "name": "room_012_config_mismatch_gives_candidate", "expected_status": "CANDIDATE" },
-    { "name": "rd_sheet_absent_gives_missing_evidence", "expected_status": "MISSING_EVIDENCE" },
-    { "name": "object_without_ahu_is_not_applicable", "expected_status": "NOT_APPLICABLE" }
+    {
+      "name": "same_ahu_config_gives_no_difference",
+      "expected_status": "AUTO_NO_DIFFERENCE"
+    },
+    {
+      "name": "room_012_config_mismatch_gives_candidate",
+      "expected_status": "CANDIDATE"
+    },
+    {
+      "name": "rd_sheet_absent_gives_missing_evidence",
+      "expected_status": "MISSING_EVIDENCE"
+    },
+    {
+      "name": "object_without_ahu_is_not_applicable",
+      "expected_status": "NOT_APPLICABLE"
+    }
   ]
 }
