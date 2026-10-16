@@ -1097,8 +1097,10 @@ def get_revision_diff(
         )
     try:
         payload = revision_diff_payload(groups, documents[predecessor], new)
-    except RevisionChainError as exc:
-        return JSONResponse(status_code=409, content={"detail": str(exc)})
+    except RevisionChainError:
+        return JSONResponse(
+            status_code=409, content={"detail": "редакции не образуют зафиксированную пару"}
+        )
     return {"process_id": process_id, **payload}
 
 
