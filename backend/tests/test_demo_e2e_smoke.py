@@ -100,10 +100,11 @@ def _run_to_finalize(client: TestClient, timings: dict[str, float]) -> str:
 
     # 3. Diff редакций: пара черновик → эталон в комплекте не зафиксирована,
     #    порядок не угадывается: у эталона нет предшественника (409). Черновик после
-    #    выбора эталона не попадает в группы доказательств, поэтому diff его не видит (404).
+    #    выбора эталона не попадает в группы доказательств: файл известен, пары нет (409).
     diff_url = f"/api/v1/processes/{process_id}/revisions/{{}}/diff"
     assert client.get(diff_url.format(ETALON_FILE_ID), headers=HEADERS).status_code == 409
-    assert client.get(diff_url.format(DRAFT_FILE_ID), headers=HEADERS).status_code == 404
+    assert client.get(diff_url.format(DRAFT_FILE_ID), headers=HEADERS).status_code == 409
+    assert client.get(diff_url.format("f-unknown"), headers=HEADERS).status_code == 404
     assert "revision_changes" not in ready
 
     # 4. Решения: два подтверждения, один отказ с причиной.

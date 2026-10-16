@@ -134,6 +134,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Статус обработки (целевой p95 ≤200 мс)"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProcessStatus" }
@@ -286,7 +287,7 @@ paths:
                 type: string
                 contentMediaType: image/png
         "400": { description: bbox не разобран }
-        "404": { description: Процесс, файл или страница не найдены }
+        "404": { description: "Процесс, файл или страница не найдены" }
 
   /processes/{process_id}/protocol:
     get:
@@ -302,6 +303,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Протокол проверки (структура по Приложению 2 ТЗ)"
           content:
             application/json:
               schema: { $ref: "./schemas/protocol.schema.json" }
@@ -318,6 +320,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Протокол в DOCX"
           content:
             application/vnd.openxmlformats-officedocument.wordprocessingml.document:
               schema: { type: string, format: binary }
@@ -334,6 +337,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Протокол в XML"
           content:
             application/xml:
               schema: { type: string }
@@ -350,11 +354,12 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Протокол в PDF"
           content:
             application/pdf:
               schema: { type: string, format: binary }
         "404": { description: Процесс не найден или протокол ещё не собран }
-        "501": { description: Шрифт PDF недоступен, пустой файл не отдаётся }
+        "501": { description: "Шрифт PDF недоступен, пустой файл не отдаётся" }
 
   /processes/{process_id}/audit:
     get:
@@ -371,6 +376,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Журнал действий текущего процесса"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AuditLog" }
@@ -427,6 +433,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Карточка доказательства (две панели, не протокол ТЗ)"
           content:
             application/json:
               schema: { $ref: "./schemas/evidence_card.schema.json" }
@@ -451,6 +458,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Решение инспектора по атомарной находке"
           content:
             application/json:
               schema: { $ref: "./schemas/finding.schema.json" }
@@ -528,6 +536,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Открыть очередь верификации"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProcessStatus" }
@@ -556,11 +565,12 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Закрыть очередь верификации"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProcessStatus" }
         "404": { description: Процесс не найден }
-        "409": { description: Есть необработанные кандидаты, не VERIFYING или не инспектор }
+        "409": { description: "Есть необработанные кандидаты, не VERIFYING или не инспектор" }
 
   /processes/{process_id}/finalize:
     post:
@@ -586,6 +596,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Финализация протокола"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProcessStatus" }
@@ -616,6 +627,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Отмена финализации"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProcessStatus" }
@@ -651,11 +663,12 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Инспектор назначает загруженный файл эталоном редакции"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProcessStatus" }
         "404": { description: Процесс или файл не найден }
-        "409": { description: Не READY, финализирован, штамп NOT_APPROVED или нет содержимого }
+        "409": { description: "Не READY, финализирован, штамп NOT_APPROVED или нет содержимого" }
 
   /processes/{process_id}/revisions/{file_id}/diff:
     get:
@@ -676,11 +689,12 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "200":
+          description: "Изменения параметров между редакцией и её предшественником"
           content:
             application/json:
               schema: { $ref: "./schemas/revision_diff.schema.json" }
-        "404": { description: Процесс или файл не найден }
-        "409": { description: У редакции нет зафиксированного предшественника в пакете }
+        "404": { description: Процесс не найден или файла нет в пакете }
+        "409": { description: "Файл в пакете, но вне групп доказательств, или у редакции нет зафиксированного предшественника" }
 
   /demo/kit:
     post:
@@ -713,6 +727,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "202":
+          description: "Поставить финальный протокол в очередь выгрузки"
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SyncState" }
