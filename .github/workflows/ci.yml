@@ -22,6 +22,8 @@ jobs:
       - run: mypy --strict backend/src
       - run: pytest backend/tests -q
       - run: python -m kontur.evaluation.build_gold --check
+      - name: Примеры JSON совпадают со сборкой
+        run: python scripts/export_submission_example.py --check
 
   contracts:
     runs-on: ubuntu-latest

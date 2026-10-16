@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+
+import pytest
 
 from kontur.cli.run_package import _schema_validator
 from kontur.evaluation.agent_dumps import repo_root
@@ -69,3 +72,41 @@ def test_after_select_example_has_three_candidates_with_evidence() -> None:
     blob = _blob("after_etalon_select")
     assert "CONFIRMED_VIOLATION" not in blob
     assert "AUTO_NO_DIFFERENCE" not in blob
+
+
+def _exporter() -> object:
+    import importlib.util
+    import sys
+
+    script = repo_root() / "scripts" / "export_submission_example.py"
+    spec = importlib.util.spec_from_file_location("export_submission_example", script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["export_submission_example"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_reproducible_pdf_keeps_length_and_is_stable() -> None:
+    from kontur.evaluation.demo_kit import demo_sheet_files
+
+    exporter = _exporter()
+    raw = demo_sheet_files()[0][3]
+    fixed = exporter.reproducible_pdf(raw)  # type: ignore[attr-defined]
+    assert len(fixed) == len(raw)
+    assert b"/CreationDate(D:20260101000000+00'00')" in fixed
+    assert exporter.reproducible_pdf(fixed) == fixed  # type: ignore[attr-defined]
+
+
+def test_committed_examples_match_fresh_build() -> None:
+    assert _exporter().drift() == []  # type: ignore[attr-defined]
+
+
+@pytest.mark.slow
+def test_two_consecutive_builds_are_byte_identical(tmp_path: Path) -> None:
+    exporter = _exporter()
+    first, second = tmp_path / "a", tmp_path / "b"
+    exporter.build(first)  # type: ignore[attr-defined]
+    exporter.build(second)  # type: ignore[attr-defined]
+    for path in sorted(first.rglob("*.json")):
+        assert path.read_bytes() == (second / path.relative_to(first)).read_bytes(), path

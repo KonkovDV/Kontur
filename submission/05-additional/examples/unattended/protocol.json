@@ -2,30 +2,642 @@
   "input_manifest": {
     "files": [
       {
-        "file_hash": "13f6a2e19f04e72a719437b34ec24868cd462689a5858f88f9e4ea3044523736",
+        "file_hash": "7c9a527f3fc6d9e857d8de96ab432ec98ec50020f4621bf0bd4755a969001a9c",
         "file_id": "f-id"
       },
       {
-        "file_hash": "b8a5f726c17bc0cb31fabbda2c30f775b7369a1353f86574cfcc51740baa7962",
+        "file_hash": "752cadf3ca58cf1a1479a02f7c02b503de33c5cfae3df17bfe9659b42a0949f8",
         "file_id": "f-pd-draft"
       },
       {
-        "file_hash": "e88f63c48735741112efe332ffa89bc788ee43141391013b9a26570c19b832b0",
+        "file_hash": "7c9a527f3fc6d9e857d8de96ab432ec98ec50020f4621bf0bd4755a969001a9c",
         "file_id": "f-pd"
       },
       {
-        "file_hash": "80147228ec65971b4c8ef94a4706821baec65c24b0744c83b64965deeae2372c",
+        "file_hash": "1a524871b35568fb544c1995ae801d4087010dd7c3dbefbce0dbc1ae9f65b59a",
         "file_id": "f-rd"
       }
     ],
-    "manifest_hash": "357d2af92aa746687106f21054e50b16296fa0c33a170bc7dcd5e8f56ceeef5f"
+    "manifest_hash": "5e06a64dcfddec7aee99665ff90b75053d054b527f790eb7af7197902e6a4755"
   },
   "object_id": "OBJ-DEMO-COLD-START",
-  "protocol_id": "protocol-f3a72513-77d0-44b3-ab17-4f5f8e2816a6",
+  "protocol_id": "protocol-example-unattended",
   "scenario": "PARTIALLY_LOADED",
   "sections": {
     "candidates": [],
-    "completeness": [],
+    "completeness": [
+      {
+        "counts_as_violation": false,
+        "expected_document": "Пояснительная записка",
+        "finding_id": "completeness-ПЗ-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ПЗ: ожидается «Пояснительная записка» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ПЗ",
+        "section_code": "ПЗ",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "ОД",
+        "finding_id": "completeness-ПЗ-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ПЗ: ожидается «ОД» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ПЗ",
+        "section_code": "ПЗ",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Схема планировочной организации земельного участка",
+        "finding_id": "completeness-СПЗУ-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела СПЗУ: ожидается «Схема планировочной организации земельного участка» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-СПЗУ",
+        "section_code": "СПЗУ",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "ГП, ПП",
+        "finding_id": "completeness-СПЗУ-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела СПЗУ: ожидается «ГП, ПП» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-СПЗУ",
+        "section_code": "СПЗУ",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Исполнительная схема благоустройства, АОСР",
+        "finding_id": "completeness-СПЗУ-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела СПЗУ: ожидается «Исполнительная схема благоустройства, АОСР» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-СПЗУ",
+        "section_code": "СПЗУ",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Объемно-планировочные и архитектурные решения",
+        "finding_id": "completeness-АР-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела АР: ожидается «Объемно-планировочные и архитектурные решения» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-АР",
+        "section_code": "АР",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "АР",
+        "finding_id": "completeness-АР-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела АР: ожидается «АР» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-АР",
+        "section_code": "АР",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Исполнительные поэтажные планы, АОСР",
+        "finding_id": "completeness-АР-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела АР: ожидается «Исполнительные поэтажные планы, АОСР» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-АР",
+        "section_code": "АР",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Конструктивные решения",
+        "finding_id": "completeness-КР-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела КР: ожидается «Конструктивные решения» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-КР",
+        "section_code": "КР",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "КЖ, КМ, КК",
+        "finding_id": "completeness-КР-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела КР: ожидается «КЖ, КМ, КК» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-КР",
+        "section_code": "КР",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "АОСР, Акты освидетельствования конструкций, Журнал бетонных работ",
+        "finding_id": "completeness-КР-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела КР: ожидается «АОСР, Акты освидетельствования конструкций, Журнал бетонных работ» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-КР",
+        "section_code": "КР",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Электроснабжение",
+        "finding_id": "completeness-ИОС1-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС1: ожидается «Электроснабжение» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС1",
+        "section_code": "ИОС1",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "ЭОМ",
+        "finding_id": "completeness-ИОС1-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС1: ожидается «ЭОМ» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС1",
+        "section_code": "ИОС1",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Акты испытания технических устройств, Исполнительные схемы сетей",
+        "finding_id": "completeness-ИОС1-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС1: ожидается «Акты испытания технических устройств, Исполнительные схемы сетей» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС1",
+        "section_code": "ИОС1",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Водоснабжение",
+        "finding_id": "completeness-ИОС2-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС2: ожидается «Водоснабжение» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС2",
+        "section_code": "ИОС2",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "ВК",
+        "finding_id": "completeness-ИОС2-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС2: ожидается «ВК» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС2",
+        "section_code": "ИОС2",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Акты испытания технических устройств, Исполнительные схемы сетей",
+        "finding_id": "completeness-ИОС2-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС2: ожидается «Акты испытания технических устройств, Исполнительные схемы сетей» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС2",
+        "section_code": "ИОС2",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Канализация",
+        "finding_id": "completeness-ИОС3-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС3: ожидается «Канализация» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС3",
+        "section_code": "ИОС3",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "ВК",
+        "finding_id": "completeness-ИОС3-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС3: ожидается «ВК» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС3",
+        "section_code": "ИОС3",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Исполнительные схемы сетей",
+        "finding_id": "completeness-ИОС3-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС3: ожидается «Исполнительные схемы сетей» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС3",
+        "section_code": "ИОС3",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Отопление, вентиляция и кондиционирование",
+        "finding_id": "completeness-ИОС4-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС4: ожидается «Отопление, вентиляция и кондиционирование» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС4",
+        "section_code": "ИОС4",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "ОВ",
+        "finding_id": "completeness-ИОС4-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС4: ожидается «ОВ» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС4",
+        "section_code": "ИОС4",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Акты испытания технических устройств",
+        "finding_id": "completeness-ИОС4-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС4: ожидается «Акты испытания технических устройств» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС4",
+        "section_code": "ИОС4",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Сети связи",
+        "finding_id": "completeness-ИОС5-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС5: ожидается «Сети связи» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС5",
+        "section_code": "ИОС5",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "СС",
+        "finding_id": "completeness-ИОС5-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС5: ожидается «СС» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС5",
+        "section_code": "ИОС5",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Акты испытания АПС и СОУЭ",
+        "finding_id": "completeness-ИОС5-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ИОС5: ожидается «Акты испытания АПС и СОУЭ» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ИОС5",
+        "section_code": "ИОС5",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Проект организации строительства",
+        "finding_id": "completeness-ПОС-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ПОС: ожидается «Проект организации строительства» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ПОС",
+        "section_code": "ПОС",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "ППР",
+        "finding_id": "completeness-ПОС-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ПОС: ожидается «ППР» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ПОС",
+        "section_code": "ПОС",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Общий журнал работ",
+        "finding_id": "completeness-ПОС-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ПОС: ожидается «Общий журнал работ» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ПОС",
+        "section_code": "ПОС",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Проект организации работ по сносу",
+        "finding_id": "completeness-ПОД-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ПОД: ожидается «Проект организации работ по сносу» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ПОД",
+        "section_code": "ПОД",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "ППР на демонтаж",
+        "finding_id": "completeness-ПОД-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ПОД: ожидается «ППР на демонтаж» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ПОД",
+        "section_code": "ПОД",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Акты обследования, Исполнительные схемы",
+        "finding_id": "completeness-ПОД-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ПОД: ожидается «Акты обследования, Исполнительные схемы» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ПОД",
+        "section_code": "ПОД",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Мероприятия по охране окружающей среды",
+        "finding_id": "completeness-ООС-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ООС: ожидается «Мероприятия по охране окружающей среды» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ООС",
+        "section_code": "ООС",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Технологический регламент",
+        "finding_id": "completeness-ООС-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ООС: ожидается «Технологический регламент» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ООС",
+        "section_code": "ООС",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Электронный паспорт отходов, Талоны утилизации",
+        "finding_id": "completeness-ООС-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ООС: ожидается «Электронный паспорт отходов, Талоны утилизации» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ООС",
+        "section_code": "ООС",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Мероприятия по обеспечению пожарной безопасности",
+        "finding_id": "completeness-ППМ-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ППМ: ожидается «Мероприятия по обеспечению пожарной безопасности» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ППМ",
+        "section_code": "ППМ",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "АР, ОВ, ЭОМ",
+        "finding_id": "completeness-ППМ-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ППМ: ожидается «АР, ОВ, ЭОМ» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ППМ",
+        "section_code": "ППМ",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Паспорта на двери, Акты испытаний ВПВ, Сертификаты",
+        "finding_id": "completeness-ППМ-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ППМ: ожидается «Паспорта на двери, Акты испытаний ВПВ, Сертификаты» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ППМ",
+        "section_code": "ППМ",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Мероприятия по обеспечению доступа инвалидов",
+        "finding_id": "completeness-ОДИ-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ОДИ: ожидается «Мероприятия по обеспечению доступа инвалидов» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ОДИ",
+        "section_code": "ОДИ",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "АР",
+        "finding_id": "completeness-ОДИ-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ОДИ: ожидается «АР» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ОДИ",
+        "section_code": "ОДИ",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "АОСР на пандусы, поручни, тактильные плиты",
+        "finding_id": "completeness-ОДИ-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ОДИ: ожидается «АОСР на пандусы, поручни, тактильные плиты» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ОДИ",
+        "section_code": "ОДИ",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Мероприятия по энергоэффективности",
+        "finding_id": "completeness-ЗУ-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ЗУ: ожидается «Мероприятия по энергоэффективности» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ЗУ",
+        "section_code": "ЗУ",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "АР, ОВ",
+        "finding_id": "completeness-ЗУ-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ЗУ: ожидается «АР, ОВ» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ЗУ",
+        "section_code": "ЗУ",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Энергетический паспорт, Акты допуска приборов учёта",
+        "finding_id": "completeness-ЗУ-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела ЗУ: ожидается «Энергетический паспорт, Акты допуска приборов учёта» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-ЗУ",
+        "section_code": "ЗУ",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Смета на строительство",
+        "finding_id": "completeness-СМ-PD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела СМ: ожидается «Смета на строительство» на стадии PD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-СМ",
+        "section_code": "СМ",
+        "stage": "PD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "Локальные сметы, Объектные сметы",
+        "finding_id": "completeness-СМ-RD",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела СМ: ожидается «Локальные сметы, Объектные сметы» на стадии RD; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-СМ",
+        "section_code": "СМ",
+        "stage": "RD",
+        "upload_state": "UPLOADED"
+      },
+      {
+        "counts_as_violation": false,
+        "expected_document": "КС-2, КС-3",
+        "finding_id": "completeness-СМ-ID",
+        "finding_status": "STAGE_UPLOADED_NOT_VERIFIED",
+        "kind": "section_catalog",
+        "outcome": "STAGE_UPLOADED_NOT_VERIFIED",
+        "rationale": "Каталог раздела СМ: ожидается «КС-2, КС-3» на стадии ID; комплектность стадии = UPLOADED. Не нарушение.",
+        "rule_code": "COMPLETENESS-СМ",
+        "section_code": "СМ",
+        "stage": "ID",
+        "upload_state": "UPLOADED"
+      }
+    ],
     "confirmed": [],
     "missing_evidence": [],
     "needs_attention": [
@@ -46,6 +658,24 @@
         "counts_as_violation": false,
         "finding_id": "pipe-AR-041",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "п. 4.2.1",
+            "effective_from": "2020-09-19",
+            "effective_to": null,
+            "identifier": "СП 1.13130.2020",
+            "issuer": "МЧС России",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "Технический регламент о требованиях пожарной безопасности",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "AR-041",
@@ -53,25 +683,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "СП 1.13130.2020",
-            "issuer": "МЧС России",
-            "clause": "п. 4.2.1",
-            "effective_from": "2020-09-19",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "ФЗ № 123-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "Технический регламент о требованиях пожарной безопасности",
-            "effective_from": "2009-05-01",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -207,6 +819,24 @@
         "counts_as_violation": false,
         "finding_id": "pipe-AR-052",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "ст. 52 ч. 7 (отклонение от проектной документации)",
+            "effective_from": "2005-01-10",
+            "effective_to": null,
+            "identifier": "ГрК РФ № 190-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "п. 13 подп. «ж» (раздел 3 «Архитектурные решения»: цветовое решение)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "MEDIUM",
         "rule_code": "AR-052",
@@ -214,25 +844,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ГрК РФ № 190-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "ст. 52 ч. 7 (отклонение от проектной документации)",
-            "effective_from": "2005-01-10",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "Постановление Правительства РФ № 87",
-            "issuer": "Правительство Российской Федерации",
-            "clause": "п. 13 подп. «ж» (раздел 3 «Архитектурные решения»: цветовое решение)",
-            "effective_from": "2008-02-16",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -433,6 +1045,24 @@
         "counts_as_violation": false,
         "finding_id": "pipe-KR-055",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Спецификация оборудования, изделий и материалов",
+            "effective_from": "2014-01-01",
+            "effective_to": null,
+            "identifier": "ГОСТ 21.110-2013",
+            "issuer": "Межгосударственный совет по стандартизации",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "Приложение № 1, п. 13 (журналы работ)",
+            "effective_from": "2023-09-01",
+            "effective_to": null,
+            "identifier": "Приказ Минстроя № 344/пр",
+            "issuer": "Минстрой России",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "KR-055",
@@ -440,25 +1070,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ГОСТ 21.110-2013",
-            "issuer": "Межгосударственный совет по стандартизации",
-            "clause": "Спецификация оборудования, изделий и материалов",
-            "effective_from": "2014-01-01",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "Приказ Минстроя № 344/пр",
-            "issuer": "Минстрой России",
-            "clause": "Приложение № 1, п. 13 (журналы работ)",
-            "effective_from": "2023-09-01",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -737,6 +1349,24 @@
         "counts_as_violation": false,
         "finding_id": "pipe-OOS-098",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "ст. 12 ч. 6, ст. 9 (ГРОО и лицензирование обращения с отходами)",
+            "effective_from": "1998-06-24",
+            "effective_to": null,
+            "identifier": "ФЗ № 89-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+            "effective_from": "2015-05-12",
+            "effective_to": null,
+            "identifier": "Постановление Правительства Москвы № 257-ПП",
+            "issuer": "Правительство Москвы",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "OOS-098",
@@ -744,30 +1374,22 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ФЗ № 89-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "ст. 12 ч. 6, ст. 9 (ГРОО и лицензирование обращения с отходами)",
-            "effective_from": "1998-06-24",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "Постановление Правительства Москвы № 257-ПП",
-            "issuer": "Правительство Москвы",
-            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
-            "effective_from": "2015-05-12",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
         "finding_id": "pipe-OOS-099",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+            "effective_from": "2015-05-12",
+            "effective_to": null,
+            "identifier": "Постановление Правительства Москвы № 257-ПП",
+            "issuer": "Правительство Москвы",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "OOS-099",
@@ -775,22 +1397,22 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "Постановление Правительства Москвы № 257-ПП",
-            "issuer": "Правительство Москвы",
-            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
-            "effective_from": "2015-05-12",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
         "finding_id": "pipe-OOS-100",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+            "effective_from": "2015-05-12",
+            "effective_to": null,
+            "identifier": "Постановление Правительства Москвы № 257-ПП",
+            "issuer": "Правительство Москвы",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "OOS-100",
@@ -798,22 +1420,30 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "Постановление Правительства Москвы № 257-ПП",
-            "issuer": "Правительство Москвы",
-            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
-            "effective_from": "2015-05-12",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
         "finding_id": "pipe-OOS-101",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "ст. 12 ч. 6, ст. 9 (ГРОО и лицензирование обращения с отходами)",
+            "effective_from": "1998-06-24",
+            "effective_to": null,
+            "identifier": "ФЗ № 89-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
+            "effective_from": "2015-05-12",
+            "effective_to": null,
+            "identifier": "Постановление Правительства Москвы № 257-ПП",
+            "issuer": "Правительство Москвы",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "OOS-101",
@@ -821,25 +1451,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ФЗ № 89-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "ст. 12 ч. 6, ст. 9 (ГРОО и лицензирование обращения с отходами)",
-            "effective_from": "1998-06-24",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "Постановление Правительства Москвы № 257-ПП",
-            "issuer": "Правительство Москвы",
-            "clause": "Порядок обращения с отходами строительства и сноса, в том числе грунтами",
-            "effective_from": "2015-05-12",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -858,6 +1470,32 @@
         "counts_as_violation": false,
         "finding_id": "pipe-POD-091",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "ст. 55.31 (снос объекта капитального строительства)",
+            "effective_from": "2018-08-04",
+            "effective_to": null,
+            "identifier": "ГрК РФ № 190-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "п. 24 (раздел 7 «Проект организации работ по сносу или демонтажу»)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "п. 5 (правила производства работ при демонтаже)",
+            "effective_from": "2018-06-18",
+            "effective_to": null,
+            "identifier": "СП 325.1325800.2017",
+            "issuer": "Минстрой России",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "POD-091",
@@ -865,33 +1503,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ГрК РФ № 190-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "ст. 55.31 (снос объекта капитального строительства)",
-            "effective_from": "2018-08-04",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "Постановление Правительства РФ № 87",
-            "issuer": "Правительство Российской Федерации",
-            "clause": "п. 24 (раздел 7 «Проект организации работ по сносу или демонтажу»)",
-            "effective_from": "2008-02-16",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "СП 325.1325800.2017",
-            "issuer": "Минстрой России",
-            "clause": "п. 5 (правила производства работ при демонтаже)",
-            "effective_from": "2018-06-18",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -936,6 +1548,32 @@
         "counts_as_violation": false,
         "finding_id": "pipe-POD-095",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "п. 24 (раздел 7 «Проект организации работ по сносу или демонтажу»)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "разд. X (санитарные требования при обращении с отходами сноса)",
+            "effective_from": "2021-03-01",
+            "effective_to": null,
+            "identifier": "СанПиН 2.1.3684-21",
+            "issuer": "Роспотребнадзор",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "разд. 12 (защита от шума на строительной площадке)",
+            "effective_from": "2011-05-20",
+            "effective_to": null,
+            "identifier": "СП 51.13330.2011",
+            "issuer": "Минрегион России",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "MEDIUM",
         "rule_code": "POD-095",
@@ -943,33 +1581,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "Постановление Правительства РФ № 87",
-            "issuer": "Правительство Российской Федерации",
-            "clause": "п. 24 (раздел 7 «Проект организации работ по сносу или демонтажу»)",
-            "effective_from": "2008-02-16",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "СанПиН 2.1.3684-21",
-            "issuer": "Роспотребнадзор",
-            "clause": "разд. X (санитарные требования при обращении с отходами сноса)",
-            "effective_from": "2021-03-01",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "СП 51.13330.2011",
-            "issuer": "Минрегион России",
-            "clause": "разд. 12 (защита от шума на строительной площадке)",
-            "effective_from": "2011-05-20",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -1079,6 +1691,32 @@
         "counts_as_violation": false,
         "finding_id": "pipe-POS-087",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "ст. 52 ч. 7 (отклонение от проектной документации)",
+            "effective_from": "2005-01-10",
+            "effective_to": null,
+            "identifier": "ГрК РФ № 190-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "п. 23 (раздел 6 «Проект организации строительства»)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "п. 6.2 (проект производства работ и технологические карты)",
+            "effective_from": "2020-06-25",
+            "effective_to": null,
+            "identifier": "СП 48.13330.2019",
+            "issuer": "Минстрой России",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "POS-087",
@@ -1086,33 +1724,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ГрК РФ № 190-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "ст. 52 ч. 7 (отклонение от проектной документации)",
-            "effective_from": "2005-01-10",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "Постановление Правительства РФ № 87",
-            "issuer": "Правительство Российской Федерации",
-            "clause": "п. 23 (раздел 6 «Проект организации строительства»)",
-            "effective_from": "2008-02-16",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "СП 48.13330.2019",
-            "issuer": "Минстрой России",
-            "clause": "п. 6.2 (проект производства работ и технологические карты)",
-            "effective_from": "2020-06-25",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -1157,6 +1769,16 @@
         "counts_as_violation": false,
         "finding_id": "pipe-PPM-103",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Статья 88 (требования к противопожарным преградам и заполнению проёмов)",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "PPM-103",
@@ -1164,17 +1786,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ФЗ № 123-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "Статья 88 (требования к противопожарным преградам и заполнению проёмов)",
-            "effective_from": "2009-05-01",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -1219,6 +1831,16 @@
         "counts_as_violation": false,
         "finding_id": "pipe-PPM-107",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Статья 13 (классификация строительных материалов по пожарной опасности, классы КМ0-КМ5)",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "PPM-107",
@@ -1226,17 +1848,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ФЗ № 123-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "Статья 13 (классификация строительных материалов по пожарной опасности, классы КМ0-КМ5)",
-            "effective_from": "2009-05-01",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -1333,6 +1945,16 @@
         "counts_as_violation": false,
         "finding_id": "pipe-PZ-001",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Положение, п. 10 (Пояснительная записка)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "identifier": "ПП РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "PZ-001",
@@ -1340,17 +1962,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ПП РФ № 87",
-            "issuer": "Правительство Российской Федерации",
-            "clause": "Положение, п. 10 (Пояснительная записка)",
-            "effective_from": "2008-02-16",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -1525,6 +2137,16 @@
         "counts_as_violation": false,
         "finding_id": "pipe-PZ-015",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Правила устройства электроустановок, гл. 1.2 (категории надежности)",
+            "effective_from": "2002-01-01",
+            "effective_to": null,
+            "identifier": "ПУЭ (гл. 1.2)",
+            "issuer": "Минэнерго России",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "PZ-015",
@@ -1532,17 +2154,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ПУЭ (гл. 1.2)",
-            "issuer": "Минэнерго России",
-            "clause": "Правила устройства электроустановок, гл. 1.2 (категории надежности)",
-            "effective_from": "2002-01-01",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -1613,6 +2225,16 @@
         "counts_as_violation": false,
         "finding_id": "pipe-PZ-021",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Статья 11 (требования энергетической эффективности зданий)",
+            "effective_from": "2009-11-23",
+            "effective_to": null,
+            "identifier": "ФЗ № 261-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "PZ-021",
@@ -1620,22 +2242,22 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ФЗ № 261-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "Статья 11 (требования энергетической эффективности зданий)",
-            "effective_from": "2009-11-23",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
         "finding_id": "pipe-PZ-022",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Таблица 21 (степени огнестойкости)",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "PZ-022",
@@ -1643,22 +2265,22 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ФЗ № 123-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "Таблица 21 (степени огнестойкости)",
-            "effective_from": "2009-05-01",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
         "finding_id": "pipe-PZ-023",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Таблица 22 (классы конструктивной пожарной опасности)",
+            "effective_from": "2009-05-01",
+            "effective_to": null,
+            "identifier": "ФЗ № 123-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "PZ-023",
@@ -1666,17 +2288,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ФЗ № 123-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "Таблица 22 (классы конструктивной пожарной опасности)",
-            "effective_from": "2009-05-01",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -1903,6 +2515,16 @@
         "counts_as_violation": false,
         "finding_id": "pipe-ZU-124",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "Статья 11 (требования энергетической эффективности зданий)",
+            "effective_from": "2009-11-23",
+            "effective_to": null,
+            "identifier": "ФЗ № 261-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "HIGH",
         "rule_code": "ZU-124",
@@ -1910,17 +2532,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ФЗ № 261-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "Статья 11 (требования энергетической эффективности зданий)",
-            "effective_from": "2009-11-23",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -1991,6 +2603,24 @@
         "counts_as_violation": false,
         "finding_id": "pipe-ZU-130",
         "finding_status": "CLARIFICATION_REQUIRED",
+        "normative_refs": [
+          {
+            "clause": "ст. 11 (требования энергетической эффективности зданий)",
+            "effective_from": "2009-11-23",
+            "effective_to": null,
+            "identifier": "ФЗ № 261-ФЗ",
+            "issuer": "Российская Федерация",
+            "layer": "organizer_matrix"
+          },
+          {
+            "clause": "п. 27(1) (раздел 10(1) «Мероприятия по обеспечению соблюдения требований энергетической эффективности»)",
+            "effective_from": "2008-02-16",
+            "effective_to": null,
+            "identifier": "Постановление Правительства РФ № 87",
+            "issuer": "Правительство Российской Федерации",
+            "layer": "organizer_matrix"
+          }
+        ],
         "rationale": "PD: нет документа раздела правила среди голов f-pd-draft, f-pd",
         "review_priority": "MEDIUM",
         "rule_code": "ZU-130",
@@ -1998,25 +2628,7 @@
           "matrix_version": "draft-0",
           "model_version": "none",
           "rule_version": "0.1.0"
-        },
-        "normative_refs": [
-          {
-            "identifier": "ФЗ № 261-ФЗ",
-            "issuer": "Российская Федерация",
-            "clause": "ст. 11 (требования энергетической эффективности зданий)",
-            "effective_from": "2009-11-23",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          },
-          {
-            "identifier": "Постановление Правительства РФ № 87",
-            "issuer": "Правительство Российской Федерации",
-            "clause": "п. 27(1) (раздел 10(1) «Мероприятия по обеспечению соблюдения требований энергетической эффективности»)",
-            "effective_from": "2008-02-16",
-            "effective_to": null,
-            "layer": "organizer_matrix"
-          }
-        ]
+        }
       },
       {
         "counts_as_violation": false,
@@ -2044,7 +2656,7 @@
   "version": 1,
   "versions": {
     "dataset_version": "unspecified",
-    "git_sha": "50fc1fe26aef6e86598b64b2bc4a7146dab8b8fc",
+    "git_sha": "1845c6d710a392215f313b2c4c57181395e86b63",
     "matrix_version": "draft-0",
     "model_version": "none"
   },
