@@ -24,17 +24,31 @@ class GapReport:
     findings_total: int
     findings_without_refs: int
     findings_without_group: int
+    catalog_rows: int = 0
 
 
-def _findings(protocol: object) -> Iterator[dict[str, object]]:
+def is_catalog_row(section: str, row: dict[str, object]) -> bool:
+    """Строка таблицы (1) комплектности: не находка и не нарушение.
+
+    У таких строк есть ``finding_id``, но ``kind == "section_catalog"`` и
+    ``counts_as_violation`` всегда false. Признак ``counts_as_violation`` сам по себе
+    не годится: он false и у всех находок без решения инспектора (CANDIDATE и др.).
+    """
+
+    return section == "completeness" or row.get("kind") == "section_catalog"
+
+
+def _rows(protocol: object) -> Iterator[tuple[str, dict[str, object]]]:
     if not isinstance(protocol, dict):
         return
     sections = protocol.get("sections")
     if not isinstance(sections, dict):
         return
-    for rows in sections.values():
+    for section, rows in sections.items():
         if isinstance(rows, list):
-            yield from (row for row in rows if isinstance(row, dict) and "finding_id" in row)
+            for row in rows:
+                if isinstance(row, dict) and "finding_id" in row:
+                    yield str(section), row
 
 
 def collect(rules_dir: Path = RULES, examples_dir: Path = EXAMPLES) -> GapReport:
@@ -45,17 +59,20 @@ def collect(rules_dir: Path = RULES, examples_dir: Path = EXAMPLES) -> GapReport
         rule = json.loads(path.read_text(encoding="utf-8"))
         if not rule.get("normative_refs"):
             missing.append(path.stem)
-    findings = [
-        row
+    rows = [
+        pair
         for path in sorted(examples_dir.rglob("protocol.json"))
-        for row in _findings(json.loads(path.read_text(encoding="utf-8")))
+        for pair in _rows(json.loads(path.read_text(encoding="utf-8")))
     ]
+    findings = [row for section, row in rows if not is_catalog_row(section, row)]
+    catalog = len(rows) - len(findings)
     return GapReport(
         rules_total=total,
         rules_without_refs=tuple(missing),
         findings_total=len(findings),
         findings_without_refs=sum(1 for row in findings if not row.get("normative_refs")),
         findings_without_group=sum(1 for row in findings if not row.get("evidence_group_id")),
+        catalog_rows=catalog,
     )
 
 
@@ -67,6 +84,8 @@ def main() -> int:
         f"из {report.findings_total}",
         f"находки в примерах без evidence_group_id: {report.findings_without_group} "
         f"из {report.findings_total}",
+        f"строки таблицы комплектности в примерах (не находки, не считаются): "
+        f"{report.catalog_rows}",
     ]
     for line in lines:
         print(f"::warning title=traceability::{line}")
