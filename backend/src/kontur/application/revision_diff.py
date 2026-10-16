@@ -69,7 +69,7 @@ def _values(
     )
     for group in groups:
         fragment: EvidenceFragment
-        for fragment in group.fragments:
+        for fragment in (*group.fragments, *group.prior_revision_fragments):
             if fragment.document.file_id != file_id:
                 continue
             ex = fragment.extracted
@@ -145,7 +145,7 @@ def documents_in(groups: Iterable[EvidenceGroup]) -> dict[str, DocumentRef]:
     for group in groups:
         for ref in group.resolved_revisions:
             found.setdefault(ref.file_id, ref)
-        for fragment in group.fragments:
+        for fragment in (*group.fragments, *group.prior_revision_fragments):
             found.setdefault(fragment.document.file_id, fragment.document)
     return found
 

@@ -97,14 +97,25 @@ def _run_to_finalize(client: TestClient, timings: dict[str, float]) -> str:
     assert ready["status"] == "READY"
     assert ready["violation_count"] == 0
 
-    # 3. Diff редакций: пара черновик → эталон в комплекте не зафиксирована,
-    #    порядок не угадывается: у эталона нет предшественника (409). Черновик после
-    #    выбора эталона не попадает в группы доказательств: файл известен, пары нет (409).
+    # 3. Diff редакций: черновик — заявленная предыдущая редакция эталона. После выбора
+    #    эталона связь явная, черновик лежит в группах как предыдущая редакция.
     diff_url = f"/api/v1/processes/{process_id}/revisions/{{}}/diff"
-    assert client.get(diff_url.format(ETALON_FILE_ID), headers=HEADERS).status_code == 409
+    response = client.get(diff_url.format(ETALON_FILE_ID), headers=HEADERS)
+    assert response.status_code == 200, response.text
+    diff = response.json()
+    assert (diff["old_file_id"], diff["new_file_id"]) == (DRAFT_FILE_ID, ETALON_FILE_ID)
+    changed = {row["rule_code"] for row in diff["changes"] if row["kind"] == "CHANGED"}
+    assert changed, diff["changes"]
+    # У черновика своего предшественника нет: пары нет (409). Неизвестный файл — 404.
     assert client.get(diff_url.format(DRAFT_FILE_ID), headers=HEADERS).status_code == 409
     assert client.get(diff_url.format("f-unknown"), headers=HEADERS).status_code == 404
-    assert "revision_changes" not in ready
+    # Черновик только для diff: в места находок и фрагменты он не попадает.
+    for code in DEMO_CODES:
+        assert DRAFT_FILE_ID not in {place["file_id"] for place in after[code]["places"]}, code
+    pairs = ready["revision_changes"]
+    assert [(p["old_file_id"], p["new_file_id"]) for p in pairs] == [
+        (DRAFT_FILE_ID, ETALON_FILE_ID)
+    ]
 
     # 4. Решения: два подтверждения, один отказ с причиной.
     tick = perf_counter()

@@ -143,6 +143,9 @@ class EvidenceGroup:
     matrix_version: str
     fragments: tuple[EvidenceFragment, ...]
     resolved_revisions: tuple[DocumentRef, ...] = ()
+    #: Те же параметры в зафиксированной предыдущей редакции эталона. Только для diff
+    #: редакций: в находку, места и экспорт протокола не идут.
+    prior_revision_fragments: tuple[EvidenceFragment, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.fragments:

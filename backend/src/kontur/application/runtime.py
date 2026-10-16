@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from time import perf_counter
 from uuid import uuid4
@@ -28,7 +29,14 @@ from kontur.application.protocol import (
 from kontur.application.retry_policy import next_sync_attempt
 from kontur.application.revision_diff import revision_changes
 from kontur.application.scenarios import CompletenessMap, detect_scenario
-from kontur.domain.models import ApprovalStatus, DocStage, EvidenceGroup, Finding
+from kontur.domain.models import (
+    ApprovalBasis,
+    ApprovalStatus,
+    DocStage,
+    EvidenceFragment,
+    EvidenceGroup,
+    Finding,
+)
 from kontur.domain.state_machines import (
     FINDING_TRANSITIONS,
     Actor,
@@ -91,6 +99,10 @@ class AcceptedFile:
     manifest_section: str | None = None
     manifest_path: str | None = None
     file_path: str | None = None
+    #: Предыдущая редакция, заявленная источником пакета (учебный комплект). В
+    #: резолвер не идёт: связь фиксируется, только когда инспектор выбрал этот
+    #: файл эталоном, чтобы до выбора порядок редакций не решался за него.
+    declared_predecessor_file_id: str | None = None
 
 
 _COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -742,6 +754,93 @@ class ProcessWorkspace:
             for item in record.files
         )
 
+    @staticmethod
+    def _link_declared_predecessor(record: ProcessRecord, etalon: AcceptedFile) -> None:
+        """Выбранный эталон с заявленной предыдущей редакцией: связь становится явной."""
+
+        prior_id = etalon.declared_predecessor_file_id
+        if prior_id is None or etalon.predecessor_file_id is not None:
+            return
+        prior = next((item for item in record.files if item.file_id == prior_id), None)
+        if prior is None or prior.doc_stage is not etalon.doc_stage:
+            return
+        if prior.successor_file_id not in (None, etalon.file_id):
+            return
+        etalon.predecessor_file_id = prior.file_id
+        prior.successor_file_id = etalon.file_id
+
+    def _with_prior_revisions(
+        self, record: ProcessRecord, groups: Iterable[EvidenceGroup]
+    ) -> list[EvidenceGroup]:
+        """Добавить в группы предыдущую редакцию эталона как отдельные фрагменты.
+
+        Матрица прогоняется ещё раз на пакете, где вместо эталона стоит его
+        зафиксированный предшественник. Из этого прогона берутся только фрагменты
+        предшественника; находки, места и статусы основного прогона не меняются.
+        """
+
+        by_id = {item.file_id: item for item in record.files}
+        pairs = {
+            item.file_id: by_id[item.predecessor_file_id]
+            for item in record.files
+            if item.file_id in record.inspector_approved_file_ids
+            and item.predecessor_file_id in by_id
+        }
+        if not pairs:
+            return list(groups)
+        result = list(groups)
+        for etalon_id, prior in pairs.items():
+            files = tuple(
+                replace(f, successor_file_id=None) if f.file_id == prior.file_id else f
+                for f in self._pipeline_files(record)
+                if f.file_id != etalon_id
+            )
+            approved = (set(record.inspector_approved_file_ids) - {etalon_id}) | {prior.file_id}
+            shadow = run_process_pipeline(
+                object_id=record.object_id,
+                completeness=record.completeness,
+                files=files,
+                blobs=record.blobs,
+                inspector_approved_file_ids=frozenset(approved),
+            )
+            # В теневом прогоне предшественник помечен выбранным, чтобы матрица его
+            # прочла. Документу во фрагментах возвращается его собственный статус.
+            status = prior.stamp_approval
+            basis = (
+                ApprovalBasis.UNPROVEN
+                if status is ApprovalStatus.UNKNOWN
+                else ApprovalBasis.TITLE_BLOCK
+            )
+            prior_by_rule: dict[str, tuple[EvidenceFragment, ...]] = {}
+            for group in shadow.evidence_groups:
+                found = tuple(
+                    replace(
+                        item,
+                        document=replace(
+                            item.document,
+                            approval_status=status,
+                            approval_basis=basis,
+                            successor_file_id=etalon_id,
+                        ),
+                    )
+                    for item in group.fragments
+                    if item.document.file_id == prior.file_id
+                )
+                if found:
+                    prior_by_rule.setdefault(group.rule_code, found)
+            for index, group in enumerate(result):
+                if etalon_id not in {ref.file_id for ref in group.resolved_revisions}:
+                    continue
+                fragments = prior_by_rule.get(group.rule_code)
+                if not fragments:
+                    continue
+                result[index] = replace(
+                    group,
+                    resolved_revisions=(*group.resolved_revisions, fragments[0].document),
+                    prior_revision_fragments=fragments,
+                )
+        return result
+
     def select_revision(
         self,
         process_id: str,
@@ -776,6 +875,7 @@ class ProcessWorkspace:
             actor=actor, stamp=stamp, comment=comment
         )
         record.inspector_approved_file_ids.add(file_id)
+        self._link_declared_predecessor(record, match)
         record.audit.record(
             actor.actor_id,
             "SELECT_REVISION",
@@ -800,7 +900,8 @@ class ProcessWorkspace:
                 item.stamp_approval = recorded
         self._replace_machine_findings(record, report.findings)
         record.evidence_groups = {
-            group.evidence_group_id: group for group in report.evidence_groups
+            group.evidence_group_id: group
+            for group in self._with_prior_revisions(record, report.evidence_groups)
         }
         self._save_evidence(record)
         # Бюджет parse_attempts (0..3) тратят загрузки. Выбор эталона его не ест.
