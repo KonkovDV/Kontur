@@ -12,7 +12,10 @@ from kontur.domain.statuses import FindingStatus
 from kontur.presentation.api import app
 
 _FONT = contest_slice_font()
-needs_font = pytest.mark.skipif(_FONT is None, reason="нет TTF с кириллицей")
+if _FONT is None:
+    pytest.fail("нет TTF с кириллицей: vendor/fonts/NotoSans-Regular.ttf пропал", pytrace=False)
+#: Шрифт обязателен; маркер оставлен, чтобы не трогать тесты. Пропуска нет.
+needs_font = pytest.mark.usefixtures()
 TOKEN = {"Authorization": "Bearer inspector-1@OBJ-DEMO-COLD-START/INSPECTOR"}
 
 

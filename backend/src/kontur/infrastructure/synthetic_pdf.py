@@ -25,11 +25,31 @@ def wchar(text: str) -> ctypes.Array[ctypes.c_ushort]:
     return (ctypes.c_ushort * (len(raw) // 2)).from_buffer_copy(raw)
 
 
+VENDORED_FONT_NAME = "NotoSans-Regular.ttf"
+#: Куда Dockerfile кладёт vendor/fonts.
+_IMAGE_FONT = Path("/opt/kontur/fonts") / VENDORED_FONT_NAME
+
+
+def vendored_font() -> Path | None:
+    """vendor/fonts/NotoSans-Regular.ttf из клона (OFL 1.1) или из образа."""
+
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        candidate = parent / "vendor" / "fonts" / VENDORED_FONT_NAME
+        if candidate.is_file():
+            return candidate
+    return _IMAGE_FONT if _IMAGE_FONT.is_file() else None
+
+
 def contest_slice_font() -> Path | None:
-    """TTF с кириллицей. None — синтетический лист собрать нельзя."""
+    """TTF с кириллицей: KONTUR_TEST_FONT, затем шрифт из vendor/, затем системный.
+
+    None — синтетический лист собрать нельзя.
+    """
 
     env = os.environ.get("KONTUR_TEST_FONT")
-    paths = (Path(env),) + _FONT_CANDIDATES if env else _FONT_CANDIDATES
+    vendored = vendored_font()
+    paths = ((Path(env),) if env else ()) + ((vendored,) if vendored else ()) + _FONT_CANDIDATES
     for path in paths:
         if path.is_file():
             return path

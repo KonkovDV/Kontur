@@ -23,6 +23,7 @@ COPY contracts ./contracts
 COPY data/matrix ./data/matrix
 COPY data/dataset/gold_inventory.json ./data/dataset/gold_inventory.json
 COPY vendor/ocr /opt/kontur/ocr
+COPY vendor/fonts /opt/kontur/fonts
 COPY scripts/fetch_ocr_weights.py /tmp/fetch_ocr_weights.py
 COPY backend/requirements.lock /tmp/requirements.lock
 RUN python /tmp/fetch_ocr_weights.py \

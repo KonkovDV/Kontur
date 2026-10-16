@@ -36,7 +36,10 @@ from kontur.infrastructure.pdfium_tokens import file_sha256
 from kontur.presentation.api import app
 
 _FONT = contest_slice_font()
-needs_font = pytest.mark.skipif(_FONT is None, reason="нет TTF с кириллицей")
+if _FONT is None:
+    pytest.fail("нет TTF с кириллицей: vendor/fonts/NotoSans-Regular.ttf пропал", pytrace=False)
+#: Шрифт обязателен; маркер оставлен, чтобы не трогать тесты. Пропуска нет.
+needs_font = pytest.mark.usefixtures()
 INSPECTOR = Actor("inspector-1", is_human=True)
 REPO = Path(__file__).resolve().parents[2]
 

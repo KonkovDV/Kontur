@@ -37,7 +37,10 @@ OBJECT_ID = "OBJ-CONTEST-SLICE-E2E"
 HASH = "c" * 64
 _REGISTRY = FileRuleRegistry()
 _FONT = contest_slice_font()
-needs_font = pytest.mark.skipif(_FONT is None, reason="нет TTF с кириллицей")
+if _FONT is None:
+    pytest.fail("нет TTF с кириллицей: vendor/fonts/NotoSans-Regular.ttf пропал", pytrace=False)
+#: Шрифт обязателен; маркер оставлен, чтобы не трогать тесты. Пропуска нет.
+needs_font = pytest.mark.usefixtures()
 
 _STAMP = (("Утвердил", 20.0, 20.0), ("Тестов Т.Т.", 90.0, 20.0))
 _LABEL_X = 20.0

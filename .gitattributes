@@ -1,2 +1,3 @@
 contracts/openapi-3.0.yaml text eol=lf
 vendor/ocr/ppocrv5_eslav_dict.txt text eol=lf
+vendor/fonts/*.ttf binary
