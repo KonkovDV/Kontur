@@ -98,10 +98,49 @@ def iter_operations(
             yield path, method, operation
 
 
+RESPONSE_OBJECT_KEYS = frozenset({"description", "headers", "content", "links"})
+RESPONSE_REF_KEYS = frozenset({"$ref", "summary", "description"})
+
+
+def response_object_problems(spec: dict[str, object]) -> list[str]:
+    """Response Object: только разрешённые ключи и непустая строка description.
+
+    Ловит, например, описание без кавычек в flow-mapping YAML: запятые в нём
+    превращаются в лишние ключи со значением null.
+    """
+
+    problems: list[str] = []
+    found: list[tuple[str, object]] = []
+    for path, method, operation in iter_operations(spec):
+        responses = operation.get("responses", {})
+        if not isinstance(responses, dict):
+            problems.append(f"{method.upper()} {path}: responses не объект")
+            continue
+        found.extend((f"{method.upper()} {path} {code}", item) for code, item in responses.items())
+    components = spec.get("components", {})
+    shared = components.get("responses", {}) if isinstance(components, dict) else {}
+    if isinstance(shared, dict):
+        found.extend((f"components.responses.{name}", item) for name, item in shared.items())
+    for where, response in found:
+        if not isinstance(response, dict):
+            problems.append(f"{where}: ответ не объект")
+            continue
+        keys = {key for key in response if not str(key).startswith("x-")}
+        allowed = RESPONSE_REF_KEYS if "$ref" in response else RESPONSE_OBJECT_KEYS
+        extra = sorted(str(key) for key in keys - allowed)
+        if extra:
+            problems.append(f"{where}: недопустимые ключи Response Object {extra}")
+        if "$ref" not in response:
+            description = response.get("description")
+            if not isinstance(description, str) or not description.strip():
+                problems.append(f"{where}: нет строки description")
+    return problems
+
+
 def validate_openapi(spec: dict[str, object]) -> list[str]:
     """Проверить OpenAPI и вернуть все найденные расхождения."""
 
-    problems: list[str] = []
+    problems: list[str] = response_object_problems(spec)
     components = spec["components"]["schemas"]
 
     process_props = components["ProcessStatus"]["properties"]

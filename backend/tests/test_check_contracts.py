@@ -128,3 +128,21 @@ def test_operation_security_cannot_drift_from_global(
         "uploadDocuments: effective security должен совпадать с глобальным" in problem
         for problem in problems
     )
+
+
+def test_response_objects_have_only_allowed_keys() -> None:
+    import yaml
+
+    spec = yaml.safe_load(OPENAPI.read_text(encoding="utf-8"))
+    assert _check_contracts.response_object_problems(spec) == []
+
+
+def test_unquoted_flow_mapping_description_is_reported() -> None:
+    import yaml
+
+    broken = yaml.safe_load(
+        "paths:\n  /x:\n    get:\n      responses:\n"
+        '        "409": { description: Файл в пакете, но вне групп }\n'
+    )
+    (problem,) = _check_contracts.response_object_problems(broken)
+    assert "409" in problem and "недопустимые ключи" in problem
