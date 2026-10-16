@@ -43,7 +43,7 @@ from kontur.application.scenarios import CompletenessMap
 from kontur.application.wiring import build_workspace
 from kontur.cli.score import score_supplied
 from kontur.domain.capabilities import capabilities_payload
-from kontur.domain.models import DocStage, Finding
+from kontur.domain.models import DocStage, EvidenceRole, Finding
 from kontur.domain.state_machines import TransitionError
 from kontur.domain.status_map import EmptyPackageError, protocol_status
 from kontur.domain.statuses import Completeness, FindingStatus, ProcessState, ReasonCode
@@ -599,6 +599,7 @@ def list_findings(
                 "expected_value": item.expected_value,
                 "actual_value": item.actual_value,
                 "delta": item.delta,
+                "unit": _finding_unit(record, item.evidence_group_id),
                 "normative_refs": _rule_norms(item.rule_code),
                 "places": _finding_places(record, item.evidence_group_id),
             }
@@ -626,6 +627,20 @@ def _rule_norms(rule_code: str) -> list[dict[str, str | None]]:
             {"identifier": ref["identifier"], "clause": clause if isinstance(clause, str) else None}
         )
     return norms
+
+
+def _finding_unit(record: ProcessRecord, evidence_group_id: str | None) -> str | None:
+    """Единица из фрагмента роли actual. Нет фрагмента или группы — null, без догадок."""
+
+    if evidence_group_id is None:
+        return None
+    group = record.evidence_groups.get(evidence_group_id)
+    if group is None:
+        return None
+    actual = group.role(EvidenceRole.ACTUAL)
+    if actual is None:
+        return None
+    return actual.extracted.unit
 
 
 def _finding_places(

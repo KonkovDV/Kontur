@@ -30,20 +30,14 @@ def test_value_norm_and_place_fields_exist() -> None:
     )
     extraction = _schema("evidence_group.schema.json")["$defs"]["extraction"]["properties"]
     assert "unit" in extraction
+    assert "unit" in finding
 
 
 def test_documented_gaps_are_still_gaps() -> None:
     finding = _schema("finding.schema.json")
-    assert "unit" not in finding["properties"]
     required = set(finding["required"])
     assert "normative_refs" not in required
     assert "evidence_group_id" not in required
-
-    openapi = yaml.safe_load((ROOT / "contracts" / "openapi.yaml").read_text(encoding="utf-8"))
-    get = openapi["paths"]["/processes/{process_id}/findings"]["get"]
-    schema = get["responses"]["200"]["content"]["application/json"]["schema"]
-    item = schema["properties"]["findings"]["items"]["properties"]
-    assert "unit" not in item
 
 
 def test_findings_list_carries_value_norm_and_page() -> None:
@@ -51,7 +45,7 @@ def test_findings_list_carries_value_norm_and_page() -> None:
     get = openapi["paths"]["/processes/{process_id}/findings"]["get"]
     schema = get["responses"]["200"]["content"]["application/json"]["schema"]
     item = schema["properties"]["findings"]["items"]["properties"]
-    for key in ("expected_value", "actual_value", "delta", "normative_refs", "places"):
+    for key in ("expected_value", "actual_value", "delta", "unit", "normative_refs", "places"):
         assert key in item
     assert "page" in item["places"]["items"]["properties"]
     assert "clause" in item["normative_refs"]["items"]["properties"]
