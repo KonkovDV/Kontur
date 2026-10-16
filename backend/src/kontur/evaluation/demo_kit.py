@@ -84,6 +84,9 @@ def install_demo_kit(workspace: ProcessWorkspace, object_id: str) -> ProcessReco
                 filename=filename,
                 doc_stage=stage,
                 size_bytes=len(payload),
+                # Черновик — предыдущая редакция утверждённой ПД. Связь станет явной,
+                # когда инспектор выберет f-pd эталоном; до выбора порядок не решается.
+                declared_predecessor_file_id=DRAFT_FILE_ID if file_id == ETALON_FILE_ID else None,
             ),
         )
         workspace.keep_blob(record, file_id, payload)
