@@ -298,6 +298,15 @@ CREATE TRIGGER processes_sync_requires_finalized_protocol
 
 CREATE INDEX processes_object_state ON processes (object_id, process_state);
 
+-- Группы доказательств процесса целиком (JSON EvidenceGroup). Нужны после рестарта:
+-- места находок, карточка доказательства и diff редакций читают их отсюда.
+CREATE TABLE process_evidence_groups (
+    process_id          TEXT NOT NULL REFERENCES processes (id),
+    evidence_group_id   TEXT NOT NULL,
+    payload             JSONB NOT NULL,
+    PRIMARY KEY (process_id, evidence_group_id)
+);
+
 CREATE TABLE process_findings (
     process_id          TEXT NOT NULL REFERENCES processes (id),
     store_key           TEXT NOT NULL,
