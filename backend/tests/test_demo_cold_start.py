@@ -38,8 +38,6 @@ from kontur.presentation.api import app
 _FONT = contest_slice_font()
 if _FONT is None:
     pytest.fail("нет TTF с кириллицей: vendor/fonts/NotoSans-Regular.ttf пропал", pytrace=False)
-#: Шрифт обязателен; маркер оставлен, чтобы не трогать тесты. Пропуска нет.
-needs_font = pytest.mark.usefixtures()
 INSPECTOR = Actor("inspector-1", is_human=True)
 REPO = Path(__file__).resolve().parents[2]
 
@@ -123,7 +121,6 @@ def test_compose_stack_lists_demo_services() -> None:
         assert f"{name}:" in text, name
 
 
-@needs_font
 def test_unstamped_pd_compares_without_rewriting_the_stamp() -> None:
     """Одна ПД без штампа сравнивается. Штамп файла остаётся UNKNOWN."""
 
@@ -148,7 +145,6 @@ def test_unstamped_pd_compares_without_rewriting_the_stamp() -> None:
     )
 
 
-@needs_font
 def test_demo_rehearsal_confirm_reject_protocol_outbox() -> None:
     draft = _sheet(_STALE_VALUES, stamp=False)
     pd = _sheet(_PD_VALUES)
@@ -268,7 +264,6 @@ def _unit_square(polygon: object) -> None:
         assert 0 <= y <= 1
 
 
-@needs_font
 def test_http_evidence_card_serves_pd_rd_png_and_leaves_id_empty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

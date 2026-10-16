@@ -14,8 +14,6 @@ from kontur.presentation.api import app
 _FONT = contest_slice_font()
 if _FONT is None:
     pytest.fail("нет TTF с кириллицей: vendor/fonts/NotoSans-Regular.ttf пропал", pytrace=False)
-#: Шрифт обязателен; маркер оставлен, чтобы не трогать тесты. Пропуска нет.
-needs_font = pytest.mark.usefixtures()
 TOKEN = {"Authorization": "Bearer inspector-1@OBJ-DEMO-COLD-START/INSPECTOR"}
 
 
@@ -30,7 +28,6 @@ def test_demo_kit_is_hidden_without_the_stand_flag(monkeypatch: pytest.MonkeyPat
     assert response.json()["detail"] == "учебный комплект выключен"
 
 
-@needs_font
 def test_demo_kit_loads_four_files_and_leaves_etalon_to_the_inspector(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -136,7 +133,6 @@ def _review(
     return payload
 
 
-@needs_font
 def test_demo_kit_review_finalize_and_queue_rin_without_ack(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
