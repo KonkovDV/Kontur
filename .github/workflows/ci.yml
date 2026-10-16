@@ -73,6 +73,12 @@ jobs:
           psql -h localhost -p 5432 -U postgres -d kontur -v ON_ERROR_STOP=1 \
             -f backend/src/kontur/infrastructure/db/schema.sql \
             -f backend/src/kontur/infrastructure/db/checks.sql
+      - name: Миграции поверх развёрнутой схемы и база до full_payload
+        env:
+          KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
+        run: |
+          python -m kontur.infrastructure.db.migrations
+          python scripts/check_protocol_migration_pg_live.py
       - name: Live protocol materialization concurrency
         env:
           KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
