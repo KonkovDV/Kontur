@@ -52,7 +52,6 @@ def build_process_store() -> Any:
     if not dsn:
         return MemoryProcessStore()
     from kontur.infrastructure.db.connecting_store import ConnectingPostgresProcessStore
-
     return ConnectingPostgresProcessStore(dsn)
 
 

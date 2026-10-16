@@ -717,7 +717,7 @@ def _protocol_document(
             return JSONResponse(
                 status_code=400, content={"detail": "version должен быть >= 1"}
             )
-        stored = _workspace().load_protocol_version(record.object_id, version)
+        stored = _workspace().load_full_protocol_version(record.object_id, version)
         if stored is None:
             return JSONResponse(
                 status_code=404, content={"detail": "версия протокола не найдена"}
@@ -735,7 +735,7 @@ def _protocol_document(
                 status_code=409,
                 content={"detail": "финализированный процесс без protocol_id"},
             )
-        stored = _workspace().load_protocol(protocol_id)
+        stored = _workspace().load_full_protocol(protocol_id)
         if stored is None:
             return JSONResponse(
                 status_code=409, content={"detail": "протокол не материализован"}

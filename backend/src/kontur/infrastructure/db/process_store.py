@@ -115,6 +115,12 @@ class ProcessStore(Protocol):
         self, object_id: str, version: int
     ) -> dict[str, object] | None: ...
 
+    def load_full_protocol(self, protocol_id: str) -> dict[str, object] | None: ...
+
+    def load_full_protocol_version(
+        self, object_id: str, version: int
+    ) -> dict[str, object] | None: ...
+
 
 def validate_snapshot(snapshot: ProcessSnapshot) -> None:
     """Те же границы, что CHECK в schema.sql. Молчание не считается успехом."""
@@ -327,7 +333,9 @@ def _reject_unsafe_protocol_payload(
 
 
 def _protocol_row_params(
-    snapshot: ProcessSnapshot, payload: Mapping[str, object]
+    snapshot: ProcessSnapshot,
+    payload: Mapping[str, object],
+    full_payload: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     version = payload["version"]
     if not isinstance(version, int) or isinstance(version, bool):
@@ -342,6 +350,7 @@ def _protocol_row_params(
         "input_manifest_hash": snapshot.input_manifest_hash,
         "status": payload["status"],
         "payload": _canonical_json(payload),
+        "full_payload": None if full_payload is None else _canonical_json(full_payload),
         "payload_sha256": protocol_payload_sha256(payload),
         "finalized_at": datetime.now(tz=UTC),
         "supersedes_version": version - 1 if version > 1 else None,
@@ -367,6 +376,7 @@ class MemoryProcessStore:
         self._findings: dict[str, dict[str, Finding]] = {}
         self._audit: dict[str, list[AuditEvent]] = {}
         self._protocols: dict[str, dict[str, object]] = {}
+        self._full_protocols: dict[str, dict[str, object]] = {}
         self._outbox: dict[str, dict[str, object]] = {}
 
     def load(self, process_id: str) -> ProcessSnapshot | None:
@@ -444,6 +454,7 @@ class MemoryProcessStore:
             )
         self.save(snapshot)
         self._protocols[protocol_id] = encoded
+        self._full_protocols[protocol_id] = _clone_protocol_payload(payload)
         self._outbox[protocol_id] = {
             "id": f"outbox-{protocol_id}",
             "process_id": snapshot.process_id,
@@ -467,6 +478,18 @@ class MemoryProcessStore:
         self, object_id: str, version: int
     ) -> dict[str, object] | None:
         for stored in self._protocols.values():
+            if stored.get("object_id") == object_id and stored.get("version") == version:
+                return _clone_protocol_payload(stored)
+        return None
+
+    def load_full_protocol(self, protocol_id: str) -> dict[str, object] | None:
+        stored = self._full_protocols.get(protocol_id)
+        return None if stored is None else _clone_protocol_payload(stored)
+
+    def load_full_protocol_version(
+        self, object_id: str, version: int
+    ) -> dict[str, object] | None:
+        for stored in self._full_protocols.values():
             if stored.get("object_id") == object_id and stored.get("version") == version:
                 return _clone_protocol_payload(stored)
         return None
@@ -594,12 +617,12 @@ FROM processes WHERE id = %(id)s
 INSERT_PROTOCOL_SQL = """
 INSERT INTO protocols (
     id, object_id, version, matrix_version, dataset_version, model_version,
-    input_manifest_hash, status, payload, payload_sha256, finalized_at,
+    input_manifest_hash, status, payload, full_payload, payload_sha256, finalized_at,
     supersedes_version
 ) VALUES (
     %(id)s, %(object_id)s, %(version)s, %(matrix_version)s, %(dataset_version)s,
     %(model_version)s, %(input_manifest_hash)s, %(status)s, %(payload)s::jsonb,
-    %(payload_sha256)s, %(finalized_at)s, %(supersedes_version)s
+    %(full_payload)s::jsonb, %(payload_sha256)s, %(finalized_at)s, %(supersedes_version)s
 )
 ON CONFLICT (id) DO NOTHING
 RETURNING id
@@ -615,6 +638,15 @@ SELECT payload FROM protocols WHERE id = %(protocol_id)s FOR UPDATE
 
 SELECT_PROTOCOL_VERSION_SQL = """
 SELECT payload FROM protocols
+WHERE object_id = %(object_id)s AND version = %(version)s
+"""
+
+SELECT_FULL_PROTOCOL_SQL = """
+SELECT full_payload FROM protocols WHERE id = %(protocol_id)s
+"""
+
+SELECT_FULL_PROTOCOL_VERSION_SQL = """
+SELECT full_payload FROM protocols
 WHERE object_id = %(object_id)s AND version = %(version)s
 """
 
@@ -785,7 +817,7 @@ class PostgresProcessStore:
         protocol_id = snapshot.protocol_id
         if protocol_id is None:
             raise ProtocolMaterializationRequiredError("FINALIZED требует protocol_id")
-        row_params = _protocol_row_params(snapshot, encoded)
+        row_params = _protocol_row_params(snapshot, encoded, _clone_protocol_payload(payload))
         try:
             with transaction_fn():
                 self._connection.execute(  # type: ignore[attr-defined]
@@ -857,6 +889,27 @@ class PostgresProcessStore:
         )
         row = cursor.fetchone()
         if row is None:
+            return None
+        return _protocol_cell(row[0])
+
+    def load_full_protocol(self, protocol_id: str) -> dict[str, object] | None:
+        cursor = self._connection.execute(  # type: ignore[attr-defined]
+            SELECT_FULL_PROTOCOL_SQL, {"protocol_id": protocol_id}
+        )
+        row = cursor.fetchone()
+        if row is None or row[0] is None:
+            return None
+        return _protocol_cell(row[0])
+
+    def load_full_protocol_version(
+        self, object_id: str, version: int
+    ) -> dict[str, object] | None:
+        cursor = self._connection.execute(  # type: ignore[attr-defined]
+            SELECT_FULL_PROTOCOL_VERSION_SQL,
+            {"object_id": object_id, "version": version},
+        )
+        row = cursor.fetchone()
+        if row is None or row[0] is None:
             return None
         return _protocol_cell(row[0])
 

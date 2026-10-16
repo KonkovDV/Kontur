@@ -133,9 +133,7 @@ def test_demo_scenario_end_to_end(client: TestClient) -> None:
     started = perf_counter()
     process_id = _run_to_finalize(client, timings)
 
-    # Финальный протокол по HTTP сейчас — тело outbox РиН (только confirmed и
-    # negative_verified), он не проходит protocol.schema.json; см. тест ниже.
-    final = _protocol(client, process_id, validate=False)
+    final = _protocol(client, process_id)
     assert final["status"] == "PROTOCOL_FINALIZED"
     assert final["violation_count"] == 2
     sections = final["sections"]
@@ -178,14 +176,31 @@ def test_demo_scenario_end_to_end(client: TestClient) -> None:
     assert total < BUDGET_SECONDS
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "GET /protocol после finalize отдаёт сохранённое тело protocol_for_rin: "
-        "в sections нет completeness, candidates и др., схема protocol.schema.json "
-        "не проходит. Когда это исправят, тест станет XPASS и упадёт: снимите xfail."
-    ),
-)
-def test_finalized_protocol_matches_schema(client: TestClient) -> None:
+
+def test_finalized_protocol_and_exports_match_contracts(client: TestClient) -> None:
     process_id = _run_to_finalize(client, {})
-    _protocol(client, process_id)
+    final = _protocol(client, process_id)
+    sections = final["sections"]
+    assert isinstance(sections, dict)
+    assert sections["completeness"], "таблица комплектности в финальном протоколе"
+    assert final["violation_count"] == 2
+    base = f"/api/v1/processes/{process_id}/protocol"
+    xml = client.get(f"{base}.xml", headers=HEADERS)
+    schema = etree.XMLSchema(
+        etree.parse(str(repo_root() / "contracts" / "schemas" / "protocol-export.xsd"))
+    )
+    assert schema.validate(etree.fromstring(xml.content))
+    docx = client.get(f"{base}.docx", headers=HEADERS)
+    assert Document(BytesIO(docx.content)).paragraphs
+    pdf = client.get(f"{base}.pdf", headers=HEADERS)
+    assert pdf.content.startswith(b"%PDF")
+
+
+def test_outbox_still_carries_only_the_rin_body(client: TestClient) -> None:
+    process_id = _run_to_finalize(client, {})
+    workspace = app.state.workspace
+    record = workspace.get(process_id)
+    assert record is not None and record.protocol_id is not None
+    wire = workspace.load_protocol(record.protocol_id)
+    assert wire is not None
+    assert set(wire["sections"]) == {"confirmed", "negative_verified"}

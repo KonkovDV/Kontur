@@ -349,6 +349,20 @@ class ProcessWorkspace:
     ) -> dict[str, object] | None:
         return self._store.load_protocol_version(object_id, version)
 
+    def load_full_protocol(self, protocol_id: str) -> dict[str, object] | None:
+        """Полный протокол для HTTP и экспорта. Старая строка без него — тело РиН."""
+
+        return self._store.load_full_protocol(protocol_id) or self._store.load_protocol(
+            protocol_id
+        )
+
+    def load_full_protocol_version(
+        self, object_id: str, version: int
+    ) -> dict[str, object] | None:
+        return self._store.load_full_protocol_version(
+            object_id, version
+        ) or self._store.load_protocol_version(object_id, version)
+
     def _assemble_protocol_payload(
         self, record: ProcessRecord, *, protocol_id: str, version: int
     ) -> dict[str, object]:
