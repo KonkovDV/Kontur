@@ -679,8 +679,8 @@ paths:
           content:
             application/json:
               schema: { $ref: "./schemas/revision_diff.schema.json" }
-        "404": { description: Процесс или файл не найден }
-        "409": { description: У редакции нет зафиксированного предшественника в пакете }
+        "404": { description: Процесс не найден или файла нет в пакете }
+        "409": { description: Файл в пакете, но вне групп доказательств, или у редакции нет зафиксированного предшественника }
 
   /demo/kit:
     post:

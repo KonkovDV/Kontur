@@ -1145,6 +1145,15 @@ def get_revision_diff(
     documents = documents_in(groups)
     new = documents.get(file_id)
     if new is None:
+        if any(item.file_id == file_id for item in record.files):
+            # Файл в пакете есть, но ни одна группа доказательств на него не ссылается
+            # (например, черновик после выбора эталона): пары редакций нет.
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "detail": "файл не входит в группы доказательств: редакций для сравнения нет"
+                },
+            )
         return JSONResponse(status_code=404, content={"detail": "файл не найден"})
     predecessor = new.predecessor_file_id
     if predecessor is None or predecessor not in documents:

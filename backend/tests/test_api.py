@@ -9,6 +9,7 @@ from dataclasses import replace
 import pytest
 from fastapi.testclient import TestClient
 
+from kontur.application.revision_diff import documents_in
 from kontur.application.runtime import ProcessWorkspace
 from kontur.domain.models import (
     ApprovalStatus,
@@ -1026,6 +1027,20 @@ def test_revision_diff_endpoint_never_guesses_predecessor(client: TestClient) ->
         f"/api/v1/processes/{process_id}/revisions/no-such/diff", headers=INSPECTOR
     )
     assert missing.status_code == 404
+
+
+def test_revision_diff_uploaded_file_outside_evidence_is_409(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    _attach_revisions(process_id)
+    record = app.state.workspace.get(process_id)
+    assert record is not None and record.files
+    uploaded = record.files[0].file_id
+    assert uploaded not in documents_in(record.evidence_groups.values())
+    response = client.get(
+        f"/api/v1/processes/{process_id}/revisions/{uploaded}/diff", headers=INSPECTOR
+    )
+    assert response.status_code == 409
+    assert "групп" in response.json()["detail"]
 
 
 def test_revision_diff_endpoint_is_object_scoped(client: TestClient) -> None:
