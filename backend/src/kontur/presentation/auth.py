@@ -56,26 +56,37 @@ def _is_true(value: str | None) -> bool:
     return value is not None and value.lower() == "true"
 
 
+#: Legacy-токены только при явно заданном KONTUR_ENV из этого набора.
+INSECURE_AUTH_ENVS: frozenset[str] = frozenset({"dev", "demo"})
+
+
+def _explicit_env() -> str:
+    """KONTUR_ENV как задан, без значения по умолчанию: пусто — значит не задан."""
+
+    return (os.environ.get("KONTUR_ENV") or "").strip().lower()
+
+
 def insecure_auth_permitted() -> bool:
-    """Legacy-токен только в dev/test/local/demo. Иначе — только JWT."""
+    """Legacy-токен только при флаге и явном KONTUR_ENV=dev|demo. Иначе — только JWT."""
 
     if not _is_true(os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH")):
         return False
-    env = (os.environ.get("KONTUR_ENV") or "dev").strip().lower()
-    return env in INSECURE_AUTH_ENVS
-
-
-INSECURE_AUTH_ENVS: frozenset[str] = frozenset({"dev", "test", "local", "demo"})
+    return _explicit_env() in INSECURE_AUTH_ENVS
 
 
 def assert_insecure_auth_allowed() -> None:
-    """Флаг legacy-токенов вне dev/test/local/demo (pilot, prod, …) не даёт ядру стартовать."""
+    """Флаг legacy-токенов без явного KONTUR_ENV=dev|demo не даёт ядру стартовать.
+
+    Пустой KONTUR_ENV здесь не считается dev: забытая переменная на стенде не должна
+    молча включать учебные токены.
+    """
 
     if _is_true(os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH")) and not insecure_auth_permitted():
-        env = (os.environ.get("KONTUR_ENV") or "dev").strip().lower()
+        env = _explicit_env()
+        shown = f"KONTUR_ENV={env}" if env else "KONTUR_ENV не задан"
         raise RuntimeError(
-            f"KONTUR_ALLOW_INSECURE_DEV_AUTH=true запрещён при KONTUR_ENV={env}: "
-            "разрешён только в dev|demo|test|local. Уберите флаг или задайте KONTUR_ENV=demo"
+            f"KONTUR_ALLOW_INSECURE_DEV_AUTH=true запрещён: {shown}. Флаг разрешён только "
+            "при явном KONTUR_ENV=dev или KONTUR_ENV=demo; иначе уберите флаг"
         )
 
 

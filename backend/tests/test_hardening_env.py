@@ -6,14 +6,14 @@ from kontur.infrastructure.clamd import AvStatus, clamd_required, scan_from_env
 from kontur.presentation.auth import insecure_auth_permitted
 
 
-@pytest.mark.parametrize("env", ["dev", "demo", "test", "local"])
+@pytest.mark.parametrize("env", ["dev", "demo"])
 def test_insecure_auth_allowed_in_dev_envs(monkeypatch, env):
     monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
     monkeypatch.setenv("KONTUR_ENV", env)
     assert insecure_auth_permitted()
 
 
-@pytest.mark.parametrize("env", ["production", "staging", "prod"])
+@pytest.mark.parametrize("env", ["production", "staging", "prod", "test", "local", ""])
 def test_insecure_auth_blocked_outside_demo(monkeypatch, env):
     monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
     monkeypatch.setenv("KONTUR_ENV", env)

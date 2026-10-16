@@ -74,7 +74,7 @@ def assert_honest_coverage(report: Mapping[str, int]) -> None:
 
 
 DEFAULT_HEALTHZ_URL = "http://127.0.0.1:8000/api/v1/healthz"
-_INSECURE_ENVS = frozenset({"dev", "test", "local", "demo"})
+_INSECURE_ENVS = frozenset({"dev", "demo"})
 
 
 def preflight(
@@ -91,11 +91,12 @@ def preflight(
 
     problems: list[str] = []
     flag = (env.get("KONTUR_ALLOW_INSECURE_DEV_AUTH") or "").strip().lower() == "true"
-    kontur_env = (env.get("KONTUR_ENV") or "dev").strip().lower()
+    kontur_env = (env.get("KONTUR_ENV") or "").strip().lower()
     if flag and kontur_env not in _INSECURE_ENVS:
+        shown = f"при KONTUR_ENV={kontur_env}" if kontur_env else "без KONTUR_ENV"
         problems.append(
-            f"флаг: KONTUR_ALLOW_INSECURE_DEV_AUTH=true при KONTUR_ENV={kontur_env} — "
-            "ядро не стартует. Для демо задайте KONTUR_ENV=demo, для pilot/prod уберите флаг"
+            f"флаг: KONTUR_ALLOW_INSECURE_DEV_AUTH=true {shown} — ядро не стартует. "
+            "Для демо задайте KONTUR_ENV=demo, для pilot/prod уберите флаг"
         )
     elif not flag:
         problems.append(

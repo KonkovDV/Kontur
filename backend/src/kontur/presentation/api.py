@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from time import perf_counter
@@ -58,9 +57,9 @@ from kontur.infrastructure.db.process_store import (
 from kontur.infrastructure.matrix.registry import FileRuleRegistry
 from kontur.infrastructure.pdfium_page import PageRenderError, parse_bbox, render_page_png
 from kontur.presentation.auth import (
-    _is_true,
     actor_from_roles,
     assert_insecure_auth_allowed,
+    insecure_auth_permitted,
     parse_bearer,
 )
 from kontur.presentation.json_logging import JsonRequestLogMiddleware, configure_json_logging
@@ -525,7 +524,7 @@ def load_demo_kit(
 ) -> dict[str, object] | JSONResponse:
     """Синтетические ПД/РД/ИД. Только учебный токен. Эталон не назначается."""
 
-    if not _is_true(os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH")):
+    if not insecure_auth_permitted():
         return JSONResponse(status_code=404, content={"detail": "учебный комплект выключен"})
     _subject, _granted, caller_object_id = _require("loadDemoKit", authorization)
     if caller_object_id is None:
