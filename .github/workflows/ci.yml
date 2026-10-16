@@ -37,6 +37,8 @@ jobs:
         run: python scripts/check_normative_registry.py
       - name: Правила матрицы совпадают с результатом сборки
         run: python scripts/compile_matrix.py --check
+      - name: Трассируемость норм и доказательств (предупреждение, не ошибка)
+        run: python scripts/report_traceability_gaps.py
 
   db:
     runs-on: ubuntu-latest
