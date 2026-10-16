@@ -21,7 +21,8 @@ claims: `iss`, `aud`, `exp`, `nbf`, `sub`, `roles`; object scope берётся
 заголовке должен совпасть. Dotted-токен никогда не разбирается как legacy.
 
 Локальная грамматика `Bearer <actor_id>@<object_id>/<ROLE>[,<ROLE>]`
-включается только при `KONTUR_ALLOW_INSECURE_DEV_AUTH=true` и только если
+включается только при `KONTUR_ALLOW_INSECURE_DEV_AUTH=true` вместе с явным
+`KONTUR_ENV=dev` или `KONTUR_ENV=demo` (иначе ядро не стартует) и только если
 в токене нет точки.
 
 Каждая операция над объектом выполняет две независимые проверки:

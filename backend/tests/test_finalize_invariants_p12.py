@@ -22,7 +22,7 @@ SUPERVISOR = {"Authorization": "Bearer sup-1@obj-1/SUPERVISOR"}
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
-    monkeypatch.setenv("KONTUR_ENV", "test")
+    monkeypatch.setenv("KONTUR_ENV", "dev")
     app.state.workspace = ProcessWorkspace()
     return TestClient(app)
 

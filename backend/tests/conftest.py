@@ -14,6 +14,9 @@ def legacy_auth_enabled(
 ) -> Iterator[None]:
     """Enable the temporary legacy grammar for the compatibility API module only."""
 
+    # Тесты — среда разработки. Флаг legacy-токенов требует явного KONTUR_ENV,
+    # поэтому он задан здесь; тесты пустого значения снимают его сами.
+    monkeypatch.setenv("KONTUR_ENV", "dev")
     if request.node.path.name == "test_api.py":
         monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
     yield

@@ -49,7 +49,8 @@ JWT по умолчанию проверяется. Для локального 
 copy .env.example .env          # Windows; иначе cp
 ```
 
-В `.env` для этой репетиции: `KONTUR_ALLOW_INSECURE_DEV_AUTH=true`.
+В `.env` для этой репетиции: `KONTUR_ALLOW_INSECURE_DEV_AUTH=true` и `KONTUR_ENV=demo`.
+Без явного `KONTUR_ENV=demo` (или `dev`) ядро с этим флагом не стартует.
 Это не OIDC и не production. Порты ядра — `127.0.0.1:8000`.
 
 ```text
