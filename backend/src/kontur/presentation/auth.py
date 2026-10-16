@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import math
 import os
-import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -17,10 +16,29 @@ from kontur.presentation.rbac import AuthenticationRequiredError, Role
 
 _AUTHENTICATION_REQUIRED = "authentication required"
 _ALLOWED_ALGORITHMS = frozenset({"RS256", "ES256"})
-_LEGACY_TOKEN = re.compile(
-    r"(?:[A-Za-z0-9_-]+(?:@[A-Za-z0-9_-]+)?/"
-    r"[A-Z][A-Z0-9_]*(?:,[A-Z][A-Z0-9_]*)*|[A-Z][A-Z0-9_]*)\Z"
-)
+_NAME_CHARS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-")
+_ROLE_HEAD = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+_ROLE_CHARS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+
+
+def _is_name(part: str) -> bool:
+    return bool(part) and all(char in _NAME_CHARS for char in part)
+
+
+def _is_role(part: str) -> bool:
+    return bool(part) and part[0] in _ROLE_HEAD and all(char in _ROLE_CHARS for char in part)
+
+
+def _legacy_grammar(token: str) -> bool:
+    """``name[@name]/ROLE[,ROLE...]`` или голая ``ROLE``. Без regex, линейно по длине."""
+
+    if "/" not in token:
+        return _is_role(token)
+    principal, roles_part = token.split("/", maxsplit=1)
+    names = principal.split("@")
+    if len(names) > 2 or not all(_is_name(name) for name in names):
+        return False
+    return all(_is_role(role) for role in roles_part.split(","))
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,7 +66,7 @@ def insecure_auth_permitted() -> bool:
 
 
 def _legacy_context(token: str) -> AuthContext:
-    if _LEGACY_TOKEN.fullmatch(token) is None:
+    if not _legacy_grammar(token):
         raise _authentication_required()
     if "/" in token:
         principal, roles_part = token.split("/", maxsplit=1)

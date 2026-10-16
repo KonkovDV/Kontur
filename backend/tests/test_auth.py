@@ -203,3 +203,44 @@ def test_explicit_dev_compatibility(monkeypatch: pytest.MonkeyPatch) -> None:
     assert context.subject == "insp-7"
     assert context.roles == ("INSPECTOR",)
     assert context.object_id == "OBJ-001"
+
+
+@pytest.mark.parametrize(
+    ("token", "subject", "roles", "object_id"),
+    [
+        ("insp-7@OBJ-001/INSPECTOR", "insp-7", ("INSPECTOR",), "OBJ-001"),
+        ("sup_1/SUPERVISOR,ADMIN", "sup_1", ("SUPERVISOR", "ADMIN"), None),
+        ("ADMIN", "ADMIN", ("ADMIN",), None),
+    ],
+)
+def test_legacy_grammar_accepts_valid_tokens(
+    token: str,
+    subject: str,
+    roles: tuple[str, ...],
+    object_id: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    context = parse_bearer(f"Bearer {token}")
+    assert (context.subject, context.roles, context.object_id) == (subject, roles, object_id)
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        "-" * 200_000 + "!",
+        "A" * 200_000 + "!",
+        "a@" + "-" * 200_000 + "@",
+        "a/" + "A," * 100_000 + "!",
+    ],
+)
+def test_legacy_grammar_is_linear_on_pathological_input(
+    token: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from time import perf_counter
+
+    monkeypatch.setenv("KONTUR_ALLOW_INSECURE_DEV_AUTH", "true")
+    started = perf_counter()
+    _reject(token)
+    assert perf_counter() - started < 1.0
