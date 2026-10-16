@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from uuid import uuid4
@@ -38,6 +39,12 @@ def schema_before_full_payload() -> str:
         if "full_payload" not in line or "NEW.full_payload" in line or "OLD.full_payload" in line
     ]
     old = "\n".join(lines).replace("NEW.full_payload, ", "").replace("OLD.full_payload, ", "")
+    # 0002: таблицы process_evidence_groups в старой базе тоже нет.
+    old = re.sub(
+        r"^CREATE TABLE process_evidence_groups \(.*?^\);$", "", old, flags=re.MULTILINE | re.DOTALL
+    )
+    if "process_evidence_groups" in old:
+        raise SystemExit("FAIL: не удалось убрать process_evidence_groups из старой схемы")
     if "full_payload" in old:
         raise SystemExit("FAIL: не удалось получить схему до full_payload")
     return old
@@ -103,6 +110,11 @@ def main() -> int:
             ).fetchone()
             if triggers is None or triggers[0] != 1:
                 raise SystemExit(f"FAIL: триггеров неизменности {triggers}")
+            table = connection.execute(
+                "SELECT to_regclass('process_evidence_groups') IS NOT NULL"
+            ).fetchone()
+            if table is None or not table[0]:
+                raise SystemExit("FAIL: миграция не создала process_evidence_groups")
     finally:
         with psycopg.connect(DSN, autocommit=True) as admin:
             admin.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')

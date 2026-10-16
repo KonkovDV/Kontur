@@ -7,13 +7,15 @@ from kontur.infrastructure.db.migrations import SCHEMA_PATH, migration_statement
 
 def test_migration_reuses_guard_from_schema() -> None:
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
-    add, function, drop, trigger = migration_statements()
+    add, function, drop, trigger, evidence = migration_statements()
     assert add == "ALTER TABLE protocols ADD COLUMN IF NOT EXISTS full_payload JSONB"
     assert function.startswith("CREATE OR REPLACE FUNCTION protocols_guard_finalized()")
     assert function.replace("CREATE OR REPLACE FUNCTION", "CREATE FUNCTION", 1) in schema
     assert "NEW.full_payload" in function and "OLD.full_payload" in function
     assert drop == "DROP TRIGGER IF EXISTS protocols_finalized_is_immutable ON protocols"
     assert trigger in schema and trigger.startswith("CREATE TRIGGER")
+    assert evidence.startswith("CREATE TABLE IF NOT EXISTS process_evidence_groups (")
+    assert evidence.replace(" IF NOT EXISTS", "", 1) in schema
 
 
 class _Recorder:

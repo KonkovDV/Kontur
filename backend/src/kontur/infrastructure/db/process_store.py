@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from typing import Protocol
 
 from kontur.application.protocol import protocol_for_rin
-from kontur.domain.models import DocStage, Finding, InspectorDecision
+from kontur.domain.models import DocStage, EvidenceGroup, Finding, InspectorDecision
 from kontur.domain.statuses import (
     Completeness,
     DisagreementKind,
@@ -27,6 +27,7 @@ from kontur.domain.statuses import (
     SyncState,
 )
 from kontur.infrastructure.db.audit_store import AuditEvent, PostgresAuditStore
+from kontur.infrastructure.db.evidence_codec import decode_group, encode_group
 
 MAX_PARSE_ATTEMPTS = 8
 MAX_SYNC_ATTEMPTS = 4
@@ -100,6 +101,12 @@ class ProcessStore(Protocol):
     ) -> None: ...
 
     def load_audit(self, process_id: str) -> list[AuditEvent]: ...
+
+    def save_evidence_groups(
+        self, process_id: str, groups: Sequence[EvidenceGroup]
+    ) -> None: ...
+
+    def load_evidence_groups(self, process_id: str) -> list[EvidenceGroup]: ...
 
     def list_all_files(self) -> list[tuple[str, str, str]]: ...
 
@@ -378,6 +385,7 @@ class MemoryProcessStore:
         self._protocols: dict[str, dict[str, object]] = {}
         self._full_protocols: dict[str, dict[str, object]] = {}
         self._outbox: dict[str, dict[str, object]] = {}
+        self._evidence: dict[str, str] = {}
 
     def load(self, process_id: str) -> ProcessSnapshot | None:
         return self._rows.get(process_id)
@@ -423,6 +431,18 @@ class MemoryProcessStore:
 
     def load_audit(self, process_id: str) -> list[AuditEvent]:
         return list(self._audit.get(process_id, ()))
+
+    def save_evidence_groups(self, process_id: str, groups: Sequence[EvidenceGroup]) -> None:
+        if process_id not in self._rows:
+            raise KeyError(process_id)
+        # JSON, как в Postgres: запись не делит объекты с вызывающим кодом.
+        self._evidence[process_id] = json.dumps(
+            [encode_group(group) for group in groups], ensure_ascii=False
+        )
+
+    def load_evidence_groups(self, process_id: str) -> list[EvidenceGroup]:
+        raw = self._evidence.get(process_id)
+        return [] if raw is None else [decode_group(item) for item in json.loads(raw)]
 
     def next_protocol_version(self, object_id: str) -> int:
         return _max_protocol_version(self._protocols, object_id) + 1
@@ -500,6 +520,7 @@ class MemoryProcessStore:
         self._audit.clear()
         self._protocols.clear()
         self._outbox.clear()
+        self._evidence.clear()
 
 
 UPSERT_PROCESS_SQL = """
@@ -639,6 +660,21 @@ SELECT payload FROM protocols WHERE id = %(protocol_id)s FOR UPDATE
 SELECT_PROTOCOL_VERSION_SQL = """
 SELECT payload FROM protocols
 WHERE object_id = %(object_id)s AND version = %(version)s
+"""
+
+DELETE_EVIDENCE_GROUPS_SQL = """
+DELETE FROM process_evidence_groups WHERE process_id = %(process_id)s
+"""
+
+INSERT_EVIDENCE_GROUP_SQL = """
+INSERT INTO process_evidence_groups (process_id, evidence_group_id, payload)
+VALUES (%(process_id)s, %(evidence_group_id)s, %(payload)s::jsonb)
+"""
+
+SELECT_EVIDENCE_GROUPS_SQL = """
+SELECT payload FROM process_evidence_groups
+WHERE process_id = %(process_id)s
+ORDER BY evidence_group_id
 """
 
 SELECT_FULL_PROTOCOL_SQL = """
@@ -945,3 +981,28 @@ class PostgresProcessStore:
 
     def load_audit(self, process_id: str) -> list[AuditEvent]:
         return self._audit.load_events(process_id)
+
+    def save_evidence_groups(self, process_id: str, groups: Sequence[EvidenceGroup]) -> None:
+        """Заменить группы процесса целиком (вызывающий коммитит транзакцию)."""
+
+        self._connection.execute(  # type: ignore[attr-defined]
+            DELETE_EVIDENCE_GROUPS_SQL, {"process_id": process_id}
+        )
+        for group in groups:
+            self._connection.execute(  # type: ignore[attr-defined]
+                INSERT_EVIDENCE_GROUP_SQL,
+                {
+                    "process_id": process_id,
+                    "evidence_group_id": group.evidence_group_id,
+                    "payload": json.dumps(encode_group(group), ensure_ascii=False),
+                },
+            )
+
+    def load_evidence_groups(self, process_id: str) -> list[EvidenceGroup]:
+        cursor = self._connection.execute(  # type: ignore[attr-defined]
+            SELECT_EVIDENCE_GROUPS_SQL, {"process_id": process_id}
+        )
+        return [
+            decode_group(row[0] if isinstance(row[0], dict) else json.loads(row[0]))
+            for row in cursor.fetchall()
+        ]

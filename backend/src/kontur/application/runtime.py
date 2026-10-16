@@ -300,6 +300,12 @@ class ProcessWorkspace:
     def _persist(self, record: ProcessRecord) -> None:
         self._store.save(self._snapshot(record))
 
+    def _save_evidence(self, record: ProcessRecord) -> None:
+        """Группы доказательств рядом со снимком: снимок пишется первым (FK на процесс)."""
+
+        self._persist(record)
+        self._store.save_evidence_groups(record.process_id, list(record.evidence_groups.values()))
+
     def _hydrate(self, snapshot: ProcessSnapshot) -> ProcessRecord:
         record = ProcessRecord(
             process_id=snapshot.process_id,
@@ -401,6 +407,10 @@ class ProcessWorkspace:
         for finding in self._store.load_findings(process_id):
             key = finding.evidence_group_id or finding.finding_id
             record.findings[key] = finding
+        record.evidence_groups = {
+            group.evidence_group_id: group
+            for group in self._store.load_evidence_groups(process_id)
+        }
         record.audit.records.extend(self._store.load_audit(process_id))
         record.audit.bind(self._store, process_id, record.object_id)
         record.inspector_approved_file_ids = {
@@ -565,6 +575,7 @@ class ProcessWorkspace:
         record.evidence_groups = {
             group.evidence_group_id: group for group in report.evidence_groups
         }
+        self._save_evidence(record)
         record.parse_attempts += 1
         record.audit.record(
             "system",
@@ -791,6 +802,7 @@ class ProcessWorkspace:
         record.evidence_groups = {
             group.evidence_group_id: group for group in report.evidence_groups
         }
+        self._save_evidence(record)
         # Бюджет parse_attempts (0..3) тратят загрузки. Выбор эталона его не ест.
         record.audit.record(
             "system",

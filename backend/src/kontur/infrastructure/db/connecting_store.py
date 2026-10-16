@@ -7,7 +7,7 @@ from collections.abc import Sequence
 
 import psycopg  # type: ignore[import-not-found,import-untyped,unused-ignore]
 
-from kontur.domain.models import Finding
+from kontur.domain.models import EvidenceGroup, Finding
 from kontur.infrastructure.db.audit_store import AuditEvent
 from kontur.infrastructure.db.migrations import apply_migrations_dsn
 from kontur.infrastructure.db.process_store import PostgresProcessStore, ProcessSnapshot
@@ -81,6 +81,15 @@ class ConnectingPostgresProcessStore:
                 process_id, actor_id, action, payload, object_id=object_id
             )
             connection.commit()
+
+    def save_evidence_groups(self, process_id: str, groups: Sequence[EvidenceGroup]) -> None:
+        with self._connect() as connection:
+            self._store(connection).save_evidence_groups(process_id, groups)
+            connection.commit()
+
+    def load_evidence_groups(self, process_id: str) -> list[EvidenceGroup]:
+        with self._connect() as connection:
+            return self._store(connection).load_evidence_groups(process_id)
 
     def load_audit(self, process_id: str) -> list[AuditEvent]:
         with self._connect() as connection:

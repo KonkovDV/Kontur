@@ -22,6 +22,9 @@ MIGRATION_LOCK_KEY = 0x4B4E544D
 _GUARD_FUNCTION = re.compile(
     r"^CREATE FUNCTION protocols_guard_finalized\(\).*?^\$\$;$", re.MULTILINE | re.DOTALL
 )
+_EVIDENCE_TABLE = re.compile(
+    r"^CREATE TABLE process_evidence_groups \(.*?^\);$", re.MULTILINE | re.DOTALL
+)
 _GUARD_TRIGGER = re.compile(
     r"^CREATE TRIGGER protocols_finalized_is_immutable\b.*?;$", re.MULTILINE | re.DOTALL
 )
@@ -35,7 +38,10 @@ def _schema_block(pattern: re.Pattern[str], schema: str) -> str:
 
 
 def migration_statements(schema: str | None = None) -> tuple[str, ...]:
-    """0001: protocols.full_payload и триггер неизменности, который её сравнивает."""
+    """0001: protocols.full_payload и триггер неизменности, который её сравнивает.
+
+    0002: таблица process_evidence_groups (группы доказательств процесса).
+    """
 
     text = SCHEMA_PATH.read_text(encoding="utf-8") if schema is None else schema
     function = _schema_block(_GUARD_FUNCTION, text).replace(
@@ -47,6 +53,9 @@ def migration_statements(schema: str | None = None) -> tuple[str, ...]:
         function,
         "DROP TRIGGER IF EXISTS protocols_finalized_is_immutable ON protocols",
         trigger,
+        _schema_block(_EVIDENCE_TABLE, text).replace(
+            "CREATE TABLE", "CREATE TABLE IF NOT EXISTS", 1
+        ),
     )
 
 

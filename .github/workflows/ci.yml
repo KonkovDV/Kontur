@@ -79,6 +79,7 @@ jobs:
         run: |
           python -m kontur.infrastructure.db.migrations
           python scripts/check_protocol_migration_pg_live.py
+          python scripts/check_evidence_groups_pg_live.py
       - name: Live protocol materialization concurrency
         env:
           KONTUR_DB_URL: postgresql://postgres:postgres@localhost:5432/kontur
