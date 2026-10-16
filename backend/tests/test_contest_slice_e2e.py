@@ -37,7 +37,8 @@ OBJECT_ID = "OBJ-CONTEST-SLICE-E2E"
 HASH = "c" * 64
 _REGISTRY = FileRuleRegistry()
 _FONT = contest_slice_font()
-needs_font = pytest.mark.skipif(_FONT is None, reason="нет TTF с кириллицей")
+if _FONT is None:
+    pytest.fail("нет TTF с кириллицей: vendor/fonts/NotoSans-Regular.ttf пропал", pytrace=False)
 
 _STAMP = (("Утвердил", 20.0, 20.0), ("Тестов Т.Т.", 90.0, 20.0))
 _LABEL_X = 20.0
@@ -262,7 +263,6 @@ def _pipeline(pd: bytes, rd: bytes | None) -> object:
     )
 
 
-@needs_font
 def test_pdf_pipeline_detects_five_candidates() -> None:
     report = _pipeline(_sheet(_PD_VALUES), _sheet(_RD_CANDIDATE))
     assert report.parse_errors == ()
@@ -285,7 +285,6 @@ def test_pdf_pipeline_detects_five_candidates() -> None:
     }
 
 
-@needs_font
 def test_pdf_pipeline_stale_pd_numbers_are_not_compared() -> None:
     """Явный successor: 9999 с устаревшего тома не эталон, даже если файл загружен последним."""
 
@@ -326,7 +325,6 @@ def test_pdf_pipeline_stale_pd_numbers_are_not_compared() -> None:
         assert finding.finding_status is FindingStatus.MISSING_EVIDENCE
 
 
-@needs_font
 def test_pdf_pipeline_ar041_mm_equals_metres_after_conversion() -> None:
     """1200 мм и 1,2 м на векторном PDF — одно значение в метрах, не угадка голого 1200."""
 
@@ -340,7 +338,6 @@ def test_pdf_pipeline_ar041_mm_equals_metres_after_conversion() -> None:
     assert finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
 
-@needs_font
 def test_pdf_pipeline_ar041_899mm_is_candidate_not_bare_guess() -> None:
     report = _pipeline(
         _sheet(_with_width(_PD_VALUES, "1200 мм")),
@@ -352,7 +349,6 @@ def test_pdf_pipeline_ar041_899mm_is_candidate_not_bare_guess() -> None:
     assert finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
 
-@needs_font
 def test_pdf_pipeline_ar041_bare_1200_stays_unconverted() -> None:
     pd = _sheet(_with_width(_PD_VALUES, "1200"))
     item = PipelineFile("f-pd", file_sha256(pd), "pd.pdf", DocStage.PD)
@@ -365,7 +361,6 @@ def test_pdf_pipeline_ar041_bare_1200_stays_unconverted() -> None:
     assert hit.extraction.normalized_value == 1200.0
 
 
-@needs_font
 def test_pdf_pipeline_without_stamp_compares_and_keeps_the_stamp() -> None:
     """Одна ПД без штампа сравнивается. Штамп файла остаётся UNKNOWN."""
 
@@ -379,7 +374,6 @@ def test_pdf_pipeline_without_stamp_compares_and_keeps_the_stamp() -> None:
         assert finding.finding_status is not FindingStatus.CONFIRMED_VIOLATION
 
 
-@needs_font
 def test_workspace_pipeline_stays_ready_without_human_verdict() -> None:
     pd = _sheet(_PD_VALUES)
     rd = _sheet(_RD_CANDIDATE)

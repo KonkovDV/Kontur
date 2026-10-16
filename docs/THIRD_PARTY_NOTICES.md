@@ -22,6 +22,14 @@
 
 `rapidocr` и `onnxruntime` стоят в extra `ocr` и в образ ядра попадают на сборке вместе с весами PP-OCRv5 (детектор, классификатор поворота строки, распознаватель eslav) по `ocr_weights.lock.json`. Код RapidOCR — Apache-2.0, ONNX Runtime — MIT. Веса — конвертация моделей PaddleOCR (Apache-2.0, авторские права на модель у Baidu). В рантайме они не скачиваются. `ocr_text` остаётся `MEASURED`.
 
+## Шрифты
+
+| Файл | Источник | Лицензия |
+| --- | --- | --- |
+| `vendor/fonts/NotoSans-Regular.ttf` | Noto Sans Regular, notofonts (16.10.2026) | SIL Open Font License 1.1, текст в `vendor/fonts/OFL.txt`; SHA-256 в `vendor/fonts/SHA256SUMS` |
+
+Шрифт встраивается в синтетические PDF учебного комплекта и тестов, в образ ядра копируется в `/opt/kontur/fonts`. Файл не изменялся.
+
 ## Образ ядра
 
 `backend/Dockerfile` ставит пакеты Debian `tesseract-ocr`, `tesseract-ocr-rus`, `tesseract-ocr-eng`. Движок Tesseract OCR (upstream) — Apache-2.0. Условия языковых данных — у этих пакетов Debian, отдельно в репозиторий они не копируются.

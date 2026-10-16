@@ -2,13 +2,12 @@
 решения → протокол → diff редакций → DOCX/PDF/XML.
 
 Тот же путь, что в docs/DEMO_COLD_START.md и у кнопки учебного комплекта
-(`POST /demo/kit`, `install_demo_kit`). В CI тест не пропускается: без TTF с
-кириллицей он падает, а не молчит.
+(`POST /demo/kit`, `install_demo_kit`). Тест не пропускается: без TTF с
+кириллицей он падает, а не молчит (шрифт лежит в vendor/fonts).
 """
 
 from __future__ import annotations
 
-import os
 from io import BytesIO
 from time import perf_counter
 
@@ -32,8 +31,8 @@ HEADERS = {"Authorization": f"Bearer {INSPECTOR_ID}@OBJ-DEMO-E2E/INSPECTOR"}
 #: здесь синтетика из четырёх листов: локально около 1-2 с, запас на медленный раннер CI.
 BUDGET_SECONDS = 20.0
 
-if contest_slice_font() is None and os.environ.get("CI") != "true":
-    pytest.skip("нет TTF с кириллицей (локально)", allow_module_level=True)
+if contest_slice_font() is None:
+    pytest.fail("нет TTF с кириллицей: vendor/fonts/NotoSans-Regular.ttf пропал", pytrace=False)
 
 
 @pytest.fixture
