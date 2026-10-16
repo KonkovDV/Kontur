@@ -34,6 +34,8 @@
 ```text
 python -m pytest backend/tests/test_demo_cold_start.py -q --tb=short
 python scripts/demo_cold_start.py
+# до показа, при поднятом compose:
+python scripts/demo_cold_start.py --preflight
 ```
 
 На Linux с GNU make: `make demo-rehearsal`.
@@ -53,6 +55,7 @@ copy .env.example .env          # Windows; иначе cp
 ```text
 docker compose up -d
 curl -s http://127.0.0.1:8000/api/v1/healthz
+python scripts/demo_cold_start.py --preflight
 ```
 
 Токен legacy (тот же флаг): `inspector-1@OBJ-DEMO-COLD-START/INSPECTOR`.

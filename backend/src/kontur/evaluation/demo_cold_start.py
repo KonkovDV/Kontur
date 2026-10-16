@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from pathlib import Path
 
 from kontur.domain.models import Finding
 from kontur.domain.statuses import FindingStatus
@@ -70,3 +71,46 @@ def assert_honest_coverage(report: Mapping[str, int]) -> None:
         raise AssertionError("extractor_missing=0: незакрытые извлечения обязаны быть видны")
     if sum(buckets.values()) != EXPECTED_PARAM_COUNT:
         raise AssertionError("разбивка coverage не сходится к 132")
+
+
+DEFAULT_HEALTHZ_URL = "http://127.0.0.1:8000/api/v1/healthz"
+_INSECURE_ENVS = frozenset({"dev", "test", "local", "demo"})
+
+
+def preflight(
+    env: Mapping[str, str],
+    *,
+    font: Path | None,
+    healthz: Callable[[], str | None] | None,
+) -> list[str]:
+    """Проверки до показа: флаг legacy-токенов, шрифт, /healthz. Пусто — можно начинать.
+
+    `healthz` возвращает None при ответе 200 `{"status":"ok"}` или текст ошибки;
+    None вместо функции — проверка ядра пропущена (офлайн-прогон).
+    """
+
+    problems: list[str] = []
+    flag = (env.get("KONTUR_ALLOW_INSECURE_DEV_AUTH") or "").strip().lower() == "true"
+    kontur_env = (env.get("KONTUR_ENV") or "dev").strip().lower()
+    if flag and kontur_env not in _INSECURE_ENVS:
+        problems.append(
+            f"флаг: KONTUR_ALLOW_INSECURE_DEV_AUTH=true при KONTUR_ENV={kontur_env} — "
+            "ядро не стартует. Для демо задайте KONTUR_ENV=demo, для pilot/prod уберите флаг"
+        )
+    elif not flag:
+        problems.append(
+            "флаг: KONTUR_ALLOW_INSECURE_DEV_AUTH не задан — учебные токены демо ядро "
+            "не примет. Для репетиции: KONTUR_ALLOW_INSECURE_DEV_AUTH=true и KONTUR_ENV=demo"
+        )
+    if font is None or not font.is_file():
+        problems.append(
+            "шрифт: нет TTF с кириллицей — POST /demo/kit ответит 503. "
+            "Нужен vendor/fonts/NotoSans-Regular.ttf или KONTUR_TEST_FONT=<путь к .ttf>"
+        )
+    if healthz is not None:
+        error = healthz()
+        if error is not None:
+            problems.append(
+                f"ядро: {error}. Поднимите compose (docs/DEMO_COLD_START.md) и повторите"
+            )
+    return problems

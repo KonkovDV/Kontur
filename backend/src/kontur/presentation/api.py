@@ -60,7 +60,7 @@ from kontur.infrastructure.pdfium_page import PageRenderError, parse_bbox, rende
 from kontur.presentation.auth import (
     _is_true,
     actor_from_roles,
-    insecure_auth_permitted,
+    assert_insecure_auth_allowed,
     parse_bearer,
 )
 from kontur.presentation.json_logging import JsonRequestLogMiddleware, configure_json_logging
@@ -76,11 +76,7 @@ from kontur.presentation.upload_limits import (
     read_bounded_upload,
 )
 
-_insecure_flag = (os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH") or "").lower() == "true"
-if _insecure_flag and not insecure_auth_permitted():
-    raise RuntimeError(
-        "KONTUR_ALLOW_INSECURE_DEV_AUTH запрещён вне KONTUR_ENV=dev|demo|test|local"
-    )
+assert_insecure_auth_allowed()
 
 
 @asynccontextmanager

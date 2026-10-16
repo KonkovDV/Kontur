@@ -62,7 +62,21 @@ def insecure_auth_permitted() -> bool:
     if not _is_true(os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH")):
         return False
     env = (os.environ.get("KONTUR_ENV") or "dev").strip().lower()
-    return env in {"dev", "test", "local", "demo"}
+    return env in INSECURE_AUTH_ENVS
+
+
+INSECURE_AUTH_ENVS: frozenset[str] = frozenset({"dev", "test", "local", "demo"})
+
+
+def assert_insecure_auth_allowed() -> None:
+    """Флаг legacy-токенов вне dev/test/local/demo (pilot, prod, …) не даёт ядру стартовать."""
+
+    if _is_true(os.environ.get("KONTUR_ALLOW_INSECURE_DEV_AUTH")) and not insecure_auth_permitted():
+        env = (os.environ.get("KONTUR_ENV") or "dev").strip().lower()
+        raise RuntimeError(
+            f"KONTUR_ALLOW_INSECURE_DEV_AUTH=true запрещён при KONTUR_ENV={env}: "
+            "разрешён только в dev|demo|test|local. Уберите флаг или задайте KONTUR_ENV=demo"
+        )
 
 
 def _legacy_context(token: str) -> AuthContext:
