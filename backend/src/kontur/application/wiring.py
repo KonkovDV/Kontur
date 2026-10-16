@@ -52,10 +52,6 @@ def build_process_store() -> Any:
     if not dsn:
         return MemoryProcessStore()
     from kontur.infrastructure.db.connecting_store import ConnectingPostgresProcessStore
-    from kontur.infrastructure.db.migrations import apply_migrations_dsn
-
-    # База, созданная до новых колонок, догоняет schema.sql до первого запроса.
-    apply_migrations_dsn(dsn)
     return ConnectingPostgresProcessStore(dsn)
 
 

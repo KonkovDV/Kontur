@@ -2,7 +2,8 @@
 
 Создаёт отдельную временную базу, разворачивает в ней schema.sql без колонки
 full_payload (как до миграции 0001), кладёт финализированный протокол, затем
-дважды применяет миграции тем же вызовом, что делает ядро при старте.
+открывает её рабочим store ядра (он применяет миграции перед первым запросом)
+и применяет миграции ещё раз.
 Проверяет: старая строка читается, триггер неизменности по-прежнему запрещает
 правку и удаление (в том числе новой колонки), повтор миграции ничего не ломает.
 """
@@ -21,11 +22,8 @@ import psycopg
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend" / "src"))
 
-from kontur.infrastructure.db.migrations import (  # noqa: E402
-    SCHEMA_PATH,
-    apply_migrations,
-    apply_migrations_dsn,
-)
+from kontur.infrastructure.db.connecting_store import ConnectingPostgresProcessStore  # noqa: E402
+from kontur.infrastructure.db.migrations import SCHEMA_PATH, apply_migrations  # noqa: E402
 from kontur.infrastructure.db.process_store import PostgresProcessStore  # noqa: E402
 
 DSN = os.environ.get("KONTUR_DB_URL", "postgresql://postgres:postgres@localhost:5432/kontur")
@@ -81,7 +79,9 @@ def main() -> int:
             if column is not None:
                 raise SystemExit("FAIL: старая схема уже содержит full_payload")
 
-        apply_migrations_dsn(target)  # старт ядра
+        # Старт ядра: первый же запрос через рабочий store применяет миграции.
+        if ConnectingPostgresProcessStore(target).load_protocol("P-OLD") != payload:
+            raise SystemExit("FAIL: ядро не прочитало старый протокол")
         with psycopg.connect(target) as connection:
             apply_migrations(connection)  # повторный старт: идемпотентно
             store = PostgresProcessStore(connection)

@@ -105,9 +105,6 @@ def test_wiring_allows_db_without_object_store_in_dev(monkeypatch) -> None:
     monkeypatch.setenv("KONTUR_DB_URL", "postgresql://kontur:kontur@localhost/kontur")
     monkeypatch.delenv("KONTUR_OBJECT_STORE_URL", raising=False)
     monkeypatch.delenv("KONTUR_S3_ENDPOINT", raising=False)
-    monkeypatch.setattr(
-        "kontur.infrastructure.db.migrations.apply_migrations_dsn", lambda dsn: None
-    )
     from kontur.application.wiring import build_workspace
     from kontur.infrastructure.db.connecting_store import ConnectingPostgresProcessStore
     from kontur.infrastructure.object_store import MemoryObjectStore
