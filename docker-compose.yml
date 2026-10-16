@@ -72,7 +72,7 @@ services:
       - minio:/bitnami/minio/data
 
   clamav:
-    image: clamav/clamav:1.4@sha256:b5b910ce43d595bf8a2fe401e34db56434602b2c755b7c2b07f00c917d04d469
+    image: clamav/clamav:1.5@sha256:638d90201ee7ee6a82d249a2fc23b132e578673b5f1f2766852b127676ca1ef6
     mem_limit: 2g
     cpus: 1.0
     pids_limit: 256
