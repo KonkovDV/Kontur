@@ -19,6 +19,10 @@
     "expected_value": { "type": ["string", "number", "boolean", "null"] },
     "actual_value": { "type": ["string", "number", "boolean", "null"] },
     "delta": { "type": ["string", "number", "null"] },
+    "unit": {
+      "type": ["string", "null"],
+      "description": "Единица actual_value: extracted.unit фрагмента роли actual из evidence_group. null — фрагмента нет, единица не извлечена или группы нет в памяти. Не пересчитывается и не берётся из правила."
+    },
     "finding_status": {
       "type": "string",
       "description": "AUTO_NO_DIFFERENCE — внутренний статус автомата (развилка п. 9.2 и 9.3). Во внешний протокол ТЗ и в ИАИС «РиН» не сериализуется: ждёт ответа организатора на вопрос 8. Карточки с этим статусом кладутся в sections.preliminary_no_difference.",

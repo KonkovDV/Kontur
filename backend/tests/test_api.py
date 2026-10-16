@@ -1077,6 +1077,7 @@ def test_findings_list_shows_value_norm_and_page(client: TestClient) -> None:
     assert all({"identifier", "clause"} == set(ref) for ref in item["normative_refs"])
     places = {(place["role"], place["file_id"], place["page"]) for place in item["places"]}
     assert ("actual", "file-rd", 1) in places
+    assert item["unit"] == "м²"
     assert "raw_token" not in json.dumps(item)
 
 
@@ -1085,3 +1086,4 @@ def test_findings_list_places_null_when_group_not_in_memory(client: TestClient) 
     response = client.get(f"/api/v1/processes/{process_id}/findings", headers=INSPECTOR)
     (item,) = [row for row in response.json()["findings"] if row["finding_id"] == "f-1"]
     assert item["places"] is None
+    assert item["unit"] is None
