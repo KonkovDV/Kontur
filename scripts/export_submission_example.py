@@ -9,8 +9,8 @@
 
 Запуск из корня клона: `python scripts/export_submission_example.py`.
 Проверка без записи: `python scripts/export_submission_example.py --check`
-(собирает во временный каталог и сравнивает с файлами в git; отличается только
-`versions.git_sha`, он от проверки исключён).
+(собирает во временный каталог и сравнивает с файлами в git; от проверки исключены
+`versions.git_sha` и хеши файлов комплекта: они зависят от коммита, шрифта и pdfium).
 
 Сборка воспроизводима: в PDF комплекта фиксируются CreationDate и /ID, у
 протоколов постоянный protocol_id. Два запуска подряд дают одинаковые байты.
@@ -166,10 +166,27 @@ def build(target: Path) -> None:
 
 
 def _without_git_sha(raw: bytes) -> object:
+    """JSON без полей, зависящих от машины сборки.
+
+    ``versions.git_sha`` меняется с каждым коммитом. ``file_hash`` и ``manifest_hash``
+    зависят от байтов PDF комплекта, а в PDF встраивается системный TTF и версия
+    pdfium: на другой машине хеши другие при том же содержании. Остальное сравнивается.
+    """
+
     payload = json.loads(raw)
-    versions = payload.get("versions") if isinstance(payload, dict) else None
+    if not isinstance(payload, dict):
+        return payload
+    versions = payload.get("versions")
     if isinstance(versions, dict):
         versions.pop("git_sha", None)
+    manifest = payload.get("input_manifest")
+    if isinstance(manifest, dict):
+        manifest.pop("manifest_hash", None)
+        files = manifest.get("files")
+        if isinstance(files, list):
+            for item in files:
+                if isinstance(item, dict):
+                    item.pop("file_hash", None)
     return payload
 
 

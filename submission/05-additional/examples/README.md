@@ -7,7 +7,9 @@
 `versions.git_sha` — SHA репозитория в момент сборки, не номер влития этого пакета.
 Сборка воспроизводима: PDF комплекта с постоянными CreationDate и /ID, `protocol_id` постоянный.
 CI запускает `python scripts/export_submission_example.py --check`: файлы должны совпасть со
-свежей сборкой (кроме `versions.git_sha`).
+свежей сборкой, кроме `versions.git_sha` и хешей файлов `input_manifest`: в PDF комплекта
+встраивается системный шрифт, поэтому байты и хеши зависят от машины. На одной машине два
+запуска подряд дают одинаковые байты.
 `sections.completeness` — таблица (1) комплектности, 47 строк `STAGE_UPLOADED_NOT_VERIFIED`
 с `counts_as_violation: false`. Это не находки и не нарушения.
 
