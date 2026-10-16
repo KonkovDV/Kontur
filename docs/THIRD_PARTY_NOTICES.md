@@ -9,7 +9,7 @@
 | fastapi | 0.141.1 | MIT |
 | uvicorn | 0.53.0 | BSD-3-Clause |
 | pydantic | 2.13.5 | MIT |
-| pypdfium2 | 5.13.0 | BSD-3-Clause и Apache-2.0 (так написано в метаданных; внутри — лицензии зависимостей, включая PDFium) |
+| pypdfium2 | 5.13.0 (закреплена точно) | BSD-3-Clause и Apache-2.0 (так написано в метаданных; внутри — лицензии зависимостей, включая PDFium) |
 | pdfminer.six | 20260107 | MIT |
 | jsonschema | 4.26.0 | MIT |
 | PyYAML | 6.0.3 | MIT |
