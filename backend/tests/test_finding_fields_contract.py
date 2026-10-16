@@ -43,5 +43,15 @@ def test_documented_gaps_are_still_gaps() -> None:
     get = openapi["paths"]["/processes/{process_id}/findings"]["get"]
     schema = get["responses"]["200"]["content"]["application/json"]["schema"]
     item = schema["properties"]["findings"]["items"]["properties"]
-    for key in ("actual_value", "normative_refs", "page"):
-        assert key not in item
+    assert "unit" not in item
+
+
+def test_findings_list_carries_value_norm_and_page() -> None:
+    openapi = yaml.safe_load((ROOT / "contracts" / "openapi.yaml").read_text(encoding="utf-8"))
+    get = openapi["paths"]["/processes/{process_id}/findings"]["get"]
+    schema = get["responses"]["200"]["content"]["application/json"]["schema"]
+    item = schema["properties"]["findings"]["items"]["properties"]
+    for key in ("expected_value", "actual_value", "delta", "normative_refs", "places"):
+        assert key in item
+    assert "page" in item["places"]["items"]["properties"]
+    assert "clause" in item["normative_refs"]["items"]["properties"]

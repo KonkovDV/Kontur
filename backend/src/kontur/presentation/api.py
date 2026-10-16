@@ -596,10 +596,56 @@ def list_findings(
                 "section": _matrix_section(item.rule_code),
                 "rationale": item.rationale,
                 "evidence_group_id": item.evidence_group_id,
+                "expected_value": item.expected_value,
+                "actual_value": item.actual_value,
+                "delta": item.delta,
+                "normative_refs": _rule_norms(item.rule_code),
+                "places": _finding_places(record, item.evidence_group_id),
             }
             for item in record.findings.values()
         ],
     }
+
+
+def _rule_norms(rule_code: str) -> list[dict[str, str | None]]:
+    """Пункты норм из JSON правила. Нет правила или ссылок — пустой список."""
+
+    try:
+        rule = _rules().get(rule_code)
+    except KeyError:
+        return []
+    raw = rule.get("normative_refs")
+    if not isinstance(raw, list):
+        return []
+    norms: list[dict[str, str | None]] = []
+    for ref in raw:
+        if not isinstance(ref, dict) or not isinstance(ref.get("identifier"), str):
+            continue
+        clause = ref.get("clause")
+        norms.append(
+            {"identifier": ref["identifier"], "clause": clause if isinstance(clause, str) else None}
+        )
+    return norms
+
+
+def _finding_places(
+    record: ProcessRecord, evidence_group_id: str | None
+) -> list[dict[str, object]] | None:
+    """Документ и страница фрагментов. null — группы нет в памяти процесса."""
+
+    if evidence_group_id is None:
+        return []
+    group = record.evidence_groups.get(evidence_group_id)
+    if group is None:
+        return None
+    return [
+        {
+            "role": fragment.role.value,
+            "file_id": fragment.document.file_id,
+            "page": fragment.page,
+        }
+        for fragment in group.fragments
+    ]
 
 
 def _matrix_section(rule_code: str) -> str | None:
