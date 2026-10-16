@@ -5,6 +5,11 @@
 Оба файла проходят `submission.schema.json` и `protocol.schema.json`.
 Строк `CONFIRMED_VIOLATION` и `AUTO_NO_DIFFERENCE` нет.
 `versions.git_sha` — SHA репозитория в момент сборки, не номер влития этого пакета.
+Сборка воспроизводима: PDF комплекта с постоянными CreationDate и /ID, `protocol_id` постоянный.
+CI запускает `python scripts/export_submission_example.py --check`: файлы должны совпасть со
+свежей сборкой (кроме `versions.git_sha`).
+`sections.completeness` — таблица (1) комплектности, 47 строк `STAGE_UPLOADED_NOT_VERIFIED`
+с `counts_as_violation: false`. Это не находки и не нарушения.
 
 | Папка | Исход |
 |---|---|

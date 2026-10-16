@@ -36,7 +36,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "AR-043",
@@ -52,7 +52,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "AR-045",
@@ -76,7 +76,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "AR-048",
@@ -84,7 +84,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "AR-049",
@@ -92,7 +92,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "AR-050",
@@ -108,7 +108,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "AR-052",
@@ -180,7 +180,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: строки ведомости не найдены"
     },
     {
       "parameter_code": "IOS3-075",
@@ -196,7 +196,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: строки ведомости не найдены"
     },
     {
       "parameter_code": "IOS4-077",
@@ -228,7 +228,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "KR-054",
@@ -236,7 +236,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "KR-055",
@@ -289,7 +289,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: строки ведомости не найдены"
     },
     {
       "parameter_code": "KR-060",
@@ -305,7 +305,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: строки ведомости не найдены"
     },
     {
       "parameter_code": "KR-062",
@@ -329,7 +329,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "KR-065",
@@ -337,7 +337,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "KR-066",
@@ -369,7 +369,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "ODI-117",
@@ -377,7 +377,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "ODI-118",
@@ -385,7 +385,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "ODI-119",
@@ -409,7 +409,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "ODI-122",
@@ -465,7 +465,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "POD-091",
@@ -521,7 +521,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "POS-081",
@@ -529,7 +529,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "POS-082",
@@ -537,7 +537,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "POS-083",
@@ -545,7 +545,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "POS-084",
@@ -553,7 +553,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "POS-085",
@@ -569,7 +569,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "POS-087",
@@ -617,7 +617,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "PPM-105",
@@ -625,7 +625,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "PPM-106",
@@ -649,7 +649,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "PPM-109",
@@ -934,7 +934,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "SPZU-028",
@@ -942,7 +942,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "SPZU-029",
@@ -958,7 +958,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "SPZU-031",
@@ -966,7 +966,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "SPZU-032",
@@ -974,7 +974,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "SPZU-033",
@@ -982,7 +982,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "SPZU-034",
@@ -1014,7 +1014,7 @@
       "violation_label": "COMPARISON_IMPOSSIBLE",
       "evidence": [],
       "protocol_status": "COMPARISON_IMPOSSIBLE",
-      "rationale": "PD: якорь или число не найдены"
+      "rationale": "PD: MEASUREMENT_REQUIRED"
     },
     {
       "parameter_code": "SPZU-038",
