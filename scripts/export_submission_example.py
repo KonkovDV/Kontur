@@ -173,6 +173,28 @@ def _without_git_sha(raw: bytes) -> object:
     return payload
 
 
+def first_difference(left: object, right: object, path: str = "$") -> str | None:
+    """Путь к первому расхождению двух JSON или None."""
+
+    if isinstance(left, dict) and isinstance(right, dict):
+        for key in sorted(set(left) | set(right)):
+            if key not in left or key not in right:
+                return f"{path}.{key}"
+            found = first_difference(left[key], right[key], f"{path}.{key}")
+            if found:
+                return found
+        return None
+    if isinstance(left, list) and isinstance(right, list):
+        if len(left) != len(right):
+            return f"{path}[len {len(left)} != {len(right)}]"
+        for index, (a, b) in enumerate(zip(left, right, strict=True)):
+            found = first_difference(a, b, f"{path}[{index}]")
+            if found:
+                return found
+        return None
+    return None if left == right else f"{path}: {left!r} != {right!r}"
+
+
 def drift(target: Path = TARGET) -> list[str]:
     """Файлы примеров, отличные от свежей сборки (без учёта versions.git_sha)."""
 
@@ -183,10 +205,14 @@ def drift(target: Path = TARGET) -> list[str]:
         for folder, name in _FILES:
             committed = target / folder / name
             built = fresh / folder / name
-            if not committed.is_file() or _without_git_sha(
-                committed.read_bytes()
-            ) != _without_git_sha(built.read_bytes()):
-                changed.append(f"{folder}/{name}")
+            if not committed.is_file():
+                changed.append(f"{folder}/{name}: нет файла")
+                continue
+            where = first_difference(
+                _without_git_sha(committed.read_bytes()), _without_git_sha(built.read_bytes())
+            )
+            if where:
+                changed.append(f"{folder}/{name}: {where}")
         return changed
 
 
