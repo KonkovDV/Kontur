@@ -173,6 +173,45 @@ def _upload(protocol: Mapping[str, object]) -> tuple[str, str, str]:
     return _text(raw.get("pd")), _text(raw.get("rd")), _text(raw.get("id"))
 
 
+def _revision_changes(protocol: Mapping[str, object]) -> list[Mapping[str, object]]:
+    raw = protocol.get("revision_changes", [])
+    if not isinstance(raw, list):
+        raise ValueError("revision_changes")
+    return [item for item in raw if isinstance(item, Mapping)]
+
+
+def _change_rows(pair: Mapping[str, object]) -> list[Mapping[str, object]]:
+    raw = pair.get("changes", [])
+    return [item for item in raw if isinstance(item, Mapping)] if isinstance(raw, list) else []
+
+
+def _side(change: Mapping[str, object], key: str) -> str:
+    value = change.get(key)
+    if not isinstance(value, Mapping):
+        return "—"
+    unit = value.get("unit")
+    text = _text(value.get("value"))
+    return f"{text} {unit}".strip() if isinstance(unit, str) else text
+
+
+def _change_line(change: Mapping[str, object]) -> str:
+    return (
+        f"{_text(change.get('rule_code'))}  {_text(change.get('kind'))}  "
+        f"{_side(change, 'old')} → {_side(change, 'new')}"
+    )
+
+
+def _pair_title(pair: Mapping[str, object]) -> str:
+    return (
+        f"{_text(pair.get('document_code'))}: редакция {_text(pair.get('old_revision'))} "
+        f"({_text(pair.get('old_file_id'))}) → {_text(pair.get('new_revision'))} "
+        f"({_text(pair.get('new_file_id'))})"
+    )
+
+
+_REVISION_TITLE = "Изменения между редакциями (справочно, не находки)"
+
+
 def render_docx(
     protocol: Mapping[str, object],
     cards: Mapping[str, Mapping[str, object]] | None = None,
@@ -222,6 +261,13 @@ def render_docx(
                     document.add_paragraph(f"Доказательство: {_text(ref)}")
     if card_count == 0:
         document.add_paragraph("Карточек нет.")
+    pairs = _revision_changes(protocol)
+    if pairs:
+        document.add_heading(_REVISION_TITLE, level=1)
+        for pair in pairs:
+            document.add_paragraph(_pair_title(pair))
+            for change in _change_rows(pair):
+                document.add_paragraph(_change_line(change))
     document.add_paragraph(f"Число нарушений: {_text(protocol.get('violation_count'))}")
     buffer = BytesIO()
     document.save(buffer)
@@ -285,6 +331,36 @@ def render_xml(
                 ET.SubElement(card, "evidence_ref").text = _text(ref)
         for key, value in _fact_pairs(row, cards):
             ET.SubElement(card, key).text = value
+    pairs = _revision_changes(protocol)
+    if pairs:
+        changes_root = ET.SubElement(root, "revision_changes")
+        for pair in pairs:
+            pair_node = ET.SubElement(
+                changes_root,
+                "revision_pair",
+                {
+                    "document_code": _text(pair.get("document_code")),
+                    "old_file_id": _text(pair.get("old_file_id")),
+                    "new_file_id": _text(pair.get("new_file_id")),
+                    "old_revision": _text(pair.get("old_revision")),
+                    "new_revision": _text(pair.get("new_revision")),
+                },
+            )
+            for change in _change_rows(pair):
+                change_node = ET.SubElement(
+                    pair_node,
+                    "change",
+                    {
+                        "rule_code": _text(change.get("rule_code")),
+                        "kind": _text(change.get("kind")),
+                        "usable_for_automatic_finding": (
+                            "true" if change.get("usable_for_automatic_finding") else "false"
+                        ),
+                    },
+                )
+                for key in ("old", "new"):
+                    if isinstance(change.get(key), Mapping):
+                        ET.SubElement(change_node, key).text = _side(change, key)
     count = protocol.get("violation_count")
     if not isinstance(count, int) or count < 0:
         raise ValueError("violation_count")
@@ -384,6 +460,13 @@ def render_pdf(
                     line(f"Доказательство: {_text(ref)}")
     if card_count == 0:
         line("Карточек нет.")
+    pairs = _revision_changes(protocol)
+    if pairs:
+        line(_REVISION_TITLE, 14)
+        for pair in pairs:
+            line(_pair_title(pair))
+            for change in _change_rows(pair):
+                line(_change_line(change))
     line(f"Число нарушений: {_text(protocol.get('violation_count'))}")
     sheet.save()
     payload = buffer.getvalue()

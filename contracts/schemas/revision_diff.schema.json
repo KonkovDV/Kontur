@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kontur.local/schemas/revision_diff.schema.json",
+  "title": "RevisionDiff",
+  "description": "Изменения параметров матрицы между редакцией и её зафиксированным предшественником. Справка инспектору: не находка, не finding_status, не входит в violation_count и не уходит в РиН. Пара берётся только из predecessor_file_id, порядок редакций не угадывается. Значения сравниваются как извлечены, без пересчёта единиц.",
+  "type": "object",
+  "required": ["old_file_id", "new_file_id", "document_code", "old_revision", "new_revision", "changes"],
+  "additionalProperties": false,
+  "properties": {
+    "process_id": { "type": "string" },
+    "old_file_id": { "type": "string" },
+    "new_file_id": { "type": "string" },
+    "document_code": { "type": "string" },
+    "old_revision": { "type": "string" },
+    "new_revision": { "type": "string" },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule_code", "kind", "old", "new", "usable_for_automatic_finding"],
+        "additionalProperties": false,
+        "properties": {
+          "rule_code": { "type": "string" },
+          "kind": { "type": "string", "enum": ["ADDED", "REMOVED", "CHANGED", "UNCHANGED", "AMBIGUOUS"] },
+          "old": { "$ref": "#/$defs/value" },
+          "new": { "$ref": "#/$defs/value" },
+          "usable_for_automatic_finding": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "value": {
+      "description": "null — значения нет в этой редакции или оно неоднозначно (AMBIGUOUS).",
+      "type": ["object", "null"],
+      "required": ["value", "unit", "page", "grounded"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": ["string", "number", "boolean", "null"] },
+        "unit": { "type": ["string", "null"] },
+        "page": { "type": "integer", "minimum": 1 },
+        "grounded": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -949,3 +949,118 @@ def test_mass_confirm_audits_each_candidate_and_refuses_a_mixed_batch(client: Te
     assert {item[2]["finding_id"] for item in reviews} == {"f-1", "f-2"}
     statuses = {item.finding_id: item.finding_status for item in record.findings.values()}
     assert statuses["f-4"] is FindingStatus.MISSING_EVIDENCE
+
+
+def _revision_fragment(
+    fid: str, document: DocumentRef, value: float, role: EvidenceRole
+) -> EvidenceFragment:
+    box = ((0.1, 0.1), (0.2, 0.1), (0.2, 0.2), (0.1, 0.2))
+    return EvidenceFragment(
+        fragment_id=fid,
+        role=role,
+        document=document,
+        page=2,
+        polygon_source=box,
+        polygon_norm=box,
+        extracted=Extraction(
+            raw_token=str(value),
+            engine=ExtractionEngine.VECTOR,
+            engine_version="pdfium",
+            confidence=0.9,
+            normalized_value=value,
+            unit="м²",
+            grounded_in_source_tokens=True,
+        ),
+    )
+
+
+def _attach_revisions(process_id: str) -> None:
+    old = DocumentRef(
+        file_id="pz-r0",
+        file_hash="c" * 64,
+        doc_stage=DocStage.PD,
+        document_code="ПЗ-001",
+        revision="0",
+        approval_status=ApprovalStatus.APPROVED,
+    )
+    new = replace(
+        old, file_id="pz-r1", file_hash="d" * 64, revision="1", predecessor_file_id="pz-r0"
+    )
+    record = app.state.workspace.get(process_id)
+    assert record is not None
+    record.evidence_groups["eg-rev"] = EvidenceGroup(
+        evidence_group_id="eg-rev",
+        object_id=record.object_id,
+        rule_code="PZ-001",
+        matrix_version="draft-0",
+        fragments=(
+            _revision_fragment("r0", old, 1250.5, EvidenceRole.EXPECTED),
+            _revision_fragment("r1", new, 1300.0, EvidenceRole.ACTUAL),
+        ),
+    )
+
+
+def test_revision_diff_endpoint_reports_change(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    _attach_revisions(process_id)
+    response = client.get(
+        f"/api/v1/processes/{process_id}/revisions/pz-r1/diff", headers=INSPECTOR
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert (body["old_file_id"], body["new_file_id"]) == ("pz-r0", "pz-r1")
+    (change,) = body["changes"]
+    assert change["rule_code"] == "PZ-001"
+    assert change["kind"] == "CHANGED"
+    assert change["old"]["value"] == 1250.5
+    assert change["new"]["value"] == 1300.0
+    assert change["usable_for_automatic_finding"] is True
+
+
+def test_revision_diff_endpoint_never_guesses_predecessor(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    _attach_revisions(process_id)
+    first = client.get(f"/api/v1/processes/{process_id}/revisions/pz-r0/diff", headers=INSPECTOR)
+    assert first.status_code == 409
+    missing = client.get(
+        f"/api/v1/processes/{process_id}/revisions/no-such/diff", headers=INSPECTOR
+    )
+    assert missing.status_code == 404
+
+
+def test_revision_diff_endpoint_is_object_scoped(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    _attach_revisions(process_id)
+    path = f"/api/v1/processes/{process_id}/revisions/pz-r1/diff"
+    assert client.get(path).status_code == 401
+    assert client.get(path, headers=OTHER_INSPECTOR).status_code == 403
+
+
+def test_protocol_carries_revision_changes_outside_findings(client: TestClient) -> None:
+    process_id = _seed_completed(client)
+    _attach_revisions(process_id)
+    response = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR)
+    assert response.status_code == 200
+    body = response.json()
+    (pair,) = body["revision_changes"]
+    assert pair["new_file_id"] == "pz-r1"
+    assert pair["changes"][0]["kind"] == "CHANGED"
+    rows = [row for rows in body["sections"].values() for row in rows]
+    assert all(row.get("rule_code") != "PZ-001" or "finding_id" in row for row in rows)
+    xml = client.get(f"/api/v1/processes/{process_id}/protocol.xml", headers=INSPECTOR)
+    assert xml.status_code == 200
+    assert b'<revision_pair document_code="\xd0\x9f\xd0\x97-001"' in xml.content
+    assert b'kind="CHANGED"' in xml.content
+
+
+def test_revision_diff_and_protocol_match_contract_schemas(client: TestClient) -> None:
+    from kontur.cli.run_package import _schema_validator
+
+    process_id = _seed_completed(client)
+    _attach_revisions(process_id)
+    diff = client.get(
+        f"/api/v1/processes/{process_id}/revisions/pz-r1/diff", headers=INSPECTOR
+    ).json()
+    _schema_validator("revision_diff.schema.json").validate(diff)
+    protocol = client.get(f"/api/v1/processes/{process_id}/protocol", headers=INSPECTOR).json()
+    _schema_validator("protocol.schema.json").validate(protocol)

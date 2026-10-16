@@ -17,7 +17,16 @@ from enum import StrEnum
 
 from kontur.domain.models import DocumentRef, EvidenceFragment, EvidenceGroup
 
-__all__ = ["ChangeKind", "ParameterChange", "RevisionChainError", "diff_revisions"]
+__all__ = [
+    "ChangeKind",
+    "ParameterChange",
+    "RevisionChainError",
+    "change_to_schema",
+    "diff_revisions",
+    "documents_in",
+    "revision_changes",
+    "revision_diff_payload",
+]
 
 
 class ChangeKind(StrEnum):
@@ -107,3 +116,75 @@ def diff_revisions(
             kind = ChangeKind.CHANGED
         changes.append(ParameterChange(code, kind, old_value, new_value))
     return changes
+
+
+def _value_to_schema(value: ValueAt | None) -> dict[str, object] | None:
+    if value is None:
+        return None
+    return {
+        "value": value.value,
+        "unit": value.unit,
+        "page": value.page,
+        "grounded": value.grounded,
+    }
+
+
+def change_to_schema(change: ParameterChange) -> dict[str, object]:
+    return {
+        "rule_code": change.rule_code,
+        "kind": change.kind.value,
+        "old": _value_to_schema(change.old),
+        "new": _value_to_schema(change.new),
+        "usable_for_automatic_finding": change.usable_for_automatic_finding,
+    }
+
+
+def documents_in(groups: Iterable[EvidenceGroup]) -> dict[str, DocumentRef]:
+    """Documents referenced by evidence fragments and resolved revisions, by file_id."""
+    found: dict[str, DocumentRef] = {}
+    for group in groups:
+        for ref in group.resolved_revisions:
+            found.setdefault(ref.file_id, ref)
+        for fragment in group.fragments:
+            found.setdefault(fragment.document.file_id, fragment.document)
+    return found
+
+
+def revision_diff_payload(
+    groups: Iterable[EvidenceGroup], old: DocumentRef, new: DocumentRef
+) -> dict[str, object]:
+    """JSON body of one revision pair: contracts/schemas/revision_diff.schema.json."""
+    changes = diff_revisions(groups, old, new)
+    return {
+        "old_file_id": old.file_id,
+        "new_file_id": new.file_id,
+        "document_code": new.document_code,
+        "old_revision": old.revision,
+        "new_revision": new.revision,
+        "changes": [change_to_schema(change) for change in changes],
+    }
+
+
+def revision_changes(groups: Iterable[EvidenceGroup]) -> list[dict[str, object]]:
+    """Every explicit revision pair with at least one non-UNCHANGED parameter.
+
+    Only pairs recorded as predecessor/successor are diffed; documents without a recorded
+    predecessor in the package are skipped, never paired by label.
+    """
+    items = list(groups)
+    documents = documents_in(items)
+    pairs: list[dict[str, object]] = []
+    for file_id in sorted(documents):
+        new = documents[file_id]
+        predecessor = new.predecessor_file_id
+        if predecessor is None or predecessor not in documents:
+            continue
+        payload = revision_diff_payload(items, documents[predecessor], new)
+        changes = payload["changes"]
+        assert isinstance(changes, list)
+        payload["changes"] = [
+            change for change in changes if change["kind"] != ChangeKind.UNCHANGED.value
+        ]
+        if payload["changes"]:
+            pairs.append(payload)
+    return pairs

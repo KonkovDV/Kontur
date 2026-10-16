@@ -26,6 +26,7 @@ from kontur.application.protocol import (
     reject_placeholder_payload,
 )
 from kontur.application.retry_policy import next_sync_attempt
+from kontur.application.revision_diff import revision_changes
 from kontur.application.scenarios import CompletenessMap, detect_scenario
 from kontur.domain.models import ApprovalStatus, DocStage, EvidenceGroup, Finding
 from kontur.domain.state_machines import (
@@ -369,6 +370,7 @@ class ProcessWorkspace:
             process_state=record.process_state,
             input_manifest_hash=record.input_manifest_hash,
             version=version,
+            revision_changes=revision_changes(record.evidence_groups.values()),
         )
 
     def get(self, process_id: str) -> ProcessRecord | None:

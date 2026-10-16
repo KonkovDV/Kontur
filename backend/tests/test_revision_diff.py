@@ -115,3 +115,18 @@ def test_revision_order_is_never_guessed() -> None:
         diff_revisions([], NEW, OLD)
     with pytest.raises(RevisionChainError):
         diff_revisions([], OLD, _doc("f3", "2"))
+
+
+def test_protocol_payload_lists_changed_pairs_and_rin_drops_them() -> None:
+    from kontur.application.protocol import protocol_for_rin
+    from kontur.application.revision_diff import revision_changes
+
+    groups = [
+        _group("PZ-002", _frag("a", OLD, 10.0), _frag("b", NEW, 12.0)),
+        _group("PZ-003", _frag("c", OLD, 5.0), _frag("d", NEW, 5.0)),
+    ]
+    (pair,) = revision_changes(groups)
+    assert [c["rule_code"] for c in pair["changes"]] == ["PZ-002"]  # type: ignore[union-attr]
+    assert revision_changes(groups[1:]) == []
+    rin = protocol_for_rin({"sections": {}, "revision_changes": [pair]})
+    assert "revision_changes" not in rin
