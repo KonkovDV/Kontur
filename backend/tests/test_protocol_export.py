@@ -116,6 +116,7 @@ def test_exports_print_expected_actual_and_fragment() -> None:
                     "expected_value": "1250",
                     "actual_value": "1100",
                     "delta": "150",
+                    "reason_code": "OCR_ERROR",
                 }
             ],
             "confirmed": [],
@@ -132,6 +133,7 @@ def test_exports_print_expected_actual_and_fragment() -> None:
             "document_code": "KR-1",
             "revision": "1",
             "approval_basis": "PACKAGE_DEFAULT",
+            "approval_status": "APPROVED",
             "tolerance": "abs 1",
         }
     }
@@ -143,6 +145,9 @@ def test_exports_print_expected_actual_and_fragment() -> None:
     assert "Ожидаемое: 1250" in text
     assert "Фактическое: 1100" in text
     assert "Полигон:" in text
+    assert "Статус утверждения: APPROVED" in text
+    assert "Причина: OCR_ERROR" in text
+    assert "approval_status" in xml and "reason_code" in xml
     pdf_bytes = render_pdf(protocol, cards)
     assert pdf_bytes.startswith(b"%PDF")
     assert b"AUTO_NO_DIFFERENCE" not in pdf_bytes

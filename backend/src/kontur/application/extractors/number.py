@@ -91,6 +91,8 @@ def _regex(rule: dict[str, object]) -> re.Pattern[str]:
 
 
 _DEFAULT_NUMBER_STEPS = ("nfc", "collapse_spaces", "decimal_comma", "strip_unit")
+_DIMENSION_PAIR = re.compile(r"\d\s*[×xх]\s*\d")
+_DIMENSION_MARK = re.compile(r"^[×xх]$")
 
 
 def _steps(rule: dict[str, object]) -> tuple[str, ...]:
@@ -224,6 +226,34 @@ def _note_flags(tokens: Sequence[PageToken]) -> tuple[bool, ...]:
     return tuple(flags)
 
 
+def _part_of_drawing_dimension(
+    tokens: Sequence[PageToken],
+    index: int,
+    raw: str,
+    rule: dict[str, object],
+) -> bool:
+    """Размер на чертеже (500×300) не значение скалярного правила.
+
+    Правило, которое само просит произведение сторон, этот размер читает.
+    """
+
+    if "multiply_dimensions" in _steps(rule):
+        return False
+    pieces = (raw, tokens[index].text)
+    if any(
+        _DIMENSION_PAIR.search(piece) or _DIMENSION_MARK.fullmatch(piece.strip())
+        for piece in pieces
+    ):
+        return True
+    for neighbor in (index - 1, index + 1):
+        if neighbor < 0 or neighbor >= len(tokens):
+            continue
+        text = tokens[neighbor].text.strip()
+        if _DIMENSION_MARK.fullmatch(text) or _DIMENSION_PAIR.search(text):
+            return True
+    return False
+
+
 def _reads(
     tokens: Sequence[PageToken], rule: dict[str, object], *, nearest_at_end: bool
 ) -> list[_Read]:
@@ -242,8 +272,10 @@ def _reads(
         token = tokens[local]
         if _ROW_PREFIX.fullmatch(token.text.strip()):
             continue
+        raw = _captured_number(match)
+        if _part_of_drawing_dimension(tokens, local, raw, rule):
+            continue
         try:
-            raw = _captured_number(match)
             source_unit = measure_unit_of_match(text, match)
             if measure_dimensions_conflict(source_unit, target):
                 continue

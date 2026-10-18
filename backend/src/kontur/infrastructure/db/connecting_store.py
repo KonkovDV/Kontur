@@ -53,6 +53,11 @@ class ConnectingPostgresProcessStore:
             self._store(connection).save(snapshot)
             connection.commit()
 
+    def note_sync(self, snapshot: ProcessSnapshot) -> None:
+        with self._connect() as connection:
+            self._store(connection).note_sync(snapshot)
+            connection.commit()
+
     def save_finding(self, process_id: str, finding: Finding) -> None:
         with self._connect() as connection:
             self._store(connection).save_finding(process_id, finding)

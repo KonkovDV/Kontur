@@ -85,8 +85,10 @@ _FACT_KEYS: tuple[tuple[str, str], ...] = (
     ("document_code", "Шифр"),
     ("revision", "Редакция"),
     ("approval_basis", "Основание утверждения"),
+    ("approval_status", "Статус утверждения"),
     ("page", "Страница"),
     ("polygon_norm", "Полигон"),
+    ("reason_code", "Причина"),
 )
 
 
@@ -152,6 +154,9 @@ def cards_from_groups(
                 "revision": "; ".join(item.document.revision for item in fragments),
                 "approval_basis": "; ".join(
                     _basis_label(item.document.approval_basis) for item in fragments
+                ),
+                "approval_status": "; ".join(
+                    item.document.approval_status.value for item in fragments
                 ),
                 "page": "; ".join(str(item.page) for item in fragments),
                 "polygon_norm": json.dumps(

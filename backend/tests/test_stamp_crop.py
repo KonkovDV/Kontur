@@ -23,6 +23,15 @@ def _tok(text: str, x: float, y: float, *, page: int = 1) -> PageToken:
     return PageToken(text=text, page=page, polygon_source=poly, polygon_norm=poly)
 
 
+def test_large_sheet_crop_stays_in_the_title_block_corner() -> None:
+    point = 72.0 / 25.4
+    media = (0.0, 0.0, 841.0 * point, 1189.0 * point)
+    x0, y0, x1, y1 = stamp_crop_box(media_box=media)
+    assert x0 > 0.7 and y0 > 0.9
+    assert x1 == pytest.approx(1.0) and y1 == pytest.approx(1.0)
+    assert polygon_in_unit_square(stamp_crop_polygon(media_box=media))
+
+
 def test_default_stamp_region_in_unit_square() -> None:
     poly = stamp_region_polygon()
     assert polygon_in_unit_square(poly)

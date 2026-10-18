@@ -320,6 +320,56 @@ def test_key_fields_tuple_is_the_exact_match_contract() -> None:
     assert KEY_FIELDS == ("document_code", "revision", "sheet")
 
 
+def test_standard_and_certificate_are_not_a_cipher() -> None:
+    standard = _read(_tok("обозначение ГОСТ 21.101-2020", 0.55, 0.86))
+    certificate = _read(_tok("шифр: РОСС-RU-АЯ04-В-12345", 0.55, 0.86))
+    expertise = _read(_tok("шифр: 77-4-59-3-19-2022", 0.55, 0.86))
+    assert standard.document_code is None
+    assert certificate.document_code is None
+    assert expertise.document_code is None
+    kept = _read(
+        _tok("обозначение ГОСТ 21.101-2020", 0.55, 0.82),
+        _tok("АНО/150321/1-П-АР", 0.55, 0.90),
+    )
+    assert kept.document_code == "АНО/150321/1-П-АР"
+
+
+def test_large_sheet_reads_the_title_block_not_the_drawing() -> None:
+    point = 72.0 / 25.4
+    media = (0.0, 0.0, 841.0 * point, 1189.0 * point)
+    passport = read_passport(
+        (
+            _tok("шифр: 99999-XX", 0.05, 0.96),
+            _tok("шифр: 12345-PZ", 0.80, 0.95),
+        ),
+        file_id="file-pd",
+        file_hash=HASH,
+        pages=1,
+        media_box=media,
+    )
+    assert passport.document_code == "12345-PZ"
+
+
+def test_sheet_total_is_not_the_sheet_number() -> None:
+    alone = _read(_tok("листов 17", 0.70, 0.86))
+    assert alone.sheet is None
+    paired = _read(
+        _tok("Лист", 0.40, 0.86),
+        _tok("3", 0.60, 0.86),
+        _tok("Листов", 0.78, 0.86),
+        _tok("17", 0.78, 0.91),
+    )
+    assert paired.sheet == "3"
+
+
+def test_inset_title_block_does_not_replace_the_stamp_sheet() -> None:
+    passport = _read(
+        _tok("лист 2", 0.08, 0.72),
+        _tok("лист 26", 0.78, 0.92),
+    )
+    assert passport.sheet == "26"
+
+
 def test_gost_designation_in_the_stamp_is_the_cipher() -> None:
     passport = _read(_tok("АНО/150321/1-П-АР", 0.55, 0.86))
     assert passport.document_code == "АНО/150321/1-П-АР"

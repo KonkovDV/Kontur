@@ -6,6 +6,7 @@
 
 | Файл | Содержание |
 |---|---|
+| [OSINT-2026-10-18.md](OSINT-2026-10-18.md) | Полный публичный список репозиториев задачи №10 на 18.10 |
 | [COMPETITORS-OSINT-2026-10-15.md](COMPETITORS-OSINT-2026-10-15.md) | Финалисты, peers GH, коммерция, Murder Board |
 | [TOP10-GH-REPOS.md](TOP10-GH-REPOS.md) | Топ‑10 GH + сверка с модулями ТЗ §7 |
 

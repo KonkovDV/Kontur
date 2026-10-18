@@ -84,6 +84,8 @@ class ProcessStore(Protocol):
 
     def save(self, snapshot: ProcessSnapshot) -> None: ...
 
+    def note_sync(self, snapshot: ProcessSnapshot) -> None: ...
+
     def save_finding(self, process_id: str, finding: Finding) -> None: ...
 
     def load_findings(self, process_id: str) -> list[Finding]: ...
@@ -402,6 +404,9 @@ class MemoryProcessStore:
     def save(self, snapshot: ProcessSnapshot) -> None:
         validate_snapshot(snapshot)
         self._rows[snapshot.process_id] = snapshot
+
+    def note_sync(self, snapshot: ProcessSnapshot) -> None:
+        self.save(snapshot)
 
     def save_finding(self, process_id: str, finding: Finding) -> None:
         key = finding.evidence_group_id or finding.finding_id
@@ -808,6 +813,39 @@ class PostgresProcessStore:
                 "PostgreSQL FINALIZED save requires atomic versioned protocol materialization"
             )
         self._write_process(snapshot)
+
+    def note_sync(self, snapshot: ProcessSnapshot) -> None:
+        """Сдвинуть очередь РиН у уже финализированного процесса, не переписывая протокол."""
+
+        validate_snapshot(snapshot)
+        if snapshot.process_state is not ProcessState.FINALIZED or not snapshot.protocol_id:
+            raise ProtocolMaterializationRequiredError(
+                "выгрузка только у финализированного протокола"
+            )
+        updated = self._connection.execute(  # type: ignore[attr-defined]
+            """
+            UPDATE processes
+               SET sync_state = %(sync_state)s,
+                   sync_attempts = %(sync_attempts)s,
+                   last_error_code = %(last_error_code)s,
+                   updated_at = now()
+             WHERE id = %(id)s
+               AND process_state = 'FINALIZED'
+               AND protocol_id = %(protocol_id)s
+            RETURNING id
+            """,
+            {
+                "id": snapshot.process_id,
+                "protocol_id": snapshot.protocol_id,
+                "sync_state": snapshot.sync_state.value,
+                "sync_attempts": snapshot.sync_attempts,
+                "last_error_code": snapshot.last_error_code,
+            },
+        )
+        if updated.fetchone() is None:
+            raise ProtocolMaterializationRequiredError(
+                "финализированный процесс не найден для выгрузки"
+            )
 
     def _write_process(self, snapshot: ProcessSnapshot) -> None:
         params = snapshot_params(snapshot)

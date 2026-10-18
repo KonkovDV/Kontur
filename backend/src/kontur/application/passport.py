@@ -14,6 +14,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime
+from enum import StrEnum
 
 from kontur.application.extractors.number import PageToken
 from kontur.application.normalize import fold_label, normalize_key_field
@@ -38,10 +39,14 @@ _REV = re.compile(
     r"(изм\.?|ред\.?|rev\.?|корректировк\w*)\s*[:.]?\s*(?:№\s*)?(\d{1,3})\b",
     re.IGNORECASE,
 )
+# «Листов» не номер листа: после «лист» не должно идти «ов».
 _SHEET = re.compile(
-    r"(?:лист|sheet)\s*[:.]?\s*([A-ZА-Я0-9][A-ZА-Я0-9.\-]{0,12})",
+    r"(?<![\w])(?:лист|sheet)(?!ов)\s*[:.]?\s*(\d{1,3}(?:\.\d{1,2})?)",
     re.IGNORECASE,
 )
+_SHEET_LABEL = re.compile(r"^(?:лист|sheet)\.?$", re.IGNORECASE)
+_SHEET_COUNT = re.compile(r"^листов\.?:?$", re.IGNORECASE)
+_SHEET_NUMBER = re.compile(r"^\d{1,3}(?:\.\d{1,2})?$")
 _STAGE_LABELED = re.compile(
     r"(?:стадия|stadia|stage)\s*[:.]?\s*(пд|рд|ид|pd|rd|id)\b",
     re.IGNORECASE,
@@ -62,6 +67,16 @@ _PERSON_NAME = re.compile(
 _STAMP_Y0 = 0.70
 _APPROVAL_ROW_DY = 0.04
 _APPROVAL_MAX_DX = 0.40
+# Форма 1 ГОСТ Р 21.101: основная надпись 185×55 мм в правом нижнем углу.
+# Запас закрывает рамку и строку изменений, не четверть листа А0.
+_TITLE_BLOCK_WIDTH_MM = 190.0
+_TITLE_BLOCK_HEIGHT_MM = 70.0
+_PT_TO_MM = 25.4 / 72.0
+_STANDARD_CODE = re.compile(
+    r"^(?:гост|gost|снип|snip|санпин|sanpin|росс|еаэс|eaэс|pocc|ra\.ru|ru\.)"
+    r"|^(?:сп|sp)\d"
+    r"|^(?:рф-)?\d+(?:-\d+){3,}",
+)
 
 # Детерминированный crop основной надписи ГОСТ (без VLM): нижняя полоса листа.
 # Нормализованные координаты после CropBox/MediaBox/Rotate, Y вниз.
@@ -76,6 +91,39 @@ _STAGE_MAP = {
 }
 
 KEY_FIELDS: tuple[str, ...] = ("document_code", "revision", "sheet")
+_ROOM_NO = re.compile(
+    r"(?<![\w])(?:пом(?:ещени\w*)?|комн(?:ата)?)\.?\s*(?:№\s*)?(\d{1,4}(?:\.\d{1,2})?)",
+    re.IGNORECASE,
+)
+_ELEMENT_NO = re.compile(
+    r"(?<![\w])элемент\w*\s*(?:№\s*)?([0-9A-ZА-ЯЁ][0-9A-ZА-ЯЁ.\-]{0,16})",
+    re.IGNORECASE,
+)
+
+
+class KeyFieldState(StrEnum):
+    """Исход чтения одного ключевого поля. Это не finding_status."""
+
+    FOUND = "found"
+    ABSENT = "absent"
+    UNREADABLE = "unreadable"
+
+
+@dataclass(frozen=True, slots=True)
+class KeyFieldValue:
+    state: KeyFieldState
+    value: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class StampKeyFields:
+    """Пять полей §14.3. Порог Exact Match этим отчётом не закрывается."""
+
+    cipher: KeyFieldValue
+    stage: KeyFieldValue
+    revision: KeyFieldValue
+    sheet: KeyFieldValue
+    room_element: KeyFieldValue
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,6 +198,27 @@ def _join(tokens: Sequence[PageToken]) -> str:
     return " ".join(item.text for item in ordered if item.text.strip())
 
 
+def title_block_origin(media_box: Sequence[float] | None) -> tuple[float, float]:
+    """Левый верх зоны штампа в [0;1], Y вниз.
+
+    Размер листа неизвестен или меньше надписи — прежняя нижняя полоса.
+    На А1 и крупнее зона сжимается до правого нижнего угла, иначе шифр
+    читается из таблицы на поле чертежа.
+    """
+
+    if media_box is None or len(media_box) != 4:
+        return 0.0, _STAMP_Y0
+    left, bottom, right, top = (float(item) for item in media_box)
+    width_mm = (right - left) * _PT_TO_MM
+    height_mm = (top - bottom) * _PT_TO_MM
+    if width_mm <= _TITLE_BLOCK_WIDTH_MM or height_mm <= _TITLE_BLOCK_HEIGHT_MM:
+        return 0.0, _STAMP_Y0
+    return (
+        1.0 - _TITLE_BLOCK_WIDTH_MM / width_mm,
+        max(_STAMP_Y0, 1.0 - _TITLE_BLOCK_HEIGHT_MM / height_mm),
+    )
+
+
 def stamp_region_polygon(*, y0: float = _STAMP_Y0) -> tuple[tuple[float, float], ...]:
     """Прямоугольник зоны штампа в норм. координатах [0;1]. Без VLM / детектора."""
 
@@ -162,14 +231,18 @@ def stamp_crop_box(
     *,
     page: int | None = None,
     y0: float = _STAMP_Y0,
+    media_box: Sequence[float] | None = None,
 ) -> tuple[float, float, float, float]:
     """Нормализованный bbox кропа штампа для OCR dual-read.
 
     Если в полосе есть токены — охватывающий прямоугольник с небольшим
-    запасом; иначе дефолтная нижняя полоса ГОСТ. Всегда в [0;1].
+    запасом; иначе дефолтная нижняя полоса. На крупном листе полоса — это
+    основная надпись в миллиметрах, не нижние 30% страницы. Всегда в [0;1].
     """
 
-    default = (0.0, min(max(y0, 0.0), 0.95), 1.0, 1.0)
+    x_min, y_min = title_block_origin(media_box)
+    y_min = max(y_min, min(max(y0, 0.0), 0.95))
+    default = (x_min, y_min, 1.0, 1.0)
     if not tokens:
         return default
     pool = list(tokens)
@@ -181,7 +254,7 @@ def stamp_crop_box(
     band = [
         item
         for item in pool
-        if item.page == first_page and bbox_from_polygon(item.polygon_norm)[1] >= y0
+        if item.page == first_page and _in_title_block(item, x_min, y_min)
     ]
     if not band:
         return default
@@ -206,21 +279,30 @@ def stamp_crop_polygon(
     *,
     page: int | None = None,
     y0: float = _STAMP_Y0,
+    media_box: Sequence[float] | None = None,
 ) -> tuple[tuple[float, float], ...]:
     """Четырёхугольник кропа штампа — вход для ocr_region_* / dual-read."""
 
-    x0, y_lo, x1, y_hi = stamp_crop_box(tokens, page=page, y0=y0)
+    x0, y_lo, x1, y_hi = stamp_crop_box(tokens, page=page, y0=y0, media_box=media_box)
     return ((x0, y_lo), (x1, y_lo), (x1, y_hi), (x0, y_hi))
 
 
-def _stamp_tokens(tokens: Sequence[PageToken]) -> tuple[PageToken, ...]:
-    """Нижняя четверть первой страницы: типичное место основной надписи ГОСТ."""
+def _in_title_block(token: PageToken, x_min: float, y_min: float) -> bool:
+    left, top, _right, _bottom = bbox_from_polygon(token.polygon_norm)
+    return left >= x_min - 1e-6 and top >= y_min - 1e-6
+
+
+def _stamp_tokens(
+    tokens: Sequence[PageToken],
+    *,
+    media_box: Sequence[float] | None = None,
+) -> tuple[PageToken, ...]:
+    """Токены основной надписи. На крупном листе это правый нижний угол."""
 
     first_page = [item for item in tokens if item.page == 1]
     pool: Sequence[PageToken] = first_page or tokens
-    bottom = [
-        item for item in pool if bbox_from_polygon(item.polygon_norm)[1] >= _STAMP_Y0
-    ]
+    x_min, y_min = title_block_origin(media_box)
+    bottom = [item for item in pool if _in_title_block(item, x_min, y_min)]
     return tuple(bottom) if bottom else tuple(pool)
 
 
@@ -299,6 +381,15 @@ def _revision_mark(text: str) -> tuple[str | None, str]:
     return number, "correction"
 
 
+def _designation_is_standard(code: str) -> bool:
+    """ГОСТ, СП, сертификат и номер экспертизы — не шифр комплекта."""
+
+    folded = fold_label(code).replace(" ", "")
+    if not folded:
+        return False
+    return _STANDARD_CODE.search(folded) is not None
+
+
 def _first(pattern: re.Pattern[str], text: str) -> str | None:
     match = pattern.search(text)
     if match is None:
@@ -306,10 +397,22 @@ def _first(pattern: re.Pattern[str], text: str) -> str | None:
     return normalize_key_field(match.group(1))
 
 
+def _first_project_code(pattern: re.Pattern[str], text: str) -> str | None:
+    for match in pattern.finditer(text):
+        code = normalize_key_field(match.group(1))
+        if code and not _designation_is_standard(code):
+            return code
+    return None
+
+
 def _designation(text: str) -> tuple[str | None, bool]:
     """Одно обозначение или большинство. Ничья — шифр не выбран."""
 
-    found = [normalize_key_field(item) for item in _CODE_DESIGNATION.findall(text)]
+    found: list[str] = []
+    for item in _CODE_DESIGNATION.findall(text):
+        code = normalize_key_field(item)
+        if code and not _designation_is_standard(code):
+            found.append(code)
     if not found:
         return None, False
     counts: dict[str, int] = {}
@@ -471,7 +574,7 @@ def cipher_from_filename(filename: str | None) -> str | None:
 def cipher_from_text(text: str) -> str | None:
     """Шифр из уже прочитанного текста. Имя файла сюда не подставляется."""
 
-    labeled = _first(_CODE, text) or _first(_CODE_BARE, text)
+    labeled = _first_project_code(_CODE, text) or _first_project_code(_CODE_BARE, text)
     if labeled:
         return labeled
     code, _tie = _designation(text)
@@ -481,9 +584,208 @@ def cipher_from_text(text: str) -> str | None:
 def cipher_is_ambiguous(text: str) -> bool:
     """Несколько обозначений без большинства. Подписанный шифр это не спор."""
 
-    if _first(_CODE, text) or _first(_CODE_BARE, text):
+    if _first_project_code(_CODE, text) or _first_project_code(_CODE_BARE, text):
         return False
     return _designation(text)[1]
+
+
+def _one_or_conflict(values: list[str]) -> KeyFieldValue:
+    unique = list(dict.fromkeys(item.strip() for item in values if item.strip()))
+    if not unique:
+        return KeyFieldValue(KeyFieldState.ABSENT)
+    if len(unique) > 1:
+        return KeyFieldValue(KeyFieldState.UNREADABLE)
+    return KeyFieldValue(KeyFieldState.FOUND, unique[0])
+
+
+def _unreadable_fields() -> StampKeyFields:
+    blank = KeyFieldValue(KeyFieldState.UNREADABLE)
+    return StampKeyFields(
+        cipher=blank,
+        stage=blank,
+        revision=blank,
+        sheet=blank,
+        room_element=blank,
+    )
+
+
+def _sheet_count_boxes(
+    tokens: Sequence[PageToken],
+) -> tuple[tuple[float, float, float], ...]:
+    boxes: list[tuple[float, float, float]] = []
+    for token in tokens:
+        if not _SHEET_COUNT.fullmatch(token.text.strip()):
+            continue
+        left, top, right, _bottom = bbox_from_polygon(token.polygon_norm)
+        boxes.append((top, left, right))
+    return tuple(boxes)
+
+
+def _number_beside_label(
+    tokens: Sequence[PageToken], top: float, left: float, right: float
+) -> str | None:
+    """Число справа в строке подписи или сразу под ней. Графа «Листов» не берётся."""
+
+    counts = _sheet_count_boxes(tokens)
+    best: tuple[float, str] | None = None
+    for token in tokens:
+        text = token.text.strip()
+        if not _SHEET_NUMBER.fullmatch(text):
+            continue
+        token_left, token_top, token_right, _token_bottom = bbox_from_polygon(token.polygon_norm)
+        same_row = abs(token_top - top) <= 0.03 and token_left >= right - 0.01
+        below = 0.0 < (token_top - top) <= 0.06 and token_left <= right and token_right >= left
+        if not same_row and not below:
+            continue
+        distance = abs(token_left - right) + abs(token_top - top)
+        nearer_count = any(
+            abs(token_left - count_right) + abs(token_top - count_top) < distance
+            for count_top, _count_left, count_right in counts
+        )
+        if nearer_count:
+            continue
+        if best is None or distance < best[0]:
+            best = (distance, text)
+    if best is None:
+        return None
+    return best[1]
+
+
+def sheet_from_stamp(tokens: Sequence[PageToken]) -> tuple[str | None, bool]:
+    """Номер у подписи «Лист». «Листов 17» не номер. Нижняя правая подпись важнее вложенной.
+
+    Два разных номера в одной клетке — спор, значения нет.
+    """
+
+    hits: list[tuple[float, float, str]] = []
+    for token in tokens:
+        text = token.text.strip()
+        if _SHEET_COUNT.fullmatch(text):
+            continue
+        left, top, right, _bottom = bbox_from_polygon(token.polygon_norm)
+        embedded = list(_SHEET.finditer(text))
+        if embedded:
+            hits.extend((top, left, match.group(1)) for match in embedded)
+            continue
+        if _SHEET_LABEL.fullmatch(text):
+            number = _number_beside_label(tokens, top, left, right)
+            if number is not None:
+                hits.append((top, left, number))
+    if not hits:
+        return None, False
+    hits.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    best_y, best_x, best = hits[0]
+    for top, left, value in hits[1:]:
+        if value == best:
+            continue
+        if abs(top - best_y) <= 0.03 and abs(left - best_x) <= 0.15:
+            return None, True
+    return best, False
+
+
+def _sheet_field(search: str, tokens: Sequence[PageToken]) -> KeyFieldValue:
+    if tokens:
+        number, clash = sheet_from_stamp(tokens)
+        if clash:
+            return KeyFieldValue(KeyFieldState.UNREADABLE)
+        if number:
+            return KeyFieldValue(KeyFieldState.FOUND, number)
+        return KeyFieldValue(KeyFieldState.ABSENT)
+    return _one_or_conflict(list(_SHEET.findall(search)))
+
+
+def _fields_from_text(
+    search: str, tokens: Sequence[PageToken] = ()
+) -> StampKeyFields:
+    """Поля одного чтения. Имя файла и второй движок сюда не входят."""
+
+    code = cipher_from_text(search)
+    if cipher_is_ambiguous(search):
+        cipher = KeyFieldValue(KeyFieldState.UNREADABLE)
+    elif code:
+        cipher = KeyFieldValue(KeyFieldState.FOUND, code)
+    else:
+        cipher = KeyFieldValue(KeyFieldState.ABSENT)
+    stamped = _stage_from_text(search, labeled_only=True) or _stage_from_text(
+        search, labeled_only=False
+    )
+    stage = (
+        KeyFieldValue(KeyFieldState.FOUND, stamped.value)
+        if stamped is not None
+        else KeyFieldValue(KeyFieldState.ABSENT)
+    )
+    rooms = _ROOM_NO.findall(search)
+    elements = _ELEMENT_NO.findall(search)
+    return StampKeyFields(
+        cipher=cipher,
+        stage=stage,
+        revision=_one_or_conflict([item[1] for item in _REV.findall(search)]),
+        sheet=_sheet_field(search, tokens),
+        room_element=_one_or_conflict([*rooms, *elements]),
+    )
+
+
+def _agree(left: KeyFieldValue, right: KeyFieldValue) -> KeyFieldValue:
+    """Два чтения. Пустое со пустым — нет поля. Разные значения — нечитаемо."""
+
+    if left.state is KeyFieldState.UNREADABLE or right.state is KeyFieldState.UNREADABLE:
+        return KeyFieldValue(KeyFieldState.UNREADABLE)
+    if left.state is KeyFieldState.ABSENT and right.state is KeyFieldState.ABSENT:
+        return left
+    if (
+        left.state is KeyFieldState.FOUND
+        and right.state is KeyFieldState.FOUND
+        and left.value == right.value
+    ):
+        return left
+    return KeyFieldValue(KeyFieldState.UNREADABLE)
+
+
+def _with_filename_stage(fields: StampKeyFields, filename: str | None) -> StampKeyFields:
+    named = stage_from_filename(filename) if filename else None
+    if named is None:
+        return fields
+    if fields.stage.state is KeyFieldState.FOUND and fields.stage.value != named.value:
+        return replace(fields, stage=KeyFieldValue(KeyFieldState.UNREADABLE))
+    if fields.stage.state is KeyFieldState.ABSENT:
+        return replace(fields, stage=KeyFieldValue(KeyFieldState.FOUND, named.value))
+    return fields
+
+
+def stamp_key_fields(
+    tokens: Sequence[PageToken],
+    *,
+    filename: str | None = None,
+    alternate_ciphers: Sequence[str] = (),
+    text_render_agreement: bool | None = None,
+    second_text: str | None = None,
+    media_box: Sequence[float] | None = None,
+) -> StampKeyFields:
+    """Шифр, стадия, редакция, лист и номер помещения или элемента.
+
+    Нет подписи — absent. Два разных чтения — unreadable. Пустой второй
+    текст (пустой кроп OCR) спор не открывает. Найденное поле не становится
+    нарушением и не закрывает порог 0,90.
+    """
+
+    if text_render_agreement is False:
+        return _unreadable_fields()
+    region = _stamp_tokens(tokens, media_box=media_box) if tokens else ()
+    pool = region or tuple(tokens)
+    search = _join(pool)
+    fields = _fields_from_text(search, pool)
+    if second_text is not None and second_text.strip():
+        other = _fields_from_text(second_text)
+        fields = StampKeyFields(
+            cipher=_agree(fields.cipher, other.cipher),
+            stage=_agree(fields.stage, other.stage),
+            revision=_agree(fields.revision, other.revision),
+            sheet=_agree(fields.sheet, other.sheet),
+            room_element=_agree(fields.room_element, other.room_element),
+        )
+    if cipher_reads_agree((fields.cipher.value, *alternate_ciphers)) is False:
+        fields = replace(fields, cipher=KeyFieldValue(KeyFieldState.UNREADABLE))
+    return _with_filename_stage(fields, filename)
 
 
 def cipher_reads_agree(codes: Sequence[str | None]) -> bool | None:
@@ -545,7 +847,7 @@ def read_passport(
     has_text = any(item.text.strip() for item in tokens)
     if layer_kind == "vector" and not has_text:
         layer_kind = "raster"
-    region = _stamp_tokens(tokens) if tokens else ()
+    region = _stamp_tokens(tokens, media_box=media_box) if tokens else ()
     blob = _join(region)
     full = _join(tokens)
     search = blob or full
@@ -553,13 +855,17 @@ def read_passport(
     code = cipher_from_text(search)
     ambiguous = code is None and cipher_is_ambiguous(search)
     revision, revision_kind = _revision_mark(search)
-    sheet = _first(_SHEET, search)
+    sheet, sheet_clash = sheet_from_stamp(region or tuple(tokens)) if tokens else (None, False)
     stage = _stage_from_text(search, labeled_only=True) or _stage_from_text(
         search, labeled_only=False
     )
     name_stage = stage_from_filename(filename) if filename else None
     needs = False
     reason: str | None = None
+    if sheet_clash:
+        sheet = None
+        needs = True
+        reason = "в основной надписи два разных номера листа"
     if cipher_reads_agree((code, *alternate_ciphers)) is False:
         needs = True
         reason = "шифр vector, eslav и Tesseract не совпали"
@@ -627,7 +933,7 @@ def read_passport(
     if has_text:
         confidence = filled / len(KEY_FIELDS)
     if crop_box is None:
-        crop_box = stamp_crop_box(tokens if tokens else None)
+        crop_box = stamp_crop_box(tokens if tokens else None, media_box=media_box)
     return DocumentPassport(
         file_id=file_id,
         file_hash=file_hash,
