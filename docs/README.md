@@ -37,7 +37,8 @@
 
 | Тема | Файл |
 |---|---|
-| Редакция до сравнения. С 15.10.2026 пустой шифр собирает цепочку ПД и РД по имени | [`adr/0003-revision-resolver-before-comparison.md`](adr/0003-revision-resolver-before-comparison.md) |
+| Редакция до сравнения. Пустой шифр собирает цепочку ПД и РД по имени | [`adr/0003-revision-resolver-before-comparison.md`](adr/0003-revision-resolver-before-comparison.md) |
+| Штамп: угол 190×70 мм, графа «Лист», буква стадии П, Р или И | [`../README.md`](../README.md), раздел «Редакция и знак триггера» |
 | Знак триггера, единицы, десятичная разность, невидимый текст | [`SOTA_AEROBIM_ANALYSIS.md`](SOTA_AEROBIM_ANALYSIS.md) |
 | Модель не пишет статус | [`adr/0001-llm-never-sets-verdict.md`](adr/0001-llm-never-sets-verdict.md) |
 | Сверка документов, не нормы | [`adr/0006-compare-documents-not-norms.md`](adr/0006-compare-documents-not-norms.md) |
@@ -48,7 +49,8 @@
 
 | Вопрос | Файл |
 |---|---|
-| OSINT финалистов №10, peers GH, конкуренты (15.10.2026) | [`research/competitors/`](research/competitors/) |
+| Публичные репозитории задачи №10 (18.10.2026) | [`research/competitors/OSINT-2026-10-18.md`](research/competitors/OSINT-2026-10-18.md) |
+| Финалисты и peers, срез 15.10.2026 | [`research/competitors/`](research/competitors/) |
 | OCR / Document AI (срез 28.09) | [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md) |
 
 ## Записи по дням
