@@ -21,6 +21,12 @@ def _states(fields):
     )
 
 
+def test_stage_letter_is_its_own_field() -> None:
+    fields = stamp_key_fields((_tok("Стадия", 0.40), _tok("П", 0.62)))
+    assert fields.stage.state is KeyFieldState.FOUND
+    assert fields.stage.value == "PD"
+
+
 def test_sheet_total_does_not_fill_the_sheet_field() -> None:
     fields = stamp_key_fields((_tok("листов 17", 0.70),))
     assert fields.sheet.state is KeyFieldState.ABSENT

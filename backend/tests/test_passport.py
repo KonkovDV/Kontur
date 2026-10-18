@@ -350,6 +350,28 @@ def test_large_sheet_reads_the_title_block_not_the_drawing() -> None:
     assert passport.document_code == "12345-PZ"
 
 
+def test_stage_letter_under_the_caption_is_the_stage() -> None:
+    split = _read(
+        _tok("шифр: 12345-PZ", 0.08, 0.82),
+        _tok("Стадия", 0.40, 0.86),
+        _tok("П", 0.60, 0.86),
+    )
+    assert split.doc_stage is DocStage.PD
+    written = _read(_tok("стадия П", 0.40, 0.86))
+    assert written.doc_stage is DocStage.PD
+    cipher = _read(_tok("АНО/150321/1-П-АР", 0.55, 0.86))
+    assert cipher.document_code == "АНО/150321/1-П-АР"
+    assert cipher.doc_stage is None
+
+
+def test_inset_stage_stays_on_the_drawing() -> None:
+    passport = _read(
+        _tok("стадия И", 0.08, 0.72),
+        _tok("стадия Р", 0.78, 0.92),
+    )
+    assert passport.doc_stage is DocStage.RD
+
+
 def test_sheet_total_is_not_the_sheet_number() -> None:
     alone = _read(_tok("листов 17", 0.70, 0.86))
     assert alone.sheet is None

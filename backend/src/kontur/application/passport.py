@@ -48,9 +48,11 @@ _SHEET_LABEL = re.compile(r"^(?:лист|sheet)\.?$", re.IGNORECASE)
 _SHEET_COUNT = re.compile(r"^листов\.?:?$", re.IGNORECASE)
 _SHEET_NUMBER = re.compile(r"^\d{1,3}(?:\.\d{1,2})?$")
 _STAGE_LABELED = re.compile(
-    r"(?:стадия|stadia|stage)\s*[:.]?\s*(пд|рд|ид|pd|rd|id)\b",
+    r"(?:стадия|stadia|stage)\s*[:.]?\s*(пд|рд|ид|pd|rd|id|п|р|и)\b",
     re.IGNORECASE,
 )
+_STAGE_LABEL = re.compile(r"^(?:стадия|stage)\.?$", re.IGNORECASE)
+_STAGE_WORD = re.compile(r"^(?:пд|рд|ид|pd|rd|id|п|р|и)\.?$", re.IGNORECASE)
 _STAGE_TOKEN = re.compile(r"(?:^|[_\-\s./])(pd|rd|id|пд|рд|ид)(?:[_\-\s./]|$)", re.IGNORECASE)
 _NOT_APPROVED = re.compile(r"\b(?:не\s+утв|not\s+approved|черновик)\b", re.IGNORECASE)
 _DATE = re.compile(r"\b(\d{2})[.](\d{2})[.](\d{4})\b")
@@ -84,10 +86,13 @@ _STANDARD_CODE = re.compile(
 _STAGE_MAP = {
     "pd": DocStage.PD,
     "пд": DocStage.PD,
+    "п": DocStage.PD,
     "rd": DocStage.RD,
     "рд": DocStage.RD,
+    "р": DocStage.RD,
     "id": DocStage.ID,
     "ид": DocStage.ID,
+    "и": DocStage.ID,
 }
 
 KEY_FIELDS: tuple[str, ...] = ("document_code", "revision", "sheet")
@@ -651,6 +656,74 @@ def _number_beside_label(
     return best[1]
 
 
+def _lower_right(hits: list[tuple[float, float, str]]) -> tuple[str | None, bool]:
+    """Нижняя правая подпись. Два разных значения в одной клетке — спор."""
+
+    if not hits:
+        return None, False
+    hits.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    best_y, best_x, best = hits[0]
+    for top, left, value in hits[1:]:
+        if value == best:
+            continue
+        if abs(top - best_y) <= 0.03 and abs(left - best_x) <= 0.15:
+            return None, True
+    return best, False
+
+
+def _stage_of(raw: str) -> DocStage | None:
+    key = fold_label(raw).replace(" ", "").rstrip(".")
+    return _STAGE_MAP.get(key)
+
+
+def _stage_beside_label(
+    tokens: Sequence[PageToken], top: float, left: float, right: float
+) -> str | None:
+    best: tuple[float, str] | None = None
+    for token in tokens:
+        text = token.text.strip()
+        if not _STAGE_WORD.fullmatch(text):
+            continue
+        token_left, token_top, token_right, _token_bottom = bbox_from_polygon(token.polygon_norm)
+        same_row = abs(token_top - top) <= 0.03 and token_left >= right - 0.01
+        below = 0.0 < (token_top - top) <= 0.06 and token_left <= right and token_right >= left
+        if not same_row and not below:
+            continue
+        distance = abs(token_left - right) + abs(token_top - top)
+        if best is None or distance < best[0]:
+            best = (distance, text)
+    if best is None:
+        return None
+    return best[1]
+
+
+def stage_from_stamp(tokens: Sequence[PageToken]) -> tuple[DocStage | None, bool]:
+    """Буква графы «Стадия»: П, Р, И и слова ПД, РД, ИД.
+
+    Буква внутри шифра сюда не входит. Нижняя правая подпись важнее вложенной.
+    """
+
+    hits: list[tuple[float, float, str]] = []
+    for token in tokens:
+        text = token.text.strip()
+        left, top, right, _bottom = bbox_from_polygon(token.polygon_norm)
+        embedded = list(_STAGE_LABELED.finditer(text))
+        if embedded:
+            hits.extend((top, left, match.group(1)) for match in embedded)
+            continue
+        if _STAGE_LABEL.fullmatch(text):
+            word = _stage_beside_label(tokens, top, left, right)
+            if word is not None:
+                hits.append((top, left, word))
+    raw, clash = _lower_right(hits)
+    if clash or raw is None:
+        return None, clash
+    stage = _stage_of(raw)
+    if stage is None:
+        return None, False
+    return stage, False
+
+
 def sheet_from_stamp(tokens: Sequence[PageToken]) -> tuple[str | None, bool]:
     """Номер у подписи «Лист». «Листов 17» не номер. Нижняя правая подпись важнее вложенной.
 
@@ -671,16 +744,7 @@ def sheet_from_stamp(tokens: Sequence[PageToken]) -> tuple[str | None, bool]:
             number = _number_beside_label(tokens, top, left, right)
             if number is not None:
                 hits.append((top, left, number))
-    if not hits:
-        return None, False
-    hits.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    best_y, best_x, best = hits[0]
-    for top, left, value in hits[1:]:
-        if value == best:
-            continue
-        if abs(top - best_y) <= 0.03 and abs(left - best_x) <= 0.15:
-            return None, True
-    return best, False
+    return _lower_right(hits)
 
 
 def _sheet_field(search: str, tokens: Sequence[PageToken]) -> KeyFieldValue:
@@ -706,14 +770,23 @@ def _fields_from_text(
         cipher = KeyFieldValue(KeyFieldState.FOUND, code)
     else:
         cipher = KeyFieldValue(KeyFieldState.ABSENT)
-    stamped = _stage_from_text(search, labeled_only=True) or _stage_from_text(
-        search, labeled_only=False
-    )
-    stage = (
-        KeyFieldValue(KeyFieldState.FOUND, stamped.value)
-        if stamped is not None
-        else KeyFieldValue(KeyFieldState.ABSENT)
-    )
+    if tokens:
+        stamped, stage_clash = stage_from_stamp(tokens)
+        if stage_clash:
+            stage = KeyFieldValue(KeyFieldState.UNREADABLE)
+        elif stamped is not None:
+            stage = KeyFieldValue(KeyFieldState.FOUND, stamped.value)
+        else:
+            stage = KeyFieldValue(KeyFieldState.ABSENT)
+    else:
+        stamped = _stage_from_text(search, labeled_only=True) or _stage_from_text(
+            search, labeled_only=False
+        )
+        stage = (
+            KeyFieldValue(KeyFieldState.FOUND, stamped.value)
+            if stamped is not None
+            else KeyFieldValue(KeyFieldState.ABSENT)
+        )
     rooms = _ROOM_NO.findall(search)
     elements = _ELEMENT_NO.findall(search)
     return StampKeyFields(
@@ -855,8 +928,10 @@ def read_passport(
     code = cipher_from_text(search)
     ambiguous = code is None and cipher_is_ambiguous(search)
     revision, revision_kind = _revision_mark(search)
-    sheet, sheet_clash = sheet_from_stamp(region or tuple(tokens)) if tokens else (None, False)
-    stage = _stage_from_text(search, labeled_only=True) or _stage_from_text(
+    pool = region or tuple(tokens)
+    sheet, sheet_clash = sheet_from_stamp(pool) if tokens else (None, False)
+    column_stage, stage_clash = stage_from_stamp(pool) if tokens else (None, False)
+    stage = column_stage or _stage_from_text(search, labeled_only=True) or _stage_from_text(
         search, labeled_only=False
     )
     name_stage = stage_from_filename(filename) if filename else None
@@ -866,6 +941,10 @@ def read_passport(
         sheet = None
         needs = True
         reason = "в основной надписи два разных номера листа"
+    if stage_clash:
+        stage = None
+        needs = True
+        reason = reason or "в основной надписи две разные стадии"
     if cipher_reads_agree((code, *alternate_ciphers)) is False:
         needs = True
         reason = "шифр vector, eslav и Tesseract не совпали"
@@ -885,7 +964,7 @@ def read_passport(
             "эталон не выбирается"
         )
         stage = None
-    elif stage is None and name_stage is not None:
+    elif stage is None and name_stage is not None and not stage_clash:
         stage = name_stage
     if has_text and code is None and text_render_agreement is not False:
         needs = True
