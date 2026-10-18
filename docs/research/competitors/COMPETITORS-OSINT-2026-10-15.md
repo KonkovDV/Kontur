@@ -34,7 +34,7 @@
 |---|---|
 | Вход ПД/РД/ИД PDF (+DOCX/XML) | IFC/clash ≠ peer №10 |
 | Матрица 132 | Смотрим executable vs «132 строки в JSON» |
-| CA≥0,95; EM≥0,90; IoU≥0,50; P≥0,90; R≥0,80; F1≥0,85 | Без замера / ниже порога — гейт открыт |
+| CA ≥ 0,95; EM ≥ 0,90; IoU ≥ 0,50; P ≥ 0,90; R ≥ 0,80; F1 ≥ 0,85 | Без замера / ниже порога — гейт открыт |
 | HITL: CONFIRMED_VIOLATION только инспектор | LLM-вердикт = провал |
 | MISSING_EVIDENCE ≠ нарушение | антипаттерн |
 | Офлайн / без внешних API на зачёте | cloud OCR/VLM — дисквалификация пути |
@@ -64,12 +64,12 @@
 
 Детали и таблица §7 — в [TOP10-GH-REPOS.md](TOP10-GH-REPOS.md).
 
-| Репо | Команда (self) | Стек | Матрица (claim) | OCR vs CA≥0,95 | РиН | Риск жюри |
+| Репо | Команда (self) | Стек | Матрица (claim) | OCR vs CA ≥ 0,95 | РиН | Риск жюри |
 |---|---|---|---|---|---|---|
 | [tbikbov/a13-inspector-lct2026](https://github.com/tbikbov/a13-inspector-lct2026) | A13 | Fastify, Python workers, Tess, LLM off | 132; NOT_COMPARABLE честно | **FAIL** (пишут); stamp CA не взят | mock | Честность плюс; пороги §14 не закрыты |
 | [midudar/ctrl_z_hackathon](https://github.com/midudar/ctrl_z_hackathon) | ctrl_z | Node/React/ml-service | ~19 extract; skeleton 132 | claim **0,950** SILVER 600 стр.* | ? | Без Releases-кэша сканы ИД пустые |
 | [Evgen74/inspector-ai-public](https://github.com/Evgen74/inspector-ai-public) | — | Nest+ONNX | ~75 content | ONNX; наш SILVER не гоняли | mock | Скрытый тест остановлен; XML нет; runs∉git |
-| [Namelomax/AIDocumentAnalize](https://github.com/Namelomax/AIDocumentAnalize) | — | Docker+optional vLLM | ~99/132 | **1−CER 0,225** | mock | OCR-гейт; demo passwords |
+| [Namelomax/AIDocumentAnalize](https://github.com/Namelomax/AIDocumentAnalize) | — | Docker+optional vLLM | ~99/132 | **1 − CER 0,225** | mock | OCR-гейт; demo passwords |
 | [NikolaySalyakhutdinov/gos-stoidoc](https://github.com/NikolaySalyakhutdinov/gos-stoidoc) | — | Express+MiniLM | seed 132 | tesseract | очередь | Cloud Run в README |
 | [Tanoklllmonbku/Hakaton-LDT](https://github.com/Tanoklllmonbku/Hakaton-LDT) + [Kaiman30/Hakaton-LDT-backend](https://github.com/Kaiman30/Hakaton-LDT-backend) | — | Go microservices skeleton | arch README | — | — | Ранняя стадия; не полный компаратор |
 | [Crooak/chakaton](https://github.com/Crooak/chakaton) | — | Vite mocks | UI 132 | нет | нет | UI-only |
@@ -103,14 +103,14 @@ Forma, Solibri, BIMcollab, PlanRadar, Helonic — координация/IFC/п�
 
 ## 5. Murder Board (сжато)
 
-**Для спикера (Precision / HITL / покрытие).** Жюри услышит «у них 99 параметров, у вас 55». Ответ односложный не годится: **99 и 55 — разные метрики**. У peers «99/132» часто значит «строка в ответе / декларативный YAML / текстовой якорь», а не закрытый порог §14 на скрытом тесте. Контур считает **55 executable** экстракторов, которые реально сравнивают стадии; остальное — `extractor_missing` и честный отказ, а не ложное нарушение. Precision и Recall ТЗ меряются по **evidence_group** после HITL: автомат пишет только `CANDIDATE`, `CONFIRMED_VIOLATION` ставит инспектор (ADR-0001). Гонка за чужим «F1 0,89 на train» без общего gold и без порога CA≥0,95 — ложный KPI; на питче держим свои n, Wilson и открытые гейты I/J/K/L.
+**Для спикера (Precision / HITL / покрытие).** Жюри услышит «у них 99 параметров, у вас 55». Ответ односложный не годится: **99 и 55 — разные метрики**. У peers «99/132» часто значит «строка в ответе / декларативный YAML / текстовой якорь», а не закрытый порог §14 на скрытом тесте. Контур считает **55 executable** экстракторов, которые реально сравнивают стадии; остальное — `extractor_missing` и честный отказ, а не ложное нарушение. Precision и Recall ТЗ меряются по **evidence_group** после HITL: автомат пишет только `CANDIDATE`, `CONFIRMED_VIOLATION` ставит инспектор (ADR-0001). Гонка за чужим «F1 0,89 на train» без общего gold и без порога CA ≥ 0,95 — ложный KPI; на питче держим свои n, Wilson и открытые гейты I/J/K/L.
 
 | Роль | Вывод |
 |---|---|
 | Юрист | Слайд ADR-0006: мы ≠ нормоконтроль / ≠ экспертиза СП |
 | Банкир | Пилот XML ИД Мосгосстройнадзора — стык |
 | ИБ | Офлайн; не светить demo passwords; не vendor AGPL/SSPL |
-| Пользователь | ≤3 клика / ≤30 мин (ТЗ §9.3) — гейт K |
+| Пользователь | ≤ 3 клика / ≤ 30 мин (ТЗ §9.3) — гейт K |
 | Триаж | Peers много; гонка за чужим F1 без общего gold — low ROI; OCR-гейт общий |
 | Red Team | Не приписывать GH-peers к строкам постера; вопрос «а СНиП?» — ловушка |
 

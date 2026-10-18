@@ -13,7 +13,7 @@
 | OCR primary | `VECTOR_PDFIUM` (pypdfium2 текстовый слой) | `docs/OCR_BAKEOFF.md`, `pdfium_tokens.py` |
 | OCR verifier | Tesseract-5 region-crop ×3; fallback/альтернатива — RapidOCR **eslav PP-OCRv5** (ONNX, lock SHA-256, runtime download запрещён) | `ocr_tesseract.py`, `ocr_rapid.py`, `ocr_weights.lock.json`, `vendor/ocr/` |
 | Dual-read | `dual_read_required` → согласие primary/verifier, иначе ABSTAIN | `dual_read.py` |
-| Gate I | SILVER n=5935; eslav tz_low≈**0,663** при пороге 0,95; **не GOLD**, порог не взят | `OCR_BAKEOFF.md`, `ocr_pilot.py` |
+| Gate I | SILVER n=5935; eslav tz_low ≈ **0,663** при пороге 0,95; **не GOLD**, порог не взят | `OCR_BAKEOFF.md`, `ocr_pilot.py` |
 | VLM | GOT-OCR2_0 в бейк-оффе **отложен** (нет frozen-val, нет grounded-токенов) | `OCR_BAKEOFF.md`, ADR-0001 |
 | Пайплайн doc AI | vector-first → OCR → экстракторы `exact_field` / `presence` / `number` / `element_table`; паспорт; нормализация NFC | `extractors/`, `passport.py`, `normalize.py` |
 | Таблицы | Простая «марка + одно число» по токенам; Docling/Camelot — только в ROADMAP W5 «с лицензией OK» | `element_table.py`, `EXTRACTOR_ROADMAP.md` |
@@ -32,7 +32,7 @@
 | Модель / стек | Размер / лицензия | Языки / RU | Опубликованные ориентиры | Ссылка |
 |---|---|---|---|---|
 | **PaddleOCR-VL / VL-1.6** | ~0,9B, Apache-2.0 | **109 языков, явно Cyrillic/Russian** | OmniDocBench v1.6 overall **96,33%** (заявлено авторами/сравнениями 2026); компактный NaViT + ERNIE-4.5-0.3B | [PaddleOCR-VL docs](https://www.paddleocr.ai/latest/en/version3.x/algorithm/PaddleOCR-VL/PaddleOCR-VL.html), [HF PaddleOCR-VL-1.6](https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.6), [arxiv 2510.14528](https://arxiv.org/html/2510.14528v4) |
-| **PP-OCRv5 eslav** (уже в Контуре) | mobile ONNX | Восточнославянский rec | На SILVER Контура: mean_ca≈0,794, tz_low≈0,663 (n=5935) — **наш** замер, не чужой бенч | `OCR_BAKEOFF.md`, [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) |
+| **PP-OCRv5 eslav** (уже в Контуре) | mobile ONNX | Восточнославянский rec | На SILVER Контура: mean_ca ≈ 0,794, tz_low ≈ 0,663 (n=5935) — **наш** замер, не чужой бенч | `OCR_BAKEOFF.md`, [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) |
 | **GOT-OCR 2.0** | ~580M, Apache-2.0 | 20+ | Силён на формулах/таблицах/форматированном тексте; VRAM ~3 GB FP16 (оценка Spheron) | [Spheron OCR/VLM 2026](https://www.spheron.network/blog/best-open-source-ocr-vlm-self-host-gpu-cloud-2026/), HF `ucaslcl/GOT-OCR2_0` |
 | **DeepSeek-OCR** | ~3B MoE, MIT | ~100 | Высокий throughput на batch; OmniDocBench v1.6 для этого чекпоинта в обзоре **не приведён** | [Spheron 2026](https://www.spheron.network/blog/best-open-source-ocr-vlm-self-host-gpu-cloud-2026/) |
 | **dots.ocr** | ~1,7B, MIT | ~100 | Структурированные формы; без OmniDocBench v1.6 в том же обзоре | то же |
@@ -49,7 +49,7 @@
 
 **Стоимость CPU/GPU (ориентиры сторонних замеров, не Контур):**
 
-- Spheron (заморозка цен 23.06.2026 в статье; live L40S ~$0,96/ч на 15.10.2026): PaddleOCR-VL-1.6 ~2 GB FP16, ~45 page/min peak decode на L40S; end-to-end ~½; ~$5–8 / 10k pages на spot/on-demand. Источник: [Spheron 2026](https://www.spheron.network/blog/best-open-source-ocr-vlm-self-host-gpu-cloud-2026/).
+- Spheron (заморозка цен 23.06.2026 в статье; live L40S ~$0,96/ч на 15.10.2026): PaddleOCR-VL-1.6 ~2 GB FP16, ~45 страниц в минуту на пике декодирования на L40S; полный проход около половины этой скорости; ~$5–8 / 10k pages на spot/on-demand. Источник: [Spheron 2026](https://www.spheron.network/blog/best-open-source-ocr-vlm-self-host-gpu-cloud-2026/).
 - Контурский eslav ONNX: **CPU**, 5935 строк за ~88 с (1 поток) в образе — уже приемлемо для verifier/region-crop. GPU не обязателен до 30.10.
 
 ### 1.2. Adopt ≤ 30.10 / Defer / Avoid
@@ -131,7 +131,7 @@ EvidencePane с polygon_norm оверлеем, метаданные докуме
 - **Quorum queues** — default для критичных durable очередей; Raft; publisher confirms; manual ack; poison → `delivery-limit` (default 20 с 4.0) + DLX; at-least-once dead-lettering при `dead-letter-strategy=at-least-once` + `overflow=reject-publish` ([Quorum Queues](https://www.rabbitmq.com/docs/quorum-queues), [DLX](https://www.rabbitmq.com/docs/dlx), [Reliability](https://www.rabbitmq.com/docs/reliability)).
 - **Outbox / Inbox:** атомарно domain+outbox в PG → poll/worker → publish confirm; consumer **идемпотентен** (inbox по `event_id`); at-least-once, не exactly-once к брокеру ([Reliability](https://www.rabbitmq.com/docs/reliability); практический outbox+DLQ: [Level Up / outbox part 2](https://levelup.gitconnected.com/transactional-outbox-with-rabbitmq-part-2-handling-retries-dead-letter-queues-and-observability-d53217cf45e9)).
 - **Streams:** append-only log, replay/audit/fan-out; **без DLX**; не замена work-queue для Rin protocol ([Streams](https://www.rabbitmq.com/docs/streams)).
-- **Delayed retry** (RabbitMQ ≥4.3): linear backoff на quorum — у Контура сейчас **3.13**, свои паузы 1/5/15 мин в outbox worker — этого достаточно.
+- **Delayed retry** (RabbitMQ ≥ 4.3): linear backoff на quorum — у Контура сейчас **3.13**, свои паузы 1/5/15 мин в outbox worker — этого достаточно.
 
 ### 4.2. Контур vs пробелы
 

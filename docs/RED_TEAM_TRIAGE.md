@@ -88,7 +88,7 @@ psql -v ON_ERROR_STOP=1 \
 | RT-2709-09 | S3 | Character Accuracy / CER не реализованы | Не смешивать с Exact Match | E1 после bake-off OCR |
 
 Остальные пробелы — [KNOWN_GAPS.md](KNOWN_GAPS.md).
-Порог Exact Match ≥0,92 на validation v0 не атаковался: выборки нет, метрика есть.
+Порог Exact Match ≥ 0,92 на validation v0 не атаковался: выборки нет, метрика есть.
 
 ## Прогон 17.09.2026 (п. 9.5 SUSPICION)
 

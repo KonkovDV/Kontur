@@ -377,7 +377,7 @@ python -m kontur.cli.score --submissions <каталог>
 
 | Часть | Технология |
 |---|---|
-| Ядро | Python 3.12 в образе (≥3.11 для разработки), FastAPI, pdfium |
+| Ядро | Python 3.12 в образе (≥ 3.11 для разработки), FastAPI, pdfium |
 | OCR | eslav PP-OCRv5 (ONNX, локальные веса), Tesseract |
 | Шлюз | Node.js 22: лимиты размера и частоты, статика |
 | Экран инспектора | React 18, TypeScript, Vite |
