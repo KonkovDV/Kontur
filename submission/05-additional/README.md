@@ -45,15 +45,15 @@
 
 | Тип | Правил | executable | extractor_missing | advisory | source_missing |
 |---|---|---|---|---|---|
-| `number` | 74 | 30 | 44 | 0 | 0 |
+| `number` | 70 | 30 | 40 | 0 | 0 |
 | `enum` | 19 | 10 | 9 | 0 | 0 |
 | `exact_field` | 16 | 4 | 8 | 0 | 4 |
 | `presence` | 12 | 0 | 11 | 1 | 0 |
 | `multi_field` | 7 | 7 | 0 | 0 | 0 |
+| `element_table` | 5 | 5 | 0 | 0 | 0 |
 | `contour_area` | 2 | 2 | 0 | 0 | 0 |
-| `element_table` | 1 | 1 | 0 | 0 | 0 |
 | `geometry` | 1 | 1 | 0 | 0 | 0 |
-| Итого | 132 | 55 | 72 | 1 | 4 |
+| Итого | 132 | 59 | 68 | 1 | 4 |
 
 **По разделу матрицы**
 
@@ -62,25 +62,24 @@
 | ПЗ | 23 | 23 | — |
 | СПЗУ | 16 | 4 | 12 extractor_missing |
 | АР | 14 | 5 | 9 extractor_missing |
-| КР | 14 | 5 | 9 extractor_missing |
+| КР | 14 | 7 | 7 extractor_missing |
 | ППМ | 13 | 4 | 9 extractor_missing |
 | ОДИ | 9 | 0 | 9 extractor_missing |
 | ПОС | 9 | 2 | 7 extractor_missing |
 | ЗУ | 8 | 6 | 2 extractor_missing |
 | ПОД | 8 | 1 | 6 extractor_missing, 1 advisory |
 | ООС | 4 | 0 | 4 source_missing |
-| ИОС4 | 4 | 2 | 2 extractor_missing |
+| ИОС4 | 4 | 3 | 1 extractor_missing |
 | ИОС1, ИОС2 | 3 и 3 | 1 и 1 | 2 и 2 extractor_missing |
-| ИОС3, ИОС5 | 2 и 1 | 0 | 2 и 1 extractor_missing |
+| ИОС3, ИОС5 | 2 и 1 | 1 и 0 | 1 и 1 extractor_missing |
 | СМ | 1 | 1 | — |
 
 Почему правила остались `extractor_missing` — поштучно в
 [`number_family_triage.json`](../../data/matrix/number_family_triage.json),
 [`class_ladder_triage.json`](../../data/matrix/class_ladder_triage.json) и
 [`family_triage.json`](../../data/matrix/family_triage.json). Подсчёт объектов на
-плане, площадь по нескольким контурам и таблица по элементам в `executable`
-не переводились. Четыре правила ООС ссылаются на источники вне пакета
-ПД/РД/ИД.
+плане в `executable` не переводился. Четыре правила ООС ссылаются на
+источники вне пакета ПД/РД/ИД.
 
 ## 3. Публичный gold: пять повторов
 
@@ -235,7 +234,7 @@ Ruleset `main-pr-and-ci`, id 23890545: PR обязателен, 11 обязат�
 | OCR на уровне порога, GOLD по растру | [`OCR_BAKEOFF.md`](../../docs/OCR_BAKEOFF.md), GAP-CAP-OCR |
 | Атомарное разделение находки, `split()` | [#83](https://github.com/KonkovDV/Kontur/issues/83) |
 | Изоляция VLM от инъекций в документе | [#84](https://github.com/KonkovDV/Kontur/issues/84) |
-| Разбор XML | [`KNOWN_GAPS.md`](../../docs/KNOWN_GAPS.md), GAP-DOCX-XML |
+| Схема пояснительной записки из XML | [`KNOWN_GAPS.md`](../../docs/KNOWN_GAPS.md), GAP-DOCX-XML |
 | Живой РиН, ACK, УКЭП, OIDC | [`ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) |
 | Видео показа | человек |
 

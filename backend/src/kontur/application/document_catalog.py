@@ -62,7 +62,7 @@ def _stamp_ref(item: CatalogFile, inspector_ids: frozenset[str]) -> tuple[Docume
         timeout_s=pdf_parse_timeout_s(),
     )
     tokens = flatten_tokens(document)
-    last = document.pages[-1]
+    first = document.pages[0]
     passport = read_passport(
         tokens,
         file_id=item.file_id,
@@ -70,7 +70,9 @@ def _stamp_ref(item: CatalogFile, inspector_ids: frozenset[str]) -> tuple[Docume
         filename=item.filename,
         pages=len(document.pages),
         layer_kind=document.layer_kind,
-        rotate=last.frame.rotate,
+        rotate=first.frame.rotate,
+        media_box=first.frame.media,
+        visible_box=first.frame.crop,
         injection_clean=scan_tokens_for_injection(tokens).is_clean,
     )
     approval, basis = approval_with_basis(

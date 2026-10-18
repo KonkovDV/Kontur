@@ -416,22 +416,28 @@ def _bottom_band(image: object | None) -> object | None:
     if size is None or image is None:
         return None
     width, height = size
-    if height < 8:
+    if width < 8 or height < 8:
         return None
-    top = int(height * 0.70)  # согласовано с passport._STAMP_Y0
+    from kontur.application.passport import title_block_origin
+
+    scale = 72.0 / OCR_RENDER_DPI
+    x_min, y_min = title_block_origin((0.0, 0.0, width * scale, height * scale))
+    left = max(0, min(width - 1, int(width * x_min)))
+    top = max(0, min(height - 1, int(height * y_min)))
     crop = getattr(image, "crop", None)
     if crop is None:
         return None
     try:
-        band: object = crop((0, top, width, height))
+        band: object = crop((left, top, width, height))
     except (TypeError, ValueError):
         return None
     return band
 
 
-def stamp_cipher_reads(data: bytes, page_count: int) -> tuple[str, ...]:
-    """Шифры нижней полосы последней страницы отдельно от eslav и Tesseract.
+def stamp_cipher_reads(data: bytes, page_number: int = 1) -> tuple[str, ...]:
+    """Шифры основной надписи того же листа, что читает паспорт.
 
+    Паспорт берёт первый лист. Последняя страница здесь спорила бы с другим штампом.
     Нет весов eslav — пустой кортеж: векторный шифр не оспаривается.
     Движок без шифра по regex в кортеж не входит.
     """
@@ -439,15 +445,15 @@ def stamp_cipher_reads(data: bytes, page_count: int) -> tuple[str, ...]:
     from kontur.application.passport import cipher_from_text
     from kontur.infrastructure.ocr_rapid import rapid_page_tokens, weights_ready
 
-    if page_count < 1 or not weights_ready() or not tesseract_available():
+    if page_number < 1 or not weights_ready() or not tesseract_available():
         return ()
-    band = _bottom_band(PageImageCache(data).page_image(page_count))
+    band = _bottom_band(PageImageCache(data).page_image(page_number))
     size = _image_size(band)
     if band is None or size is None:
         return ()
     width, height = size
     stub = PdfPageTokens(
-        page=page_count,
+        page=page_number,
         frame=PageFrame(
             media=(0.0, 0.0, float(width), float(height)),
             crop=(0.0, 0.0, float(width), float(height)),

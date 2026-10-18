@@ -242,6 +242,20 @@ def test_two_unordered_pd_files_do_not_compare_the_last_upload() -> None:
     }
 
 
+def test_large_sheet_pipeline_ignores_drawing_table_cipher() -> None:
+    point = 72.0 / 25.4
+    width = 841.0 * point
+    height = 1189.0 * point
+    sheet = ascii_pdf("CODE 99999-XX", x=40.0, y=40.0, width=width, height=height)
+    files = (PipelineFile("f-a1", file_sha256(sheet), "a1.pdf", DocStage.PD),)
+    pages, _errors, _stamps, _clean, _pool = _pages_from_blobs(
+        files,
+        {"f-a1": sheet},
+        inspector_approved_file_ids=frozenset({"f-a1"}),
+    )
+    assert pages[DocStage.PD].document.document_code == ""
+
+
 def test_later_not_approved_does_not_hide_the_earlier_file() -> None:
     earlier = ascii_pdf("CODE 12345-PZ")
     later = ascii_pdf("not approved CODE 12345-PZ")

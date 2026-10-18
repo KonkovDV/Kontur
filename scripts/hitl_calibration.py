@@ -15,7 +15,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
-from kontur.evaluation.calibration import calibration_report, load_samples, reliability_svg  # noqa: E402
+from kontur.evaluation.calibration import (  # noqa: E402
+    calibration_report,
+    load_samples,
+    reliability_svg,
+)
 
 
 def main() -> int:

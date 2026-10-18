@@ -30,6 +30,15 @@ def test_stage_letter_is_its_own_field() -> None:
 def test_sheet_total_does_not_fill_the_sheet_field() -> None:
     fields = stamp_key_fields((_tok("листов 17", 0.70),))
     assert fields.sheet.state is KeyFieldState.ABSENT
+    single = stamp_key_fields(
+        (
+            _tok("Лист", 0.40, 0.86),
+            _tok("Листов", 0.65, 0.86),
+            _tok("1", 0.65, 0.91),
+        )
+    )
+    assert single.sheet.state is KeyFieldState.FOUND
+    assert single.sheet.value == "1"
     inset = stamp_key_fields(
         (
             _tok("лист 2", 0.08, 0.72),

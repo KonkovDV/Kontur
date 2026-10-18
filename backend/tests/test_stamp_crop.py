@@ -30,6 +30,8 @@ def test_large_sheet_crop_stays_in_the_title_block_corner() -> None:
     assert x0 > 0.7 and y0 > 0.9
     assert x1 == pytest.approx(1.0) and y1 == pytest.approx(1.0)
     assert polygon_in_unit_square(stamp_crop_polygon(media_box=media))
+    rx0, ry0, _rx1, _ry1 = stamp_crop_box(media_box=media, rotate=90)
+    assert rx0 > x0 and ry0 < y0
 
 
 def test_default_stamp_region_in_unit_square() -> None:

@@ -619,7 +619,7 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
             extract_pdf_bytes, raw, timeout_s=pdf_parse_timeout_s()
         )
         tokens = flatten_tokens(document)
-        last = document.pages[-1]
+        first = document.pages[0]
         passport = read_passport(
             tokens,
             file_id=item.file_id,
@@ -627,7 +627,9 @@ def _field_row(item: PackageFile, raw: bytes, digest: str, object_id: str) -> di
             filename=item.path.name,
             pages=len(document.pages),
             layer_kind=document.layer_kind,
-            rotate=last.frame.rotate,
+            rotate=first.frame.rotate,
+            media_box=first.frame.media,
+            visible_box=first.frame.crop,
             object_id=object_id,
         )
         passport = apply_manifest_section(

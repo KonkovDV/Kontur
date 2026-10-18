@@ -350,6 +350,61 @@ def test_large_sheet_reads_the_title_block_not_the_drawing() -> None:
     assert passport.document_code == "12345-PZ"
 
 
+def test_large_sheet_signature_outside_the_corner_is_not_approval() -> None:
+    point = 72.0 / 25.4
+    media = (0.0, 0.0, 841.0 * point, 1189.0 * point)
+    drawing = read_passport(
+        (
+            _tok("шифр: 12345-PZ", 0.80, 0.95),
+            _tok("Утвердил", 0.05, 0.96),
+            _tok("Тестов Т.Т.", 0.22, 0.96),
+        ),
+        file_id="file-pd",
+        file_hash=HASH,
+        pages=1,
+        media_box=media,
+    )
+    assert drawing.document_code == "12345-PZ"
+    assert drawing.approval_status is ApprovalStatus.UNKNOWN
+    corner = read_passport(
+        (
+            _tok("шифр: 12345-PZ", 0.80, 0.95),
+            _tok("Утвердил", 0.78, 0.96),
+            _tok("Тестов Т.Т.", 0.86, 0.96),
+        ),
+        file_id="file-pd",
+        file_hash=HASH,
+        pages=1,
+        media_box=media,
+    )
+    assert corner.approval_status is ApprovalStatus.APPROVED
+
+
+def test_visible_page_sizes_the_stamp_media_box_stays_recorded() -> None:
+    point = 72.0 / 25.4
+    media = (0.0, 0.0, 841.0 * point, 1189.0 * point)
+    visible = (0.0, 0.0, 210.0 * point, 297.0 * point)
+    tokens = (_tok("шифр: 12345-PZ", 0.20, 0.90),)
+    on_media = read_passport(
+        tokens,
+        file_id="file-pd",
+        file_hash=HASH,
+        pages=1,
+        media_box=media,
+    )
+    on_visible = read_passport(
+        tokens,
+        file_id="file-pd",
+        file_hash=HASH,
+        pages=1,
+        media_box=media,
+        visible_box=visible,
+    )
+    assert on_media.document_code is None
+    assert on_visible.document_code == "12345-PZ"
+    assert on_visible.media_box == media
+
+
 def test_stage_letter_under_the_caption_is_the_stage() -> None:
     split = _read(
         _tok("шифр: 12345-PZ", 0.08, 0.82),
@@ -382,6 +437,21 @@ def test_sheet_total_is_not_the_sheet_number() -> None:
         _tok("17", 0.78, 0.91),
     )
     assert paired.sheet == "3"
+    single = _read(
+        _tok("Лист", 0.40, 0.86),
+        _tok("Листов", 0.65, 0.86),
+        _tok("1", 0.65, 0.91),
+    )
+    assert single.sheet == "1"
+    fractional = _read(_tok("лист 6,1", 0.70, 0.86))
+    assert fractional.sheet == "6.1"
+
+
+def test_dot_separated_designation_is_the_cipher_not_a_part_mark() -> None:
+    cipher = _read(_tok("2451.П.ДР.ГИ.ТЧ", 0.55, 0.86))
+    assert cipher.document_code == "2451.П.ДР.ГИ.ТЧ"
+    curb = _read(_tok("БР100.20.8", 0.55, 0.86))
+    assert curb.document_code is None
 
 
 def test_inset_title_block_does_not_replace_the_stamp_sheet() -> None:

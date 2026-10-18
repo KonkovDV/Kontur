@@ -504,3 +504,39 @@ def test_one_clipped_edge_is_not_a_stamp() -> None:
     draw.rectangle((0, 12, 8, 28), fill=0)
     draw.rectangle((16, 16, 64, 24), fill=0)
     assert achromatic_stamp_overlap(image) is False
+
+
+def test_stamp_cipher_reads_uses_the_requested_page(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[int] = []
+
+    class _Image:
+        def __init__(self) -> None:
+            self.size = (1200, 1600)
+
+        def crop(self, _box: tuple[int, int, int, int]) -> _Image:
+            return self
+
+    class _Cache:
+        def __init__(self, _data: bytes) -> None:
+            return
+
+        def page_image(self, page_number: int) -> _Image:
+            return _Image()
+
+    def _rapid(
+        _image: object, stub: PdfPageTokens, _size: tuple[int, int]
+    ) -> tuple[PageToken, ...]:
+        seen.append(stub.page)
+        return ()
+
+    def _missing(_name: str) -> object:
+        raise ImportError
+
+    monkeypatch.setattr(ocr_tesseract, "tesseract_available", lambda: True)
+    monkeypatch.setattr(ocr_tesseract, "PageImageCache", _Cache)
+    monkeypatch.setattr(ocr_tesseract, "import_module", _missing)
+    monkeypatch.setattr("kontur.infrastructure.ocr_rapid.weights_ready", lambda: True)
+    monkeypatch.setattr("kontur.infrastructure.ocr_rapid.rapid_page_tokens", _rapid)
+
+    assert ocr_tesseract.stamp_cipher_reads(b"%PDF-1.4", 1) == ()
+    assert seen == [1]

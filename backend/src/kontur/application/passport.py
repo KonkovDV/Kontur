@@ -35,18 +35,28 @@ _CODE_DESIGNATION = re.compile(
     r"[A-ZА-ЯЁ]{1,8}\d{0,4}(?:\.\d+){0,4})(?!\w)",
     re.IGNORECASE,
 )
+# Обозначение через точку: 2451.П.ДР.ГИ.ТЧ. В отличие от БР100.20.8 не меньше
+# двух буквенных групп (стадия и марка).
+_CODE_DOT = re.compile(
+    r"(?<![\w./-])(\d{3,8}(?:\.[A-ZА-ЯЁ]{1,6}){2,5}(?:\.\d{1,3})?)(?![\w./-])",
+    re.IGNORECASE,
+)
 _REV = re.compile(
     r"(изм\.?|ред\.?|rev\.?|корректировк\w*)\s*[:.]?\s*(?:№\s*)?(\d{1,3})\b",
     re.IGNORECASE,
 )
 # «Листов» не номер листа: после «лист» не должно идти «ов».
 _SHEET = re.compile(
-    r"(?<![\w])(?:лист|sheet)(?!ов)\s*[:.]?\s*(\d{1,3}(?:\.\d{1,2})?)",
+    r"(?<![\w])(?:лист|sheet)(?!ов)\s*[:.]?\s*(\d{1,3}(?:[.,]\d{1,2})?)",
+    re.IGNORECASE,
+)
+_SHEET_COUNT_EMBEDDED = re.compile(
+    r"(?<![\w])листов\s*[:.]?\s*(\d{1,3})\b",
     re.IGNORECASE,
 )
 _SHEET_LABEL = re.compile(r"^(?:лист|sheet)\.?$", re.IGNORECASE)
 _SHEET_COUNT = re.compile(r"^листов\.?:?$", re.IGNORECASE)
-_SHEET_NUMBER = re.compile(r"^\d{1,3}(?:\.\d{1,2})?$")
+_SHEET_NUMBER = re.compile(r"^\d{1,3}(?:[.,]\d{1,2})?$")
 _STAGE_LABELED = re.compile(
     r"(?:стадия|stadia|stage)\s*[:.]?\s*(пд|рд|ид|pd|rd|id|п|р|и)\b",
     re.IGNORECASE,
@@ -203,17 +213,32 @@ def _join(tokens: Sequence[PageToken]) -> str:
     return " ".join(item.text for item in ordered if item.text.strip())
 
 
-def title_block_origin(media_box: Sequence[float] | None) -> tuple[float, float]:
+def _displayed_media_box(
+    media_box: Sequence[float] | None, rotate: int = 0
+) -> tuple[float, float, float, float] | None:
+    if media_box is None or len(media_box) != 4:
+        return None
+    left, bottom, right, top = (float(item) for item in media_box)
+    if rotate % 180 == 90:
+        return (0.0, 0.0, top - bottom, right - left)
+    return (left, bottom, right, top)
+
+
+def title_block_origin(
+    media_box: Sequence[float] | None, *, rotate: int = 0
+) -> tuple[float, float]:
     """Левый верх зоны штампа в [0;1], Y вниз.
 
-    Размер листа неизвестен или меньше надписи — прежняя нижняя полоса.
-    На А1 и крупнее зона сжимается до правого нижнего угла, иначе шифр
-    читается из таблицы на поле чертежа.
+    Аргумент — видимая страница в пунктах PDF. Размер неизвестен или меньше
+    надписи — прежняя нижняя полоса. На А1 и крупнее зона сжимается до
+    правого нижнего угла, иначе шифр читается из таблицы на поле чертежа.
+    При повороте 90 и 270 ширина и высота берутся у видимого листа.
     """
 
-    if media_box is None or len(media_box) != 4:
+    displayed = _displayed_media_box(media_box, rotate)
+    if displayed is None:
         return 0.0, _STAMP_Y0
-    left, bottom, right, top = (float(item) for item in media_box)
+    left, bottom, right, top = displayed
     width_mm = (right - left) * _PT_TO_MM
     height_mm = (top - bottom) * _PT_TO_MM
     if width_mm <= _TITLE_BLOCK_WIDTH_MM or height_mm <= _TITLE_BLOCK_HEIGHT_MM:
@@ -237,6 +262,7 @@ def stamp_crop_box(
     page: int | None = None,
     y0: float = _STAMP_Y0,
     media_box: Sequence[float] | None = None,
+    rotate: int = 0,
 ) -> tuple[float, float, float, float]:
     """Нормализованный bbox кропа штампа для OCR dual-read.
 
@@ -245,7 +271,7 @@ def stamp_crop_box(
     основная надпись в миллиметрах, не нижние 30% страницы. Всегда в [0;1].
     """
 
-    x_min, y_min = title_block_origin(media_box)
+    x_min, y_min = title_block_origin(media_box, rotate=rotate)
     y_min = max(y_min, min(max(y0, 0.0), 0.95))
     default = (x_min, y_min, 1.0, 1.0)
     if not tokens:
@@ -285,10 +311,13 @@ def stamp_crop_polygon(
     page: int | None = None,
     y0: float = _STAMP_Y0,
     media_box: Sequence[float] | None = None,
+    rotate: int = 0,
 ) -> tuple[tuple[float, float], ...]:
     """Четырёхугольник кропа штампа — вход для ocr_region_* / dual-read."""
 
-    x0, y_lo, x1, y_hi = stamp_crop_box(tokens, page=page, y0=y0, media_box=media_box)
+    x0, y_lo, x1, y_hi = stamp_crop_box(
+        tokens, page=page, y0=y0, media_box=media_box, rotate=rotate
+    )
     return ((x0, y_lo), (x1, y_lo), (x1, y_hi), (x0, y_hi))
 
 
@@ -301,14 +330,19 @@ def _stamp_tokens(
     tokens: Sequence[PageToken],
     *,
     media_box: Sequence[float] | None = None,
+    rotate: int = 0,
 ) -> tuple[PageToken, ...]:
     """Токены основной надписи. На крупном листе это правый нижний угол."""
 
     first_page = [item for item in tokens if item.page == 1]
     pool: Sequence[PageToken] = first_page or tokens
-    x_min, y_min = title_block_origin(media_box)
+    x_min, y_min = title_block_origin(media_box, rotate=rotate)
     bottom = [item for item in pool if _in_title_block(item, x_min, y_min)]
-    return tuple(bottom) if bottom else tuple(pool)
+    if bottom:
+        return tuple(bottom)
+    if x_min > 0.0:
+        return ()
+    return tuple(pool)
 
 
 def _parse_approval_date(text: str) -> date | None:
@@ -327,18 +361,22 @@ def _parse_approval_date(text: str) -> date | None:
 
 def _title_block_approval(
     tokens: Sequence[PageToken],
+    *,
+    x_min: float = 0.0,
+    y_min: float = _STAMP_Y0,
 ) -> tuple[ApprovalStatus, date | None]:
-    """Искать явное заполнение графы утверждения в штампе любого листа.
+    """Искать явное заполнение графы утверждения в том же окне, что и шифр.
 
-    Для APPROVED обязательны метка «Утвердил»/«утв.» и ФИО ответственного
-    в той же строке. Дата без ФИО, пустая графа, «Согласовано», «ГИП» или
-    «подп.» не являются достаточным признаком. Неоднозначность остаётся
+    На крупном листе окно — правый нижний угол. Подпись на поле чертежа
+    в это окно не входит. Для APPROVED обязательны метка «Утвердил»/«утв.»
+    и ФИО ответственного в той же строке. Дата без ФИО, пустая графа,
+    «Согласовано», «ГИП» или «подп.» недостаточны. Неоднозначность остаётся
     UNKNOWN и далее приводит к CLARIFICATION_REQUIRED.
     """
 
     by_page: dict[int, list[PageToken]] = {}
     for item in tokens:
-        if bbox_from_polygon(item.polygon_norm)[1] < _STAMP_Y0:
+        if not _in_title_block(item, x_min, y_min):
             continue
         by_page.setdefault(item.page, []).append(item)
 
@@ -414,10 +452,11 @@ def _designation(text: str) -> tuple[str | None, bool]:
     """Одно обозначение или большинство. Ничья — шифр не выбран."""
 
     found: list[str] = []
-    for item in _CODE_DESIGNATION.findall(text):
-        code = normalize_key_field(item)
-        if code and not _designation_is_standard(code):
-            found.append(code)
+    for pattern in (_CODE_DESIGNATION, _CODE_DOT):
+        for item in pattern.findall(text):
+            code = normalize_key_field(item)
+            if code and not _designation_is_standard(code):
+                found.append(code)
     if not found:
         return None, False
     counts: dict[str, int] = {}
@@ -566,9 +605,10 @@ def cipher_from_filename(filename: str | None) -> str | None:
         item
         for item in (
             *(normalize_key_field(raw) for raw in _CODE_DESIGNATION.findall(text)),
+            *(normalize_key_field(raw) for raw in _CODE_DOT.findall(text)),
             *(normalize_key_field(raw) for raw in _CODE_BARE.findall(text)),
         )
-        if item
+        if item and not _designation_is_standard(item)
     ]
     unique = list(dict.fromkeys(found))
     if len(unique) != 1:
@@ -614,6 +654,10 @@ def _unreadable_fields() -> StampKeyFields:
     )
 
 
+def _normalize_sheet(raw: str) -> str:
+    return normalize_key_field(raw.replace(",", "."))
+
+
 def _sheet_count_boxes(
     tokens: Sequence[PageToken],
 ) -> tuple[tuple[float, float, float], ...]:
@@ -650,10 +694,46 @@ def _number_beside_label(
         if nearer_count:
             continue
         if best is None or distance < best[0]:
-            best = (distance, text)
+            best = (distance, _normalize_sheet(text))
     if best is None:
         return None
     return best[1]
+
+
+def _single_sheet_from_total(tokens: Sequence[PageToken]) -> str | None:
+    """ГОСТ Р 21.101: у документа из одного листа «Лист» пуст, «Листов» равен 1."""
+
+    if not any(_SHEET_LABEL.fullmatch(token.text.strip()) for token in tokens):
+        return None
+    totals: list[str] = []
+    for token in tokens:
+        text = token.text.strip()
+        embedded = [match.group(1) for match in _SHEET_COUNT_EMBEDDED.finditer(text)]
+        if embedded:
+            totals.extend(embedded)
+            continue
+        if not _SHEET_COUNT.fullmatch(text):
+            continue
+        left, top, right, _bottom = bbox_from_polygon(token.polygon_norm)
+        best: tuple[float, str] | None = None
+        for other in tokens:
+            raw = other.text.strip()
+            if not _SHEET_NUMBER.fullmatch(raw):
+                continue
+            ox0, oy0, ox1, _oy1 = bbox_from_polygon(other.polygon_norm)
+            same_row = abs(oy0 - top) <= 0.03 and ox0 >= right - 0.01
+            below = 0.0 < (oy0 - top) <= 0.06 and ox0 <= right and ox1 >= left
+            if not same_row and not below:
+                continue
+            distance = abs(ox0 - right) + abs(oy0 - top)
+            if best is None or distance < best[0]:
+                best = (distance, _normalize_sheet(raw))
+        if best is not None:
+            totals.append(best[1])
+    unique = set(totals)
+    if unique == {"1"}:
+        return "1"
+    return None
 
 
 def _lower_right(hits: list[tuple[float, float, str]]) -> tuple[str | None, bool]:
@@ -727,7 +807,8 @@ def stage_from_stamp(tokens: Sequence[PageToken]) -> tuple[DocStage | None, bool
 def sheet_from_stamp(tokens: Sequence[PageToken]) -> tuple[str | None, bool]:
     """Номер у подписи «Лист». «Листов 17» не номер. Нижняя правая подпись важнее вложенной.
 
-    Два разных номера в одной клетке — спор, значения нет.
+    Два разных номера в одной клетке — спор, значения нет. Если графа «Лист»
+    пуста и «Листов» равен 1, это первый и единственный лист по ГОСТ Р 21.101.
     """
 
     hits: list[tuple[float, float, str]] = []
@@ -738,13 +819,19 @@ def sheet_from_stamp(tokens: Sequence[PageToken]) -> tuple[str | None, bool]:
         left, top, right, _bottom = bbox_from_polygon(token.polygon_norm)
         embedded = list(_SHEET.finditer(text))
         if embedded:
-            hits.extend((top, left, match.group(1)) for match in embedded)
+            hits.extend((top, left, _normalize_sheet(match.group(1))) for match in embedded)
             continue
         if _SHEET_LABEL.fullmatch(text):
             number = _number_beside_label(tokens, top, left, right)
             if number is not None:
                 hits.append((top, left, number))
-    return _lower_right(hits)
+    number, clash = _lower_right(hits)
+    if clash or number is not None:
+        return number, clash
+    single = _single_sheet_from_total(tokens)
+    if single is not None:
+        return single, False
+    return None, False
 
 
 def _sheet_field(search: str, tokens: Sequence[PageToken]) -> KeyFieldValue:
@@ -755,7 +842,7 @@ def _sheet_field(search: str, tokens: Sequence[PageToken]) -> KeyFieldValue:
         if number:
             return KeyFieldValue(KeyFieldState.FOUND, number)
         return KeyFieldValue(KeyFieldState.ABSENT)
-    return _one_or_conflict(list(_SHEET.findall(search)))
+    return _one_or_conflict([_normalize_sheet(item) for item in _SHEET.findall(search)])
 
 
 def _fields_from_text(
@@ -833,6 +920,7 @@ def stamp_key_fields(
     text_render_agreement: bool | None = None,
     second_text: str | None = None,
     media_box: Sequence[float] | None = None,
+    rotate: int = 0,
 ) -> StampKeyFields:
     """Шифр, стадия, редакция, лист и номер помещения или элемента.
 
@@ -843,8 +931,9 @@ def stamp_key_fields(
 
     if text_render_agreement is False:
         return _unreadable_fields()
-    region = _stamp_tokens(tokens, media_box=media_box) if tokens else ()
-    pool = region or tuple(tokens)
+    region = _stamp_tokens(tokens, media_box=media_box, rotate=rotate) if tokens else ()
+    x_min, _y_min = title_block_origin(media_box, rotate=rotate)
+    pool = region if x_min > 0.0 else (region or tuple(tokens))
     search = _join(pool)
     fields = _fields_from_text(search, pool)
     if second_text is not None and second_text.strip():
@@ -907,28 +996,35 @@ def read_passport(
     layer_kind: str = "vector",
     rotate: int = 0,
     media_box: tuple[float, ...] | None = None,
+    visible_box: tuple[float, ...] | None = None,
     crop_box: tuple[float, ...] | None = None,
     object_id: str | None = None,
     text_render_agreement: bool | None = None,
     injection_clean: bool | None = None,
     alternate_ciphers: Sequence[str] = (),
 ) -> DocumentPassport:
-    """Прочитать паспорт. Не заполняет шифр из имени файла."""
+    """Прочитать паспорт. Не заполняет шифр из имени файла.
+
+    ``visible_box`` — видимая страница в пунктах PDF (CropBox). По ней
+    считается угол 190×70 мм. В паспорт по-прежнему пишется MediaBox.
+    """
 
     if _HASH.fullmatch(file_hash) is None:
         raise ValueError("file_hash паспорта обязан быть SHA-256")
     has_text = any(item.text.strip() for item in tokens)
     if layer_kind == "vector" and not has_text:
         layer_kind = "raster"
-    region = _stamp_tokens(tokens, media_box=media_box) if tokens else ()
+    sheet_box = visible_box if visible_box is not None else media_box
+    region = _stamp_tokens(tokens, media_box=sheet_box, rotate=rotate) if tokens else ()
     blob = _join(region)
     full = _join(tokens)
-    search = blob or full
+    x_min, y_min = title_block_origin(sheet_box, rotate=rotate)
+    search = blob if x_min > 0.0 else (blob or full)
 
     code = cipher_from_text(search)
     ambiguous = code is None and cipher_is_ambiguous(search)
     revision, revision_kind = _revision_mark(search)
-    pool = region or tuple(tokens)
+    pool = region if x_min > 0.0 else (region or tuple(tokens))
     sheet, sheet_clash = sheet_from_stamp(pool) if tokens else (None, False)
     column_stage, stage_clash = stage_from_stamp(pool) if tokens else (None, False)
     stage = column_stage or _stage_from_text(search, labeled_only=True) or _stage_from_text(
@@ -978,7 +1074,7 @@ def read_passport(
     if approval is not ApprovalStatus.UNKNOWN:
         basis = ApprovalBasis.TITLE_BLOCK
     if approval is ApprovalStatus.UNKNOWN:
-        later, later_date = _title_block_approval(tokens)
+        later, later_date = _title_block_approval(tokens, x_min=x_min, y_min=y_min)
         if later is not ApprovalStatus.UNKNOWN:
             approval, approval_date = later, later_date or approval_date
             basis = ApprovalBasis.TITLE_BLOCK
@@ -1012,7 +1108,9 @@ def read_passport(
     if has_text:
         confidence = filled / len(KEY_FIELDS)
     if crop_box is None:
-        crop_box = stamp_crop_box(tokens if tokens else None, media_box=media_box)
+        crop_box = stamp_crop_box(
+            tokens if tokens else None, media_box=sheet_box, rotate=rotate
+        )
     return DocumentPassport(
         file_id=file_id,
         file_hash=file_hash,

@@ -348,7 +348,7 @@ def _pages_from_blobs(
         document = _maybe_ocr(document, raw)
         tokens = flatten_tokens(document)
         injection_clean_flag = scan_tokens_for_injection(tokens).is_clean
-        last = document.pages[-1]
+        first = document.pages[0]
         passport = read_passport(
             tokens,
             file_id=item.file_id,
@@ -356,9 +356,11 @@ def _pages_from_blobs(
             filename=item.filename,
             pages=len(document.pages),
             layer_kind=document.layer_kind,
-            rotate=last.frame.rotate,
+            rotate=first.frame.rotate,
+            media_box=first.frame.media,
+            visible_box=first.frame.crop,
             injection_clean=injection_clean_flag,
-            alternate_ciphers=stamp_cipher_reads(raw, len(document.pages)),
+            alternate_ciphers=stamp_cipher_reads(raw, first.page),
         )
         passport = apply_manifest_section(
             passport,
@@ -588,7 +590,7 @@ def stamp_approval_from_pdf(
     except (PdfParseTimeoutError, ValueError):
         return ApprovalStatus.UNKNOWN
     tokens = flatten_tokens(document)
-    last = document.pages[-1]
+    first = document.pages[0]
     passport = read_passport(
         tokens,
         file_id=file_id,
@@ -596,7 +598,9 @@ def stamp_approval_from_pdf(
         filename=filename,
         pages=len(document.pages),
         layer_kind=document.layer_kind,
-        rotate=last.frame.rotate,
+        rotate=first.frame.rotate,
+        media_box=first.frame.media,
+        visible_box=first.frame.crop,
     )
     return passport.approval_status
 
