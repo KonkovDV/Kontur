@@ -26,7 +26,7 @@ S0/S1 закрывают двое: инженер и доменный/юриди
 подмена · `RT-C` OCR/VLM robustness · `RT-D` identity, revision, pairing ·
 `RT-E` rule и legal layer · `RT-F` RAG, модели, supply chain · `RT-G` API,
 очередь, persistence · `RT-H` авторизация, приватность, аудит ·
-`RT-I` человеческий фактор и жюри.
+`RT-I` человеческий фактор и приёмка.
 
 Каталог фикстур: `backend/tests/adversarial/` (скелет с одним примером в каждом наборе).
 

@@ -8,17 +8,17 @@
 HITL; MISSING_EVIDENCE≠нарушение; РиН только подтверждённое; модули §7 №1–12.
 Задача — **не BIM-clash** (ADR-0006).
 
-**Календарь ЛЦТ:** пост финалистов «Город»
+**Календарь направления «Город»:** пост
 [t.me/leaders_hack/967](https://t.me/leaders_hack/967) (15.10.2026, ~15:17 MSK);
-ЛЦТ.Фест / награждение **30.10.2026** (чеки 1 000 000 / 600 000 / 400 000 ₽).
-По Положению постановщик может взять **больше 10** команд в финал.
+публичное награждение **30.10.2026** (чеки 1 000 000 / 600 000 / 400 000 ₽).
+По положению постановщик может взять **больше 10** команд.
 
 Клоны peers для разбора хранились локально у агента и в git не входят.
 Связано: [COMPETITORS-OSINT-2026-10-15.md](COMPETITORS-OSINT-2026-10-15.md),
 [`../../RESEARCH_OSINT_2026.md`](../../RESEARCH_OSINT_2026.md),
 [`../../TZ_SCORECARD.md`](../../TZ_SCORECARD.md), [`../../METRICS.md`](../../METRICS.md).
 
-## Топ по полезности Контуру (прямые peers №10 выше IFC)
+## Топ по полезности Контуру (прямые peers выше IFC)
 
 | # | Репозиторий | ★ | Lic | Класс | Суть | Вердикт |
 |---|---|---|---|---|---|---|
@@ -31,7 +31,7 @@ HITL; MISSING_EVIDENCE≠нарушение; РиН только подтвер�
 | 7 | [mzat-dev/bimdiff](https://github.com/mzat-dev/bimdiff) | 4 | AGPL-3.0 | паттерн | `filter_noise`, severity | Только паттерны |
 | 8 | [kaan36875/BIMDelta](https://github.com/kaan36875/BIMDelta) | 0 | MIT | паттерн | Tag fallback; PR Action | CI-комментарий к диффу |
 | 9 | [CyberbuildLab/pcd-bim-matching-confidence](https://github.com/CyberbuildLab/pcd-bim-matching-confidence) + [rsasaki0109/bim-quality-checker](https://github.com/rsasaki0109/bim-quality-checker) | 7/0 | Apache/MIT | паттерн | multi-metric confidence; CI gate | На OCR/coverage матрицы |
-| 10 | [buildingSMART/IDS](https://github.com/buildingSMART/IDS) + [BCF-API](https://github.com/buildingSMART/BCF-API) / [ThatOpen/engine_web-ifc](https://github.com/ThatOpen/engine_web-ifc) | — | bSI/MPL | паттерн/roadmap | IDS/BCF; WASM IFC | После демо №10 |
+| 10 | [buildingSMART/IDS](https://github.com/buildingSMART/IDS) + [BCF-API](https://github.com/buildingSMART/BCF-API) / [ThatOpen/engine_web-ifc](https://github.com/ThatOpen/engine_web-ifc) | — | bSI/MPL | паттерн/roadmap | IDS/BCF; WASM IFC | После текущего показа |
 
 ### Дополнительно разобраны (не топ‑10)
 
@@ -64,10 +64,10 @@ HITL; MISSING_EVIDENCE≠нарушение; РиН только подтвер�
 
 **Перенять:** A13-стиль честных FAIL по §14 + JURY-GUIDE; ctrl_z Releases-кэш как идея (но прозрачно маркировать «без кэша — нет сканов»); `drawing_dimension` filter; offline tar+AV; XML удержать; multi-metric confidence; CI coverage gate.
 
-**Отвергнуть:** IFC в демо №10; cloud VLM; копирование peer-кода; путать claim F1 на train с скрытым тестом; «нет документа = нарушение».
+**Отвергнуть:** IFC в текущем показе; cloud VLM; копирование peer-кода; путать claim F1 на train с скрытым тестом; «нет документа = нарушение».
 
 ## Метод
 
 ТЗ v1.1; t.me/leaders_hack/967 (текст виджета 15.10); GitHub API+clone;
-сверка ADR/scorecard. Карточки финалистов в Telegram — изображения, полный
+сверка ADR/scorecard. Карточки в Telegram — изображения, полный
 текстовый список имён из поста **не извлечён** (только постер пользователя).

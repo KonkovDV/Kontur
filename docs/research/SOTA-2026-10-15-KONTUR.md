@@ -1,6 +1,6 @@
 # SOTA 2026-10-15 для Kontur (OCR/VLM, Document AI, HITL, RabbitMQ)
 
-Автор: Red Team (research). Код не правлю. Срез: `KonkovDV/Kontur@main` **040db27** (15.10.2026, ~19:53 МСК). Дедлайн демо жюри: **30.10.2026** (~2 недели).
+Автор: Red Team (research). Код не правлю. Срез: `KonkovDV/Kontur@main` **040db27** (15.10.2026, ~19:53 МСК). Дедлайн показа: **30.10.2026** (~2 недели).
 
 Цель брифа: что взять из открытого SOTA 2025–2026 **до 30.10**, что отложить, чего избегать. Размеры: **S** ≤ 0,5 дня, **M** 1–2 дня, **L** 3+ дня. Бенчмарки не выдумываю: только опубликованные цифры со ссылками; где нет замера на корпусе Контура — пишу «не измеряли».
 
@@ -19,7 +19,7 @@
 | Таблицы | Простая «марка + одно число» по токенам; Docling/Camelot — только в ROADMAP W5 «с лицензией OK» | `element_table.py`, `EXTRACTOR_ROADMAP.md` |
 | HITL / evidence | Единица = `evidence_group`; polygon source+[0;1]; SHA-256; `CONFIRMED_VIOLATION` только инспектор; UI с оверлеем | ADR-0002, ADR-0007, `evidence_card.py`, `EvidencePane.tsx` |
 | RabbitMQ | 3.13; durable **quorum** `kontur.rin.protocol`; transactional outbox (`FOR UPDATE SKIP LOCKED`); publisher confirms; retry 1/5/15 → `FAILED_TERMINAL`; `event_id` стабилен | ADR-0010, `outbox.py`, `outbox_worker.py`, `sync_relay.py` |
-| Ограничение жюри | Облачные OCR/VLM **не входят** в зачётный прогон (ответ организатора 23); веса локально | `README.md`, `JURY_ONEPAGER.md` |
+| Ограничение зачётного прогона | Облачные OCR/VLM **не входят** в зачётный прогон (ответ организатора 23); веса локально | `README.md`, `JURY_ONEPAGER.md` |
 
 ---
 
@@ -57,9 +57,9 @@
 | | Что | Размер | Зачем |
 |---|---|---|---|
 | **Adopt** | Двухстадийный штамп: (1) детерминированный crop зоны штампа по якорям ГОСТ / layout heuristic; (2) eslav/Tesseract **только на кропе** + dual-read; при disagreement → `LOW_QUALITY`/`ABSTAIN` | M | Закрывает GAP-STAMP частично без VLM; стыкуется с W1 exact_field паспорта |
-| **Adopt** | Прогон **MWS-Vision-Bench** (public val) offline на eslav vs Tesseract — один JSON с n и CI, без заявления «порог взят» | S | Внешняя калибровка RU; честный слайд для жюри |
-| **Adopt** | Пилот PaddleOCR-VL-0.9B/1.6 **только offline**, на 50–100 кропах штампа, с обязательным grounding к pdfium-токенам; **не** в scoring path | M | Ответить жюри «почему не VLM» цифрой на *нашем* корпусе |
-| **Defer** | Production VLM primary; fine-tune Qwen2.5-VL / PaddleOCR-VL на штампах | L+ | Нет GOLD, нет GPU в offline-compose жюри, нарушает «не арбитр» |
+| **Adopt** | Прогон **MWS-Vision-Bench** (public val) offline на eslav vs Tesseract — один JSON с n и CI, без заявления «порог взят» | S | Внешняя калибровка RU; честный слайд для показа |
+| **Adopt** | Пилот PaddleOCR-VL-0.9B/1.6 **только offline**, на 50–100 кропах штампа, с обязательным grounding к pdfium-токенам; **не** в scoring path | M | Ответить на вопрос «почему не VLM» цифрой на *нашем* корпусе |
+| **Defer** | Production VLM primary; fine-tune Qwen2.5-VL / PaddleOCR-VL на штампах | L+ | Нет GOLD, нет GPU в офлайн-сборке, нарушает «не арбитр» |
 | **Defer** | Детектор title-block (Faster R-CNN) как отдельный сервис | L | ROI ниже, чем шаблоны ГОСТ + vector anchors до демо |
 | **Avoid** | Облачный GPT-4o/Claude как экстрактор в зачётном прогоне | — | Запрет организатора; нет provenance |
 | **Avoid** | End-to-end VLM без bbox/grounded tokens | — | Ломает ADR-0001/0002; BlueprintSymVL показывает галлюцинации |
@@ -158,7 +158,7 @@ EvidencePane с polygon_norm оверлеем, метаданные докуме
 
 ## 5. Top-10 adopt до 30.10 (impact / effort)
 
-Ранжирование: влияние на жюри (живой сценарий + evidence + честные метрики) и на закрытие ТЗ при минимальном риске для durable.
+Ранжирование: влияние на показ (живой сценарий + evidence + честные метрики) и на закрытие ТЗ при минимальном риске для durable.
 
 | # | Действие | Область | Размер | Impact | Effort | Почему сейчас |
 |---|---|---|---|---|---|---|

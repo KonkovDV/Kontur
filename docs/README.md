@@ -49,8 +49,8 @@
 
 | Вопрос | Файл |
 |---|---|
-| Публичные репозитории задачи №10 (18.10.2026) | [`research/competitors/OSINT-2026-10-18.md`](research/competitors/OSINT-2026-10-18.md) |
-| Финалисты и peers, срез 15.10.2026 | [`research/competitors/`](research/competitors/) |
+| Смежные открытые репозитории (18.10.2026) | [`research/competitors/OSINT-2026-10-18.md`](research/competitors/OSINT-2026-10-18.md) |
+| Смежные репозитории, срез 15.10.2026 | [`research/competitors/`](research/competitors/) |
 | OCR / Document AI (срез 28.09) | [`RESEARCH_OSINT_2026.md`](RESEARCH_OSINT_2026.md) |
 
 ## Записи по дням

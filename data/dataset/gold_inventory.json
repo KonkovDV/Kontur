@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "observed_at": "2026-09-20",
-  "package_version": "lct2026-task10-20260915",
+  "package_version": "kontur-dataset-20260915",
   "purpose": "Машиночитаемый снимок открытого gold организатора. Не корпус frozen validation. Не содержимое TEST_HIDDEN.",
   "human_doc": "docs/ORGANIZER_GOLD.md",
   "sources_open_only": [

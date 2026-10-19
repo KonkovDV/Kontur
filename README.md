@@ -12,23 +12,23 @@
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white">
   <a href="docker-compose.offline.yml"><img alt="Docker Compose офлайн" src="https://img.shields.io/badge/Docker_Compose-offline-2496ED?logo=docker&amp;logoColor=white"></a>
   <a href="contracts/openapi.yaml"><img alt="OpenAPI 3.1" src="https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&amp;logoColor=white"></a>
-  <img alt="Задача №10, Мосгосстройнадзор" src="https://img.shields.io/badge/%D0%B7%D0%B0%D0%B4%D0%B0%D1%87%D0%B0_%E2%84%9610-%D0%9C%D0%BE%D1%81%D0%B3%D0%BE%D1%81%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BD%D0%B0%D0%B4%D0%B7%D0%BE%D1%80-520978">
+  <img alt="Мосгосстройнадзор" src="https://img.shields.io/badge/%D0%9C%D0%BE%D1%81%D0%B3%D0%BE%D1%81%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BD%D0%B0%D0%B4%D0%B7%D0%BE%D1%80-520978">
   <a href="docs/METRICS.md"><img alt="132 параметра матрицы" src="https://img.shields.io/badge/матрица-132_параметра-520978"></a>
 </p>
 
 # Контур — «Инспектор ИИ»
 
 Сервис камеральной сверки проектной (ПД), рабочей (РД) и исполнительной (ИД)
-документации по матрице из 132 контролируемых параметров. Задача №10,
-Мосгосстройнадзор.
+документации по матрице из 132 контролируемых параметров.
+Заказчик — Мосгосстройнадзор.
 
 Контур находит расхождение между стадиями и кладёт на карточку файл, страницу,
 SHA-256 и область на листе. Подтверждает расхождение инспектор.
 
-Репозиторий публичный, открытой лицензии на код нет: он передаётся заказчику
-задачи. Замеры gold и OCR сняты 28.09.2026 и после правок штампа не повторялись.
+Репозиторий публичный, открытой лицензии на код нет: он передаётся заказчику.
+Замеры gold и OCR сняты 28.09.2026 и после правок штампа не повторялись.
 
-**Для жюри:** [пакет формы](submission/README.md) ·
+**Документы:** [пакет формы](submission/README.md) ·
 [досье](submission/02-documentation/README.md) ·
 [протокол запуска](submission/04-prototype/README.md) ·
 [реестр доказательств](submission/05-additional/README.md) ·
@@ -183,7 +183,7 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
 Учебный токен: `inspector-1@OBJ-DEMO-COLD-START/INSPECTOR`. Это не учётная
 запись промышленного контура. Защищённые маршруты без токена отвечают 401.
 Перед сборкой задайте `KONTUR_GIT_SHA` — 40 символов `git rev-parse HEAD`:
-каталог `.git` в образ не копируется. Сервер жюри открывает экран наружу
+каталог `.git` в образ не копируется. Сервер приёмки открывает экран наружу
 переменной `KONTUR_BIND=0.0.0.0`, базы и брокер остаются на `127.0.0.1`.
 
 Без сети: `scripts/offline_bundle.sh` сохраняет собранные образы в tar с
@@ -264,7 +264,7 @@ Frozen validation в репозитории нет. Ниже — то, что у
 
 ## Как оценивают и где это проверить
 
-Рейтинг ставит организатор: 30 баллов экспертизы и 10 питча (ответ 13). При равенстве смотрят F1 и Recall. Таблица ниже — техническая доска ЛЦТ, максимум 20.
+Рейтинг ставит заказчик: 30 баллов экспертизы и 10 за показ (ответ 13). При равенстве смотрят F1 и Recall. Таблица ниже — техническая доска приёмки, максимум 20.
 
 | Критерий доски | Баллы | Где проверить |
 |---|---|---|
@@ -403,8 +403,6 @@ docs/           ADR, архитектура, метрики, трассируе�
 
 ## Документы
 
-Для жюри:
-
 | Тема | Файл |
 |---|---|
 | Пять полей формы сдачи | [`submission/README.md`](submission/README.md) |
@@ -436,12 +434,12 @@ docs/           ADR, архитектура, метрики, трассируе�
 | Нормативный реестр | [`docs/NORMATIVE_REGISTRY.md`](docs/NORMATIVE_REGISTRY.md) |
 | Вопросы организатору | [`docs/QUESTIONS_TO_ORGANIZER.md`](docs/QUESTIONS_TO_ORGANIZER.md) |
 | OSINT Document AI, срез 28.09 | [`docs/RESEARCH_OSINT_2026.md`](docs/RESEARCH_OSINT_2026.md) |
-| Публичные репозитории задачи №10, 18.10 | [`docs/research/competitors/OSINT-2026-10-18.md`](docs/research/competitors/OSINT-2026-10-18.md) |
+| Смежные открытые репозитории, 18.10 | [`docs/research/competitors/OSINT-2026-10-18.md`](docs/research/competitors/OSINT-2026-10-18.md) |
 | Донор архитектуры AeroBIM и переносы 08–15.10 | [`docs/SOTA_AEROBIM_ANALYSIS.md`](docs/SOTA_AEROBIM_ANALYSIS.md) |
 | Карта всех документов | [`docs/README.md`](docs/README.md) |
 
 ## Права на код
 
-Код Контура передаётся заказчику задачи. Открытой лицензии на него в
+Код Контура передаётся заказчику. Открытой лицензии на него в
 репозитории нет. Модели и пакеты третьих сторон остаются под лицензиями своих
 авторов — [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md).

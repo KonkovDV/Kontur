@@ -23,6 +23,6 @@
 
 Только `coverage_counts` из `tz_scorecard.json` + число новых тестов семейства. Не «% ТЗ».
 
-## Связь с питчем
+## Связь с показом
 
 См. [JURY_ONEPAGER.md](JURY_ONEPAGER.md) и [research/competitors/](research/competitors/): конкуренты с 99/132 — claims; мы растём очередью W1–W5.

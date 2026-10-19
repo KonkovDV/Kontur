@@ -1,4 +1,4 @@
-"""Адаптер submission_schema: внутренний статус ≠ метка хакатона, JSON собирается один раз."""
+"""Адаптер submission_schema: внутренний статус ≠ внешняя метка, JSON собирается один раз."""
 
 from __future__ import annotations
 
