@@ -12,7 +12,7 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     # Точная версия до демо 30.10.2026: совпадает с requirements.lock и образом ядра.
-    "pypdfium2==5.13.0",
+    "pypdfium2==5.14.0",
     "pdfminer.six>=20240706",
     "jsonschema>=4.23",
     "pyyaml>=6.0",
