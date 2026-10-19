@@ -1,6 +1,6 @@
 # Уведомления о сторонних компонентах
 
-Код Контура передаётся заказчику задачи, открытой лицензии на него нет. Ниже лицензии зависимостей, которые реально указаны в `backend/pyproject.toml`, `web/package.json` и `gateway/package.json`. Версии Python сняты с метаданных установленных пакетов 23.09.2026 (`License` / `License-Expression`). Лицензии npm сняты командой `npm view <имя> license` в тот же день.
+Код Контура — под лицензией MIT, текст в [`LICENSE`](../LICENSE). Ниже лицензии зависимостей, которые реально указаны в `backend/pyproject.toml`, `web/package.json` и `gateway/package.json`. Версии Python сняты с метаданных установленных пакетов 23.09.2026 (`License` / `License-Expression`). Лицензии npm сняты командой `npm view <имя> license` в тот же день.
 
 ## Python
 

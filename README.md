@@ -13,6 +13,7 @@
   <a href="docker-compose.offline.yml"><img alt="Docker Compose офлайн" src="https://img.shields.io/badge/Docker_Compose-offline-2496ED?logo=docker&amp;logoColor=white"></a>
   <a href="contracts/openapi.yaml"><img alt="OpenAPI 3.1" src="https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&amp;logoColor=white"></a>
   <img alt="Мосгосстройнадзор" src="https://img.shields.io/badge/%D0%9C%D0%BE%D1%81%D0%B3%D0%BE%D1%81%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BD%D0%B0%D0%B4%D0%B7%D0%BE%D1%80-520978">
+  <a href="LICENSE"><img alt="Лицензия MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
   <a href="docs/METRICS.md"><img alt="132 параметра матрицы" src="https://img.shields.io/badge/матрица-132_параметра-520978"></a>
 </p>
 
@@ -25,7 +26,7 @@
 Контур находит расхождение между стадиями и кладёт на карточку файл, страницу,
 SHA-256 и область на листе. Подтверждает расхождение инспектор.
 
-Репозиторий публичный, открытой лицензии на код нет: он передаётся заказчику.
+Репозиторий публичный. Код Контура — под лицензией MIT.
 Замеры gold и OCR сняты 28.09.2026 и после правок штампа не повторялись.
 
 **Документы:** [пакет формы](submission/README.md) ·
@@ -440,6 +441,6 @@ docs/           ADR, архитектура, метрики, трассируе�
 
 ## Права на код
 
-Код Контура передаётся заказчику. Открытой лицензии на него в
-репозитории нет. Модели и пакеты третьих сторон остаются под лицензиями своих
-авторов — [`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md).
+Код Контура — под лицензией [MIT](LICENSE). Модели и пакеты третьих сторон
+остаются под лицензиями своих авторов —
+[`docs/THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md).

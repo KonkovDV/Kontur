@@ -2,8 +2,8 @@
 
 **Ссылка для формы:** https://github.com/KonkovDV/Kontur
 
-Публичный репозиторий. Код передаётся заказчику задачи, открытой лицензии
-на него нет.
+Публичный репозиторий. Код Контура — под лицензией MIT
+([`LICENSE`](../../LICENSE)).
 Гейты I/J/K/L открыты.
 
 ## Структура
@@ -34,7 +34,7 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
 
 ## Что фиксирует сборку
 
-Код Контура передаётся заказчику без открытой лицензии. Сторонние пакеты
+Код Контура — под лицензией MIT ([`LICENSE`](../../LICENSE)). Сторонние пакеты
 и веса — под лицензиями своих авторов:
 [`THIRD_PARTY_NOTICES.md`](../../docs/THIRD_PARTY_NOTICES.md).
 Зависимости Python — [`backend/requirements.lock`](../../backend/requirements.lock).
