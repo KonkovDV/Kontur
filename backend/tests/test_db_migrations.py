@@ -7,7 +7,7 @@ from kontur.infrastructure.db.migrations import SCHEMA_PATH, migration_statement
 
 def test_migration_reuses_guard_from_schema() -> None:
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
-    add, function, drop, trigger, evidence = migration_statements()
+    add, function, drop, trigger, evidence, *files = migration_statements()
     assert add == "ALTER TABLE protocols ADD COLUMN IF NOT EXISTS full_payload JSONB"
     assert function.startswith("CREATE OR REPLACE FUNCTION protocols_guard_finalized()")
     assert function.replace("CREATE OR REPLACE FUNCTION", "CREATE FUNCTION", 1) in schema
@@ -16,6 +16,11 @@ def test_migration_reuses_guard_from_schema() -> None:
     assert trigger in schema and trigger.startswith("CREATE TRIGGER")
     assert evidence.startswith("CREATE TABLE IF NOT EXISTS process_evidence_groups (")
     assert evidence.replace(" IF NOT EXISTS", "", 1) in schema
+    assert files == [
+        "ALTER TABLE process_files ADD COLUMN IF NOT EXISTS predecessor_file_id TEXT",
+        "ALTER TABLE process_files ADD COLUMN IF NOT EXISTS successor_file_id TEXT",
+        "ALTER TABLE process_files ADD COLUMN IF NOT EXISTS file_path TEXT",
+    ]
 
 
 class _Recorder:

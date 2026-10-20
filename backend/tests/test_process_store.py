@@ -415,6 +415,32 @@ def test_postgres_finalized_save_fails_closed_before_any_sql() -> None:
     assert conn.sql == []
 
 
+def test_postgres_note_sync_updates_the_queue_without_rewriting_the_protocol() -> None:
+    class _SyncConn:
+        def __init__(self) -> None:
+            self.sql: list[str] = []
+
+        def execute(self, sql: str, params: object = None) -> _Cursor:
+            del params
+            self.sql.append(sql)
+            return _Cursor([("p-1",)])
+
+    conn = _SyncConn()
+    store = PostgresProcessStore(conn)
+    store.note_sync(
+        _snap(
+            process_state=ProcessState.FINALIZED,
+            finalized_by="insp-7",
+            protocol_id="proto-1",
+            sync_state=SyncState.PENDING_SYNC,
+        )
+    )
+    joined = "\n".join(conn.sql)
+    assert "UPDATE processes" in joined
+    assert "INSERT INTO processes" not in joined
+    assert "INSERT INTO protocols" not in joined
+
+
 def test_memory_store_keeps_finalized_snapshot_compatibility() -> None:
     store = MemoryProcessStore()
     finalized = _snap(

@@ -242,6 +242,20 @@ def test_two_unordered_pd_files_do_not_compare_the_last_upload() -> None:
     }
 
 
+def test_large_sheet_pipeline_ignores_drawing_table_cipher() -> None:
+    point = 72.0 / 25.4
+    width = 841.0 * point
+    height = 1189.0 * point
+    sheet = ascii_pdf("CODE 99999-XX", x=40.0, y=40.0, width=width, height=height)
+    files = (PipelineFile("f-a1", file_sha256(sheet), "a1.pdf", DocStage.PD),)
+    pages, _errors, _stamps, _clean, _pool = _pages_from_blobs(
+        files,
+        {"f-a1": sheet},
+        inspector_approved_file_ids=frozenset({"f-a1"}),
+    )
+    assert pages[DocStage.PD].document.document_code == ""
+
+
 def test_later_not_approved_does_not_hide_the_earlier_file() -> None:
     earlier = ascii_pdf("CODE 12345-PZ")
     later = ascii_pdf("not approved CODE 12345-PZ")
@@ -472,6 +486,39 @@ def test_zip_with_pdf_is_expanded_before_compare() -> None:
     text = " ".join(report.parse_errors)
     assert "ARCHIVE_NOT_EXPANDED" not in text
     assert "ZIP:" not in text
+
+
+def test_one_rule_error_keeps_the_rest_of_the_matrix(monkeypatch) -> None:
+    from kontur.application import process_pipeline as pipeline_module
+
+    real = pipeline_module.evaluate_rule
+
+    def explode(rule, **kwargs):
+        if rule.get("code") == "PZ-001":
+            raise ValueError("сбой правила")
+        return real(rule, **kwargs)
+
+    monkeypatch.setattr(pipeline_module, "evaluate_rule", explode)
+    data = ascii_pdf("CODE 12345-PZ Rev 2 Sheet 1")
+    item = PipelineFile(
+        file_id="f-pd",
+        file_hash=file_sha256(data),
+        filename="pz.pdf",
+        doc_stage=DocStage.PD,
+    )
+    report = run_process_pipeline(
+        object_id="obj-one-rule",
+        completeness=_completeness_pd(),
+        files=(item,),
+        blobs={"f-pd": data},
+    )
+    by_code = {item.rule_code: item for item in report.findings}
+    assert by_code["PZ-001"].finding_status is FindingStatus.LOW_QUALITY
+    assert by_code["PZ-001"].rationale == "правило не посчиталось"
+    assert len(report.findings) == EXPECTED_PARAM_COUNT
+    assert any(item.rule_code == "AR-041" for item in report.findings)
+    assert any("PZ-001: ValueError" in line for line in report.parse_errors)
+    assert all(item.finding_status not in HUMAN_ONLY_STATUSES for item in report.findings)
 
 
 def test_seven_zip_stays_unexpanded() -> None:

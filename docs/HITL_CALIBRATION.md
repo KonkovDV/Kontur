@@ -13,7 +13,7 @@
 
 **Текущий статус (15.10.2026): uncalibrated / insufficient_data.**
 В `hitl_thresholds.v1.json`: `t_high = null`, `t_low = null`, `calibrated = false`.
-UI-чипы (`web/src/bands.ts`) читают файл: при отсутствии калибровки берут fallback 0,90/0,70 и **обязательно** суффикс «не калибр.». Это не заявление Exact Match ≥0,90 и не закрытие Gate I.
+UI-чипы (`web/src/bands.ts`) читают файл: при отсутствии калибровки берут fallback 0,90/0,70 и **обязательно** суффикс «не калибр.». Это не заявление Exact Match ≥ 0,90 и не закрытие Gate I.
 
 Повторный подбор порогов = новый `version`, не тихая правка того же файла. Смена JSON без смены version ломает sha256-тест.
 

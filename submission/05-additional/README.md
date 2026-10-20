@@ -25,8 +25,9 @@
 | Замер | Значение | n | Источник | Чем не является |
 |---|---|---|---|---|
 | Покрытие матрицы | 59 executable, 68 extractor_missing, 1 advisory, 4 source_missing | 132 правила | [`coverage_snapshot.json`](../../data/matrix/coverage_snapshot.json) | Заявлением, что все параметры исполняются |
-| Публичный gold, матрица | 0 попаданий, Wilson [0; 0,39] | 6 позитивов | [`GOLD_DIAGNOSIS.md`](../../docs/GOLD_DIAGNOSIS.md) | Порогом Recall |
-| Публичный gold, свободный поиск | 0 попаданий, Wilson [0; 0,49] | 4 позитива | там же | Порогом Recall |
+| Публичный gold, матрица, 08.10 | 6 попаданий, Wilson [0,61; 1] | 6 позитивов | [`METRICS.md`](../../docs/METRICS.md) | Порогом Recall: 0,61 ниже 0,80 |
+| Публичный gold, свободный поиск, 08.10 | 4 попадания, Wilson [0,51; 1] | 4 позитива | там же | Порогом Recall. Рядом помещение вне эталона |
+| Публичный gold, 28.09 | 0 и 0, Wilson [0; 0,39] и [0; 0,49] | 6 и 4 | [`GOLD_DIAGNOSIS.md`](../../docs/GOLD_DIAGNOSIS.md) | Порогом Recall |
 | OCR, eslav PP-OCRv5 | нижняя граница Wilson 0,663 доли строк с CA не ниже 0,95 | 5935 строк SILVER | [`OCR_BAKEOFF.md`](../../docs/OCR_BAKEOFF.md) | Замером на GOLD. Порог 0,95 не взят |
 | k6 на `/status` | p50 7,12 мс, p95 18,26 мс, p99 32,80 мс, ошибок 0 | 6000 запросов, 100 VU × 60 с | [`PERFORMANCE.md`](../../docs/PERFORMANCE.md) | Промышленным SLA |
 | Холодный запуск из tar | `healthz` 200, core и gateway `healthy` | 2 прогона, 27.09 и 28.09 | [`DEMO_COLD_START.md`](../../docs/DEMO_COLD_START.md) | Прогоном с вынутым кабелем на чистом Linux |
@@ -45,15 +46,15 @@
 
 | Тип | Правил | executable | extractor_missing | advisory | source_missing |
 |---|---|---|---|---|---|
-| `number` | 74 | 30 | 44 | 0 | 0 |
+| `number` | 70 | 30 | 40 | 0 | 0 |
 | `enum` | 19 | 10 | 9 | 0 | 0 |
 | `exact_field` | 16 | 4 | 8 | 0 | 4 |
 | `presence` | 12 | 0 | 11 | 1 | 0 |
 | `multi_field` | 7 | 7 | 0 | 0 | 0 |
+| `element_table` | 5 | 5 | 0 | 0 | 0 |
 | `contour_area` | 2 | 2 | 0 | 0 | 0 |
-| `element_table` | 1 | 1 | 0 | 0 | 0 |
 | `geometry` | 1 | 1 | 0 | 0 | 0 |
-| Итого | 132 | 55 | 72 | 1 | 4 |
+| Итого | 132 | 59 | 68 | 1 | 4 |
 
 **По разделу матрицы**
 
@@ -62,25 +63,24 @@
 | ПЗ | 23 | 23 | — |
 | СПЗУ | 16 | 4 | 12 extractor_missing |
 | АР | 14 | 5 | 9 extractor_missing |
-| КР | 14 | 5 | 9 extractor_missing |
+| КР | 14 | 7 | 7 extractor_missing |
 | ППМ | 13 | 4 | 9 extractor_missing |
 | ОДИ | 9 | 0 | 9 extractor_missing |
 | ПОС | 9 | 2 | 7 extractor_missing |
 | ЗУ | 8 | 6 | 2 extractor_missing |
 | ПОД | 8 | 1 | 6 extractor_missing, 1 advisory |
 | ООС | 4 | 0 | 4 source_missing |
-| ИОС4 | 4 | 2 | 2 extractor_missing |
+| ИОС4 | 4 | 3 | 1 extractor_missing |
 | ИОС1, ИОС2 | 3 и 3 | 1 и 1 | 2 и 2 extractor_missing |
-| ИОС3, ИОС5 | 2 и 1 | 0 | 2 и 1 extractor_missing |
+| ИОС3, ИОС5 | 2 и 1 | 1 и 0 | 1 и 1 extractor_missing |
 | СМ | 1 | 1 | — |
 
 Почему правила остались `extractor_missing` — поштучно в
 [`number_family_triage.json`](../../data/matrix/number_family_triage.json),
 [`class_ladder_triage.json`](../../data/matrix/class_ladder_triage.json) и
 [`family_triage.json`](../../data/matrix/family_triage.json). Подсчёт объектов на
-плане, площадь по нескольким контурам и таблица по элементам в `executable`
-не переводились. Четыре правила ООС ссылаются на источники вне пакета
-ПД/РД/ИД.
+плане в `executable` не переводился. Четыре правила ООС ссылаются на
+источники вне пакета ПД/РД/ИД.
 
 ## 3. Публичный gold: пять повторов
 
@@ -100,6 +100,7 @@ IOS4-079 в помещении 012) и 4 позитива свободного �
 | После `sole_head` | `c18cf8e` | «шифр части файлов стадии PD не прочитан» | 0 из 6 | 0 из 4 |
 | После якоря шифра | код `d5e4a0e`, манифест `05e3470` | «якорь или число не найдены». В режиме `code` 1 из 6 за счёт помещения 600, которого нет в разметке | 0 из 6 | 0 из 4 |
 | После метки и пар листов | код `3bc590f`, манифест `9bd8753` | «якорь или число не найдены». Помещение 600 в ответ не вышло | 0 из 6 | 0 из 4 |
+| После разведения листов, 08.10 | `2d48d89` | Полный пакет: 50 файлов, 8 пропусков, сбоев 0. Порог Wilson не взят | 6 из 6, низ 0,61 | 4 из 4, низ 0,51 |
 
 Последний повтор: 132 правила, сбоев 0, пропусков 8, `pipeline_seconds` 1406,
 `elapsed_seconds` 1656, `model_version` `tesseract-5.4.0.20240606`.
@@ -235,7 +236,7 @@ Ruleset `main-pr-and-ci`, id 23890545: PR обязателен, 11 обязат�
 | OCR на уровне порога, GOLD по растру | [`OCR_BAKEOFF.md`](../../docs/OCR_BAKEOFF.md), GAP-CAP-OCR |
 | Атомарное разделение находки, `split()` | [#83](https://github.com/KonkovDV/Kontur/issues/83) |
 | Изоляция VLM от инъекций в документе | [#84](https://github.com/KonkovDV/Kontur/issues/84) |
-| Разбор XML | [`KNOWN_GAPS.md`](../../docs/KNOWN_GAPS.md), GAP-DOCX-XML |
+| Схема пояснительной записки из XML | [`KNOWN_GAPS.md`](../../docs/KNOWN_GAPS.md), GAP-DOCX-XML |
 | Живой РиН, ACK, УКЭП, OIDC | [`ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) |
 | Видео показа | человек |
 

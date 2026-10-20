@@ -993,11 +993,11 @@ class ProcessWorkspace:
         if record.sync_state is SyncState.NOT_REQUESTED:
             record.sync_state = SyncState.PENDING_SYNC
             record.last_sync_notice = "передача поставлена в очередь; РиН не вызывался"
-            self._persist(record)
+            self._store.note_sync(self._snapshot(record))
             return record
         record.sync_attempts += 1
         decision = next_sync_attempt(max(record.sync_attempts, 1))
         record.sync_state = decision.state
         record.last_sync_notice = decision.reason
-        self._persist(record)
+        self._store.note_sync(self._snapshot(record))
         return record

@@ -1,12 +1,12 @@
-"""Два провода статусов: внутренний FindingStatus и внешний submission хакатона.
+"""Два провода статусов: внутренний FindingStatus и внешняя метка ответа.
 
-Домен не подгоняется под enum организатора. Этот модуль — адаптер границы
-соревнования: `submission_schema.json`. Провод ТЗ/РиН по-прежнему идёт через
+Домен не подгоняется под enum заказчика. Этот модуль — адаптер границы
+сдачи: `submission_schema.json`. Провод ТЗ/РиН по-прежнему идёт через
 `status_map.on_the_wire` и не содержит AUTO_NO_DIFFERENCE.
 
-Здесь же собирается сам JSON ответа. Правило одно: файл участника не должен
+Здесь же собирается сам JSON ответа. Правило одно: файл ответа не должен
 собираться «руками» в другом месте, иначе формат кода параметра, локализация и
-номер страницы разъедутся с матрицей, и ответ потеряет баллы молча.
+номер страницы разъедутся с матрицей.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ class ContestCodeStyle(StrEnum):
 CONTEST_CODE_STYLE = ContestCodeStyle.CANONICAL
 
 
-# Команда на хакатоне заявляет детекцию. CANDIDATE — это её VIOLATION_PRESENT.
+# В ответе детекция заявляется так. CANDIDATE — это VIOLATION_PRESENT.
 # AUTO_NO_DIFFERENCE на провод ТЗ не отдаётся, но в JSON участника становится
 # NO_VIOLATION: иначе 5 gold-проверок с violation_label=NO_VIOLATION некуда класть.
 _CONTEST_LABEL: dict[FindingStatus, ContestViolationLabel] = {

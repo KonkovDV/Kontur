@@ -1,5 +1,5 @@
 {
-  "package_version": "lct2026-task10-20260915",
+  "package_version": "kontur-dataset-20260915",
   "split_rule": "Изоляция по object_id: все документы, страницы и редакции одного объекта лежат в одном наборе. Пересечение train/validation по object_id = 0 (docs/DATA_QUARANTINE.md, п. 3).",
   "split_status": "partially_known_from_split_policy",
   "address_hint_status": "Адрес выведен из имени архива и организатором не подтверждён: источник истины — титул и штамп документа.",

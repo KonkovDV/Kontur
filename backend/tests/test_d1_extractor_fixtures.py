@@ -332,6 +332,19 @@ def test_ar041_missing_and_neighbor_height() -> None:
     assert hit.extraction.normalized_value == 1.2
 
 
+def test_opening_width_does_not_read_a_drawing_dimension() -> None:
+    """500×300 рядом с шириной проёма — размер на чертеже, не ширина."""
+
+    rule = _REGISTRY.get("AR-041")
+    hit = extract_number(_line("Ширина", "проема", "500×300"), rule)
+    assert hit is None
+    split = extract_number(_line("Ширина", "проема", "500", "×", "300"), rule)
+    assert split is None
+    kept = extract_number(_line("Ширина", "проема", "выход", "1,2", "м"), rule)
+    assert kept is not None
+    assert kept.extraction.normalized_value == 1.2
+
+
 def test_ios4078_area_is_not_scaled_as_length() -> None:
     """мм² не длина: 500×300 мм остаётся 150000, не 0,15 м."""
 

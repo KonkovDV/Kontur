@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "kontur"
 version = "0.1.0"
 description = "Контур — Инспектор ИИ: сверка ПД/РД/ИД по матрице 132 параметров"
+license = {text = "MIT"}
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

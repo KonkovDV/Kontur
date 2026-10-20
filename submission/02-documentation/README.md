@@ -2,7 +2,7 @@
 
 **Ссылка для формы:** https://github.com/KonkovDV/Kontur/tree/main/submission/02-documentation
 
-Техническое досье Контура для жюри задачи №10. Замеры — срез 28.09.2026.
+Техническое досье Контура. Замеры — срез 28.09.2026.
 Покрытие матрицы: 59 executable, 68 extractor_missing, 1 advisory,
 4 source_missing из 132. Приёмка по гейтам I, J, K и L ещё впереди.
 
@@ -49,7 +49,7 @@ predecessor/successor (ответы 11 и 12). Шифр штампа важне�
 
 **Что вне задачи.** Проверка проекта по СНиП и СанПиН. Автономный надзор
 без человека. Промышленные OIDC, TLS, УКЭП и живой РиН (ответ организатора 18:
-на хакатоне это не блокер).
+в этой поставке это не блокер).
 
 ## 2. Как читать
 
@@ -186,7 +186,7 @@ predecessor/successor (ответы 11 и 12). Шифр штампа важне�
 | [`document_passport.schema.json`](../../contracts/schemas/document_passport.schema.json) | Паспорт тома: шифр, редакция, штамп, слой |
 | [`protocol.schema.json`](../../contracts/schemas/protocol.schema.json) | Протокол по образцу приложения 2 |
 | [`protocol-export.xsd`](../../contracts/schemas/protocol-export.xsd) | XML-выгрузка протокола |
-| [`submission.schema.json`](../../contracts/schemas/submission.schema.json) | Ответ участника соревнования |
+| [`submission.schema.json`](../../contracts/schemas/submission.schema.json) | Файл ответа по схеме приёмки |
 | [`submission_pack.schema.json`](../../contracts/schemas/submission_pack.schema.json) | Машиночитаемый пакет провенанса |
 
 ## 7. Как инварианты держатся кодом
@@ -218,8 +218,10 @@ job `backend` имеет `conclusion=success`, `runner_id` не 0 и непус�
 **Пороги.** Раздел 14 ТЗ 1.1 — минимумы приёмки: Character Accuracy не ниже
 0,95, Exact Match полей не ниже 0,90, связка документов не ниже 0,95,
 локализация не ниже 0,95 при IoU не ниже 0,50, Precision не ниже 0,90,
-Recall не ниже 0,80, F1 не ниже 0,85, FPR не выше 0,10. Гармоника P=0,90 и
-R=0,80 ≈ 0,847: такая пара порог F1 не закрывает.
+Recall не ниже 0,80, F1 не ниже 0,85, FPR не выше 0,10.
+F1 = 2 × Precision × Recall / (Precision + Recall).
+Пара Precision = 0,90 и Recall = 0,80 даёт 2 × 0,90 × 0,80 / (0,90 + 0,80) ≈ 0,847
+и порог F1 не закрывает. Формула интервала — в [`METRICS.md`](../../docs/METRICS.md).
 
 **Правило решения.** Порог считается взятым только по нижней границе 95%
 интервала на frozen validation. Для доли используется интервал Wilson.

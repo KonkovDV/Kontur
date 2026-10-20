@@ -84,7 +84,9 @@ class S3ObjectStore:
     def _get_client(self) -> Any:
         if self._client is None:
             import boto3  # type: ignore[import-not-found,import-untyped,unused-ignore]
-            from botocore.client import Config  # type: ignore[import-not-found,import-untyped,unused-ignore]
+            from botocore.client import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
+                Config,
+            )
 
             self._client = boto3.client(
                 "s3",
@@ -99,7 +101,9 @@ class S3ObjectStore:
     def _ensure_bucket(self) -> None:
         if self._bucket_ready:
             return
-        from botocore.exceptions import ClientError  # type: ignore[import-not-found,import-untyped,unused-ignore]
+        from botocore.exceptions import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
+            ClientError,
+        )
 
         client = self._get_client()
         try:
@@ -115,7 +119,9 @@ class S3ObjectStore:
         return key
 
     def get(self, process_id: str, file_id: str) -> bytes | None:
-        from botocore.exceptions import ClientError  # type: ignore[import-not-found,import-untyped,unused-ignore]
+        from botocore.exceptions import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
+            ClientError,
+        )
 
         self._ensure_bucket()
         key = object_key(process_id, file_id)
@@ -132,7 +138,9 @@ class S3ObjectStore:
         self, process_id: str, file_id: str, chunk_size: int = 1 << 20
     ) -> Iterator[bytes] | None:
         """Потоковое чтение тела (для sha256 без загрузки целиком в RAM)."""
-        from botocore.exceptions import ClientError  # type: ignore[import-not-found,import-untyped,unused-ignore]
+        from botocore.exceptions import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
+            ClientError,
+        )
 
         self._ensure_bucket()
         key = object_key(process_id, file_id)

@@ -53,7 +53,7 @@ _COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
 def _sha_from_env() -> str:
-    """SHA, зашитый в образ. .git в контейнер жюри не копируется."""
+    """SHA, зашитый в образ. .git в контейнер приёмки не копируется."""
 
     for key in ("KONTUR_GIT_SHA", "GITHUB_SHA"):
         pinned = os.environ.get(key, "").strip().lower()

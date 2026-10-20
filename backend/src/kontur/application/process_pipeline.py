@@ -39,7 +39,7 @@ from kontur.domain.models import (
     EvidenceGroup,
     Finding,
 )
-from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus
+from kontur.domain.statuses import HUMAN_ONLY_STATUSES, FindingStatus, ReviewPriority
 from kontur.infrastructure.injection_scan import scan_tokens_for_injection
 from kontur.infrastructure.matrix.free_search import load_free_search
 from kontur.infrastructure.matrix.registry import (
@@ -95,6 +95,21 @@ class PipelineReport:
     #: иначе карточка доказательства не найдёт страницу.
     expanded_files: tuple[PipelineFile, ...] = ()
     expanded_blobs: Mapping[str, bytes] = field(default_factory=dict)
+
+
+def _uncomputed_finding(rule: dict[str, object]) -> Finding:
+    """Сбой одного правила не стирает остальные строки матрицы."""
+
+    return Finding(
+        finding_id=f"pipe-{rule.get('code', 'rule')}",
+        rule_code=str(rule.get("code") or ""),
+        finding_status=FindingStatus.LOW_QUALITY,
+        review_priority=ReviewPriority.LOW,
+        matrix_version=str(rule.get("matrix_version") or "draft-0"),
+        rule_version="0.1.0",
+        model_version="none",
+        rationale="правило не посчиталось",
+    )
 
 
 def _is_pdf(filename: str) -> bool:
@@ -333,7 +348,7 @@ def _pages_from_blobs(
         document = _maybe_ocr(document, raw)
         tokens = flatten_tokens(document)
         injection_clean_flag = scan_tokens_for_injection(tokens).is_clean
-        last = document.pages[-1]
+        first = document.pages[0]
         passport = read_passport(
             tokens,
             file_id=item.file_id,
@@ -341,9 +356,11 @@ def _pages_from_blobs(
             filename=item.filename,
             pages=len(document.pages),
             layer_kind=document.layer_kind,
-            rotate=last.frame.rotate,
+            rotate=first.frame.rotate,
+            media_box=first.frame.media,
+            visible_box=first.frame.crop,
             injection_clean=injection_clean_flag,
-            alternate_ciphers=stamp_cipher_reads(raw, len(document.pages)),
+            alternate_ciphers=stamp_cipher_reads(raw, first.page),
         )
         passport = apply_manifest_section(
             passport,
@@ -465,15 +482,22 @@ def run_process_pipeline(
     compare_started = perf_counter()
     findings: list[Finding] = []
     groups: list[EvidenceGroup] = []
+    rule_errors: list[str] = []
     for code in codes:
-        result = evaluate_rule(
-            source.get(code),
-            object_id=object_id,
-            pages=pages,
-            completeness=completeness,
-            revision_pool=revision_pool,
-            inspector_selected_file_ids=inspector_approved_file_ids,
-        )
+        rule = source.get(code)
+        try:
+            result = evaluate_rule(
+                rule,
+                object_id=object_id,
+                pages=pages,
+                completeness=completeness,
+                revision_pool=revision_pool,
+                inspector_selected_file_ids=inspector_approved_file_ids,
+            )
+        except Exception as exc:
+            rule_errors.append(f"{code}: {type(exc).__name__}")
+            findings.append(_uncomputed_finding(rule))
+            continue
         batch = (result, *result.also)
         for index, item in enumerate(batch):
             finding = item.finding
@@ -488,19 +512,23 @@ def run_process_pipeline(
         for entry in load_free_search(catalog):
             if entry.room_compare is None:
                 continue
-            searched = evaluate_free_search(
-                {
-                    "code": entry.parameter_code,
-                    "matrix_version": source.matrix_version,
-                    "extractor": {
-                        "type": "room_compare",
-                        "room_compare": entry.room_compare,
-                        "provision": entry.provision,
+            try:
+                searched = evaluate_free_search(
+                    {
+                        "code": entry.parameter_code,
+                        "matrix_version": source.matrix_version,
+                        "extractor": {
+                            "type": "room_compare",
+                            "room_compare": entry.room_compare,
+                            "provision": entry.provision,
+                        },
                     },
-                },
-                pages,
-                object_id,
-            )
+                    pages,
+                    object_id,
+                )
+            except Exception as exc:
+                rule_errors.append(f"{entry.parameter_code}: {type(exc).__name__}")
+                continue
             for index, item in enumerate(searched):
                 finding = item.finding
                 if finding.finding_status is not FindingStatus.SUSPICION:
@@ -518,7 +546,7 @@ def run_process_pipeline(
     report = PipelineReport(
         findings=tuple(findings),
         rules_evaluated=len(codes),
-        parse_errors=parse_errors,
+        parse_errors=(*parse_errors, *rule_errors),
         pages_built=_count_built_pages(pages),
         stamp_by_file_id=stamps,
         evidence_groups=tuple(groups),
@@ -562,7 +590,7 @@ def stamp_approval_from_pdf(
     except (PdfParseTimeoutError, ValueError):
         return ApprovalStatus.UNKNOWN
     tokens = flatten_tokens(document)
-    last = document.pages[-1]
+    first = document.pages[0]
     passport = read_passport(
         tokens,
         file_id=file_id,
@@ -570,7 +598,9 @@ def stamp_approval_from_pdf(
         filename=filename,
         pages=len(document.pages),
         layer_kind=document.layer_kind,
-        rotate=last.frame.rotate,
+        rotate=first.frame.rotate,
+        media_box=first.frame.media,
+        visible_box=first.frame.crop,
     )
     return passport.approval_status
 

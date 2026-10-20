@@ -42,7 +42,7 @@ python scripts/demo_cold_start.py --preflight
 
 ## Compose на чистой машине
 
-Нужны Docker Compose v2, Python ≥3.11, TTF с кириллицей (DejaVu/Arial).
+Нужны Docker Compose v2, Python ≥ 3.11, TTF с кириллицей (DejaVu/Arial).
 JWT по умолчанию проверяется. Для локального прогона **только** на loopback:
 
 ```text

@@ -56,6 +56,9 @@ def migration_statements(schema: str | None = None) -> tuple[str, ...]:
         _schema_block(_EVIDENCE_TABLE, text).replace(
             "CREATE TABLE", "CREATE TABLE IF NOT EXISTS", 1
         ),
+        "ALTER TABLE process_files ADD COLUMN IF NOT EXISTS predecessor_file_id TEXT",
+        "ALTER TABLE process_files ADD COLUMN IF NOT EXISTS successor_file_id TEXT",
+        "ALTER TABLE process_files ADD COLUMN IF NOT EXISTS file_path TEXT",
     )
 
 
