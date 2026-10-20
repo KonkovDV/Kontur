@@ -12,7 +12,6 @@
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&amp;logoColor=white">
   <a href="docker-compose.offline.yml"><img alt="Docker Compose офлайн" src="https://img.shields.io/badge/Docker_Compose-offline-2496ED?logo=docker&amp;logoColor=white"></a>
   <a href="contracts/openapi.yaml"><img alt="OpenAPI 3.1" src="https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&amp;logoColor=white"></a>
-  <img alt="Мосгосстройнадзор" src="https://img.shields.io/badge/%D0%9C%D0%BE%D1%81%D0%B3%D0%BE%D1%81%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BD%D0%B0%D0%B4%D0%B7%D0%BE%D1%80-520978">
   <a href="LICENSE"><img alt="Лицензия MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
   <a href="docs/METRICS.md"><img alt="132 параметра матрицы" src="https://img.shields.io/badge/матрица-132_параметра-520978"></a>
 </p>
@@ -20,8 +19,7 @@
 # Контур — «Инспектор ИИ»
 
 Сервис камеральной сверки проектной (ПД), рабочей (РД) и исполнительной (ИД)
-документации по матрице из 132 контролируемых параметров. Заказчик —
-Мосгосстройнадзор.
+документации по матрице из 132 контролируемых параметров.
 
 Контур находит расхождение между стадиями и кладёт на карточку файл, страницу,
 SHA-256 и область на листе. Решение по карточке принимает инспектор. Стенд
@@ -40,7 +38,7 @@ SHA-256 и область на листе. Решение по карточке 
 
 - [Состояние](#состояние)
 - [Куда смотреть](#куда-смотреть)
-- [Задача заказчика](#задача-заказчика)
+- [Задача](#задача)
 - [Как устроено](#как-устроено)
 - [Редакция, штамп и знак триггера](#редакция-штамп-и-знак-триггера)
 - [Слова на экране](#слова-на-экране)
@@ -85,7 +83,7 @@ SHA-256 и область на листе. Решение по карточке 
 
 Карта всех документов по типу вопроса — [`docs/README.md`](docs/README.md).
 
-## Задача заказчика
+## Задача
 
 Инспектор получает комплект томов трёх стадий и сверяет их вручную: площадь
 застройки в ПД и в РД, класс бетона, ширину проёма, сечение воздуховода.
@@ -106,7 +104,7 @@ SHA-256 и область на листе. Решение по карточке 
 `MISSING_EVIDENCE`. Непрочитанное значение получает `ABSTAIN` или `LOW_QUALITY`.
 
 Единица результата — точка `object_id + parameter_code + location`
-([ответ заказчика 14](docs/ORGANIZER_ANSWERS_2026_09_26.md)). Сверяются ПД, РД
+([записанный ответ 14](docs/ORGANIZER_ANSWERS_2026_09_26.md)). Сверяются ПД, РД
 и ИД между собой ([ADR-0006](docs/adr/0006-compare-documents-not-norms.md)).
 
 ## Как устроено
@@ -182,7 +180,7 @@ flowchart LR
 | Текст PDF может быть инъекцией | Статус пишет компаратор |
 | На новых объектах модели легко ставят «соответствует» (arXiv:2607.29058) | Вердикт у инспектора, выборки режутся по `object_id` |
 | При малом n интервал Вальда завышает уверенность | Доля публикуется с n и интервалом Wilson, порог берётся по консервативной границе |
-| Облачные OCR и VLM в официальный прогон не входят (ответ заказчика 23) | Веса лежат в образе |
+| Облачные OCR и VLM в официальный прогон не входят (записанный ответ 23) | Веса лежат в образе |
 | На чертеже рядом с шириной проёма стоит размер 500×300 | Скалярное правило его пропускает. Площадь читает правило, которое само просит произведение сторон |
 | В штампе рядом лежат «Лист», «Листов», ГОСТ и вложенная надпись | Номер листа — графа «Лист» в углу надписи. Стандарт и сертификат шифром комплекта не становятся |
 
@@ -250,7 +248,7 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml -f docker-compos
 [`unattended`](submission/05-additional/examples/unattended/submission.json) и
 [`after_etalon_select`](submission/05-additional/examples/after_etalon_select/submission.json).
 От кандидата до записанного решения три действия: открыть, выбрать исход,
-сохранить (ответ заказчика 28). Сессии Gate K считаются отдельно.
+сохранить (записанный ответ 28). Сессии Gate K считаются отдельно.
 
 ## Пакетный прогон и счёт
 
@@ -481,7 +479,7 @@ docs/           ADR, архитектура, метрики, трассируе�
 | Проверить цифры | [`METRICS.md`](docs/METRICS.md), [`GOLD_DIAGNOSIS.md`](docs/GOLD_DIAGNOSIS.md), [`OCR_BAKEOFF.md`](docs/OCR_BAKEOFF.md), [реестр доказательств](submission/05-additional/README.md) |
 | Пункт ТЗ, статус, пробел | [`TZ_TRACEABILITY.md`](docs/TZ_TRACEABILITY.md), [`TZ_SCORECARD.md`](docs/TZ_SCORECARD.md), [`KNOWN_GAPS.md`](docs/KNOWN_GAPS.md) |
 | Данные и карантин | [`DATASET_PACKAGE.md`](docs/DATASET_PACKAGE.md), [`ORGANIZER_GOLD.md`](docs/ORGANIZER_GOLD.md), [`DATA_QUARANTINE.md`](docs/DATA_QUARANTINE.md) |
-| Ответы и вопросы заказчику | [`ORGANIZER_ANSWERS_2026_09_26.md`](docs/ORGANIZER_ANSWERS_2026_09_26.md), [`QUESTIONS_TO_ORGANIZER.md`](docs/QUESTIONS_TO_ORGANIZER.md) |
+| Записанные ответы и открытые вопросы | [`ORGANIZER_ANSWERS_2026_09_26.md`](docs/ORGANIZER_ANSWERS_2026_09_26.md), [`QUESTIONS_TO_ORGANIZER.md`](docs/QUESTIONS_TO_ORGANIZER.md) |
 | Безопасность и нагрузка | [`RED_TEAM.md`](docs/RED_TEAM.md), [`PERFORMANCE.md`](docs/PERFORMANCE.md), [`OBSERVABILITY.md`](docs/OBSERVABILITY.md) |
 | Исследования | [`RESEARCH_OSINT_2026.md`](docs/RESEARCH_OSINT_2026.md), [`SOTA_AEROBIM_ANALYSIS.md`](docs/SOTA_AEROBIM_ANALYSIS.md), [`docs/research/`](docs/research/) |
 | Лицензии сторонних пакетов | [`THIRD_PARTY_NOTICES.md`](docs/THIRD_PARTY_NOTICES.md) |
