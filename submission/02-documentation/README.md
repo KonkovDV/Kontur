@@ -186,7 +186,7 @@ predecessor/successor (ответы 11 и 12). Шифр штампа важне�
 | [`document_passport.schema.json`](../../contracts/schemas/document_passport.schema.json) | Паспорт тома: шифр, редакция, штамп, слой |
 | [`protocol.schema.json`](../../contracts/schemas/protocol.schema.json) | Протокол по образцу приложения 2 |
 | [`protocol-export.xsd`](../../contracts/schemas/protocol-export.xsd) | XML-выгрузка протокола |
-| [`submission.schema.json`](../../contracts/schemas/submission.schema.json) | Ответ участника соревнования |
+| [`submission.schema.json`](../../contracts/schemas/submission.schema.json) | Файл ответа по схеме приёмки |
 | [`submission_pack.schema.json`](../../contracts/schemas/submission_pack.schema.json) | Машиночитаемый пакет провенанса |
 
 ## 7. Как инварианты держатся кодом
