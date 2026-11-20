@@ -19,7 +19,7 @@ services:
       - ./backend/src/kontur/infrastructure/db/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
 
   redis:
-    image: redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    image: redis:7-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe
     mem_limit: 256m
     cpus: 0.50
     pids_limit: 128
